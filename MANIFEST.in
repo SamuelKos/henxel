@@ -1,2 +1,2 @@
-include src/simple_editor/*.png
-include src/simple_editor/*.txt
+include src/henxel/*.png
+include src/henxel/*.txt
