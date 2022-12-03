@@ -1,0 +1,2 @@
+include src/simple_editor/*.png
+include src/simple_editor/*.txt
