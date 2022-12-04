@@ -239,7 +239,7 @@ class Editor(tkinter.Toplevel):
 		self.ln.bind('<Control-c>', self.no_copy_ln)
 		
 		
-		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', wrap=tkinter.WORD, highlightthickness=0, bd=0, pady=0)
+		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=0, pady=0)
 		
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, command = self.contents.yview)
 
@@ -546,6 +546,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.see('1.0')
 		self.contents.mark_set('insert', '1.0')
 		
+		self.contents.edit_reset()
+		self.contents.edit_modified(0)
+		
 		self.update_title()
 		return 'break'
 		
@@ -592,6 +595,8 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', '1.0')
 			
 		self.contents.edit_reset()
+		self.contents.edit_modified(0)
+		
 		self.update_title()
 		
 		return 'break'
@@ -646,7 +651,10 @@ class Editor(tkinter.Toplevel):
 			self.contents.see('1.0')
 			self.contents.mark_set('insert', '1.0')
 			
+		
 		self.contents.edit_reset()
+		self.contents.edit_modified(0)
+		
 		self.update_title()
 		
 		return 'break'
@@ -832,6 +840,8 @@ class Editor(tkinter.Toplevel):
 		if self.tabs[self.tabindex].type == 'normal':
 			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+			self.contents.edit_reset()
+			self.contents.edit_modified(0)
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
@@ -1067,6 +1077,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.contents.edit_reset()
+		self.contents.edit_modified(0)
 		self.contents.focus_set()
 		
 		line = errline + '.0'
@@ -1214,6 +1225,7 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			
 		self.contents.edit_reset()
+		self.contents.edit_modified(0)
 		self.contents.focus_set()
 
 		# ensure we see something before and after
@@ -1282,19 +1294,34 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-			
-		# Want to keep those lines. Because undo-mechanism is not handled
-		# by ourselves and when starting editor, inserting contents for
-		# the first time and when walking etc. is considered an action that
-		# can be undone.
 		 
-		numlines = int(self.contents.index(tkinter.END).split('.')[0])
-		
-		if numlines > 2:
-			try:
-				self.contents.edit_undo()
-			except tkinter.TclError:
-				self.bell()
+		try:
+			pos = self.contents.index(tkinter.INSERT)
+			if not pos: pos = self.tabs[self.tabindex].position
+			if not pos: pos = '1.0'
+			
+			self.contents.edit_undo()
+				
+			# Want to keep those lines. Because undo-mechanism is not handled
+			# by ourselves and when starting editor, inserting contents for
+			# the first time and when walking etc. is considered an action that
+			# can be undone.
+			
+			numlines = int(self.contents.index(tkinter.END).split('.')[0])
+			if numlines <= 2:
+				self.contents.edit_redo()
+				
+				# ensure we see something before and after
+				self.contents.see('%s - 2 lines' % pos)
+				self.update_idletasks()
+				self.contents.see('%s + 2 lines' % pos)
+				self.contents.mark_set('insert', pos)
+				
+				self.contents.edit_reset()
+				self.contents.edit_modified(0)
+			
+		except tkinter.TclError:
+			self.bell()
 			
 		return 'break'
 		
@@ -1448,7 +1475,9 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return
 		
-		# event is button
+		##################### Get filename begin
+		
+		# Pressed Open-button
 		if event == None:
 			d = tkinter.filedialog.FileDialog(self)
 			
@@ -1483,7 +1512,8 @@ class Editor(tkinter.Toplevel):
 				 dirp = pathlib.Path().cwd() / tmp
 				 self.lastdir = pathlib.Path(*dirp.parts[:-1])
 			
-		# event should then be Return
+			
+		# Entered filename to be opened in entry:
 		else:
 			tmp = self.entry.get().strip()
 
@@ -1492,6 +1522,9 @@ class Editor(tkinter.Toplevel):
 			return
 		
 		filename = pathlib.Path().cwd() / tmp
+		
+		###################################### Get filename end
+		
 		
 		openfiles = [tab.filepath for tab in self.tabs]
 		
@@ -1526,6 +1559,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.mark_set('insert', '1.0')			
 				self.entry.insert(0, filename)
 				self.contents.edit_reset()
+				self.contents.edit_modified(0)
 		except (EnvironmentError, UnicodeDecodeError) as e:
 			print(e.__str__())
 			print('\n Could not open file %s' % filename)
@@ -1580,7 +1614,7 @@ class Editor(tkinter.Toplevel):
 					
 			return
 
-		# if not forced:
+		# if not forced (Pressed Save-button):
 
 		tmp = self.entry.get().strip()
 		
@@ -1668,6 +1702,7 @@ class Editor(tkinter.Toplevel):
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				self.contents.edit_reset()
+				self.contents.edit_modified(0)
 				
 				try:
 					line = self.tabs[self.tabindex].position
@@ -1784,6 +1819,8 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+		self.contents.edit_reset()
+		self.contents.edit_modified(0)
 		
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
