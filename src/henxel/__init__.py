@@ -64,6 +64,7 @@ class Tab:
 		self.oldcontents = ''
 		self.position = '1.0'
 		self.type = 'newtab'
+		self.textwidget = None
 		
 		self.__dict__.update(entries)
 		
@@ -237,6 +238,11 @@ class Editor(tkinter.Toplevel):
 		
 		# disable copying linenumbers:
 		self.ln.bind('<Control-c>', self.no_copy_ln)
+		
+		
+		# need to know if config or not here ############################################
+		#self.contents = self.tabs[self.tabindex].textwidget
+		
 		
 		
 		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=0, pady=0)
@@ -729,6 +735,7 @@ class Editor(tkinter.Toplevel):
 		for tab in self.tabs:
 			tab.contents = ''
 			tab.oldcontents = ''
+			tab.textwidget = None
 			
 			# Convert tab.filepath to string for serialization
 			if tab.filepath:
@@ -776,8 +783,6 @@ class Editor(tkinter.Toplevel):
 		self.menufont.config(**dictionary['menufont'])
 		self.scrollbar_width 	= dictionary['scrollbar_width']
 		self.elementborderwidth	= dictionary['elementborderwidth']
-		self.scrollbar.config(width=self.scrollbar_width)
-		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
 		
 		self.lastdir = dictionary['lastdir']
 		
@@ -794,6 +799,8 @@ class Editor(tkinter.Toplevel):
 		for i in range(len(self.tabs)-1, -1, -1):
 			tab = self.tabs[i]
 			
+			tab.textwidget = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=0, pady=0)
+		
 			if tab.type == 'normal':
 				try:
 					with open(tab.filepath, 'r', encoding='utf-8') as f:
@@ -820,6 +827,14 @@ class Editor(tkinter.Toplevel):
 			background=self.bgcolor, insertbackground=self.fgcolor, 
 			tabs=(self.tab_width, ))
 			
+		for tab in self.tabs:
+			tab.textwidget.config(font=self.font, foreground=self.fgcolor,
+			background=self.bgcolor, insertbackground=self.fgcolor, 
+			tabs=(self.tab_width, ))
+			
+		self.scrollbar.config(width=self.scrollbar_width)
+		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
+		
 		self.ln.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor)
 			
 		self.entry.config(font=self.menufont)
