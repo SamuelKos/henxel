@@ -27,6 +27,56 @@
 ############ Stucture briefing End
 ############ TODO Begin
 
+##	Goal: 
+##	Tab-spesific undo-mechanism, that survives as long as tab page is open,
+## 	and maybe show in title if tab (with contents on disk) is modified.
+##	like:
+##	self.tabs[self.tabindex].modified = 
+##	self.tabs[self.tabindex].textwidget.edit_modified()
+##	
+##	How:
+##	Now have single tkinter.Text -widget with single undo-stack that is used
+##	in all situations and tabs. Want all tabs have its own text-widget and
+##	undo stack:
+##	self.tabs[self.tabindex].textwidget = tkinter.Text(**options)
+##	Help and error-views must also have their own text-widgets.
+##	
+##	How view is changed:
+##	Now self.contents is emptied and filled again when view changes.
+##	This is unnecessary when each view has its own text-widget.
+##	When view is called to change: old views (a tab page most likely) 
+##	textwidget must be first unpacked with (tab-page was open in this example):
+##	self.tabs[self.tabindex].textwidget.grid_forget()
+##	and then do necessary updates to whatever objects is needed like: 
+##	self.tabindex += 1
+##	and	then pack the new views text-widget with
+##	(open another tab-page in this example):
+##	self.tabs[self.tabindex].textwidget.grid(**options)
+##	
+##	This is big change and will take some time to do.
+	
+	
+# Class Tab ok? maybe dont need tab.contents
+# save_conf() ok?
+# load_conf() ok?
+
+# doing init (and load conf), remember to create textwidgets for help and error
+# doing new_tab()
+
+# init etc.
+# Linenumbers
+# Tab Related
+# Configuration Related
+# Theme Related
+# Run file Related
+# Overrides
+# Save and Load
+# Gotoline and Help
+# Indent and Comment
+# Search
+# Replace
+
+
 ############ TODO End
 ############ Imports Begin
 
@@ -153,7 +203,8 @@ class Editor(tkinter.Toplevel):
 		
 		# get current git-branch
 		try:
-			self.branch = subprocess.run('git branch --show-current'.split(), check=True, capture_output=True).stdout.decode().strip()
+			self.branch = subprocess.run('git branch --show-current'.split(), 
+					check=True, capture_output=True).stdout.decode().strip()
 		except Exception as e:
 			pass
 		
@@ -192,7 +243,8 @@ class Editor(tkinter.Toplevel):
 		
 		pkg_contents = importlib.resources.files(__name__)
 		
-		self.helptxt = self.helptxt = 'Could not load help-file. Press ESC to return.'
+		self.helptxt = 'Could not load help-file. Press ESC to return.'
+		no_icon = True
 		
 		for item in pkg_contents.iterdir():
 			if item.name == HELPPATH:
@@ -205,23 +257,25 @@ class Editor(tkinter.Toplevel):
 				try:
 					self.pic = tkinter.Image("photo", file=item)
 					self.tk.call('wm','iconphoto', self._w, self.pic)
+					no_icon = False
 				except tkinter.TclError as e:
-					print('Could not load icon-file %s' % (item))
 					print(e)
-		
+					
+		if no_icon: print('Could not load icon-file.')
+			
 		
 		# Layout Begin:
 		####################################################
 		self.rowconfigure(1, weight=1)
 		self.columnconfigure(1, weight=1)
 		
-		self.btn_test=tkinter.Button(self)
-		self.btn_test.grid(row=0, column = 0, sticky='nsew')
+		self.btn_git=tkinter.Button(self)
+		self.btn_git.grid(row=0, column = 0, sticky='nsew')
 		
 		if self.branch:
-			self.btn_test.config(font=self.menufont, bd=0, padx=0, text=self.branch[:5], state='disabled')
+			self.btn_git.config(font=self.menufont, bd=0, padx=0, text=self.branch[:5], state='disabled')
 		else:
-			self.btn_test.config(font=self.menufont, bd=0, padx=0, bitmap='info', state='disabled')
+			self.btn_git.config(font=self.menufont, bd=0, padx=0, bitmap='info', state='disabled')
 		
 		self.entry = tkinter.Entry(self)
 		self.entry.bind("<Return>", self.load)
@@ -241,13 +295,100 @@ class Editor(tkinter.Toplevel):
 		
 		
 		# need to know if config or not here ############################################
-		#self.contents = self.tabs[self.tabindex].textwidget
+				
+##		string_representation = None
+##		data = None
+##		
+##		# Try to apply saved configurations:
+##		if self.env:
+##			p = pathlib.Path(self.env) / CONFPATH
+##		
+##		if self.env and p.exists():
+##			try:
+##				with open(p, 'r', encoding='utf-8') as f:
+##					string_representation = f.read()
+##					data = json.loads(string_representation)
+##						
+##			except EnvironmentError as e:
+##				print(e.__str__())	# __str__() is for user (print to screen)
+##				#print(e.__repr__())	# __repr__() is for developer (log to file)
+##				print('\n Could not load existing configuration file %s' % p)
+##			
+##		if data:
+##			self.oldconf = string_representation
+##			self.load_config(data)
+##			
+##			# Hide selection in linenumbers
+##			self.ln.config( selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
+##			
+##			
+##		# if no conf:
+##		if self.tabindex == None:
+##		
+##			self.tabindex = -1
+##			self.new_tab()
+##			
+##			self.bgdaycolor = r'#D3D7CF'
+##			self.fgdaycolor = r'#000000'
+##			self.bgnightcolor = r'#000000'
+##			self.fgnightcolor = r'#D3D7CF'
+##			self.fgcolor = self.fgdaycolor
+##			self.bgcolor = self.bgdaycolor
+##			self.curcolor = 'day'
+##			
+##			# Set Font Begin ##################################################
+##			fontname = None
+##			self.randfont = False
+##						
+##			fontfamilies = [f for f in tkinter.font.families() if f not in BADFONTS]
+##			s = set(fontfamilies)
+##			fontfamilies = [f for f in s]
+##		
+##			random.shuffle(fontfamilies)
+##			
+##			for font in GOODFONTS:
+##				if font in fontfamilies:
+##					fontname = font
+##					break
+##			
+##			if fontname == None:
+##				fontname = fontfamilies[0]
+##				self.randfont = True
+##			
+##			# Initialize rest of configurables
+##			self.font.config(family=fontname, size=12)
+##			self.menufont.config(family=fontname, size=10)
+##		
+##			self.scrollbar_width = 30
+##			self.elementborderwidth = 4	
+##			
+##			self.scrollbar.config(width=self.scrollbar_width)
+##			self.scrollbar.config(elementborderwidth=self.elementborderwidth)
+##			
+##			self.tab_width = self.font.measure(TAB_WIDTH * TAB_WIDTH_CHAR)
+##			self.contents.config(font=self.font, foreground=self.fgcolor,
+##				background=self.bgcolor, insertbackground=self.fgcolor, 
+##				tabs=(self.tab_width, ))
+##				
+##			self.entry.config(font=self.menufont)
+##			self.btn_open.config(font=self.menufont)
+##			self.btn_save.config(font=self.menufont)
+##			self.popup.config(font=self.menufont)
+##			
+##			self.btn_git.config(font=self.menufont)
+##			
+##			self.ln.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled')
+##
+
 		
 		
+		######### move to load conf:
 		
-		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=0, pady=0)
+		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, 
+					tabstyle='wordprocessor', highlightthickness=0, bd=0, pady=0)
 		
-		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, command = self.contents.yview)
+		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, 
+					bd=0, command = self.contents.yview)
 
 		self.contents.grid(row=1, column=1, columnspan=3, sticky='nswe')
 		self.scrollbar.grid(row=1,column=4, sticky='nse')
@@ -270,8 +411,13 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-v>", self.paste)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
 
+		############# move to load conf end
+		
+		
 		# Needed in leave() taglink in: Run file Related
 		self.name_of_cursor_in_text_widget = self.contents['cursor']
+##		self.name_of_cursor_in_text_widget = self.tabs[self.tabindex].textwidget['cursor']
+		
 		
 		self.popup_whohasfocus = None
 		self.popup = tkinter.Menu(self, tearoff=0, bd=0, activeborderwidth=0)
@@ -289,8 +435,10 @@ class Editor(tkinter.Toplevel):
 		# This needs to be before loading conf for some reason.
 		self.update_idletasks()
 		# if self.y_extra_offset > 0, it needs attention, it is the second value in bbox('1.0')
-		#self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
-		_, _, _, self.bbox_height = self.contents.bbox('1.0')
+		# self.y_extra_offset = self.tabs[self.tabindex].textwidget['highlightthickness'] + self.tabs[self.tabindex].textwidget['bd'] + self.tabs[self.tabindex].textwidget['pady']
+		self.bbox_height = self.contents.bbox('1.0')[3]
+##		self.bbox_height = self.tabs[self.tabindex].textwidget.bbox('1.0')[3]
+		
 		
 		string_representation = None
 		data = None
@@ -371,7 +519,7 @@ class Editor(tkinter.Toplevel):
 			self.btn_save.config(font=self.menufont)
 			self.popup.config(font=self.menufont)
 			
-			self.btn_test.config(font=self.menufont)
+			self.btn_git.config(font=self.menufont)
 			
 			self.ln.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled')
 
@@ -818,30 +966,7 @@ class Editor(tkinter.Toplevel):
 			if tab.active == True:
 				self.tabindex = i
 				break
-				
-
-	def apply_config(self):
-	
-		self.tab_width = self.font.measure(TAB_WIDTH * TAB_WIDTH_CHAR)
-		self.contents.config(font=self.font, foreground=self.fgcolor,
-			background=self.bgcolor, insertbackground=self.fgcolor, 
-			tabs=(self.tab_width, ))
-			
-		for tab in self.tabs:
-			tab.textwidget.config(font=self.font, foreground=self.fgcolor,
-			background=self.bgcolor, insertbackground=self.fgcolor, 
-			tabs=(self.tab_width, ))
-			
-		self.scrollbar.config(width=self.scrollbar_width)
-		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
 		
-		self.ln.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor)
-			
-		self.entry.config(font=self.menufont)
-		self.btn_open.config(font=self.menufont)
-		self.btn_save.config(font=self.menufont)
-		self.btn_test.config(font=self.menufont)
-		self.popup.config(font=self.menufont)
 		
 		if self.tabindex == None:
 			if len(self.tabs) == 0:
@@ -851,7 +976,77 @@ class Editor(tkinter.Toplevel):
 			else:
 				self.tabindex = 0
 				self.tabs[self.tabindex].active = True 
+		
+
+	def apply_config(self):
+##		t = self.tabs[self.tabindex].textwidget
+##		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, command = t.yview)
+##		t.grid(row=1, column=1, columnspan=3, sticky='nswe')
+##		self.scrollbar.grid(row=1,column=4, sticky='nse')
+	
+		self.tab_width = self.font.measure(TAB_WIDTH * TAB_WIDTH_CHAR)
+		self.contents.config(font=self.font, foreground=self.fgcolor,
+			background=self.bgcolor, insertbackground=self.fgcolor, 
+			tabs=(self.tab_width, ))
 			
+##		for tab in self.tabs:
+##			tab.textwidget.config(font=self.font, foreground=self.fgcolor,
+##			background=self.bgcolor, insertbackground=self.fgcolor, 
+##			tabs=(self.tab_width, ))
+##				
+##			tab.textwidget['yscrollcommand'] = lambda *args: self.sbset_override(*args)
+##			
+##			tab.textwidget.tag_config('match', background='lightyellow', foreground='black')
+##			tab.textwidget.tag_config('found', background='lightgreen')
+##			
+##			tab.textwidget.bind( "<Control-n>", self.new_tab)
+##			tab.textwidget.bind( "<Return>", self.return_override)
+##			tab.textwidget.bind( "<Control-d>", self.del_tab)
+##			tab.textwidget.bind( "<Shift-Return>", self.comment)
+##			tab.textwidget.bind( "<Shift-BackSpace>", self.uncomment)
+##			tab.textwidget.bind( "<Tab>", self.tab_override)
+##			tab.textwidget.bind( "<ISO_Left_Tab>", self.unindent)
+##			tab.textwidget.bind( "<Control-a>", self.select_all)
+##			tab.textwidget.bind( "<Control-z>", self.undo_override)
+##			tab.textwidget.bind( "<Control-Z>", self.redo_override)
+##			tab.textwidget.bind( "<Control-v>", self.paste)
+##			tab.textwidget.bind( "<Control-BackSpace>", self.search_next)
+	
+			
+			
+		self.scrollbar.config(width=self.scrollbar_width)
+		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
+		
+		self.ln.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor)
+			
+		self.entry.config(font=self.menufont)
+		self.btn_open.config(font=self.menufont)
+		self.btn_save.config(font=self.menufont)
+		self.btn_git.config(font=self.menufont)
+		self.popup.config(font=self.menufont)
+		
+		
+##		if self.tabs[self.tabindex].type == 'normal':
+##			t.insert(tkinter.INSERT, self.tabs[self.tabindex].oldcontents)
+##			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+##			t.edit_reset()
+##			t.edit_modified(0)
+##		try:
+##			line = self.tabs[self.tabindex].position
+##			t.focus_set()
+##			# ensure we see something before and after
+##			t.see('%s - 2 lines' % line)
+##			self.update_idletasks()
+##			t.see('%s + 2 lines' % line)
+##			t.mark_set('insert', line)
+##		except tkinter.TclError:
+##			self.tabs[self.tabindex].position = '1.0'
+##			t.focus_set()
+##			t.see('1.0')
+##			t.mark_set('insert', '1.0')
+		
+		
+		
 		if self.tabs[self.tabindex].type == 'normal':
 			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
