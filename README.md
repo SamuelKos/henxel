@@ -1,5 +1,6 @@
 # Henxel
 GUI-editor for Python development. Tested to work with Debian Bullseye
+* Update: I am not going to continue anymore on this project. 
 
 # Featuring
 * Auto-indent
@@ -14,6 +15,7 @@ GUI-editor for Python development. Tested to work with Debian Bullseye
 * Comment - Uncomment
 * Click to open errors
 * Persistent configuration
+* Near persistent contents
 
 # Lacking
 * Auto-completion
@@ -42,24 +44,29 @@ foo@bar:~$ sudo apt install python3-venv
 
 Then save this script to file named 'mkvenv' to some place nice like bin-directory in your home-directory:
 ```console
-#!/bin/bash
+#!/usr/bin/env bash
 # Create a new virtual environment for python.
 # Usage: mkvenv [name_of_myvenv]
 # If no argument is given this  defaults to creating virtual environment
 # named "venv"
 
+
 if [[ "$#" -gt 1 ]]; then
- echo "Illegal number of parameters"
+ echo "mkvenv: Illegal number of parameters"
  exit 1
 elif [[ "$#" -eq 0 ]]; then
  newdir="venv"
 else
- newdir=$1
-fi
-
-if [[ -e ${newdir} ]]; then
- echo "File ${newdir} already exist"
- exit 1
+ var="$1"
+ isdash=${var::1}
+ if  [[ $isdash == "-" ]]; then
+  echo "Usage: mkvenv [name_of_myvenv]"
+  echo "If no argument is given this  defaults to creating virtual environment"
+  echo 'named "venv"'
+  exit 1
+ else
+  newdir=$1
+ fi
 fi
 
 # First: update pip and setuptools and then install wheel
@@ -143,6 +150,10 @@ If you currently have no internet but have previously installed virtual environm
 ```
 
 Files are in src/henxel/
+
+
+# More resources
+[Changelog](https://github.com/SamuelKos/henxel/blob/main/CHANGELOG.md)
 
 # Licence
 This project is licensed under the terms of the GNU General Public License v3.0.
