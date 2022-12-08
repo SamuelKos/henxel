@@ -8,6 +8,16 @@ import tkinter
 import tkinter.font
 
 
+# add 'extra line' to ln getLineNumbers() 	ok ####################
+
+# added borders 							ok ################
+
+ 
+
+# undo only char at time, need edit-separators
+# testi.py	
+
+
 # I tested this: grid_forget() + grid()   is just too blinky to be really usable
 
 ##	Goal: 
@@ -136,8 +146,37 @@ class Ed(tkinter.Toplevel):
 		self.update_idletasks()
 		_, self.y_extra_offset, _,  self.bbox_height = self.contents.bbox('1.0')
 		
+		
+		self.contents.bind('<<Modified>>', self.modified)
+		
+		self.contents.edit_reset()
+		self.contents.edit_modified(0)
+		self.eventnum = 0
+		
 		if self.__class__.updateId is None:
 			self.updateAllLineNumbers()
+		
+		
+	def modified(self, event=None):
+		
+		self.eventnum += 1
+	
+		print(f'Begin Event {self.eventnum}:\n')
+	
+		#l = [ item for item in dir(event) if '_' not in item ]
+		
+		print(event.__class__)
+		print(event)
+		print('asd', event.__repr__() )
+		
+		#for key in l:
+		#	print(key, getattr(event, key))
+		
+		
+		print(f'\nEnd Event {self.eventnum}:')
+		print(10*'= ')
+		
+		self.contents.edit_modified(0)
 		
 		
 	def getLineNumbers(self):

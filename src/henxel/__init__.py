@@ -236,7 +236,7 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.grid(row=0, column = 2)
 		self.btn_save.grid(row=0, column = 3, columnspan=2, sticky='e')
 		
-		self.ln = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=0, pady=0)
+		self.ln = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4)
 		self.ln.grid(row=1, column = 0, sticky='nsw')
 		self.ln.tag_config('justright', justify=tkinter.RIGHT)
 		
@@ -245,7 +245,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, 
-					tabstyle='wordprocessor', highlightthickness=0, bd=0, pady=0)
+					tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
 		
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, 
 					bd=0, command = self.contents.yview)
@@ -292,7 +292,7 @@ class Editor(tkinter.Toplevel):
 		# This needs to be before loading conf for some reason.
 		self.update_idletasks()
 		# if self.y_extra_offset > 0, it needs attention, it is the second value in bbox('1.0')
-		# self.y_extra_offset=self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
+		self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
 		self.bbox_height = self.contents.bbox('1.0')[3]
 		
 		
@@ -442,8 +442,9 @@ class Editor(tkinter.Toplevel):
 		# @x,y is tkinter text-index -notation:
 		# The character that covers the (x,y) -coordinate within the text's window.
 		indexMask = '@0,%d'
-
-		for i in range(0, self.contents.winfo_height(), step):
+		
+		# Extra +step//2 is needed because of later adjustment moves lines up
+		for i in range(0, self.contents.winfo_height() + step//2, step):
 
 			ll, cc = self.contents.index( indexMask % i).split('.')
 
@@ -457,7 +458,8 @@ class Editor(tkinter.Toplevel):
 				# then starts again from 0 (when actually 10000)
 				ln += (lineMask % line)[-5:]
 		
-		return ln
+		# remove unwanted newline:
+		return ln[:-1]
 
 	
 	def updateLineNumbers(self):
@@ -486,8 +488,8 @@ class Editor(tkinter.Toplevel):
 			y_offset *= -1
 			
 			#if self.y_extra_offset > 0, we need this:
-			#if y_offset != 0:
-			#	y_offset += self.y_extra_offset
+			if y_offset != 0:
+				y_offset += self.y_extra_offset
 				
 			tt.config(state='normal')
 			tt.delete('1.0', tkinter.END)
@@ -2299,5 +2301,4 @@ class Editor(tkinter.Toplevel):
 
 ################ Replace End
 ########### Class Editor End
-
 
