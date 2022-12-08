@@ -137,6 +137,7 @@ class Editor(tkinter.Toplevel):
 		super().__init__(self.root, class_='Henxel')
 		self.__class__.editors.append(self)
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
+		self.config( bd=4 )
 		
 		self.lineNumbers = ''
 		self.oldconf = None
@@ -222,19 +223,19 @@ class Editor(tkinter.Toplevel):
 		self.btn_git.grid(row=0, column = 0, sticky='nsew')
 		
 		if self.branch:
-			self.btn_git.config(font=self.menufont, bd=0, padx=0, text=self.branch[:5], state='disabled')
+			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0, padx=0, text=self.branch[:5], state='disabled')
 		else:
-			self.btn_git.config(font=self.menufont, bd=0, padx=0, bitmap='info', state='disabled')
+			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0, padx=0, bitmap='info', state='disabled')
 		
 		
-		self.entry = tkinter.Entry(self)
+		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, bg='#d9d9d9')
 		self.entry.bind("<Return>", self.load)
-		self.entry.grid(row=0, column = 1, sticky='we')
+		self.entry.grid(row=0, column = 1, sticky='nsew')
 		
-		self.btn_open=tkinter.Button(self, text='Open', command=self.load)
-		self.btn_save=tkinter.Button(self, text='Save', command=self.save)
-		self.btn_open.grid(row=0, column = 2)
-		self.btn_save.grid(row=0, column = 3, columnspan=2, sticky='e')
+		self.btn_open=tkinter.Button(self, text='Open', bd=4, highlightthickness=0, command=self.load)
+		self.btn_save=tkinter.Button(self, text='Save', bd=4, highlightthickness=0, command=self.save)
+		self.btn_open.grid(row=0, column = 2, sticky='nsew')
+		self.btn_save.grid(row=0, column = 3, columnspan=2, sticky='nsew')
 		
 		self.ln = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4)
 		self.ln.grid(row=1, column = 0, sticky='nsw')
