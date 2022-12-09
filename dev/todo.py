@@ -12,10 +12,11 @@ import tkinter.font
 
 # added borders 							ok ################
 
- 
 
 # undo only char at time, need edit-separators
 # testi.py	
+
+
 
 
 # I tested this: grid_forget() + grid()   is just too blinky to be really usable
@@ -60,6 +61,13 @@ import tkinter.font
 ## w.wait_visibility(w)
 ## Wait until widget w (typically a Toplevel) is visible.
 ##
+
+# check screen dpi:
+# font is tkinter.font.Font-instance
+# dpi = self.font.metrics().get('linespace')*5
+
+# builtin stiples have too small and dense dots for hdpi:
+# myTextwidget.tag_config('sel', bgstipple='gray12')
 
 ########################## Maybe interesting end
 
@@ -147,7 +155,7 @@ class Ed(tkinter.Toplevel):
 		_, self.y_extra_offset, _,  self.bbox_height = self.contents.bbox('1.0')
 		
 		
-		self.contents.bind('<<Modified>>', self.modified)
+##		self.contents.bind('<<Modified>>', self.modified)
 		
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
