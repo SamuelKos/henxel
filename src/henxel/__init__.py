@@ -258,7 +258,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('found', background='lightgreen')
 		
-		
 		self.contents.bind( "<Control-n>", self.new_tab)
 		self.contents.bind( "<Return>", self.return_override)
 		self.contents.bind( "<Control-d>", self.del_tab)
@@ -391,10 +390,8 @@ class Editor(tkinter.Toplevel):
 		
 	
 	def update_title(self, event=None):
-		#self.title( 'Henxel {}/{}'.format(self.tabindex + 1, len(self.tabs)) )
-
-		tail = len(self.tabs) - self.tabindex
-		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail-1)}' )
+		tail = len(self.tabs) - self.tabindex - 1
+		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
 		
 		
 	def do_nothing(self, event=None):
@@ -416,7 +413,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.quit()
 		self.destroy()
-
+		
 ############## Linenumbers Begin
 
 	def no_copy_ln(self, event=None):
@@ -442,8 +439,9 @@ class Editor(tkinter.Toplevel):
 		# @x,y is tkinter text-index -notation:
 		# The character that covers the (x,y) -coordinate within the text's window.
 		indexMask = '@0,%d'
-
-		for i in range(0, self.contents.winfo_height(), step):
+		
+		# +step//2 to get last visible linenum
+		for i in range(0, self.contents.winfo_height() + step//2, step):
 
 			ll, cc = self.contents.index( indexMask % i).split('.')
 
@@ -457,7 +455,8 @@ class Editor(tkinter.Toplevel):
 				# then starts again from 0 (when actually 10000)
 				ln += (lineMask % line)[-5:]
 		
-		return ln
+		# remove unwanted newline
+		return ln[:-1]
 
 	
 	def updateLineNumbers(self):
