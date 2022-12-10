@@ -13,6 +13,85 @@ import tkinter.font
 # added borders 							ok ################
 
 
+# try two lines, newline is action 			ok #######
+
+# no need buffer-stack? only separators?
+
+
+0: empty or not empty undo and redo stacks
+
+1: user made action  == insert or delete
+
+2: proxy makes a decision:
+	
+	
+	# what is important action?
+	
+	- paste()
+	- return_override()
+	- indent(), unindent()
+	- comment(), uncomment()
+	- replace_all(), replace()
+		
+	insert:
+		- more than one letter at time
+		
+		- one letter but:
+			- it is on different line than previous action
+			
+		- one letter that is in the same line than previous action but:
+			if previous action == 'insert':
+				- it is not right after the previous insert
+			else:
+				- it is not at same place than previous delete char action
+			
+	delete:
+		- more than one letter at time
+		
+		- one letter but:
+			- it is on different line than previous action
+			
+		- one letter that is in the same line than previous action but:
+			if previous action == 'delete':
+				- it is not right before the previous delete char action
+			else:
+				- it is not at same place than previous insert
+
+
+		
+	if len(undo_stack) == 0:
+		do not check previous actions when thinking if important or not, only:
+			if action lenght > 1:
+				 --> important
+			elif action in important function-actions:
+				 --> important
+			else:
+				put it in undo_stack no separators
+				
+	
+	if action in important actions:
+		(action is one that needs to be separated):
+		if not separator:
+			put separator
+		put action
+		put separator
+		action_count = 0
+		
+	else:
+		(want to collect more actions):
+		put action
+		action_count += 1
+		
+		# what is max_action_count?
+		if action_count > max_action_count:
+			put separator
+			action_count = 0
+		
+	
+		
+
+	
+	
 # undo only char at time, need edit-separators
 # testi.py	
 
