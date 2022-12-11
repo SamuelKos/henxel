@@ -8,36 +8,155 @@ import tkinter
 import tkinter.font
 
 
-# I tested this: grid_forget() + grid()   is just too blinky to be really usable
+# add 'extra line' to ln getLineNumbers() 	ok ####################
 
-##	Goal: 
-##	Tab-spesific undo-mechanism, that survives as long as tab page is open,
-## 	and maybe show in title if tab (with contents on disk) is modified.
-##	like:
-##	self.tabs[self.tabindex].modified = 
-##	self.tabs[self.tabindex].textwidget.edit_modified()
+# added borders 							ok ################
+
+
+
+##	0: empty or not empty undo and redo stacks
+##
+##	1: user made action  == insert or delete
+##
+##	2: proxy makes a decision: (if action in important actions):
 ##	
-##	How:
-##	Now have single tkinter.Text -widget with single undo-stack that is used
-##	in all situations and tabs. Want all tabs have its own text-widget and
-##	undo stack:
-##	self.tabs[self.tabindex].textwidget = tkinter.Text(**options)
-##	Help and error-views must also have their own text-widgets.
 ##	
-##	How view is changed:
-##	Now self.contents is emptied and filled again when view changes.
-##	This is unnecessary when each view has its own text-widget.
-##	When view is called to change: old views (a tab page most likely) 
-##	textwidget must be first unpacked with (tab-page was open in this example):
-##	self.tabs[self.tabindex].textwidget.grid_forget()
-##	and then do necessary updates to whatever objects is needed like: 
-##	self.tabindex += 1
-##	and	then pack the new views text-widget with
-##	(open another tab-page in this example):
-##	self.tabs[self.tabindex].textwidget.grid(**options)
+##	# what is important action?
 ##	
-##	This is big change and will take some time to do.
+##
+##	These kind of series of actions (like from indent() ) needs to be separated as a whole,
+##	no separators in between. So need a flag to know when not to put separators.
+##
+##	- paste()
+##	- return_override()
+##	- indent(), unindent()
+##	- comment(), uncomment()
+##	- replace_all(), replace()
+##		
+##	insert:
+##		- more than one letter at time
+##		
+##		- one letter but:
+##			- it is on different line than previous action
+##			
+##		- one letter that is in the same line than previous action but:
+##			if previous action == 'insert':
+##				- it is not right after the previous insert
+##			else:
+##				- it is not at same place than previous delete char action
+##			
+##	delete:
+##		- more than one letter at time
+##		
+##		- one letter but:
+##			- it is on different line than previous action
+##			
+##		- one letter that is in the same line than previous action but:
+##			if previous action == 'delete':
+##				- it is not right before the previous delete char action
+##			else:
+##				- it is not at same place than previous insert
+##
+##	#### (if action in important actions) End
+##		
+##
+##	3: apply action
+##
+	if len(undo_stack) == 0:
+		put separator
+		put action
+		
+		do not check previous actions when thinking if important or not, only:
+		if action lenght > 1 and flag_separators == True:
+			put separator
+		
+		
+	elif action in important actions:
+		(action is one that needs to be separated):
+		
+		if flag_separators == True:
+			if not separator:
+				put separator
+		
+		put action
+		
+		if flag_separators == True:
+			put separator
+		
+		action_count = 0
+		
+	else:
+		(want to collect more actions):
+		put action
+		action_count += 1
+		
+		# what is max_action_count?
+		if action_count > max_action_count:
+			if flag_separators == True:
+				put separator
+			
+			action_count = 0
+			
+			
+def undo(self):
 	
+	undo_args = 0
+	redo_args = 0
+	
+	while undo_args == 0	
+		if len(self._undo_stack) == 0:
+			modified = False
+			return
+	
+		undo_args, redo_args = self._undo_stack.pop()
+		
+	
+	self._redo_stack.append(separator)
+	self._redo_stack.append((undo_args, redo_args))
+	
+	action_list = list()
+	action_list.append(undo_args)
+	
+	
+	undo_args = 1
+	redo_args = 1
+	
+	while undo_args != 0	
+		if len(self._undo_stack) == 0:
+			break
+	
+		undo_args, redo_args = self._undo_stack.pop()
+		self._redo_stack.append((undo_args, redo_args))
+		action_list.append(undo_args)
+	
+	
+	self._redo_stack.append(separator)
+	
+	
+	
+	for action in action_list:
+		self.tk.call((self._orig,) + action)
+	
+	
+	
+	# update cursor pos
+	if undo_args[0] == 'insert':
+		pos = f"{undo_args[1]}+{len(undo_args[2])}c"
+	else:
+		pos = undo_args[1]
+		
+	self.mark_set( 'insert', pos )
+	
+	
+		
+
+	
+	
+# undo only char at time, need edit-separators
+# testi.py	
+
+
+
 
 
 
@@ -50,6 +169,13 @@ import tkinter.font
 ## w.wait_visibility(w)
 ## Wait until widget w (typically a Toplevel) is visible.
 ##
+
+# check screen dpi:
+# font is tkinter.font.Font-instance
+# dpi = self.font.metrics().get('linespace')*5
+
+# builtin stiples have too small and dense dots for hdpi:
+# myTextwidget.tag_config('sel', bgstipple='gray12')
 
 ########################## Maybe interesting end
 
@@ -136,8 +262,37 @@ class Ed(tkinter.Toplevel):
 		self.update_idletasks()
 		_, self.y_extra_offset, _,  self.bbox_height = self.contents.bbox('1.0')
 		
+		
+##		self.contents.bind('<<Modified>>', self.modified)
+		
+		self.contents.edit_reset()
+		self.contents.edit_modified(0)
+		self.eventnum = 0
+		
 		if self.__class__.updateId is None:
 			self.updateAllLineNumbers()
+		
+		
+	def modified(self, event=None):
+		
+		self.eventnum += 1
+	
+		print(f'Begin Event {self.eventnum}:\n')
+	
+		#l = [ item for item in dir(event) if '_' not in item ]
+		
+		print(event.__class__)
+		print(event)
+		print('asd', event.__repr__() )
+		
+		#for key in l:
+		#	print(key, getattr(event, key))
+		
+		
+		print(f'\nEnd Event {self.eventnum}:')
+		print(10*'= ')
+		
+		self.contents.edit_modified(0)
 		
 		
 	def getLineNumbers(self):
