@@ -1,6 +1,29 @@
 # to run: python3 name_of_this_file.py
 
 
+# Demonstrates self-made undo-mechanism as simply as possible.
+# There is no undo-separators, so it should be more easy to understand.
+ 
+# To filter insert and delete -actions from events, a proxy is created in init,
+# but this is just a curiosity of tk-gui and not important at all. Important
+# is:
+
+## init: created undo and redo stacks
+##
+## 0: if action(event) in [list of interesting actions like insert and delete]:
+##	
+##		1: build undo-action for the action
+##
+##		2: clear redo-stack, this is important
+##	
+##		3: put(append) tuple((undo_action, original_action)) to undo_stack
+##	
+##	
+##	
+## Then make undo and redo -functions and bind to them like in below.
+
+
+
 import tkinter as tk
 
 
@@ -11,9 +34,6 @@ class MyText(tk.Text):
 		
 		self._undo_stack = []
 		self._redo_stack = []
-		
-		# do not touch this
-		self._undo_separator = tuple(( (0,0),(0,0) ))
 		
 		# create proxy
 		self._orig = self._w + "_orig"

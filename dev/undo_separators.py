@@ -354,6 +354,7 @@ class UndoText(tkinter.Text):
 		###### redo End ###################################
 	
 
+
 root = tkinter.Tk()
 
 text = UndoText(root, width=65, height=20, font="consolas 14")

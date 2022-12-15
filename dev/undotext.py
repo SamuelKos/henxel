@@ -1,8 +1,7 @@
 import tkinter
 
-# need flag no undo
 
-##	Pseudo-code related to undo-stack handling in _proxy() in undo_separator_test.py :
+##	Pseudo-code related to undo-stack handling in _proxy():
 ##	
 ##	0: empty or not empty undo and redo stacks
 ##
@@ -41,14 +40,10 @@ import tkinter
 ##	replace_all calls do_single_replace which also calls can_add_separator:
 ##		can_add_separator('replace') --> flag_separators stays the same, because caller is not original.
 ##		
-##	
-##	- paste()
-##	- return_override()
-##	- indent(), unindent()
-##	- comment(), uncomment()
-##	- replace_all(), replace()
-##			
 ##		
+##
+##	Also there is a flag: undo_is_paused which stops adding events to stack, this can be handy.
+##	
 ##	###### Pseudo-code End
 
 
@@ -85,7 +80,6 @@ class UndoText(tkinter.Text):
 		return self._undo_stack
 	
 		
-	
 	def undo_clear(self):
 	
 		self._undo_stack.clear()

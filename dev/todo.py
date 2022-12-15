@@ -15,7 +15,6 @@ import tkinter.font
 # walk back alt-q  							ok ################
 
 
-# readme files
 
 # dumped 'proxy-undo' reason lag increase
 
