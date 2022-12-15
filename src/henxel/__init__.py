@@ -190,6 +190,7 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Control-s>", self.color_choose)
 		self.bind( "<Alt-t>", self.toggle_color)
 		self.bind( "<Alt-w>", self.walk_files)
+		self.bind( "<Alt-q>", lambda event: self.walk_files(event, **{'back':True}) )
 		
 		pkg_contents = importlib.resources.files(__name__)
 		
@@ -615,12 +616,12 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 
 		
-	def walk_files(self, event=None):
+	def walk_files(self, event=None, back=False):
 	
 		if self.state != 'normal' or len(self.tabs) < 2:
 			self.bell()
 			return "break"
-			
+		
 		self.tabs[self.tabindex].active = False
 		
 		try:
@@ -635,9 +636,16 @@ class Editor(tkinter.Toplevel):
 		self.tabs[self.tabindex].contents = tmp[:-1]
 			
 		idx = self.tabindex
-		if idx == len(self.tabs) - 1:
-			idx = -1
-		idx += 1
+		
+		if back:
+			if idx == 0:
+				idx = len(self.tabs)
+			idx -= 1
+			
+		else:
+			if idx == len(self.tabs) - 1:
+				idx = -1
+			idx += 1
 		
 		self.tabindex = idx
 		self.tabs[self.tabindex].active = True

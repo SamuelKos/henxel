@@ -69,6 +69,7 @@ class Ed(tkinter.Toplevel):
 
 		self.fgcolor = r'#D3D7CF'
 		self.bgcolor = r'#000000'
+		self.config(bg=self.bgcolor)
 		
 		self.t1.config(font=self.font, foreground=self.fgcolor,
 				background=self.bgcolor, insertbackground=self.fgcolor)

@@ -1,14 +1,8 @@
+# to run: python3 name_of_this_file.py
+
+
 import tkinter as tk
 
-# paste 6 letters
-# enter 3 letters
-# paste 6 letters
-
-# delete 3 letters in middle
-# undo
-# redo
-# undo 
-# redo
 
 class MyText(tk.Text):
 
@@ -17,8 +11,6 @@ class MyText(tk.Text):
 		
 		self._undo_stack = []
 		self._redo_stack = []
-		self.flag_separators = True
-		self.max_action_count = 10
 		
 		# do not touch this
 		self._undo_separator = tuple(( (0,0),(0,0) ))
@@ -40,7 +32,6 @@ class MyText(tk.Text):
 				# Is not 'insert' only in return_override() and do_single_replace()
 				# This also clears possible (unwanted) tags away from undo-stack: args[3]
 				if args[1] == 'insert':
-					print('insert')
 					a0 = args[0]
 					a1 = self.index(args[1])
 					a2 = args[2]
@@ -73,6 +64,11 @@ class MyText(tk.Text):
 		return result
 
 
+	def undo_clear(self):
+		
+			self._undo_stack.clear()
+			self._redo_stack.clear()
+		
 
 	def undo(self):
 		if not self._undo_stack:
@@ -128,7 +124,12 @@ undo_button.pack()
 redo_button = tk.Button(root, text="Redo", command=text.redo)
 redo_button.pack()
 
+text.insert(tk.END, 10*'1' +'A'+ 10*'1' +'\n')
+text.insert(tk.END, 10*'2' +'B'+ 10*'2' +'\n')
+text.insert(tk.END, 10*'3' +'C'+ 10*'3' +'\n')
+
 text.focus_set()
+text.undo_clear()
 
 
 root.mainloop()
