@@ -3,7 +3,9 @@
 # demonstrates switching between two text-widgets
 # Control-l 	(as lemon) to switch
 
-# issue: switch is blinky
+# Switch is no more blinky, because background color of toplevel widget 
+# is set to same color of text-widget. Scrollbar still flashes but
+# this should be fine.   
 
 
 import tkinter
@@ -30,10 +32,10 @@ class Ed(tkinter.Toplevel):
 		self.columnconfigure(1, weight=1)
 		
 		self.btn_test=tkinter.Button(self, text='Test')
-		self.btn_test.grid(row=0, column = 0, sticky='w')
+		self.btn_test.grid(row=0, column = 0, sticky='we')
 		
 		self.entry = tkinter.Entry(self)
-		self.entry.grid(row=0, column = 1, sticky='we')
+		self.entry.grid(row=0, column = 1, sticky='nswe')
 		
 		self.btn_open=tkinter.Button(self, text='Open')
 		self.btn_save=tkinter.Button(self, text='Save')

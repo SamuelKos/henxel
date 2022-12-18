@@ -1,3 +1,21 @@
+# You might want first check undo_no_separators.py
+# Then return
+
+
+# Applies self-made undo-mechanism to tkinter.Text -widget.
+# Usage outside testing is not recommended.
+# In my opinion adds noticeable overhead to event handling, like scrolling with touchpad.
+
+# Usage in python-console:
+
+## import undotext
+## import tkinter
+## root = tkinter.Tk()
+## mytext = undotext.UndoText(root)
+## mytext.pack()
+## mytext.undo_is_paused = False
+
+
 import tkinter
 
 
@@ -53,7 +71,7 @@ class UndoText(tkinter.Text):
 	def __init__(self, master=None, **kw):
 		tkinter.Text.__init__(self, master, undo=False, **kw)
 		
-		# these need to change when view changes:
+		# these need to change when view(object who owns the undo-stack) changes:
 		self._undo_stack = []
 		self._redo_stack = []
 		self.action_count = 0

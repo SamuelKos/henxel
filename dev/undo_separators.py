@@ -1,5 +1,7 @@
 # to run: python3 name_of_this_file.py
 
+# You might want first check undo_no_separators.py
+# Then return
 
 import tkinter
 

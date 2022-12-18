@@ -8,18 +8,6 @@ import tkinter
 import tkinter.font
 
 
-# add 'extra line' to ln getLineNumbers() 	ok ####################
-
-# added borders 							ok ################
-
-# walk back alt-q  							ok ################
-
-
-
-# dumped 'proxy-undo' reason lag increase
-
-# # try bg ungrid
-
 
 
 
@@ -34,8 +22,13 @@ import tkinter.font
 ##
 
 # check screen dpi:
-# font is tkinter.font.Font-instance
-# dpi = self.font.metrics().get('linespace')*5
+# 
+# import tkinter
+# import tkinter.font
+# root = tkinter.Tk()
+# f = tkinter.font.Font(root, family='TkDefaulFont', size=12)
+# dpi = f.metrics().get('linespace')*5
+
 
 # builtin stiples have too small and dense dots for hdpi:
 # myTextwidget.tag_config('sel', bgstipple='gray12')

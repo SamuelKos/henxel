@@ -24,7 +24,8 @@
 		
 		Ctrl-n  Open new tab
 		Ctrl-d  Close current tab
-		Alt-w   Walk tabs
+		Alt-w   Walk tabs forward
+		Alt-q   Walk tabs backwards
 		
 		Ctrl-plus 	Increase scrollbar-width
 		Ctrl-minus	Decrease scrollbar-width

@@ -1,6 +1,10 @@
 # to run: python3 name_of_this_file.py
 
 
+# If you find hard to understand this, try to think why we want undo
+# in the first place, then why redo.
+
+
 # Demonstrates self-made undo-mechanism as simply as possible.
 # There is no undo-separators, so it should be more easy to understand.
  

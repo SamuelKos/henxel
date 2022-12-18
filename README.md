@@ -1,6 +1,6 @@
 # Henxel
 GUI-editor for Python development. Tested to work with Debian Bullseye
-* Update: I am not going to continue anymore on this project. 
+
 
 # Featuring
 * Auto-indent

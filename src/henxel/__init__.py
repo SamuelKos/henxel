@@ -32,7 +32,6 @@
 
 # from standard library
 import tkinter.scrolledtext
-import tkinter.colorchooser
 import tkinter.filedialog
 import tkinter.font
 import tkinter
@@ -134,10 +133,12 @@ class Editor(tkinter.Toplevel):
 
 	def __init__(self):
 		self.root = tkinter.Tk().withdraw()
-		super().__init__(self.root, class_='Henxel')
+		super().__init__(self.root, class_='Henxel', bd=4)
 		self.__class__.editors.append(self)
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
-		self.config( bd=4 )
+		
+		self.to_be_closed = list()
+		self.quitting = False
 		
 		self.lineNumbers = ''
 		self.oldconf = None
@@ -402,11 +403,18 @@ class Editor(tkinter.Toplevel):
 		
 	
 	def quit_me(self):
-	
+		# affects load():
+		self.quitting = True
+		
 		self.save(forced=True)
 		self.save_config()
 		self.clipboard_clear()
 		
+		
+		# affects color and fontchoose: 
+		for widget in self.to_be_closed:
+			widget.destroy()
+			
 		while len(self.__class__.editors) > 0:
 			self.__class__.editors.pop()
 		
@@ -944,10 +952,12 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return "break"
 			
-		self.choose = changefont.FontChooser([self.font, self.menufont])
+		choose = changefont.FontChooser([self.font, self.menufont])
+		self.to_be_closed.append(choose)
+		
 		return 'break'
 		
-		
+			
 	def color_choose(self, event=None):
 		if self.state != 'normal':
 			self.bell()
@@ -956,25 +966,32 @@ class Editor(tkinter.Toplevel):
 		# I am not sure why this works but it is possibly related
 		# to fact that there can only be one root window,
 		# or actually one Tcl-interpreter in single python-program or -console.
-		tmptop = tkinter.Toplevel()
-		tmptop.title('Choose Color')
-		tmptop.btnfg = tkinter.Button(tmptop, text='Text color', font=('TkDefaultFont', 16), command=lambda args=['fg']: self.chcolor(args))
-		tmptop.btnfg.pack(padx=10, pady=10)
+		colortop = tkinter.Toplevel()
+		colortop.title('Choose Color')
+		colortop.btnfg = tkinter.Button(colortop, text='Text color', font=('TkDefaultFont', 16),
+				command = lambda args=['fg']: self.chcolor(args) )
+				
+		colortop.btnfg.pack(padx=10, pady=10)
 		
-		tmptop.btnbg = tkinter.Button(tmptop, text='Ref. color', font=('TkDefaultFont', 16), command=lambda args=['bg']: self.chcolor(args))
-		tmptop.btnbg.pack(padx=10, pady=10)
+		colortop.btnbg = tkinter.Button(colortop, text='Ref. color', font=('TkDefaultFont', 16),
+				command = lambda args=['bg']: self.chcolor(args) )
+				
+		colortop.btnbg.pack(padx=10, pady=10)
 		
-		tmptop.lb = tkinter.Listbox(tmptop, font=('TkDefaultFont', 12), selectmode=tkinter.SINGLE)
-		tmptop.lb.pack(pady=10)
-		tmptop.choiseslist = ['day', 'night']
+		colortop.lb = tkinter.Listbox(colortop, font=('TkDefaultFont', 12), selectmode=tkinter.SINGLE)
+		colortop.lb.pack(pady=10)
+		colortop.choiseslist = ['day', 'night']
 		
-		for item in tmptop.choiseslist:
-			tmptop.lb.insert('end', item)
+		for item in colortop.choiseslist:
+			colortop.lb.insert('end', item)
 		
-		idx = tmptop.choiseslist.index(self.curcolor)
-		tmptop.lb.select_set(idx)
-		tmptop.lb.see(idx)
-		tmptop.lb.bind('<ButtonRelease-1>', lambda event, args=[tmptop]: self.choose_daynight(args, event))
+		idx = colortop.choiseslist.index(self.curcolor)
+		colortop.lb.select_set(idx)
+		colortop.lb.see(idx)
+		colortop.lb.bind('<ButtonRelease-1>', lambda event, args=[colortop]: self.choose_daynight(args, event))
+		
+		self.to_be_closed.append(colortop)
+		
 		
 		
 	def choose_daynight(self, args, event=None):
@@ -998,12 +1015,15 @@ class Editor(tkinter.Toplevel):
 			
 			self.ln.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
 			
-		
-		
+			
 	def chcolor(self, args, event=None):
-		
+	
+
 		if args[0] == 'bg':
-			tmpcolorbg = tkinter.colorchooser.askcolor(initialcolor=self.bgcolor)[1]
+			
+			res = self.tk.call('tk_chooseColor')
+			tmpcolorbg = str(res)
+			
 			if tmpcolorbg in [None, '']:
 				return 'break'
 			
@@ -1014,7 +1034,10 @@ class Editor(tkinter.Toplevel):
 				self.bgnightcolor = tmpcolorbg
 				self.bgcolor = self.bgnightcolor
 		else:
-			tmpcolorfg = tkinter.colorchooser.askcolor(initialcolor=self.fgcolor)[1]
+				
+			res = self.tk.call('tk_chooseColor')
+			tmpcolorfg = str(res)
+			
 			if tmpcolorfg in [None, '']:
 				return 'break'
 			
@@ -1024,11 +1047,16 @@ class Editor(tkinter.Toplevel):
 			else:
 				self.fgnightcolor = tmpcolorfg
 				self.fgcolor = self.fgnightcolor
-			
-		self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
-			insertbackground=self.fgcolor)
-			
-		self.ln.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
+		
+		try:
+			self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
+				insertbackground=self.fgcolor)
+				
+			self.ln.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
+		
+		except tkinter.TclError as e:
+			# because if closed editor, this survives
+			pass
 			
 		return 'break'
 		
@@ -1482,26 +1510,32 @@ class Editor(tkinter.Toplevel):
 		
 		# Pressed Open-button
 		if event == None:
-			d = tkinter.filedialog.FileDialog(self, title='Select File')
+			self.d = tkinter.filedialog.FileDialog(self, title='Select File')
 			
-			d.dirs.configure(font=self.font)
-			d.files.configure(font=self.font)
-			d.cancel_button.configure(font=self.menufont)
-			d.filter.configure(font=self.menufont)
-			d.filter_button.configure(font=self.menufont)
-			d.ok_button.configure(font=self.menufont)
-			d.selection.configure(font=self.menufont)
+			self.d.dirs.configure(font=self.font, width=30, selectmode='single')
+			self.d.files.configure(font=self.font, width=30, selectmode='single')
+			self.d.cancel_button.configure(font=self.menufont)
+			self.d.filter.configure(font=self.menufont)
+			self.d.filter_button.configure(font=self.menufont)
+			self.d.ok_button.configure(font=self.menufont)
+			self.d.selection.configure(font=self.menufont)
 
-			d.dirsbar.configure(width=self.scrollbar_width)
-			d.filesbar.configure(width=self.scrollbar_width)
-			d.filesbar.configure(elementborderwidth=self.elementborderwidth)
-			d.dirsbar.configure(elementborderwidth=self.elementborderwidth)
+			self.d.dirsbar.configure(width=self.scrollbar_width)
+			self.d.filesbar.configure(width=self.scrollbar_width)
+			self.d.filesbar.configure(elementborderwidth=self.elementborderwidth)
+			self.d.dirsbar.configure(elementborderwidth=self.elementborderwidth)
+			
 			
 			# tmp is now absolute path
 			if self.lastdir:
-				tmp = d.go(self.lastdir.__str__())
+				tmp = self.d.go(self.lastdir.__str__())
 			else:
-				tmp = d.go('.')
+				tmp = self.d.go('.')
+				
+			# Otherwise this (blocking, for reason) callback
+			# would try to continue after deletion of the filedialog:
+			if self.quitting:
+				return
 
 			# avoid bell when dialog is closed without selection
 			if tmp == None:
