@@ -256,6 +256,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.grid(row=1, column=1, columnspan=3, sticky='nswe')
 		self.scrollbar.grid(row=1,column=4, sticky='nse')
 		
+		self.text_widget_height = self.scrollbar.winfo_height()
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 		
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
@@ -274,6 +275,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-v>", self.paste)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
 		
+		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
+
 		
 		# Needed in leave() taglink in: Run file Related
 		self.name_of_cursor_in_text_widget = self.contents['cursor']
@@ -391,7 +394,15 @@ class Editor(tkinter.Toplevel):
 		
 		############################# init End ######################
 		
+
 	
+	def viewsync(self, event=None):
+		'''
+		'''
+		#self.bbox_height = self.contents.bbox('1.0')[3]
+		self.text_widget_height = self.scrollbar.winfo_height()
+
+
 	def update_title(self, event=None):
 		tail = len(self.tabs) - self.tabindex - 1
 		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
@@ -451,7 +462,7 @@ class Editor(tkinter.Toplevel):
 		indexMask = '@0,%d'
 		
 		# +step//2 to get last visible linenum
-		for i in range(0, self.contents.winfo_height() + step//2, step):
+		for i in range(0, self.text_widget_height + step//2, step):
 
 			ll, cc = self.contents.index( indexMask % i).split('.')
 
@@ -490,7 +501,7 @@ class Editor(tkinter.Toplevel):
 			# Want y-offset of first visible line, and reverse it.
 			# Also update line-height (bbox_height) in case of font changes:
 			
-			_, y_offset, _, self.bbox_height = self.contents.bbox(idx)
+			y_offset = self.contents.bbox(idx)[1]
 			
 			y_offset *= -1
 			
@@ -1446,7 +1457,7 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar.set(*args)
 		
 		# Height of whole scrollbar in pixels:
-		h = self.scrollbar.winfo_height()
+		h = self.text_widget_height
 		
 		# Relative position (tuple on two floats) of 
 		# slider-top (a[0]) and -bottom (a[1]) in scale 0-1, a[0] is smaller:

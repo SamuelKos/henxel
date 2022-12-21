@@ -4,10 +4,17 @@
 # >>> import todo
 # >>> e=todo.Ed()
 
+
+# <<'WidgetViewSync'>>
+# insert delete screen geometry change, not yview
+
+# <<'TkWorldChanged'>>
+
+
+
+
 import tkinter
 import tkinter.font
-
-
 
 
 
