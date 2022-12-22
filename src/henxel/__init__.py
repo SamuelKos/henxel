@@ -256,7 +256,16 @@ class Editor(tkinter.Toplevel):
 		self.contents.grid(row=1, column=1, columnspan=3, sticky='nswe')
 		self.scrollbar.grid(row=1,column=4, sticky='nse')
 		
+		
+		# Needed in updateLineNumbers(), there is more info.
+		self.update_idletasks()
+		# if self.y_extra_offset > 0, it needs attention, it is the second value in bbox('1.0')
+		self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
+		# Needed in updateLineNumbers() and sbset_override()
+		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
+		
+					
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 		
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
@@ -291,14 +300,6 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="      errors", command=self.show_errors)
 		self.popup.add_command(label="         run", command=self.run)
 		self.popup.add_command(label="        help", command=self.help)
-		
-		
-		# Needed in updateLineNumbers(), there is more info.
-		# This needs to be before loading conf for some reason.
-		self.update_idletasks()
-		# if self.y_extra_offset > 0, it needs attention, it is the second value in bbox('1.0')
-		self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
-		self.bbox_height = self.contents.bbox('1.0')[3]
 		
 		
 		string_representation = None
@@ -389,18 +390,26 @@ class Editor(tkinter.Toplevel):
 		
 		self.update_title()
 		
-		if self.__class__.updateId is None:
-			self.updateAllLineNumbers()
+##		if self.__class__.updateId is None:
+##			self.updateAllLineNumbers()
 		
 		############################# init End ######################
 		
 
 	
 	def viewsync(self, event=None):
+		'''	Triggered when event is <<WidgetViewSync>>
+		
+			This event itself is generated when inserting, deleting or on screen geometry change, but 
+			not when just scrolling (like yview). Almost all font-changes also generates this event,
+			so that is good to know because I yet have not seen that TkWorldChange -event.
 		'''
-		'''
-		#self.bbox_height = self.contents.bbox('1.0')[3]
+		
+		# More info in updateLineNumbers()
+		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
+		
+		self.updateLineNumbers()
 
 
 	def update_title(self, event=None):
@@ -461,12 +470,14 @@ class Editor(tkinter.Toplevel):
 		# The character that covers the (x,y) -coordinate within the text's window.
 		indexMask = '@0,%d'
 		
-		# +step//2 to get last visible linenum
-		for i in range(0, self.text_widget_height + step//2, step):
+		# stepping lineheight at time, checking index of each lines first cell, and splitting it. 
+		
+		for i in range(0, self.text_widget_height, step):
 
 			ll, cc = self.contents.index( indexMask % i).split('.')
 
 			if line == ll:
+				# is the line wrapping:
 				if col != cc:
 					col = cc
 					ln += nl
@@ -491,17 +502,16 @@ class Editor(tkinter.Toplevel):
 			
 			# 1 - 3 : adjust linenumber-lines with text-lines
 			
-			# 1: Actual line.col of x=0 y=0 in text-widget:
-			# idx is index of currently visible first character
-			idx = self.contents.index('@0,0')
+			# 1:
+			# @0,0 is currently visible first character at 
+			# x=0 y=0 in text-widget.
 			
 			# 2: bbox returns this kind of tuple: (3, -9, 19, 38)
 			# (bbox is cell that holds a character)
 			# (x-offset, y-offset, width, height) in pixels
-			# Want y-offset of first visible line, and reverse it.
-			# Also update line-height (bbox_height) in case of font changes:
+			# Want y-offset of first visible line, and reverse it:
 			
-			y_offset = self.contents.bbox(idx)[1]
+			y_offset = self.contents.bbox('@0,0')[1]
 			
 			y_offset *= -1
 			
@@ -1480,7 +1490,9 @@ class Editor(tkinter.Toplevel):
 			# which moves text up if 'adding' to both ends 
 			
 			self.scrollbar.set(a[0], a[1]+d)
-	
+			
+		self.updateLineNumbers()
+
 ########## Overrides End
 ########## Save and Load Begin
 
@@ -1492,10 +1504,20 @@ class Editor(tkinter.Toplevel):
 			if char in [' ', '\t']: indent_stop_index += 1
 			else: break
 			
-		if indent_stop_index == 0: return line
+		if indent_stop_index == 0: 
+			# remove trailing space
+			if not line.isspace():
+				line = line.rstrip() + '\n'
+				
+			return line
+		
 		
 		indent_string = line[:indent_stop_index]
 		line = line[indent_stop_index:]
+		
+		# remove trailing space
+		line = line.rstrip() + '\n'
+		
 		
 		count = 0
 		for char in indent_string:

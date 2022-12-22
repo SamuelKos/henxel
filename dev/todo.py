@@ -5,10 +5,23 @@
 # >>> e=todo.Ed()
 
 
+
+# tabify rstrip  ok ###################
+
+
+
 # <<'WidgetViewSync'>>
 # insert delete screen geometry change, not yview
 
-# <<'TkWorldChanged'>>
+
+# print() % to fstring
+
+
+
+# paste see()
+
+
+
 
 
 
@@ -29,7 +42,7 @@ import tkinter.font
 ##
 
 # check screen dpi:
-# 
+#
 # import tkinter
 # import tkinter.font
 # root = tkinter.Tk()
@@ -96,7 +109,7 @@ class Ed(tkinter.Toplevel):
 		self.lb.tag_config('justright', justify=tkinter.RIGHT)
 	
 		self.scrollbar_width = 30
-		self.elementborderwidth = 4	
+		self.elementborderwidth = 4
 		
 		self.scrollbar.config(width=self.scrollbar_width)
 		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
