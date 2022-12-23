@@ -122,19 +122,10 @@ BADFONTS = frozenset([
 			
 class Editor(tkinter.Toplevel):
 
-	# This list is needed for classmethod updateAllLineNumbers() to work.
-	# Self must be then added to this list in init with:
-	# self.__class__.editors.append(self)
-	editors = []
-	
-	UPDATE_PERIOD = 100 #ms
-	updateId = None
-	
 
 	def __init__(self):
 		self.root = tkinter.Tk().withdraw()
 		super().__init__(self.root, class_='Henxel', bd=4)
-		self.__class__.editors.append(self)
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		
 		self.to_be_closed = list()
@@ -154,7 +145,7 @@ class Editor(tkinter.Toplevel):
 		
 		# get current git-branch
 		try:
-			self.branch = subprocess.run('git branch --show-current'.split(), 
+			self.branch = subprocess.run('git branch --show-current'.split(),
 					check=True, capture_output=True).stdout.decode().strip()
 		except Exception as e:
 			pass
@@ -173,7 +164,7 @@ class Editor(tkinter.Toplevel):
 		self.menufont = tkinter.font.Font(size=10)
 		self.randfont = False
 		
-		# IMPORTANT if binding to 'root': 
+		# IMPORTANT if binding to 'root':
 		# https://stackoverflow.com/questions/54185434/python-tkinter-override-default-ctrl-h-binding
 		# https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/binding-levels.html
 		# Still problems with this, so changed back to default bindtags.
@@ -186,7 +177,6 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Button-3>", self.raise_popup)
 		self.bind( "<Control-g>", self.gotoline)
 		self.bind( "<Control-r>", self.replace)
-		self.bind( "<Control-f>", self.search)
 		self.bind( "<Control-p>", self.font_choose)
 		self.bind( "<Control-s>", self.color_choose)
 		self.bind( "<Alt-t>", self.toggle_color)
@@ -247,10 +237,10 @@ class Editor(tkinter.Toplevel):
 		self.ln.bind('<Control-c>', self.no_copy_ln)
 		
 		
-		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, 
+		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True,
 					tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
 		
-		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, 
+		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0,
 					bd=0, command = self.contents.yview)
 
 		self.contents.grid(row=1, column=1, columnspan=3, sticky='nswe')
@@ -259,18 +249,19 @@ class Editor(tkinter.Toplevel):
 		
 		# Needed in updateLineNumbers(), there is more info.
 		self.update_idletasks()
-		# if self.y_extra_offset > 0, it needs attention, it is the second value in bbox('1.0')
+		# if self.y_extra_offset > 0, it needs attention
 		self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
 		# Needed in updateLineNumbers() and sbset_override()
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
 		
-					
+		
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 		
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('found', background='lightgreen')
 		
+		self.contents.bind( "<Control-f>", self.search)
 		self.contents.bind( "<Control-n>", self.new_tab)
 		self.contents.bind( "<Return>", self.return_override)
 		self.contents.bind( "<Control-d>", self.del_tab)
@@ -283,7 +274,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-Z>", self.redo_override)
 		self.contents.bind( "<Control-v>", self.paste)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
-		
+	
 		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 
 		
@@ -318,7 +309,7 @@ class Editor(tkinter.Toplevel):
 			except EnvironmentError as e:
 				print(e.__str__())	# __str__() is for user (print to screen)
 				#print(e.__repr__())	# __repr__() is for developer (log to file)
-				print('\n Could not load existing configuration file %s' % p)
+				print(f'\n Could not load existing configuration file: {p}')
 			
 		if data:
 			self.oldconf = string_representation
@@ -366,14 +357,14 @@ class Editor(tkinter.Toplevel):
 			self.menufont.config(family=fontname, size=10)
 		
 			self.scrollbar_width = 30
-			self.elementborderwidth = 4	
+			self.elementborderwidth = 4
 			
 			self.scrollbar.config(width=self.scrollbar_width)
 			self.scrollbar.config(elementborderwidth=self.elementborderwidth)
 			
 			self.tab_width = self.font.measure(TAB_WIDTH * TAB_WIDTH_CHAR)
 			self.contents.config(font=self.font, foreground=self.fgcolor,
-				background=self.bgcolor, insertbackground=self.fgcolor, 
+				background=self.bgcolor, insertbackground=self.fgcolor,
 				tabs=(self.tab_width, ))
 				
 			self.entry.config(font=self.menufont)
@@ -390,17 +381,13 @@ class Editor(tkinter.Toplevel):
 		
 		self.update_title()
 		
-##		if self.__class__.updateId is None:
-##			self.updateAllLineNumbers()
-		
 		############################# init End ######################
 		
 
-	
 	def viewsync(self, event=None):
 		'''	Triggered when event is <<WidgetViewSync>>
 		
-			This event itself is generated when inserting, deleting or on screen geometry change, but 
+			This event itself is generated when inserting, deleting or on screen geometry change, but
 			not when just scrolling (like yview). Almost all font-changes also generates this event,
 			so that is good to know because I yet have not seen that TkWorldChange -event.
 		'''
@@ -431,18 +418,13 @@ class Editor(tkinter.Toplevel):
 		self.clipboard_clear()
 		
 		
-		# affects color and fontchoose: 
+		# affects color and fontchoose:
 		for widget in self.to_be_closed:
 			widget.destroy()
-			
-		while len(self.__class__.editors) > 0:
-			self.__class__.editors.pop()
-		
-		# fix for: linenumbers missing is closing and re-opening editor in same console-session
-		self.__class__.updateId = None
 		
 		self.quit()
 		self.destroy()
+		
 		
 ############## Linenumbers Begin
 
@@ -470,7 +452,7 @@ class Editor(tkinter.Toplevel):
 		# The character that covers the (x,y) -coordinate within the text's window.
 		indexMask = '@0,%d'
 		
-		# stepping lineheight at time, checking index of each lines first cell, and splitting it. 
+		# stepping lineheight at time, checking index of each lines first cell, and splitting it.
 		
 		for i in range(0, self.text_widget_height, step):
 
@@ -503,7 +485,7 @@ class Editor(tkinter.Toplevel):
 			# 1 - 3 : adjust linenumber-lines with text-lines
 			
 			# 1:
-			# @0,0 is currently visible first character at 
+			# @0,0 is currently visible first character at
 			# x=0 y=0 in text-widget.
 			
 			# 2: bbox returns this kind of tuple: (3, -9, 19, 38)
@@ -530,25 +512,6 @@ class Editor(tkinter.Toplevel):
 
 			tt.config(state='disabled')
 
-
-	@classmethod		
-	def updateAllLineNumbers(cls):
-
-		if len(cls.editors) < 1:
-			cls.updateId = None
-			return
-				
-		for ed in cls.editors:
-			ed.updateLineNumbers()
-
-		cls.updateId = ed.contents.after(
-			cls.UPDATE_PERIOD,
-			cls.updateAllLineNumbers)
-		
-		# about double cpu compared to after(100ms), but is smoother:
-##		cls.updateId = ed.contents.after_idle(
-##			cls.updateAllLineNumbers)
-	
 		
 ############## Linenumbers End
 ############## Tab Related Begin
@@ -752,7 +715,7 @@ class Editor(tkinter.Toplevel):
 		
 		font = dictionary['menufont']['family']
 		
-		if dictionary['menufont']['family'] not in fontfamilies: 
+		if dictionary['menufont']['family'] not in fontfamilies:
 			print(f'Font {font.upper()} does not exist.')
 			res = False
 			
@@ -793,8 +756,8 @@ class Editor(tkinter.Toplevel):
 	def set_config(self, dictionary, fonts_exists=True):
 		self.fgnightcolor = dictionary['fgnightcolor']
 		self.bgnightcolor = dictionary['bgnightcolor']
-		self.fgdaycolor = dictionary['fgdaycolor'] 
-		self.bgdaycolor = dictionary['bgdaycolor'] 
+		self.fgdaycolor = dictionary['fgdaycolor']
+		self.bgdaycolor = dictionary['bgdaycolor']
 		self.fgcolor = dictionary['fgcolor']
 		self.bgcolor = dictionary['bgcolor']
 		self.curcolor = dictionary['curcolor']
@@ -868,14 +831,14 @@ class Editor(tkinter.Toplevel):
 			# recently active normal tab is gone:
 			else:
 				self.tabindex = 0
-				self.tabs[self.tabindex].active = True 
+				self.tabs[self.tabindex].active = True
 		
 
 	def apply_config(self):
 	
 		self.tab_width = self.font.measure(TAB_WIDTH * TAB_WIDTH_CHAR)
 		self.contents.config(font=self.font, foreground=self.fgcolor,
-			background=self.bgcolor, insertbackground=self.fgcolor, 
+			background=self.bgcolor, insertbackground=self.fgcolor,
 			tabs=(self.tab_width, ))
 			
 		self.scrollbar.config(width=self.scrollbar_width)
@@ -914,7 +877,7 @@ class Editor(tkinter.Toplevel):
 ########## Theme Related Begin
 
 	def increase_scrollbar_width(self, event=None):
-		'''	Change width of scrollbar of self.contents and of 
+		'''	Change width of scrollbar of self.contents and of
 			tkinter.filedialog.FileDialog which is used in self.load().
 			Shortcut: Ctrl-plus
 		'''
@@ -931,7 +894,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def decrease_scrollbar_width(self, event=None):
-		'''	Change width of scrollbar of self.contents and of 
+		'''	Change width of scrollbar of self.contents and of
 			tkinter.filedialog.FileDialog which is used in self.load().
 			Shortcut: Ctrl-minus
 		'''
@@ -1106,7 +1069,7 @@ class Editor(tkinter.Toplevel):
 		'''
 		
 		# passing tagname-string as argument to function self.taglink()
-		# which in turn is a value of tagname-key in dictionary taglinks: 
+		# which in turn is a value of tagname-key in dictionary taglinks:
 		self.taglinks[tagname](tagname)
 		
 
@@ -1130,7 +1093,7 @@ class Editor(tkinter.Toplevel):
 					self.tabindex = i
 					self.tabs[self.tabindex].active = True
 					break
-		else:		
+		else:
 			try:
 				with open(filepath, 'r', encoding='utf-8') as f:
 					self.new_tab(error=True)
@@ -1141,7 +1104,7 @@ class Editor(tkinter.Toplevel):
 					self.tabs[self.tabindex].type = 'normal'
 			except (EnvironmentError, UnicodeDecodeError) as e:
 				print(e.__str__())
-				print('\n Could not open file %s' % filepath)
+				print(f'\n Could not open file: {filepath}')
 				self.bell()
 				return
 
@@ -1179,7 +1142,7 @@ class Editor(tkinter.Toplevel):
 			 		code in try-block raises some other error than SomeError.
 					In that case those errlines will be of course catched.
 			
-			What this means: If you self.run() with intention to spot possible 
+			What this means: If you self.run() with intention to spot possible
 			errors in your program, you should use logging (in except-block)
 			if you are not 100% sure about your code in except-block.
 		'''
@@ -1221,13 +1184,13 @@ class Editor(tkinter.Toplevel):
 				# Why ButtonRelease instead of just Button-1:
 				# https://stackoverflow.com/questions/24113946/unable-to-move-text-insert-index-with-mark-set-widget-function-python-tkint
 				
-				self.contents.tag_bind(tagname, "<ButtonRelease-1>", 
+				self.contents.tag_bind(tagname, "<ButtonRelease-1>",
 					lambda event, arg=tagname: self.lclick(arg, event))
 				
-				self.contents.tag_bind(tagname, "<Enter>", 
+				self.contents.tag_bind(tagname, "<Enter>",
 					lambda event, arg=tagname: self.enter(arg, event))
 				
-				self.contents.tag_bind(tagname, "<Leave>", 
+				self.contents.tag_bind(tagname, "<Leave>",
 					lambda event, arg=tagname: self.leave(arg, event))
 				
 				self.taglinks[tagname] = self.tag_link
@@ -1242,7 +1205,7 @@ class Editor(tkinter.Toplevel):
 					if filepath in openfiles:
 						self.contents.tag_config(tagname, foreground='brown1')
 					
-					self.errlines.append((filepath, linenum)) 
+					self.errlines.append((filepath, linenum))
 					self.contents.insert(tkinter.INSERT, tmp +"\n", tagname)
 				else:
 					self.contents.insert(tkinter.INSERT, tmp +"\n")
@@ -1279,7 +1242,7 @@ class Editor(tkinter.Toplevel):
 					data = line.split(',')[:2]
 					linenum = data[1][6:]
 					filepath = data[0][8:-1]
-					self.errlines.append((filepath, linenum)) 
+					self.errlines.append((filepath, linenum))
 					self.contents.insert(tkinter.INSERT, tmp +"\n", 'hyper-%d' % i)
 					i += 1
 				else:
@@ -1319,7 +1282,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def popup_focusOut(self, event=None):
-		self.popup.unpost() 
+		self.popup.unpost()
 	
 
 	def copy(self):
@@ -1355,7 +1318,13 @@ class Editor(tkinter.Toplevel):
 			self.contents.tag_add('sel', pos, lastpos)
 			
 			self.contents.mark_set('insert', pos)
-			return 'break'		
+		
+			self.contents.see('%s - 2 lines' % pos)
+			self.update_idletasks()
+			self.contents.see('%s + 2 lines' % pos)
+			
+			return 'break'
+			
 		else:
 			if event == None:
 				self.popup_whohasfocus.event_generate('<<Paste>>')
@@ -1418,14 +1387,14 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 			
 		except tkinter.TclError:
-			# No selection, continue to next bindtag 
+			# No selection, continue to next bindtag
 			return
 
 
 	def return_override(self, event):
 	
 		# Cursor indexes when pressed return:
-		line, row = map(int, self.contents.index(tkinter.INSERT).split('.'))			
+		line, row = map(int, self.contents.index(tkinter.INSERT).split('.'))
 		# is same as:
 		# line = int(self.contents.index(tkinter.INSERT).split('.')[0])
 		# row = int(self.contents.index(tkinter.INSERT).split('.')[1])
@@ -1449,7 +1418,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.edit_separator()
 			return "break"
 			
-		else:		
+		else:
 			for i in range(len(tmp)):
 				if tmp[i] != '\t':
 					break
@@ -1466,10 +1435,9 @@ class Editor(tkinter.Toplevel):
 		'''
 		self.scrollbar.set(*args)
 		
-		# Height of whole scrollbar in pixels:
 		h = self.text_widget_height
 		
-		# Relative position (tuple on two floats) of 
+		# Relative position (tuple on two floats) of
 		# slider-top (a[0]) and -bottom (a[1]) in scale 0-1, a[0] is smaller:
 		a = self.scrollbar.get()
 		
@@ -1486,12 +1454,10 @@ class Editor(tkinter.Toplevel):
 		d = SLIDER_MINSIZE/h - a[1] + a[0]
 		
 		if h*(a[1] - a[0]) < SLIDER_MINSIZE:
-			# Adding to one end only seems to fix jumping-effect,
-			# which moves text up if 'adding' to both ends 
-			
 			self.scrollbar.set(a[0], a[1]+d)
-			
+		
 		self.updateLineNumbers()
+		
 
 ########## Overrides End
 ########## Save and Load Begin
@@ -1504,7 +1470,7 @@ class Editor(tkinter.Toplevel):
 			if char in [' ', '\t']: indent_stop_index += 1
 			else: break
 			
-		if indent_stop_index == 0: 
+		if indent_stop_index == 0:
 			# remove trailing space
 			if not line.isspace():
 				line = line.rstrip() + '\n'
@@ -1521,7 +1487,7 @@ class Editor(tkinter.Toplevel):
 		
 		count = 0
 		for char in indent_string:
-			if char == '\t': 
+			if char == '\t':
 				count = 0
 				continue
 			if char == ' ': count += 1
@@ -1599,7 +1565,7 @@ class Editor(tkinter.Toplevel):
 		openfiles = [tab.filepath for tab in self.tabs]
 		
 		if filename in openfiles:
-			print('file %s is already open' % filename)
+			print(f'file: {filename} is already open')
 			self.bell()
 			self.entry.delete(0, tkinter.END)
 			
@@ -1626,13 +1592,13 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				self.contents.focus_set()
 				self.contents.see('1.0')
-				self.contents.mark_set('insert', '1.0')			
+				self.contents.mark_set('insert', '1.0')
 				self.entry.insert(0, filename)
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 		except (EnvironmentError, UnicodeDecodeError) as e:
 			print(e.__str__())
-			print('\n Could not open file %s' % filename)
+			print(f'\n Could not open file: {filename}')
 			self.entry.delete(0, tkinter.END)
 			
 			if self.tabs[self.tabindex].filepath != None:
@@ -1678,7 +1644,7 @@ class Editor(tkinter.Toplevel):
 							tab.oldcontents = tab.contents
 					except EnvironmentError as e:
 						print(e.__str__())
-						print('\n Could not save file %s' % tab.filepath)
+						print(f'\n Could not save file: {tab.filepath}')
 				else:
 					tab.position = '1.0'
 					
@@ -1716,7 +1682,7 @@ class Editor(tkinter.Toplevel):
 		
 			if fpath_in_entry in openfiles:
 				self.bell()
-				print('\nFile %s already opened' % fpath_in_entry)
+				print(f'\nFile: {fpath_in_entry} already opened')
 				self.entry.delete(0, tkinter.END)
 			
 				if self.tabs[self.tabindex].filepath != None:
@@ -1725,7 +1691,7 @@ class Editor(tkinter.Toplevel):
 				
 			if fpath_in_entry.exists():
 				self.bell()
-				print('\nCan not overwrite file: %s' % fpath_in_entry)
+				print(f'\nCan not overwrite file: {fpath_in_entry}')
 				self.entry.delete(0, tkinter.END)
 			
 				if self.tabs[self.tabindex].filepath != None:
@@ -1739,9 +1705,9 @@ class Editor(tkinter.Toplevel):
 					with open(fpath_in_entry, 'w', encoding='utf-8') as f:
 						self.tabs[self.tabindex].filepath = fpath_in_entry
 						self.tabs[self.tabindex].type = 'normal'
-				except EnvironmentError as e: 
+				except EnvironmentError as e:
 					print(e.__str__())
-					print('\n Could not save file %s' % fpath_in_entry)
+					print('\n Could not save file: {fpath_in_entry}')
 					return
 				
 				if self.tabs[self.tabindex].filepath != None:
@@ -1753,9 +1719,9 @@ class Editor(tkinter.Toplevel):
 				try:
 					with open(fpath_in_entry, 'w', encoding='utf-8') as f:
 						pass
-				except EnvironmentError as e: 
+				except EnvironmentError as e:
 					print(e.__str__())
-					print('\n Could not save file %s' % fpath_in_entry)
+					print(f'\n Could not save file: {fpath_in_entry}')
 					self.entry.delete(0, tkinter.END)
 			
 					if self.tabs[self.tabindex].filepath != None:
@@ -1801,7 +1767,7 @@ class Editor(tkinter.Toplevel):
 					
 			except EnvironmentError as e:
 				print(e.__str__())
-				print('\n Could not save file %s' % self.tabs[self.tabindex].filepath)
+				print(f'\n Could not save file: {self.tabs[self.tabindex].filepath}')
 				return
 	
 ########## Save and Load End
@@ -2255,6 +2221,19 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Escape>", self.stop_search)
 		self.title('Search:')
 		self.entry.delete(0, tkinter.END)
+		
+		# autofill from clipboard
+		try:
+			tmp = self.contents.clipboard_get()
+			if 80 > len(tmp) > 0:
+				self.entry.insert(tkinter.END, tmp)
+				self.entry.select_to(tkinter.END)
+				self.entry.icursor(tkinter.END)
+				
+		# empty clipboard
+		except tkinter.TclError:
+			pass
+			
 		self.entry.focus_set()
 		return "break"
 			
@@ -2274,6 +2253,18 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Escape>", self.stop_search)
 		self.title('Replace this:')
 		self.entry.delete(0, tkinter.END)
+		
+		# autofill from clipboard
+		try:
+			tmp = self.contents.clipboard_get()
+			if 80 > len(tmp) > 0:
+				self.entry.insert(tkinter.END, tmp)
+				self.entry.select_to(tkinter.END)
+				self.entry.icursor(tkinter.END)
+	
+		except tkinter.TclError:
+			pass
+				
 		self.entry.focus_set()
 		return "break"
 
@@ -2297,11 +2288,11 @@ class Editor(tkinter.Toplevel):
 		
 		# Next while-loop tags matches again, this is the main reason why
 		# there is a problem if new_word contains old_word:it will be rematched.
-		# This is why when there is a match, we move 
+		# This is why when there is a match, we move
 		# replace_overlap_index characters back and check if there already is
 		# new_word. If so, it means there have already happened a replacement
 		# and therefore search pos must be recalculated over this manifestation
-		# of new_word. 
+		# of new_word.
 		 
 		while True:
 			pos = self.contents.search(self.old_word, pos, tkinter.END)

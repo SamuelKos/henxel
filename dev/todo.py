@@ -8,17 +8,21 @@
 
 # tabify rstrip  ok ###################
 
+# search control-f bind from self to contents, reason default show cursor ok
+
+# paste see cursor ok ############
+
+# search replace insert from clipboard ok ############
 
 
-# <<'WidgetViewSync'>>
-# insert delete screen geometry change, not yview
+# <<'WidgetViewSync'>>   								ok ###############################
+# insert delete screen geometry change, not scrolling
+# fixed sbset, updatelinenums from event loop to bind to this event, also sbset do update linenums
+
+# print() % to fstring ok ###############################
 
 
-# print() % to fstring
-
-
-
-# paste see()
+# all string to fstring ~151 cases
 
 
 
