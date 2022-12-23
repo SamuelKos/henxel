@@ -15,12 +15,12 @@
 * Some renaming etc. in linenumbers.
 * Linenumber update is now handled by built-in event: <<'WidgetViewSync'>>  which is great news:
 	got rid of quite complex self-handled event-loop. It was working alright but this approach is simpler
-	and more responsive. Im keeping copy of version 0.0.5 so it can be used as a reference.
+	and more responsive. Im keeping copy of version 0.0.5 in dev/oldversions so it can be used as a reference. Install it with pip install oldversion.tar.gz.
 	About event <<'WidgetViewSync'>> :
 	It is generated when doing: insert, delete or screen geometry change. Also on almost all font-changes but
 	not when scrolling, so this is the reason why update_linenums is called also from sbset_override.
 	This really made a difference. It is now child-play to do things like toggle-linenums etc.
-* Started replacing usage of % in strings with f-strings. Now all calls to print() are %-free. Only ~150 replacements left.
+* Started replacing usage of % in strings with f-strings. Now all calls to print() are %-free. Still ~150 replacements left.
 
 
 # 0.0.5
