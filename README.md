@@ -23,7 +23,7 @@ GUI-editor for Python development. Tested to work with Debian Bullseye
 * Syntax highlighting
 
 # Prerequisites
-Python modules required that are sometimes not installed with OS: tkinter. Check: 
+Python modules required that are sometimes not installed with OS: tkinter. Check:
 
 ```console
 foo@bar:~$ python3 -c "import tkinter"
@@ -97,15 +97,15 @@ foo@bar:~/bin$ chmod u+x mkvenv
 
 Then make folder for your new project and install venv there and activate it, and show currently installed python-packages in your new virtual environment, and lastly deactivate (quit) environment:
 ```console
-foo@bar:~$ mkdir myproject 
-foo@bar:~$ cd myproject 
-foo@bar:~/myproject$ mkvenv env 
+foo@bar:~$ mkdir myproject
+foo@bar:~$ cd myproject
+foo@bar:~/myproject$ mkvenv env
 -------------------------------
 foo@bar:~/myproject$ source env/bin/activate
 (env) foo@bar:~/myproject$ pip list
 -----------------------------------
 (env) foo@bar:~/myproject$ deactivate
-foo@bar:~/myproject$ 
+foo@bar:~/myproject$
 ```
 
 To remove venv just remove the env-directory and you can start from clean desk making new one with mkvenv later.

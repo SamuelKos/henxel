@@ -36,7 +36,6 @@ import tkinter.filedialog
 import tkinter.font
 import tkinter
 import pathlib
-import random
 import json
 
 import importlib.resources
@@ -131,7 +130,7 @@ class Editor(tkinter.Toplevel):
 		self.to_be_closed = list()
 		self.quitting = False
 		
-		self.lineNumbers = ''
+		self.ln_string = ''
 		self.oldconf = None
 		
 		if sys.prefix != sys.base_prefix:
@@ -160,9 +159,8 @@ class Editor(tkinter.Toplevel):
 		self.lastdir = None
 		self.state = 'normal'
 		
-		self.font = tkinter.font.Font(size=12)
-		self.menufont = tkinter.font.Font(size=10)
-		self.randfont = False
+		self.font = tkinter.font.Font(family='TkDefaulFont', size=12)
+		self.menufont = tkinter.font.Font(family='TkDefaulFont', size=10)
 		
 		# IMPORTANT if binding to 'root':
 		# https://stackoverflow.com/questions/54185434/python-tkinter-override-default-ctrl-h-binding
@@ -229,12 +227,12 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.grid(row=0, column = 2, sticky='nsew')
 		self.btn_save.grid(row=0, column = 3, columnspan=2, sticky='nsew')
 		
-		self.ln = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4)
-		self.ln.grid(row=1, column = 0, sticky='nsw')
-		self.ln.tag_config('justright', justify=tkinter.RIGHT)
+		self.ln_widget = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4)
+		self.ln_widget.grid(row=1, column = 0, sticky='nsw')
+		self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
 		
 		# disable copying linenumbers:
-		self.ln.bind('<Control-c>', self.no_copy_ln)
+		self.ln_widget.bind('<Control-c>', self.no_copy_ln)
 		
 		
 		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True,
@@ -247,11 +245,11 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar.grid(row=1,column=4, sticky='nse')
 		
 		
-		# Needed in updateLineNumbers(), there is more info.
+		# Needed in update_linenums(), there is more info.
 		self.update_idletasks()
 		# if self.y_extra_offset > 0, it needs attention
 		self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
-		# Needed in updateLineNumbers() and sbset_override()
+		# Needed in update_linenums() and sbset_override()
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
 		
@@ -316,7 +314,7 @@ class Editor(tkinter.Toplevel):
 			self.load_config(data)
 			
 			# Hide selection in linenumbers
-			self.ln.config( selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
+			self.ln_widget.config( selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
 			
 			
 		# if no conf:
@@ -335,23 +333,17 @@ class Editor(tkinter.Toplevel):
 			
 			# Set Font Begin ##################################################
 			fontname = None
-			self.randfont = False
 						
 			fontfamilies = [f for f in tkinter.font.families() if f not in BADFONTS]
-			s = set(fontfamilies)
-			fontfamilies = [f for f in s]
-		
-			random.shuffle(fontfamilies)
 			
-			for font in GOODFONTS:
-				if font in fontfamilies:
-					fontname = font
-					break
-			
-			if fontname == None:
-				fontname = fontfamilies[0]
-				self.randfont = True
-			
+##			for font in GOODFONTS:
+##				if font in fontfamilies:
+##					fontname = font
+##					break
+					
+			if not fontname:
+				fontname = 'TkDefaulFont'
+
 			# Initialize rest of configurables
 			self.font.config(family=fontname, size=12)
 			self.menufont.config(family=fontname, size=10)
@@ -374,10 +366,8 @@ class Editor(tkinter.Toplevel):
 			
 			self.btn_git.config(font=self.menufont)
 			
-			self.ln.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled')
+			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled')
 
-		if self.randfont == True:
-			print(f'''WARNING: RANDOM FONT NAMED "{self.font['family'].upper()}" IN USE. Select a better font with: ctrl-p''')
 		
 		self.update_title()
 		
@@ -392,11 +382,11 @@ class Editor(tkinter.Toplevel):
 			so that is good to know because I yet have not seen that TkWorldChange -event.
 		'''
 		
-		# More info in updateLineNumbers()
+		# More info in update_linenums()
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
 		
-		self.updateLineNumbers()
+		self.update_linenums()
 
 
 	def update_title(self, event=None):
@@ -430,12 +420,12 @@ class Editor(tkinter.Toplevel):
 
 	def no_copy_ln(self, event=None):
 		# This is curiosity, return 'break' does the thing
-		self.ln.selection_clear()
+		self.ln_widget.selection_clear()
 		
 		return 'break'
 		
 		
-	def getLineNumbers(self):
+	def get_linenums(self):
 
 		x = 0
 		line = '0'
@@ -473,14 +463,15 @@ class Editor(tkinter.Toplevel):
 		return ln[:-1]
 
 	
-	def updateLineNumbers(self):
+	def update_linenums(self):
 
-		# self.ln is linenumber-widget, ln is string which holds the linenumbers in self.ln
-		tt = self.ln
-		ln = self.getLineNumbers()
+		# self.ln_widget is linenumber-widget,
+		# self.ln_string is string which holds the linenumbers in self.ln_widget
+		tt = self.ln_widget
+		ln = self.get_linenums()
 		
-		if self.lineNumbers != ln:
-			self.lineNumbers = ln
+		if self.ln_string != ln:
+			self.ln_string = ln
 			
 			# 1 - 3 : adjust linenumber-lines with text-lines
 			
@@ -503,7 +494,7 @@ class Editor(tkinter.Toplevel):
 				
 			tt.config(state='normal')
 			tt.delete('1.0', tkinter.END)
-			tt.insert('1.0', self.lineNumbers)
+			tt.insert('1.0', self.ln_string)
 			tt.tag_add('justright', '1.0', tkinter.END)
 			
 			# 3: Then scroll lineswidget same amount to fix offset
@@ -765,23 +756,17 @@ class Editor(tkinter.Toplevel):
 		# Set Font Begin ##################################################
 		if not fonts_exists:
 			fontname = None
-			self.randfont = False
 			
 			fontfamilies = [f for f in tkinter.font.families() if f not in BADFONTS]
-			s = set(fontfamilies)
-			fontfamilies = [f for f in s]
-		
-			random.shuffle(fontfamilies)
 			
 			for font in GOODFONTS:
 				if font in fontfamilies:
 					fontname = font
 					break
 			
-			if fontname == None:
-				fontname = fontfamilies[0]
-				self.randfont = True
-			
+			if not fontname:
+				fontname = 'TkDefaulFont'
+				
 			dictionary['font']['family']=fontname
 			dictionary['menufont']['family']=fontname
 			
@@ -844,7 +829,7 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar.config(width=self.scrollbar_width)
 		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
 		
-		self.ln.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor)
+		self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor)
 			
 		self.entry.config(font=self.menufont)
 		self.btn_open.config(font=self.menufont)
@@ -926,7 +911,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
 			insertbackground=self.fgcolor)
 			
-		self.ln.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
+		self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
 		
 		return 'break'
 		
@@ -997,7 +982,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
 			insertbackground=self.fgcolor)
 			
-			self.ln.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
+			self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
 			
 			
 	def chcolor(self, args, event=None):
@@ -1036,7 +1021,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
 				insertbackground=self.fgcolor)
 				
-			self.ln.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
+			self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
 		
 		except tkinter.TclError as e:
 			# because if closed editor, this survives
@@ -1456,7 +1441,7 @@ class Editor(tkinter.Toplevel):
 		if h*(a[1] - a[0]) < SLIDER_MINSIZE:
 			self.scrollbar.set(a[0], a[1]+d)
 		
-		self.updateLineNumbers()
+		self.update_linenums()
 		
 
 ########## Overrides End

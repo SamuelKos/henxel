@@ -6,24 +6,9 @@
 
 
 
-# tabify rstrip  ok ###################
+# all string to fstring ~150 cases
 
-# search control-f bind from self to contents, reason default show cursor ok
-
-# paste see cursor ok ############
-
-# search replace insert from clipboard ok ############
-
-
-# <<'WidgetViewSync'>>   								ok ###############################
-# insert delete screen geometry change, not scrolling
-# fixed sbset, updatelinenums from event loop to bind to this event, also sbset do update linenums
-
-# print() % to fstring ok ###############################
-
-
-# all string to fstring ~151 cases
-
+# toggle linenums, borders?
 
 
 
@@ -50,7 +35,9 @@ import tkinter.font
 # import tkinter
 # import tkinter.font
 # root = tkinter.Tk()
-# f = tkinter.font.Font(root, family='TkDefaulFont', size=12)
+# t = tkinter.Text(root)
+# t.pack()
+# f = tkinter.font.Font(t, family='TkDefaulFont', size=12)
 # dpi = f.metrics().get('linespace')*5
 
 
