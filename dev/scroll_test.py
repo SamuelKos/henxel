@@ -5,7 +5,7 @@
 
 # Issue
 # Try scrolling down with touchpad and wait it stop and repeat.
-# Notice that after couple of scrolls, it wont scroll anymore 
+# Notice that after couple of scrolls, it wont scroll anymore
 # without tapping the pad first.
 
 # Also im getting to like the default scroll behaviour

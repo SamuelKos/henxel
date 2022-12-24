@@ -31,7 +31,6 @@
 ############ Imports Begin
 
 # from standard library
-import tkinter.scrolledtext
 import tkinter.filedialog
 import tkinter.font
 import tkinter
@@ -167,6 +166,8 @@ class Editor(tkinter.Toplevel):
 		# https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/binding-levels.html
 		# Still problems with this, so changed back to default bindtags.
 		# If you can, avoid binding to root.
+		
+		self.unbinds = list()
 		
 		self.bind( "<Escape>", self.do_nothing )
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
@@ -336,10 +337,10 @@ class Editor(tkinter.Toplevel):
 						
 			fontfamilies = [f for f in tkinter.font.families() if f not in BADFONTS]
 			
-##			for font in GOODFONTS:
-##				if font in fontfamilies:
-##					fontname = font
-##					break
+			for font in GOODFONTS:
+				if font in fontfamilies:
+					fontname = font
+					break
 					
 			if not fontname:
 				fontname = 'TkDefaulFont'
@@ -399,6 +400,13 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 		
 	
+	def unbind_all(self):
+	
+		while len(self.unbinds) > 0:
+			event_string, bind_id = self.unbinds.pop()
+			self.contents.unbind(event_string, bind_id)
+		
+	
 	def quit_me(self):
 		# affects load():
 		self.quitting = True
@@ -413,8 +421,13 @@ class Editor(tkinter.Toplevel):
 			widget.destroy()
 		
 		self.quit()
-		self.destroy()
 		
+		try:
+			self.destroy()
+		
+		# unbinds leave something:
+		except tkinter.TclError:
+			pass
 		
 ############## Linenumbers Begin
 
@@ -753,7 +766,7 @@ class Editor(tkinter.Toplevel):
 		self.bgcolor = dictionary['bgcolor']
 		self.curcolor = dictionary['curcolor']
 		
-		# Set Font Begin ##################################################
+		# Set Font Begin ##############################
 		if not fonts_exists:
 			fontname = None
 			
@@ -2155,6 +2168,9 @@ class Editor(tkinter.Toplevel):
 		if self.search_matches > 0:
 			self.contents.config(state='disabled')
 			self.bind("<Button-3>", self.do_nothing)
+			bind_id = self.bind("<Button-1>", self.stop_search)
+			self.unbinds.append( ("<Button-1>" , bind_id) )
+			
 			
 			if self.state == 'search':
 				self.title('Found: %s matches' % str(self.search_matches))
@@ -2192,6 +2208,16 @@ class Editor(tkinter.Toplevel):
 		self.update_title()
 		self.state = 'normal'
 		self.contents.focus_set()
+		
+		# unbind button-1:
+		if event.num == 1:
+			self.unbind_all()
+			
+			# it seems this is unnecessary:
+			#click_idx = f'@{event.x},{event.y}'
+			#idx = self.contents.index(click_idx)
+			#self.contents.mark_set('insert', idx)
+		
 
 
 	def search(self, event=None):

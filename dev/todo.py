@@ -4,13 +4,30 @@
 # >>> import todo
 # >>> e=todo.Ed()
 
+#unbind:
+#tkinter.TclError: can't delete Tcl command
+
+# search click to escape put cursor
+
+# inspect
+
+# default Text bindings, html-address of text and event
+
+
+# tabify lastline no newline 	checked, was already ok ######################
+
+# fix goodfonts comment		ok ##################
+
+# removed tkinter.scrolledtext module as unused 	ok ######################
+
+
 
 
 # all string to fstring ~150 cases
 
 # toggle linenums, borders?
 
-
+# remove filedialog own class?
 
 
 
