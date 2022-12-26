@@ -42,55 +42,7 @@ Consider creating virtual environment for your python-projects and installing py
 foo@bar:~$ sudo apt install python3-venv
 ```
 
-Then save this script to file named 'mkvenv' to some place nice like bin-directory in your home-directory:
-```console
-#!/usr/bin/env bash
-# Create a new virtual environment for python.
-# Usage: mkvenv [name_of_myvenv]
-# If no argument is given this  defaults to creating virtual environment
-# named "venv"
-
-
-if [[ "$#" -gt 1 ]]; then
- echo "mkvenv: Illegal number of parameters"
- exit 1
-elif [[ "$#" -eq 0 ]]; then
- newdir="venv"
-else
- var="$1"
- isdash=${var::1}
- if  [[ $isdash == "-" ]]; then
-  echo "Usage: mkvenv [name_of_myvenv]"
-  echo "If no argument is given this  defaults to creating virtual environment"
-  echo 'named "venv"'
-  exit 1
- else
-  newdir=$1
- fi
-fi
-
-# First: update pip and setuptools and then install wheel
-python3 -m venv ${newdir}		&& \
-
-. ${newdir}/bin/activate		&& \
-
-pip install -U pip			&& \
-pip install -U setuptools		&& \
-pip install wheel			&& \
-echo ""					&& \
-echo "venv installed succesfully"	&& \
-echo ""					&& \
-
-# Second: install normal requirements
-if [[ -e requirements.txt ]]; then
- pip install -r requirements.txt	&& \
- echo ""				&& \
- echo "requirements installed succesfully"
-
-fi
-```
-
-Then make it executable:
+There is a script named 'mkvenv' in /util. Copy it to some place nice like bin-directory in your home-directory and make it executable if it is not already:
 ```console
 foo@bar:~/bin$ chmod u+x mkvenv
 ```
@@ -108,8 +60,7 @@ foo@bar:~/myproject$ source env/bin/activate
 foo@bar:~/myproject$
 ```
 
-To remove venv just remove the env-directory and you can start from clean desk making new one with mkvenv later.
-* Optional end
+To remove venv just remove the env-directory and you can start from clean desk making new one with mkvenv later. Optional about virtual environment ends here.
 
 # Installing
 ```console
@@ -150,6 +101,38 @@ If you currently have no internet but have previously installed virtual environm
 ```
 
 Files are in src/henxel/
+
+
+# More on virtual environments:
+For you who are packaging Python-project and you need side-by-side live-comparison of two different version,
+most propably version you are currently developing and some earlier version. Or for anyone who is interested doing so, not many I think.
+
+When creating development-venv for the project, make another one with same deps for comparison:
+
+```console
+foo@bar:~/myproject/$ mkvenv env
+foo@bar:~/myproject/$ mkvenv ref_env
+```
+
+Then install your package in env, in editable mode of course, activate it and make some change to your project.
+Then in other shell-window, activate ref_env and install your earlier version of the project to it from your
+archive; when you build your package, they are put to /dist. So assuming your earlier version of myproject
+was 0.0.3 and that you have not deleted it from your dist-folder:
+
+```console
+(ref_env) foo@bar:~/myproject/$ pip install dist/myproject-0.0.3.tar.gz
+```
+
+
+Or if you have saved your earlier version in the repository:
+
+```console
+(ref_env) foo@bar:~/myproject/$ pip install 'myproject==0.0.3'
+```
+
+
+Now you are ready to launch both versions of your project and do side-by-side comparison. If you
+are doing something with GUI this is what you want.
 
 
 # More resources

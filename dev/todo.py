@@ -4,21 +4,6 @@
 # >>> import todo
 # >>> e=todo.Ed()
 
-#unbind:
-#tkinter.TclError: can't delete Tcl command
-
-# search click to escape put cursor
-
-# inspect
-
-# default Text bindings, html-address of text and event
-
-
-# tabify lastline no newline 	checked, was already ok ######################
-
-# fix goodfonts comment		ok ##################
-
-# removed tkinter.scrolledtext module as unused 	ok ######################
 
 
 
@@ -27,7 +12,7 @@
 
 # toggle linenums, borders?
 
-# remove filedialog own class?
+# make subclass from filedialog?
 
 
 
@@ -37,7 +22,7 @@ import tkinter.font
 
 
 
-########################## Maybe interesting:
+########################## Maybe interesting Begin:
 
 ## w.wait_variable(v)
 ## Waits until the value of variable v is set, even if the value does not change. This method enters a
@@ -46,6 +31,18 @@ import tkinter.font
 ## w.wait_visibility(w)
 ## Wait until widget w (typically a Toplevel) is visible.
 ##
+
+
+############# About screen dimensions Begin
+
+# This is correct:
+# .winfo_screenheight()
+# .winfo_screenwidth()
+
+# This is quite near the truth, tested with scaling 200% and 100%
+# It stayed the same:
+# .winfo_screenmmwidth()//2
+# .winfo_screenmmheight()//2
 
 # check screen dpi:
 #
@@ -56,6 +53,8 @@ import tkinter.font
 # t.pack()
 # f = tkinter.font.Font(t, family='TkDefaulFont', size=12)
 # dpi = f.metrics().get('linespace')*5
+
+############### About screen dimensions End
 
 
 # builtin stiples have too small and dense dots for hdpi:

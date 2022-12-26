@@ -1,6 +1,13 @@
 # Changelog
-* To version: 	0.0.6
+* To version: 	0.0.7
 * From version:	0.0.3
+
+# 0.0.7
+* Fix for: goodfonts were left commented and removed badfonts as unused.
+* Removed tkinter.scrolledtext -module as unused.
+* Added info how to inspect objects in help. Was thinking implementing, but I changed my mind.
+* Added a section about venvs for more advanced programmers in README.
+
 
 # 0.0.6
 * Trailing whitespace of non-empty lines is now stripped away in tabify() when saving files to disk.

@@ -95,7 +95,6 @@ TAB_WIDTH = 4
 TAB_WIDTH_CHAR = ' '
 SLIDER_MINSIZE = 66
 
-# This is list because order matters, best ones at the start etc..
 GOODFONTS = [
 			'Noto Mono',
 			'Bitstream Vera Sans Mono',
@@ -104,17 +103,6 @@ GOODFONTS = [
 			'Inconsolata',
 			'Courier 10 Pitch'
 			]
-		
-BADFONTS = frozenset([
-					'Standard Symbols PS',
-					'OpenSymbol',
-					'Noto Color Emoji',
-					'FontAwesome',
-					'Dingbats',
-					'Droid Sans Fallback',
-					'D050000L'
-					])
-					
 			
 ############ Constants End
 			
@@ -166,8 +154,6 @@ class Editor(tkinter.Toplevel):
 		# https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/binding-levels.html
 		# Still problems with this, so changed back to default bindtags.
 		# If you can, avoid binding to root.
-		
-		self.unbinds = list()
 		
 		self.bind( "<Escape>", self.do_nothing )
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
@@ -275,7 +261,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
 	
 		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
-
+		
 		
 		# Needed in leave() taglink in: Run file Related
 		self.name_of_cursor_in_text_widget = self.contents['cursor']
@@ -335,7 +321,7 @@ class Editor(tkinter.Toplevel):
 			# Set Font Begin ##################################################
 			fontname = None
 						
-			fontfamilies = [f for f in tkinter.font.families() if f not in BADFONTS]
+			fontfamilies = [f for f in tkinter.font.families()]
 			
 			for font in GOODFONTS:
 				if font in fontfamilies:
@@ -393,19 +379,12 @@ class Editor(tkinter.Toplevel):
 	def update_title(self, event=None):
 		tail = len(self.tabs) - self.tabindex - 1
 		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
-		
-		
+			
+	
 	def do_nothing(self, event=None):
 		self.bell()
 		return 'break'
-		
 	
-	def unbind_all(self):
-	
-		while len(self.unbinds) > 0:
-			event_string, bind_id = self.unbinds.pop()
-			self.contents.unbind(event_string, bind_id)
-		
 	
 	def quit_me(self):
 		# affects load():
@@ -421,13 +400,8 @@ class Editor(tkinter.Toplevel):
 			widget.destroy()
 		
 		self.quit()
+		self.destroy()
 		
-		try:
-			self.destroy()
-		
-		# unbinds leave something:
-		except tkinter.TclError:
-			pass
 		
 ############## Linenumbers Begin
 
@@ -709,7 +683,7 @@ class Editor(tkinter.Toplevel):
 	def fonts_exists(self, dictionary):
 		
 		res = True
-		fontfamilies = [f for f in tkinter.font.families() if f not in BADFONTS]
+		fontfamilies = [f for f in tkinter.font.families()]
 		
 		font = dictionary['font']['family']
 		
@@ -770,7 +744,7 @@ class Editor(tkinter.Toplevel):
 		if not fonts_exists:
 			fontname = None
 			
-			fontfamilies = [f for f in tkinter.font.families() if f not in BADFONTS]
+			fontfamilies = [f for f in tkinter.font.families()]
 			
 			for font in GOODFONTS:
 				if font in fontfamilies:
@@ -2168,9 +2142,6 @@ class Editor(tkinter.Toplevel):
 		if self.search_matches > 0:
 			self.contents.config(state='disabled')
 			self.bind("<Button-3>", self.do_nothing)
-			bind_id = self.bind("<Button-1>", self.stop_search)
-			self.unbinds.append( ("<Button-1>" , bind_id) )
-			
 			
 			if self.state == 'search':
 				self.title('Found: %s matches' % str(self.search_matches))
@@ -2209,16 +2180,6 @@ class Editor(tkinter.Toplevel):
 		self.state = 'normal'
 		self.contents.focus_set()
 		
-		# unbind button-1:
-		if event.num == 1:
-			self.unbind_all()
-			
-			# it seems this is unnecessary:
-			#click_idx = f'@{event.x},{event.y}'
-			#idx = self.contents.index(click_idx)
-			#self.contents.mark_set('insert', idx)
-		
-
 
 	def search(self, event=None):
 		if self.state != 'normal':

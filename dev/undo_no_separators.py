@@ -1,8 +1,8 @@
 # to run: python3 name_of_this_file.py
 
 
-# If you find hard to understand this, try to think why we want undo
-# in the first place, then why redo.
+# If you find hard to understand this, try to think why we want undo-stack
+# in the first place, then why redo-stack.
 
 
 # Demonstrates self-made undo-mechanism as simply as possible.
@@ -15,15 +15,15 @@
 ## init: created undo and redo stacks
 ##
 ## 0: if action(event) in [list of interesting actions like insert and delete]:
-##	
+##
 ##		1: build undo-action for the action
 ##
 ##		2: clear redo-stack, this is important
-##	
+##
 ##		3: put(append) tuple((undo_action, original_action)) to undo_stack
-##	
-##	
-##	
+##
+##
+##
 ## Then make undo and redo -functions and bind to them like in below.
 
 
