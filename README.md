@@ -104,7 +104,7 @@ Files are in src/henxel/
 
 
 # More on virtual environments:
-For you who are packaging Python-project and you need side-by-side live-comparison of two different version,
+For you who are packaging Python-project and you need side-by-side live-comparison of two different versions,
 most propably version you are currently developing and some earlier version. Or for anyone who is interested doing so, not many I think.
 
 When creating development-venv for the project, make another one with same deps for comparison:
