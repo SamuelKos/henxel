@@ -39,6 +39,7 @@
 				cursor will remain where you left it.
 				Press arrow-key to refresh view back to cursor.
 		
+		Default bindings: https://tcl.tk/man/tcl8.6/TkCmd/text.htm#M192
 	
 	When is my file Saved to Disk?
 	
