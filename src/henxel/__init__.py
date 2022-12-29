@@ -27,6 +27,8 @@
 ############ Stucture briefing End
 ############ TODO Begin
 
+# all string to fstring ~150 cases
+
 ############ TODO End
 ############ Imports Begin
 

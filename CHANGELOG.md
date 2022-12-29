@@ -1,6 +1,15 @@
 # Changelog
-* To version: 	0.0.7
+* To version: 	0.0.8
 * From version:	0.0.3
+
+# 0.0.8
+* Reorder grid-related stuff in init to make instantiation of editor feel more instant.
+* You can now toggle linenumbers with Alt-l (as lemon). This adds a new option to conf meaning this version is not compatible with earlier ones.
+* Adjusted colors and borders for filedialog.Filedialog used in load().
+* Made small fix to no_copy_ln(). If encounter problem with copying from editor to shell or console, try
+first to copy something from shell or console to editor and retry. I have not had this issue for some time now.
+* Added inspect-option to popup-menu, and updated help-file for how to use it.
+
 
 # 0.0.7
 * Fix for: goodfonts were left commented and removed badfonts as unused.

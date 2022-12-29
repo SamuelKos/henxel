@@ -7,20 +7,8 @@
 
 
 
-# reorder init grid toggle ln conf		ok ##################
-
-# filedialog fix colors etc. 	ok #############
-
-# fix no_copy_ln() so clipboard works again between console and editor 	ok ###############
-
-
-
-
 
 # all string to fstring ~150 cases
-
-
-
 
 
 
