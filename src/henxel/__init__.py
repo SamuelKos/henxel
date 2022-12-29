@@ -118,6 +118,7 @@ class Editor(tkinter.Toplevel):
 		self.quitting = False
 		
 		self.ln_string = ''
+		self.want_ln = True
 		self.oldconf = None
 		
 		if sys.prefix != sys.base_prefix:
@@ -191,36 +192,50 @@ class Editor(tkinter.Toplevel):
 		if no_icon: print('Could not load icon-file.')
 			
 		
-		# Layout Begin:
-		####################################################
-		self.rowconfigure(1, weight=1)
-		self.columnconfigure(1, weight=1)
-		
+		# Initiate widgets
+		####################################
 		self.btn_git=tkinter.Button(self)
-		self.btn_git.grid(row=0, column = 0, sticky='nsew')
 		
 		if self.branch:
 			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0, padx=0, text=self.branch[:5], state='disabled')
 		else:
 			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0, padx=0, bitmap='info', state='disabled')
 		
-		
 		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, bg='#d9d9d9')
 		self.entry.bind("<Return>", self.load)
-		self.entry.grid(row=0, column = 1, sticky='nsew')
 		
 		self.btn_open=tkinter.Button(self, text='Open', bd=4, highlightthickness=0, command=self.load)
 		self.btn_save=tkinter.Button(self, text='Save', bd=4, highlightthickness=0, command=self.save)
-		self.btn_open.grid(row=0, column = 2, sticky='nsew')
-		self.btn_save.grid(row=0, column = 3, columnspan=2, sticky='nsew')
 		
+		# Get conf:
+		string_representation = None
+		data = None
+		
+		# Try to apply saved configurations:
+		if self.env:
+			p = pathlib.Path(self.env) / CONFPATH
+		
+		if self.env and p.exists():
+			try:
+				with open(p, 'r', encoding='utf-8') as f:
+					string_representation = f.read()
+					data = json.loads(string_representation)
+						
+			except EnvironmentError as e:
+				print(e.__str__())	# __str__() is for user (print to screen)
+				#print(e.__repr__())	# __repr__() is for developer (log to file)
+				print(f'\n Could not load existing configuration file: {p}')
+			
+		if data:
+			self.oldconf = string_representation
+			self.load_config(data)
+			
+			
 		self.ln_widget = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4)
-		self.ln_widget.grid(row=1, column = 0, sticky='nsw')
 		self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
 		
 		# disable copying linenumbers:
 		self.ln_widget.bind('<Control-c>', self.no_copy_ln)
-		
 		
 		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True,
 					tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
@@ -228,10 +243,9 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0,
 					bd=0, command = self.contents.yview)
 
-		self.contents.grid(row=1, column=1, columnspan=3, sticky='nswe')
-		self.scrollbar.grid(row=1,column=4, sticky='nse')
-		
-		
+
+		# Widgets are initiated, now more configuration
+		################################################
 		# Needed in update_linenums(), there is more info.
 		self.update_idletasks()
 		# if self.y_extra_offset > 0, it needs attention
@@ -239,13 +253,14 @@ class Editor(tkinter.Toplevel):
 		# Needed in update_linenums() and sbset_override()
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
-		
-		
+				
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 		
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('found', background='lightgreen')
 		
+		
+		self.contents.bind( "<Alt-l>", self.toggle_ln)
 		self.contents.bind( "<Control-f>", self.search)
 		self.contents.bind( "<Control-n>", self.new_tab)
 		self.contents.bind( "<Return>", self.return_override)
@@ -273,37 +288,19 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="       paste", command=self.paste)
 		self.popup.add_command(label="##   comment", command=self.comment)
 		self.popup.add_command(label="   uncomment", command=self.uncomment)
+		self.popup.add_command(label="     inspect", command=self.insert_inspected)
 		self.popup.add_command(label="      errors", command=self.show_errors)
 		self.popup.add_command(label="         run", command=self.run)
 		self.popup.add_command(label="        help", command=self.help)
 		
 		
-		string_representation = None
-		data = None
-		
-		# Try to apply saved configurations:
-		if self.env:
-			p = pathlib.Path(self.env) / CONFPATH
-		
-		if self.env and p.exists():
-			try:
-				with open(p, 'r', encoding='utf-8') as f:
-					string_representation = f.read()
-					data = json.loads(string_representation)
-						
-			except EnvironmentError as e:
-				print(e.__str__())	# __str__() is for user (print to screen)
-				#print(e.__repr__())	# __repr__() is for developer (log to file)
-				print(f'\n Could not load existing configuration file: {p}')
-			
 		if data:
-			self.oldconf = string_representation
-			self.load_config(data)
+			self.apply_config()
 			
 			# Hide selection in linenumbers
 			self.ln_widget.config( selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
 			
-			
+		
 		# if no conf:
 		if self.tabindex == None:
 		
@@ -355,10 +352,172 @@ class Editor(tkinter.Toplevel):
 			
 			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled')
 
+		# Widgets are configured
+		###############################
+		# Layout Begin
+		################################
+		self.rowconfigure(1, weight=1)
+		self.columnconfigure(1, weight=1)
 		
+		# It seems that widget is shown on screen when doing grid_configure
+		self.btn_git.grid_configure(row=0, column = 0, sticky='nsew')
+		self.entry.grid_configure(row=0, column = 1, sticky='nsew')
+		self.btn_open.grid_configure(row=0, column = 2, sticky='nsew')
+		self.btn_save.grid_configure(row=0, column = 3, columnspan=2, sticky='nsew')
+		
+		self.ln_widget.grid_configure(row=1, column = 0, sticky='nsw')
+			
+		# If want linenumbers:
+		if self.want_ln:
+			self.contents.grid_configure(row=1, column=1, columnspan=3, sticky='nswe')
+		
+		else:
+			self.contents.grid_configure(row=1, column=0, columnspan=4, sticky='nswe')
+			self.ln_widget.grid_remove()
+			
+		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
+		
+		
+		self.update_idletasks()
+		self.viewsync()
 		self.update_title()
 		
 		############################# init End ######################
+		
+	
+	def update_title(self, event=None):
+		tail = len(self.tabs) - self.tabindex - 1
+		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
+			
+				
+	def do_nothing(self, event=None):
+		self.bell()
+		return 'break'
+	
+	
+	def insert_inspected(self):
+		''' Tries to inspect selection. On success: opens new tab and pastes lines there.
+			New tab can be safely closed with ctrl-d later, or saved with new filename.
+		'''
+		try:
+			target = self.contents.selection_get()
+		except tkinter.TclError:
+			self.bell()
+			return 'break'
+		
+		target=target.strip()
+		
+		if not len(target) > 0:
+			self.bell()
+			return 'break'
+		
+		
+		import inspect
+		is_module = False
+		
+		try:
+			mod = importlib.import_module(target)
+			is_module = True
+			filepath = inspect.getsourcefile(mod)
+			
+			if not filepath:
+				self.bell()
+				return 'break'
+			
+			try:
+				with open(filepath, 'r', encoding='utf-8') as f:
+					fcontents = f.read()
+					
+					self.new_tab()
+					self.tabs[self.tabindex].contents = fcontents
+					self.contents.insert(tkinter.INSERT, fcontents)
+					self.contents.edit_reset()
+					self.contents.edit_modified(0)
+					self.contents.focus_set()
+					return 'break'
+					
+			except (EnvironmentError, UnicodeDecodeError) as e:
+				print(e.__str__())
+				print(f'\n Could not open file: {filepath}')
+				self.bell()
+				return 'break'
+					
+		except ModuleNotFoundError:
+			print(f'\n Is not a module: {target}')
+		except TypeError as ee:
+			print(ee.__str__())
+			self.bell()
+			return 'break'
+			
+			
+		if not is_module:
+		
+			try:
+				modulepart = target[:target.rindex('.')]
+				object_part = target[target.rindex('.')+1:]
+				mod = importlib.import_module(modulepart)
+				target_object = getattr(mod, object_part)
+				
+				l = inspect.getsourcelines(target_object)
+				tmp = ''.join(l[0])
+				 
+				self.new_tab()
+				self.tabs[self.tabindex].contents = tmp
+				self.contents.insert(tkinter.INSERT, tmp)
+				self.contents.edit_reset()
+				self.contents.edit_modified(0)
+				self.contents.focus_set()
+				return 'break'
+			
+			# from .rindex()
+			except ValueError:
+				self.bell()
+				return 'break'
+				
+			except Exception as e:
+				self.bell()
+				print(e.__str__())
+				return 'break'
+		
+		return 'break'
+		
+	
+	def quit_me(self):
+		# affects load():
+		self.quitting = True
+		
+		self.save(forced=True)
+		self.save_config()
+		
+		# affects color and fontchoose:
+		for widget in self.to_be_closed:
+			widget.destroy()
+		
+		self.quit()
+		self.destroy()
+		
+		
+############## Linenumbers Begin
+
+	def no_copy_ln(self, event=None):
+		return 'break'
+		
+	
+	def toggle_ln(self, event=None):
+		
+		# if dont want linenumbers:
+		if self.want_ln:
+			# remove remembers grid-options
+			self.ln_widget.grid_remove()
+			self.contents.grid_configure(column=0, columnspan=4)
+			self.want_ln = False
+		else:
+			self.contents.grid_configure(column=1, columnspan=3)
+			self.ln_widget.grid()
+			
+			self.want_ln = True
+		
+		return 'break'
 		
 
 	def viewsync(self, event=None):
@@ -375,43 +534,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.update_linenums()
 
-
-	def update_title(self, event=None):
-		tail = len(self.tabs) - self.tabindex - 1
-		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
-			
 	
-	def do_nothing(self, event=None):
-		self.bell()
-		return 'break'
-	
-	
-	def quit_me(self):
-		# affects load():
-		self.quitting = True
-		
-		self.save(forced=True)
-		self.save_config()
-		self.clipboard_clear()
-		
-		
-		# affects color and fontchoose:
-		for widget in self.to_be_closed:
-			widget.destroy()
-		
-		self.quit()
-		self.destroy()
-		
-		
-############## Linenumbers Begin
-
-	def no_copy_ln(self, event=None):
-		# This is curiosity, return 'break' does the thing
-		self.ln_widget.selection_clear()
-		
-		return 'break'
-		
-		
 	def get_linenums(self):
 
 		x = 0
@@ -521,7 +644,7 @@ class Editor(tkinter.Toplevel):
 		if len(self.tabs) > 0:
 			self.tabs[self.tabindex].active = False
 			
-		newtab = Tab(active=True, filepath=None, contents='', oldcontents='', position='1.0', type='newtab')
+		newtab = Tab()
 		
 		self.tabindex += 1
 		self.tabs.insert(self.tabindex, newtab)
@@ -551,7 +674,7 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 			
 		if (len(self.tabs) == 0):
-			newtab = Tab(active=True, filepath=None, contents='', oldcontents='', position='1.0', type='newtab')
+			newtab = Tab()
 			self.tabs.append(newtab)
 	
 		if self.tabindex > 0:
@@ -677,7 +800,6 @@ class Editor(tkinter.Toplevel):
 		
 		have_fonts = self.fonts_exists(data)
 		self.set_config(data, have_fonts)
-		self.apply_config()
 		
 	
 	def fonts_exists(self, dictionary):
@@ -716,6 +838,7 @@ class Editor(tkinter.Toplevel):
 		dictionary['menufont'] = self.menufont.config()
 		dictionary['scrollbar_width'] = self.scrollbar_width
 		dictionary['elementborderwidth'] = self.elementborderwidth
+		dictionary['want_ln'] = self.want_ln
 		
 		for tab in self.tabs:
 			tab.contents = ''
@@ -761,6 +884,7 @@ class Editor(tkinter.Toplevel):
 		self.menufont.config(**dictionary['menufont'])
 		self.scrollbar_width 	= dictionary['scrollbar_width']
 		self.elementborderwidth	= dictionary['elementborderwidth']
+		self.want_ln = dictionary['want_ln']
 		
 		self.lastdir = dictionary['lastdir']
 		
@@ -1483,13 +1607,18 @@ class Editor(tkinter.Toplevel):
 		if event == None:
 			self.d = tkinter.filedialog.FileDialog(self, title='Select File')
 			
-			self.d.dirs.configure(font=self.font, width=30, selectmode='single')
-			self.d.files.configure(font=self.font, width=30, selectmode='single')
-			self.d.cancel_button.configure(font=self.menufont)
-			self.d.filter.configure(font=self.menufont)
-			self.d.filter_button.configure(font=self.menufont)
-			self.d.ok_button.configure(font=self.menufont)
-			self.d.selection.configure(font=self.menufont)
+			self.d.botframe.config(bd=4)
+			self.d.midframe.config(bd=4)
+			
+			self.d.dirs.configure(font=self.font, width=30, selectmode='single', bd=4,
+						highlightthickness=0, bg='#d9d9d9')
+			self.d.files.configure(font=self.font, width=30, selectmode='single', bd=4,
+						highlightthickness=0, bg='#d9d9d9')
+			self.d.cancel_button.configure(font=self.menufont, bd=4)
+			self.d.filter.configure(font=self.menufont, bd=4, highlightthickness=0, bg='#d9d9d9')
+			self.d.filter_button.configure(font=self.menufont, bd=4)
+			self.d.ok_button.configure(font=self.menufont, bd=4)
+			self.d.selection.configure(font=self.menufont, bd=4, highlightthickness=0, bg='#d9d9d9')
 
 			self.d.dirsbar.configure(width=self.scrollbar_width)
 			self.d.filesbar.configure(width=self.scrollbar_width)
@@ -1530,7 +1659,7 @@ class Editor(tkinter.Toplevel):
 			return
 		
 		filename = pathlib.Path().cwd() / tmp
-		
+
 		###################################### Get filename end
 		
 		
@@ -2196,7 +2325,7 @@ class Editor(tkinter.Toplevel):
 		
 		# autofill from clipboard
 		try:
-			tmp = self.contents.clipboard_get()
+			tmp = self.clipboard_get()
 			if 80 > len(tmp) > 0:
 				self.entry.insert(tkinter.END, tmp)
 				self.entry.select_to(tkinter.END)
@@ -2228,7 +2357,7 @@ class Editor(tkinter.Toplevel):
 		
 		# autofill from clipboard
 		try:
-			tmp = self.contents.clipboard_get()
+			tmp = self.clipboard_get()
 			if 80 > len(tmp) > 0:
 				self.entry.insert(tkinter.END, tmp)
 				self.entry.select_to(tkinter.END)

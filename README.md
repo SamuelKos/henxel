@@ -1,6 +1,6 @@
 # Henxel
 GUI-editor for Python development. Tested to work with Debian Bullseye
-
+* I am pretty sure I am not going to develop this any further.
 
 # Featuring
 * Auto-indent
@@ -8,6 +8,7 @@ GUI-editor for Python development. Tested to work with Debian Bullseye
 * Color Chooser
 * Line numbering
 * Tabbed editing
+* Inspect object
 * Show git-branch
 * Run current file
 * Search - Replace

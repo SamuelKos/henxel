@@ -1,4 +1,4 @@
-# this is todo, and stub-editor for testing
+# this is todo, and stub-editor for testing, might not work
 
 # Run in python console:
 # >>> import todo
@@ -7,12 +7,20 @@
 
 
 
+# reorder init grid toggle ln conf		ok ##################
+
+# filedialog fix colors etc. 	ok #############
+
+# fix no_copy_ln() so clipboard works again between console and editor 	ok ###############
+
+
+
+
 
 # all string to fstring ~150 cases
 
-# toggle linenums, borders?
 
-# make subclass from filedialog?
+
 
 
 

@@ -3,9 +3,9 @@
 # demonstrates switching between two text-widgets
 # Control-l 	(as lemon) to switch
 
-# Switch is no more blinky, because background color of toplevel widget 
+# Switch is no more blinky, because background color of toplevel widget
 # is set to same color of text-widget. Scrollbar still flashes but
-# this should be fine.   
+# this should be fine.
 
 
 import tkinter
@@ -64,7 +64,7 @@ class Ed(tkinter.Toplevel):
 		self.lb.tag_config('justright', justify=tkinter.RIGHT)
 	
 		self.scrollbar_width = 30
-		self.elementborderwidth = 4	
+		self.elementborderwidth = 4
 		
 		self.scrollbar.config(width=self.scrollbar_width)
 		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
@@ -119,7 +119,7 @@ class Ed(tkinter.Toplevel):
 		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
 		
 		self.contents.grid_forget()
-		self.contents = self.t2	
+		self.contents = self.t2
 		self.contents.grid(row=1, column=1, columnspan=3, sticky='nswe')
 		self.scrollbar.grid(row=1,column=3, sticky='nse')
 		

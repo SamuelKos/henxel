@@ -135,8 +135,6 @@ class MyText(tk.Text):
 
 
 
-
-
 root = tk.Tk()
 
 text = MyText(root, width=65, height=20, font="consolas 14")

@@ -41,6 +41,7 @@
 		
 		Default bindings: https://tcl.tk/man/tcl8.6/TkCmd/text.htm#M192
 	
+	
 	When is my file Saved to Disk?
 	
 		All tabs are saved to disk when:
@@ -64,11 +65,16 @@
 		  
 		  - instead close python-console with ctrl-d
 		
-
+		
 	Editor
 	  - Editor configuration is related to python-environment (sys.prefix)
 		in which python console was launched. So if you have say two
 		different envs in the same directory, they will have separate confs.
+		
+			
+	Undo
+	  - Undo is only partly functional due to lack of motivation. But it
+		usually works just fine. Undo is reset when ever view is changed.
 	
 	
 	Save-button
@@ -97,7 +103,7 @@
 	  - If entered filename in entry and pressed open, entry is ignored.
 	
 	
-	How to copy-paste code-blocks in editor:
+	How to: copy-paste code-blocks in editor
 	  - When copying, select additional empty line before block.
 		This ensures indentation of whole block. If you do not do this,
 		and select for example from 'def' - word, which has indentation,
@@ -105,6 +111,7 @@
 		to other lines. But editor moves cursor at the start of block so
 		you can start fixing indenting that function definition line or
 		similar.
+		
 		
 	Running file
 	  - input from stdin does not work, so use test-data for that.
@@ -123,29 +130,45 @@
 		
 
 	Inspecting objects:
-	  - Inspect object is not implemented in editor, but here is short intro
-		how to inspect function of a module, and getting its sourcefile-path,
-		if want to open it maybe in editor. If using editor as normal user,
-		meaning you are not using editor as root, this should be fine, you
-		should not be able to mess anything serious even if editor tries to
-		save files when closing.
+	  - For inspecting module, class or functions. Not tested with other
+		object-types. You have this line in editor:
 		
-		Module to inspect: tkinter.colorchooser
+			res = package.module.function(*args)
+			
+			or
+			
+			my_instance = package.module.SomeClass()
+			
+		You are interested in function or SomeClass or module or package.
+		Then you select with mouse this text:
+		
+			pagkage.module.function
+			
+			or
+			
+			package.module.SomeClass
+			
+			or
+			
+			package.module
+			
+			or
+			
+			package
 	
-		In python-console:
+		Then open menu with mouse-right and select: inspect.
+	
+	  	Now editor tries to inspect your selection. On success: opens new tab
+		and pastes lines there. New tab can be safely closed with ctrl-d later,
+		or saved with new filename.
 		
-		import tkinter.colorchooser
-		import inspect
-		inspect.getsourcefile(tkinter.colorchooser)
+		Notice that this wont work:
+			my_instance = package.module.SomeClass()
+			res = my_instance.function(*args)
+			
+			And then trying to inspect: my_instance.function
+			Instead in this case you should inspect: package.module.SomeClass
+			Then search: function(
 		
-		And you can then copy filepath in your editor, or in shell:
-		$ more filepath
-		
-		Then just a function:
-		import tkinter.colorchooser
-		import inspect
-		l = inspect.getsourcelines(tkinter.colorchooser.askcolor)
-		
-		To print this nicely:
-		for line in l[0]: print(line, end='')
+		Also builtins like math can not be inspected.
 		
