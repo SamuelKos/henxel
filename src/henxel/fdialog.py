@@ -10,27 +10,31 @@ class FDialog:
 	'''
 
 
-	def __init__(self, master, path, stringvar):
+	def __init__(self, master, path, stringvar, font=None):
 		'''	master		tkinter.Toplevel
 			path		pathlib.Path
 			stringvar	tkinter.StringVar
+			font		tkinter.font.Font
 		'''
 		
 		self.top = master
 		self.path = path
 		self.var = stringvar
+		self.font = font
+		
+		if not self.font:
+			self.font = tkinter.font.Font(family='TkDefaulFont', size=12)
+		
+		self.top.config(bd=4)
 		
 		self.dirlist = list()
 		self.dotdirlist = list()
 		self.filelist = list()
 		self.dotfilelist = list()
 		
-		fontname = 'Noto Mono'
-		self.font = tkinter.font.Font(family=fontname, size=12)
-		
 		self.filesbar = tkinter.Scrollbar(self.top, takefocus=0)
 		self.filesbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
-		self.files = tkinter.Listbox(self.top, exportselection=0)
+		self.files = tkinter.Listbox(self.top, exportselection=0, activestyle='underline')
 		self.files.pack(side=tkinter.RIGHT, expand=1, fill=tkinter.BOTH)
 		
 		self.files['yscrollcommand'] = self.filesbar.set
@@ -38,7 +42,7 @@ class FDialog:
 		
 		self.dirsbar = tkinter.Scrollbar(self.top, takefocus=0)
 		self.dirsbar.pack(side=tkinter.LEFT, fill=tkinter.Y)
-		self.dirs = tkinter.Listbox(self.top, exportselection=0)
+		self.dirs = tkinter.Listbox(self.top, exportselection=0, activestyle='underline')
 		self.dirs.pack(side=tkinter.LEFT, expand=1, fill=tkinter.BOTH)
 		
 		self.dirs['yscrollcommand'] = self.dirsbar.set
@@ -144,25 +148,34 @@ class FDialog:
 			elif item.is_dir():
 			
 				if item.name[0] == '.':
-					self.dotdirlist.append(item.name)
+					self.dotdirlist.append(item.name + '/')
 				else:
-					self.dirlist.append(item.name)
+					self.dirlist.append(item.name + '/')
 				
-				
-		self.dirlist.sort()
+		
+		# __pycache__/ etc last:
+		self.dirlist.sort(reverse=True)
 		self.dotdirlist.sort()
-		self.dirlist.extend(self.dotdirlist)
 		
 		self.filelist.sort()
 		self.dotfilelist.sort()
-		self.filelist.extend(self.dotfilelist)
+		
 		
 		for f in self.filelist:
 			self.files.insert(tkinter.END, f)
-		
+			
 		for d in self.dirlist:
 			self.dirs.insert(tkinter.END, d)
 			
+		for f in self.dotfilelist:
+			self.files.insert(tkinter.END, f)
+			self.files.itemconfig(tkinter.END, fg='gray')
+		
+		for d in self.dotdirlist:
+			self.dirs.insert(tkinter.END, d)
+			self.dirs.itemconfig(tkinter.END, fg='gray')
+		
+		
 		if self.path.resolve().name not in [ '', self.path.absolute().root ]:
 			self.dirs.insert(0, '..')
 		

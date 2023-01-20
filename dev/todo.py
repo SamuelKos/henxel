@@ -16,21 +16,17 @@
 
 # clarify: keyword arg deltab activetab		ok #############
 
-# openfiledialog.py (if want filter?) is in hub/
+# from tkinter.filedialog.FileDialog to fdialog.FDialog		ok ############
 
-# dot no dot files dirs		ok?
+# takefocus init	ok ##########
 
-# make class fdialog, own file ok ?
-
-
-# takefocus init
 
 # test run deps
 
-
 # center to cursor
 
-# update help, alt-l etc
+
+# update help, alt-l, cursor blink ln
 
 # change same constants? options in menu
 

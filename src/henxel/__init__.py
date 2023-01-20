@@ -95,7 +95,9 @@ HELPPATH = 'help.txt'
 
 TAB_WIDTH = 4
 TAB_WIDTH_CHAR = ' '
+
 SLIDER_MINSIZE = 66
+
 
 GOODFONTS = [
 			'Noto Mono',
@@ -201,7 +203,7 @@ class Editor(tkinter.Toplevel):
 		
 		# Initiate widgets
 		####################################
-		self.btn_git=tkinter.Button(self)
+		self.btn_git=tkinter.Button(self, takefocus=0)
 		
 		if self.branch:
 			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0, padx=0, text=self.branch[:5], state='disabled')
@@ -211,8 +213,8 @@ class Editor(tkinter.Toplevel):
 		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, bg='#d9d9d9')
 		self.entry.bind("<Return>", self.load)
 		
-		self.btn_open=tkinter.Button(self, text='Open', bd=4, highlightthickness=0, command=self.load)
-		self.btn_save=tkinter.Button(self, text='Save', bd=4, highlightthickness=0, command=self.save)
+		self.btn_open=tkinter.Button(self, takefocus=0, text='Open', bd=4, highlightthickness=0, command=self.load)
+		self.btn_save=tkinter.Button(self, takefocus=0, text='Save', bd=4, highlightthickness=0, command=self.save)
 		
 		# Get conf:
 		string_representation = None
@@ -1628,7 +1630,7 @@ class Editor(tkinter.Toplevel):
 			self.wait_list.append(s)
 			
 			# fd has now grab:
-			fd = fdialog.FDialog(filetop, p, s)
+			fd = fdialog.FDialog(filetop, p, s, self.font)
 			
 			# it is important to set s in fd, if not,
 			# then we are going to wait long time
