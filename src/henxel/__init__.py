@@ -33,7 +33,6 @@
 ############ Imports Begin
 
 # from standard library
-import tkinter.filedialog
 import tkinter.font
 import tkinter
 import pathlib
@@ -44,6 +43,7 @@ import sys
 
 # from current directory
 from . import changefont
+from . import fdialog
 
 # for executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
@@ -116,8 +116,11 @@ class Editor(tkinter.Toplevel):
 		super().__init__(self.root, class_='Henxel', bd=4)
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		
+		# widgets
 		self.to_be_closed = list()
-		self.quitting = False
+		# tkinter.StringVar -list used in quit_me()
+		# to quit some event-loops
+		self.wait_list = list()
 		
 		self.ln_string = ''
 		self.want_ln = True
@@ -169,6 +172,8 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Control-s>", self.color_choose)
 		self.bind( "<Alt-t>", self.toggle_color)
 		self.bind( "<Alt-w>", self.walk_files)
+		
+		
 		self.bind( "<Alt-q>", lambda event: self.walk_files(event, **{'back':True}) )
 		
 		pkg_contents = importlib.resources.files(__name__)
@@ -259,9 +264,9 @@ class Editor(tkinter.Toplevel):
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 		
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
-		self.contents.tag_config('found', background='lightgreen')
+		self.contents.tag_config('focus', background='lightgreen')
 		
-		
+		self.contents.bind( "<Alt-Return>", self.load)
 		self.contents.bind( "<Alt-l>", self.toggle_ln)
 		self.contents.bind( "<Control-f>", self.search)
 		self.contents.bind( "<Control-n>", self.new_tab)
@@ -380,6 +385,21 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 		
 		
+		# set cursor pos:
+		try:
+			line = self.tabs[self.tabindex].position
+			self.contents.focus_set()
+			# ensure we see something before and after
+			self.contents.see('%s - 2 lines' % line)
+			self.update_idletasks()
+			self.contents.see('%s + 2 lines' % line)
+			self.contents.mark_set('insert', line)
+		except tkinter.TclError:
+			self.tabs[self.tabindex].position = '1.0'
+			self.contents.focus_set()
+			self.contents.see('1.0')
+			self.contents.mark_set('insert', '1.0')
+		
 		self.update_idletasks()
 		self.viewsync()
 		self.update_title()
@@ -485,15 +505,19 @@ class Editor(tkinter.Toplevel):
 		
 	
 	def quit_me(self):
-		# affects load():
-		self.quitting = True
-		
+	
 		self.save(forced=True)
 		self.save_config()
 		
 		# affects color and fontchoose:
 		for widget in self.to_be_closed:
 			widget.destroy()
+		
+		# affects load()
+		# but also for the future possible waiting callbacks.
+		# they must check this right after waiting.
+		for waiter in self.wait_list:
+			waiter.set('quit')
 		
 		self.quit()
 		self.destroy()
@@ -669,7 +693,7 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 
 		if self.tabs[self.tabindex].type == 'normal':
-			self.save(deltab=True)
+			self.save(activetab=True)
 			
 		self.tabs.pop(self.tabindex)
 		self.contents.delete('1.0', tkinter.END)
@@ -957,26 +981,11 @@ class Editor(tkinter.Toplevel):
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		
-		try:
-			line = self.tabs[self.tabindex].position
-			self.contents.focus_set()
-			# ensure we see something before and after
-			self.contents.see('%s - 2 lines' % line)
-			self.update_idletasks()
-			self.contents.see('%s + 2 lines' % line)
-			self.contents.mark_set('insert', line)
-		except tkinter.TclError:
-			self.tabs[self.tabindex].position = '1.0'
-			self.contents.focus_set()
-			self.contents.see('1.0')
-			self.contents.mark_set('insert', '1.0')
-		
 ########## Configuration Related End
 ########## Theme Related Begin
 
 	def increase_scrollbar_width(self, event=None):
-		'''	Change width of scrollbar of self.contents and of
-			tkinter.filedialog.FileDialog which is used in self.load().
+		'''	Change width of scrollbar and self.contents
 			Shortcut: Ctrl-plus
 		'''
 		if self.scrollbar_width >= 100:
@@ -992,8 +1001,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def decrease_scrollbar_width(self, event=None):
-		'''	Change width of scrollbar of self.contents and of
-			tkinter.filedialog.FileDialog which is used in self.load().
+		'''	Change width of scrollbar and self.contents
 			Shortcut: Ctrl-minus
 		'''
 		if self.scrollbar_width <= 0:
@@ -1492,13 +1500,13 @@ class Editor(tkinter.Toplevel):
 	def return_override(self, event):
 	
 		# Cursor indexes when pressed return:
-		line, row = map(int, self.contents.index(tkinter.INSERT).split('.'))
+		line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
 		# is same as:
 		# line = int(self.contents.index(tkinter.INSERT).split('.')[0])
-		# row = int(self.contents.index(tkinter.INSERT).split('.')[1])
+		# col = int(self.contents.index(tkinter.INSERT).split('.')[1])
 		
 		# First an easy case:
-		if row == 0:
+		if col == 0:
 			self.contents.insert(tkinter.INSERT, '\n')
 			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
@@ -1509,9 +1517,9 @@ class Editor(tkinter.Toplevel):
 		# Then one special case: check if cursor is inside indentation,
 		# and line is not empty.
 		
-		if tmp[:row].isspace() and not tmp[row:].isspace():
+		if tmp[:col].isspace() and not tmp[col:].isspace():
 			self.contents.insert(tkinter.INSERT, '\n')
-			self.contents.insert('%s.0' % str(line+1), tmp[:row])
+			self.contents.insert('%s.0' % str(line+1), tmp[:col])
 			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
 			return "break"
@@ -1606,61 +1614,52 @@ class Editor(tkinter.Toplevel):
 		##################### Get filename begin
 		
 		# Pressed Open-button
-		if event == None:
-			self.d = tkinter.filedialog.FileDialog(self, title='Select File')
+		if event == None or event.keysym == 'Return':
 			
-			self.d.botframe.config(bd=4)
-			self.d.midframe.config(bd=4)
+			s = tkinter.StringVar()
+			p = pathlib.Path().cwd()
 			
-			self.d.dirs.configure(font=self.font, width=30, selectmode='single', bd=4,
-						highlightthickness=0, bg='#d9d9d9')
-			self.d.files.configure(font=self.font, width=30, selectmode='single', bd=4,
-						highlightthickness=0, bg='#d9d9d9')
-			self.d.cancel_button.configure(font=self.menufont, bd=4)
-			self.d.filter.configure(font=self.menufont, bd=4, highlightthickness=0, bg='#d9d9d9')
-			self.d.filter_button.configure(font=self.menufont, bd=4)
-			self.d.ok_button.configure(font=self.menufont, bd=4)
-			self.d.selection.configure(font=self.menufont, bd=4, highlightthickness=0, bg='#d9d9d9')
-
-			self.d.dirsbar.configure(width=self.scrollbar_width)
-			self.d.filesbar.configure(width=self.scrollbar_width)
-			self.d.filesbar.configure(elementborderwidth=self.elementborderwidth)
-			self.d.dirsbar.configure(elementborderwidth=self.elementborderwidth)
-			
-			
-			# tmp is now absolute path
 			if self.lastdir:
-				tmp = self.d.go(self.lastdir.__str__())
-			else:
-				tmp = self.d.go('.')
-				
-			# Otherwise this (blocking, for reason) callback
-			# would try to continue after deletion of the filedialog:
-			if self.quitting:
-				return
+				p = p / self.lastdir
+			
+			filetop = tkinter.Toplevel()
+			filetop.title('Select File')
+			self.to_be_closed.append(filetop)
+			self.wait_list.append(s)
+			
+			# fd has now grab:
+			fd = fdialog.FDialog(filetop, p, s)
+			
+			# it is important to set s in fd, if not,
+			# then we are going to wait long time
+			# even after closing editor
+			self.wait_variable(s)
+			
+			if s.get() == 'quit':
+				return 'break'
 
 			# avoid bell when dialog is closed without selection
-			if tmp == None:
+			if s.get() == '':
 				self.entry.delete(0, tkinter.END)
 				if self.tabs[self.tabindex].filepath != None:
 					self.entry.insert(0, self.tabs[self.tabindex].filepath)
-				return
-			
+				return 'break'
+
 			else:
 				# update self.lastdir
-				 dirp = pathlib.Path().cwd() / tmp
-				 self.lastdir = pathlib.Path(*dirp.parts[:-1])
-			
-			
+				filename = pathlib.Path().cwd() / s.get()
+				self.lastdir = pathlib.Path(*filename.parts[:-1])
+		
+
 		# Entered filename to be opened in entry:
 		else:
 			tmp = self.entry.get().strip()
 
-		if not isinstance(tmp, str) or tmp.isspace():
-			self.bell()
-			return
-		
-		filename = pathlib.Path().cwd() / tmp
+			if not isinstance(tmp, str) or tmp.isspace():
+				self.bell()
+				return 'break'
+	
+			filename = pathlib.Path().cwd() / tmp
 
 		###################################### Get filename end
 		
@@ -1674,11 +1673,10 @@ class Editor(tkinter.Toplevel):
 			
 			if self.tabs[self.tabindex].filepath != None:
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
-			return
+			return 'break'
 		
 		if self.tabs[self.tabindex].type == 'normal':
-			# keyword argument deltab should be renamed
-			self.save(deltab=True)
+			self.save(activetab=True)
 		
 		# Using same tab:
 		try:
@@ -1706,11 +1704,13 @@ class Editor(tkinter.Toplevel):
 			
 			if self.tabs[self.tabindex].filepath != None:
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
+				
+		return 'break'
 			
 
-	def save(self, deltab=False, forced=False):
+	def save(self, activetab=False, forced=False):
 		''' forced when run() or quit_me()
-			deltab==True from load() and del_tab()
+			activetab=True from load() and del_tab()
 		'''
 		
 		if forced:
@@ -1781,7 +1781,7 @@ class Editor(tkinter.Toplevel):
 		openfiles = [tab.filepath for tab in self.tabs]
 		
 		# creating new file
-		if fpath_in_entry != self.tabs[self.tabindex].filepath and not deltab:
+		if fpath_in_entry != self.tabs[self.tabindex].filepath and not activetab:
 		
 			if fpath_in_entry in openfiles:
 				self.bell()
@@ -1856,7 +1856,7 @@ class Editor(tkinter.Toplevel):
 				
 		else:
 			# skip unnecessary disk-writing silently
-			if not deltab:
+			if not activetab:
 				return
 
 			# if closing tab or loading file:
@@ -2163,8 +2163,6 @@ class Editor(tkinter.Toplevel):
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
 			
-		self.contents.config(state='normal')
-		
 		# check if at last match or beyond:
 		i = len(self.contents.tag_ranges('match')) - 2
 		last = self.contents.tag_ranges('match')[i]
@@ -2173,10 +2171,10 @@ class Editor(tkinter.Toplevel):
 			self.search_idx = ('1.0', '1.0')
 			self.search_pos = 0
 				
-		self.contents.tag_remove('found', '1.0', tkinter.END)
+		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.search_idx = self.contents.tag_nextrange('match', self.search_idx[1])
 		# change color
-		self.contents.tag_add('found', self.search_idx[0], self.search_idx[1])
+		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
 		# ensure we see something before and after
 		self.contents.see('%s - 2 lines' % self.search_idx[0])
@@ -2187,7 +2185,7 @@ class Editor(tkinter.Toplevel):
 		
 		# compare found to match
 		num_matches = int(len(self.contents.tag_ranges('match'))/2)
-		ref = self.contents.tag_ranges('found')[0]
+		ref = self.contents.tag_ranges('focus')[0]
 		
 		for c in range(num_matches):
 			tmp = self.contents.tag_ranges('match')[c*2]
@@ -2199,15 +2197,12 @@ class Editor(tkinter.Toplevel):
 			self.bind("<Alt-n>", self.do_nothing)
 			self.bind("<Alt-p>", self.do_nothing)
 		
-		self.contents.config(state='disabled')
-
 
 	def show_prev(self, event=None):
 		
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
 		
-		self.contents.config(state='normal')
 		first = self.contents.tag_ranges('match')[0]
 	
 		if self.contents.compare(self.search_idx[0], '<=', first):
@@ -2215,12 +2210,12 @@ class Editor(tkinter.Toplevel):
 			self.search_pos = self.search_matches + 1
 
 			
-		self.contents.tag_remove('found', '1.0', tkinter.END)
+		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		
 		self.search_idx = self.contents.tag_prevrange('match', self.search_idx[0])
 		
 		# change color
-		self.contents.tag_add('found', self.search_idx[0], self.search_idx[1])
+		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
 		# ensure we see something before and after
 		self.contents.see('%s - 2 lines' % self.search_idx[0])
@@ -2231,7 +2226,7 @@ class Editor(tkinter.Toplevel):
 		
 		# compare found to match
 		num_matches = int(len(self.contents.tag_ranges('match'))/2)
-		ref = self.contents.tag_ranges('found')[0]
+		ref = self.contents.tag_ranges('focus')[0]
 		
 		for c in range(num_matches):
 			tmp = self.contents.tag_ranges('match')[c*2]
@@ -2242,14 +2237,12 @@ class Editor(tkinter.Toplevel):
 		if self.search_matches == 1:
 			self.bind("<Alt-n>", self.do_nothing)
 			self.bind("<Alt-p>", self.do_nothing)
-		
-		self.contents.config(state='disabled')
 			
 		
 	def start_search(self, event=None):
 		self.old_word = self.entry.get()
 		self.contents.tag_remove('match', '1.0', tkinter.END)
-		self.contents.tag_remove('found', '1.0', tkinter.END)
+		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.search_idx = ('1.0', '1.0')
 		self.search_matches = 0
 		self.search_pos = 0
@@ -2271,7 +2264,6 @@ class Editor(tkinter.Toplevel):
 				pos = "%s + %dc" % (pos, wordlen+1)
 				
 		if self.search_matches > 0:
-			self.contents.config(state='disabled')
 			self.bind("<Button-3>", self.do_nothing)
 			
 			if self.state == 'search':
@@ -2296,7 +2288,7 @@ class Editor(tkinter.Toplevel):
 		self.btn_save.config(state='normal')
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		self.contents.tag_remove('match', '1.0', tkinter.END)
-		self.contents.tag_remove('found', '1.0', tkinter.END)
+		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.bind("<Escape>", self.do_nothing)
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
@@ -2337,6 +2329,7 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			pass
 			
+		self.contents.config(state='disabled')
 		self.entry.focus_set()
 		return "break"
 			
@@ -2367,7 +2360,8 @@ class Editor(tkinter.Toplevel):
 	
 		except tkinter.TclError:
 			pass
-				
+		
+		self.contents.config(state='disabled')
 		self.entry.focus_set()
 		return "break"
 
@@ -2421,7 +2415,7 @@ class Editor(tkinter.Toplevel):
 				pos = "%s + %dc" % (pos, wordlen+1)
 				self.search_matches += 1
 
-		self.contents.tag_remove('found', self.search_idx[0], self.search_idx[1])
+		self.contents.tag_remove('focus', self.search_idx[0], self.search_idx[1])
 		self.contents.tag_remove('match', self.search_idx[0], self.search_idx[1])
 		self.contents.delete(self.search_idx[0], self.search_idx[1])
 		self.contents.insert(self.search_idx[0], self.new_word)

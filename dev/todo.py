@@ -6,7 +6,35 @@
 
 
 
+# search disable contents					ok ##################
 
+# set cursor pos after init					ok ##################
+
+# clarify: tag 'found' to 'focus'			ok ################
+
+# clarify: return_override row to col		ok #############
+
+# clarify: keyword arg deltab activetab		ok #############
+
+# openfiledialog.py (if want filter?) is in hub/
+
+# dot no dot files dirs		ok?
+
+# make class fdialog, own file ok ?
+
+
+# takefocus init
+
+# test run deps
+
+
+# center to cursor
+
+# update help, alt-l etc
+
+# change same constants? options in menu
+
+# edit menu look
 
 # all string to fstring ~150 cases
 
