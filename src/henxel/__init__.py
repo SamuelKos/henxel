@@ -316,10 +316,23 @@ class Editor(tkinter.Toplevel):
 			self.tabindex = -1
 			self.new_tab()
 			
-			self.bgdaycolor = r'#D3D7CF'
-			self.fgdaycolor = r'#000000'
-			self.bgnightcolor = r'#000000'
-			self.fgnightcolor = r'#D3D7CF'
+			# Colors Begin #################################
+			
+			# not used, for the future:
+			# blue = r'#12488b'
+			# red = r'#c01c28'
+			# yellow = r'#a2734c'
+			# cyan = r'#2aa1b3'
+			# magenta = r'#a347ba'
+			
+			black = r'#000000'
+			white = r'#D3D7CF'
+
+			self.bgdaycolor = white
+			self.fgdaycolor = black
+			
+			self.bgnightcolor = black
+			self.fgnightcolor = white
 			self.fgcolor = self.fgdaycolor
 			self.bgcolor = self.bgdaycolor
 			self.curcolor = 'day'
