@@ -1,6 +1,6 @@
 # Henxel
 GUI-editor for Python development. Tested to work with Debian Bullseye
-* I am pretty sure I am not going to develop this any further.
+
 
 # Featuring
 * Auto-indent
@@ -37,7 +37,7 @@ foo@bar:~$ sudo apt install python3-tk
 ```
 
 # About virtual environment, optional but highly recommended
-Consider creating virtual environment for your python-projects and installing python packages like this editor to it. In debian you have to first install this package: python3-venv:
+Consider creating virtual environment for your python-projects and installing python packages like this editor to it. Editor will not save your configuration if it was not launched from virtual environment. In debian you have to first install this package: python3-venv:
 
 ```console
 foo@bar:~$ sudo apt install python3-venv

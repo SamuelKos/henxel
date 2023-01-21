@@ -1,5 +1,6 @@
 		Keyboard shortcuts:
 
+		Alt-Return		Open file
 		Ctrl-BackSpace  Search next
 		Ctrl-f  Search
 		Ctrl-r  Replace
@@ -21,6 +22,7 @@
 		Ctrl-p  Font setting
 		Ctrl-s  Color setting
 		Alt-t   Toggle color setting
+		Alt-l   Toggle linenumbers
 		
 		Ctrl-n  Open new tab
 		Ctrl-d  Close current tab
@@ -71,6 +73,13 @@
 		in which python console was launched. So if you have say two
 		different envs in the same directory, they will have separate confs.
 		
+	  - Configuration is not saved if editor was not launched from
+		virtual environment.
+		
+	  - If editor was launched inside a directory what is being
+		version-controlled with git, the current git-branch will be shown
+		in top-left corner.
+		
 			
 	Undo
 	  - Undo is only partly functional due to lack of motivation. But it
@@ -112,7 +121,7 @@
 		you can start fixing indenting that function definition line or
 		similar.
 		
-		
+	
 	Running file
 	  - input from stdin does not work, so use test-data for that.
 	  

@@ -1,6 +1,15 @@
 # Changelog
-* To version: 	0.0.8
+* To version: 	0.0.9
 * From version:	0.0.3
+
+# 0.0.9
+* Fix for: being able modify contents at the beginning of search.
+* Cursor pos is again set after editor launch
+* Clarified some varnames: like tag 'found' to 'focus'
+* Dumped tkinter.filedialog.FileDialog. Instead use now fdialog.FDialog
+* Tested setting cursor blink off when idle but it added too much overhead, so left as is.
+	(Had to bind to: Button, KeyRelease, FocusIn and it seemed to be too much.)
+
 
 # 0.0.8
 * Reorder grid-related stuff in init to make instantiation of editor feel more instant.

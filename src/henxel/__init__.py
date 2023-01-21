@@ -560,6 +560,7 @@ class Editor(tkinter.Toplevel):
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
 		
+		
 		self.update_linenums()
 
 	

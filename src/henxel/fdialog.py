@@ -7,6 +7,12 @@ class FDialog:
 	''' Get filepath, cwd is given as pathlib object, result is saved
 		in tkinter.StringVar object, which is set to empty string: ''
 		on cancel
+		
+		Bindings:
+		window close, Esc		cancel and quit
+		double-click, Return	chdir or select file and quit
+		
+		Tab		switch focus between dirs and files
 	'''
 
 
@@ -34,7 +40,10 @@ class FDialog:
 		
 		self.filesbar = tkinter.Scrollbar(self.top, takefocus=0)
 		self.filesbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
-		self.files = tkinter.Listbox(self.top, exportselection=0, activestyle='underline')
+		
+		# yet another unconfigurable:activestyle
+		# choosed underline because dotbox was almost invisible.
+		self.files = tkinter.Listbox(self.top, exportselection=0, activestyle='underline', setgrid=1)
 		self.files.pack(side=tkinter.RIGHT, expand=1, fill=tkinter.BOTH)
 		
 		self.files['yscrollcommand'] = self.filesbar.set
@@ -42,7 +51,7 @@ class FDialog:
 		
 		self.dirsbar = tkinter.Scrollbar(self.top, takefocus=0)
 		self.dirsbar.pack(side=tkinter.LEFT, fill=tkinter.Y)
-		self.dirs = tkinter.Listbox(self.top, exportselection=0, activestyle='underline')
+		self.dirs = tkinter.Listbox(self.top, exportselection=0, activestyle='underline', setgrid=1)
 		self.dirs.pack(side=tkinter.LEFT, expand=1, fill=tkinter.BOTH)
 		
 		self.dirs['yscrollcommand'] = self.dirsbar.set

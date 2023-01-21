@@ -6,31 +6,7 @@
 
 
 
-# search disable contents					ok ##################
 
-# set cursor pos after init					ok ##################
-
-# clarify: tag 'found' to 'focus'			ok ################
-
-# clarify: return_override row to col		ok #############
-
-# clarify: keyword arg deltab activetab		ok #############
-
-# from tkinter.filedialog.FileDialog to fdialog.FDialog		ok ############
-
-# takefocus init	ok ##########
-
-
-# test run deps
-
-# center to cursor
-
-
-# update help, alt-l, cursor blink ln
-
-# change same constants? options in menu
-
-# edit menu look
 
 # all string to fstring ~150 cases
 
@@ -44,25 +20,12 @@ import tkinter.font
 
 ########################## Maybe interesting Begin:
 
-## w.wait_variable(v)
-## Waits until the value of variable v is set, even if the value does not change. This method enters a
-## local wait loop, so it does not block the rest of the application.
-
-## w.wait_visibility(w)
-## Wait until widget w (typically a Toplevel) is visible.
-##
-
 
 ############# About screen dimensions Begin
 
 # This is correct:
 # .winfo_screenheight()
 # .winfo_screenwidth()
-
-# This is quite near the truth, tested with scaling 200% and 100%
-# It stayed the same:
-# .winfo_screenmmwidth()//2
-# .winfo_screenmmheight()//2
 
 # check screen dpi:
 #
