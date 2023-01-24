@@ -5,8 +5,22 @@
 # >>> e=todo.Ed()
 
 
+# fix for not being able to open files from entry					ok ?
+
+# fdialog show path, carousel, tab from dirs to files same line		ok ?
 
 
+
+# fdialog like fontchoose, disable self, trace var, try console active
+
+
+
+
+
+
+# help() in python console freezes editor
+
+# bitmap
 
 # all string to fstring ~150 cases
 

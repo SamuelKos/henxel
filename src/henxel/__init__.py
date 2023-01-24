@@ -150,9 +150,15 @@ class Editor(tkinter.Toplevel):
 		self.search_pos = 0
 		self.old_word = ''
 		self.new_word = ''
+		
 		self.errlines = list()
+		
+		self.filename_tracevar = tkinter.StringVar(value='empty')
+		self.trace_callback_name = None
 		self.lastdir = None
+		
 		self.state = 'normal'
+		
 		
 		self.font = tkinter.font.Font(family='TkDefaulFont', size=12)
 		self.menufont = tkinter.font.Font(family='TkDefaulFont', size=10)
@@ -268,7 +274,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('focus', background='lightgreen')
 		
-		self.contents.bind( "<Alt-Return>", self.load)
+		self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
+		
 		self.contents.bind( "<Alt-l>", self.toggle_ln)
 		self.contents.bind( "<Control-f>", self.search)
 		self.contents.bind( "<Control-n>", self.new_tab)
@@ -573,7 +580,6 @@ class Editor(tkinter.Toplevel):
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
 		
-		
 		self.update_linenums()
 
 	
@@ -588,7 +594,7 @@ class Editor(tkinter.Toplevel):
 		step = self.bbox_height
 
 		nl = '\n'
-		lineMask = '    %s\n'
+		lineMask = '%s\n'
 		
 		# @x,y is tkinter text-index -notation:
 		# The character that covers the (x,y) -coordinate within the text's window.
@@ -612,7 +618,7 @@ class Editor(tkinter.Toplevel):
 				ln += (lineMask % line)[-5:]
 				
 		# remove unwanted newline:
-		return ln[:-1]
+		return ln
 
 	
 	def update_linenums(self):
@@ -1553,28 +1559,28 @@ class Editor(tkinter.Toplevel):
 			
 			
 	def sbset_override(self, *args):
-		''' Fix for: not being able to config slider min-size
+		'''	Fix for: not being able to config slider min-size
 		'''
 		self.scrollbar.set(*args)
 		
 		h = self.text_widget_height
-		
+
 		# Relative position (tuple on two floats) of
 		# slider-top (a[0]) and -bottom (a[1]) in scale 0-1, a[0] is smaller:
 		a = self.scrollbar.get()
-		
+
 		# current slider size:
 		# (a[1]-a[0])*h
-		
+
 		# want to set slider size to at least p (SLIDER_MINSIZE) pixels,
 		# by adding relative amount(0-1) of d to slider, that is: d/2 to both ends:
 		# ( a[1]+d/2 - (a[0]-d/2) )*h = p
 		# a[1] - a[0] + d = p/h
 		# d = p/h - a[1] + a[0]
-		
-		
+
+
 		d = SLIDER_MINSIZE/h - a[1] + a[0]
-		
+
 		if h*(a[1] - a[0]) < SLIDER_MINSIZE:
 			self.scrollbar.set(a[0], a[1]+d)
 		
@@ -1621,6 +1627,29 @@ class Editor(tkinter.Toplevel):
 		return tabified_line
 	
 	
+	def trace_filename(self, event=None):
+		
+##		if var == 'quit':
+##
+##		elif var == 'empty'
+##
+##		else:
+##			try to open it
+##
+##
+##		self.filename_tracevar.remove('write', self.trace_callback_name)
+			
+		return 'break'
+			
+	
+##	def loadfile(self, filepath, event=None):
+##		''' filepath is tkinter.pathlib.Path
+##		'''
+##
+##
+##		return 'break'
+	
+	
 	def load(self, event=None):
 
 		if self.state != 'normal':
@@ -1630,7 +1659,11 @@ class Editor(tkinter.Toplevel):
 		##################### Get filename begin
 		
 		# Pressed Open-button
-		if event == None or event.keysym == 'Return':
+		if event == None:
+			
+			#self.filename_tracevar.set('empty')
+			#self.trace_callback_name = self.filename_tracevar.trace_add('write', self.trace_filename)
+			
 			
 			s = tkinter.StringVar()
 			p = pathlib.Path().cwd()
@@ -1643,8 +1676,7 @@ class Editor(tkinter.Toplevel):
 			self.to_be_closed.append(filetop)
 			self.wait_list.append(s)
 			
-			# fd has now grab:
-			fd = fdialog.FDialog(filetop, p, s, self.font)
+			fd = fdialog.FDialog(filetop, p, s, self.font, self.menufont)
 			
 			# it is important to set s in fd, if not,
 			# then we are going to wait long time
