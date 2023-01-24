@@ -1627,91 +1627,32 @@ class Editor(tkinter.Toplevel):
 		return tabified_line
 	
 	
-	def trace_filename(self, event=None):
+	def trace_filename(self, *args):
 		
-##		if var == 'quit':
-##
-##		elif var == 'empty'
-##
-##		else:
-##			try to open it
-##
-##
-##		self.filename_tracevar.remove('write', self.trace_callback_name)
+		if self.filename_tracevar.get() in ['empty', 'quit']:
+			self.entry.delete(0, tkinter.END)
 			
-		return 'break'
-			
-	
-##	def loadfile(self, filepath, event=None):
-##		''' filepath is tkinter.pathlib.Path
-##		'''
-##
-##
-##		return 'break'
-	
-	
-	def load(self, event=None):
-
-		if self.state != 'normal':
-			self.bell()
-			return
-		
-		##################### Get filename begin
-		
-		# Pressed Open-button
-		if event == None:
-			
-			#self.filename_tracevar.set('empty')
-			#self.trace_callback_name = self.filename_tracevar.trace_add('write', self.trace_filename)
-			
-			
-			s = tkinter.StringVar()
-			p = pathlib.Path().cwd()
-			
-			if self.lastdir:
-				p = p / self.lastdir
-			
-			filetop = tkinter.Toplevel()
-			filetop.title('Select File')
-			self.to_be_closed.append(filetop)
-			self.wait_list.append(s)
-			
-			fd = fdialog.FDialog(filetop, p, s, self.font, self.menufont)
-			
-			# it is important to set s in fd, if not,
-			# then we are going to wait long time
-			# even after closing editor
-			self.wait_variable(s)
-			
-			if s.get() == 'quit':
-				return 'break'
-
-			# avoid bell when dialog is closed without selection
-			if s.get() == '':
-				self.entry.delete(0, tkinter.END)
-				if self.tabs[self.tabindex].filepath != None:
-					self.entry.insert(0, self.tabs[self.tabindex].filepath)
-				return 'break'
-
-			else:
-				# update self.lastdir
-				filename = pathlib.Path().cwd() / s.get()
-				self.lastdir = pathlib.Path(*filename.parts[:-1])
-		
-
-		# Entered filename to be opened in entry:
+			if self.tabs[self.tabindex].filepath != None:
+				self.entry.insert(0, self.tabs[self.tabindex].filepath)
+				
 		else:
-			tmp = self.entry.get().strip()
-
-			if not isinstance(tmp, str) or tmp.isspace():
-				self.bell()
-				return 'break'
-	
-			filename = pathlib.Path().cwd() / tmp
-
-		###################################### Get filename end
+			# update self.lastdir
+			filename = pathlib.Path().cwd() / self.filename_tracevar.get()
+			self.lastdir = pathlib.Path(*filename.parts[:-1])
+		
+			self.loadfile(filename)
 		
 		
+		self.filename_tracevar.trace_remove('write', self.trace_callback_name)
+		
+		return 'break'
+		
+			
+	def loadfile(self, filepath):
+		''' filepath is tkinter.pathlib.Path
+		'''
+
+		filename = filepath
 		openfiles = [tab.filepath for tab in self.tabs]
 		
 		if filename in openfiles:
@@ -1721,7 +1662,8 @@ class Editor(tkinter.Toplevel):
 			
 			if self.tabs[self.tabindex].filepath != None:
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
-			return 'break'
+			
+			return
 		
 		if self.tabs[self.tabindex].type == 'normal':
 			self.save(activetab=True)
@@ -1753,7 +1695,120 @@ class Editor(tkinter.Toplevel):
 			if self.tabs[self.tabindex].filepath != None:
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
 				
-		return 'break'
+		return
+		
+	
+	
+	def load(self, event=None):
+
+		if self.state != 'normal':
+			self.bell()
+			return 'break'
+		
+		##################### Get filename begin
+		
+		# Pressed Open-button
+		if event == None:
+			
+			self.filename_tracevar.set('empty')
+			self.trace_callback_name = self.filename_tracevar.trace_add('write', self.trace_filename)
+			
+			
+			#s = tkinter.StringVar()
+			p = pathlib.Path().cwd()
+			
+			if self.lastdir:
+				p = p / self.lastdir
+			
+			filetop = tkinter.Toplevel()
+			filetop.title('Select File')
+			self.to_be_closed.append(filetop)
+			#self.wait_list.append(s)
+			
+			fd = fdialog.FDialog(filetop, p, self.filename_tracevar, self.font, self.menufont)
+			
+			return 'break'
+			
+			
+##			# it is important to set s in fd, if not,
+##			# then we are going to wait long time
+##			# even after closing editor
+##			self.wait_variable(s)
+##
+##			if s.get() == 'quit':
+##				return 'break'
+##
+##			# avoid bell when dialog is closed without selection
+##			if s.get() == '':
+##				self.entry.delete(0, tkinter.END)
+##				if self.tabs[self.tabindex].filepath != None:
+##					self.entry.insert(0, self.tabs[self.tabindex].filepath)
+##				return 'break'
+##
+##			else:
+##				# update self.lastdir
+##				filename = pathlib.Path().cwd() / s.get()
+##				self.lastdir = pathlib.Path(*filename.parts[:-1])
+		
+
+		# Entered filename to be opened in entry:
+		else:
+			tmp = self.entry.get().strip()
+
+			if not isinstance(tmp, str) or tmp.isspace():
+				self.bell()
+				return 'break'
+	
+			filename = pathlib.Path().cwd() / tmp
+			
+			self.loadfile(filename)
+			return 'break'
+
+		###################################### Get filename end
+		
+		
+##		openfiles = [tab.filepath for tab in self.tabs]
+##
+##		if filename in openfiles:
+##			print(f'file: {filename} is already open')
+##			self.bell()
+##			self.entry.delete(0, tkinter.END)
+##
+##			if self.tabs[self.tabindex].filepath != None:
+##				self.entry.insert(0, self.tabs[self.tabindex].filepath)
+##			return 'break'
+##
+##		if self.tabs[self.tabindex].type == 'normal':
+##			self.save(activetab=True)
+##
+##		# Using same tab:
+##		try:
+##			with open(filename, 'r', encoding='utf-8') as f:
+##				fcontents = f.read()
+##				self.tabs[self.tabindex].contents = fcontents
+##				self.tabs[self.tabindex].oldcontents = self.tabs[self.tabindex].contents
+##				self.contents.delete('1.0', tkinter.END)
+##				self.entry.delete(0, tkinter.END)
+##				self.tabs[self.tabindex].filepath = filename
+##				self.tabs[self.tabindex].type = 'normal'
+##				self.tabs[self.tabindex].position = '1.0'
+##
+##				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+##				self.contents.focus_set()
+##				self.contents.see('1.0')
+##				self.contents.mark_set('insert', '1.0')
+##				self.entry.insert(0, filename)
+##				self.contents.edit_reset()
+##				self.contents.edit_modified(0)
+##		except (EnvironmentError, UnicodeDecodeError) as e:
+##			print(e.__str__())
+##			print(f'\n Could not open file: {filename}')
+##			self.entry.delete(0, tkinter.END)
+##
+##			if self.tabs[self.tabindex].filepath != None:
+##				self.entry.insert(0, self.tabs[self.tabindex].filepath)
+##
+##		return 'break'
 			
 
 	def save(self, activetab=False, forced=False):

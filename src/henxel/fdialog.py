@@ -114,8 +114,8 @@ class FDialog:
 		self.files.grid_configure(row=1, column = 2, sticky='nsew')
 		self.filesbar.grid_configure(row=1, column = 3, sticky='nse')
 		
-		self.top.wait_visibility()
-		self.top.grab_set()
+		#self.top.wait_visibility()
+		#self.top.grab_set()
 		self.update_view()
 			
 		#################### init end ################
@@ -169,7 +169,7 @@ class FDialog:
 	def quit_me(self, event=None):
 	
 		self.top.destroy()
-		self.var.set('')
+		self.var.set('empty')
 				
 	
 	def chdir(self, event=None):

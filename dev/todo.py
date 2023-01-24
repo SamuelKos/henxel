@@ -5,15 +5,13 @@
 # >>> e=todo.Ed()
 
 
-# fix for not being able to open files from entry					ok ?
+# fix for not being able to open files from entry						ok ?
 
-# fdialog show path, carousel, tab from dirs to files same line		ok ?
+# fdialog show path, carousel, tab from dirs to files same line			ok ?
 
+# fdialog like fontchoose, disable self, trace var, try console active	ok ?
 
-
-# fdialog like fontchoose, disable self, trace var, try console active
-
-
+# disable self, bind esc, status?
 
 
 
