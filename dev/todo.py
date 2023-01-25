@@ -11,9 +11,18 @@
 
 # fdialog like fontchoose, disable self, trace var, try console active	ok ?
 
+# git main master red													ok ?
+
+
 # disable self, bind esc, status?
 
 
+# font names check, font as dict
+# font listbox see
+
+# update help about how to change tabwidth
+# henxel.TAB_WIDTH=8
+# e=henxel.Editor()
 
 
 # help() in python console freezes editor

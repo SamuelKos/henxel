@@ -5,7 +5,7 @@ import pathlib
 
 class FDialog:
 	''' Get filepath, cwd is given as pathlib object, result is saved
-		in tkinter.StringVar object, which is set to empty string: ''
+		in tkinter.StringVar object, which is set to: ''
 		on cancel
 		
 		Bindings:
@@ -13,27 +13,14 @@ class FDialog:
 		double-click, Return	chdir or select file and quit
 		
 		Tab		switch focus between dirs and files
-		-------------------------------------------
 		
-		Usage example:
-		(in some callback-method of some widget-class)
 		
-		s = tkinter.StringVar()
-		p = pathlib.Path().cwd()
-			
-		filetop = tkinter.Toplevel()
-		filetop.title('Select File')
+		Note that there is no function to call like this:
+		fd = FDialog(*args, **kwargs)
+		filepath = fd.not_existing_function_that_returns_filepath_as_string()
 		
-		# fd has now grab:
-		fd = fdialog.FDialog(filetop, p, s, self.font, self.menufont)
-		
-		self.wait_variable(s)
-		
-		if s.get() == '':
-			canceled
-		else:
-			do something
-		-----------------
+		Instead you must arrange a variable observer for stringvar with tracing
+		or you can just wait for it to change.
 		
 	'''
 
@@ -114,10 +101,8 @@ class FDialog:
 		self.files.grid_configure(row=1, column = 2, sticky='nsew')
 		self.filesbar.grid_configure(row=1, column = 3, sticky='nse')
 		
-		#self.top.wait_visibility()
-		#self.top.grab_set()
 		self.update_view()
-			
+		
 		#################### init end ################
 		
 	
@@ -169,7 +154,7 @@ class FDialog:
 	def quit_me(self, event=None):
 	
 		self.top.destroy()
-		self.var.set('empty')
+		self.var.set('')
 				
 	
 	def chdir(self, event=None):

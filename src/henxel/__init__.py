@@ -120,9 +120,6 @@ class Editor(tkinter.Toplevel):
 		
 		# widgets
 		self.to_be_closed = list()
-		# tkinter.StringVar -list used in quit_me()
-		# to quit some event-loops
-		self.wait_list = list()
 		
 		self.ln_string = ''
 		self.want_ln = True
@@ -153,15 +150,16 @@ class Editor(tkinter.Toplevel):
 		
 		self.errlines = list()
 		
-		self.filename_tracevar = tkinter.StringVar(value='empty')
+		# used in load()
+		self.tracevar_filename = tkinter.StringVar()
 		self.trace_callback_name = None
 		self.lastdir = None
 		
 		self.state = 'normal'
 		
 		
-		self.font = tkinter.font.Font(family='TkDefaulFont', size=12)
-		self.menufont = tkinter.font.Font(family='TkDefaulFont', size=10)
+		self.font = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
+		self.menufont = tkinter.font.Font(family='TkDefaulFont', size=10, name='menufont')
 		
 		# IMPORTANT if binding to 'root':
 		# https://stackoverflow.com/questions/54185434/python-tkinter-override-default-ctrl-h-binding
@@ -212,7 +210,11 @@ class Editor(tkinter.Toplevel):
 		self.btn_git=tkinter.Button(self, takefocus=0)
 		
 		if self.branch:
-			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0, padx=0, text=self.branch[:5], state='disabled')
+			branch = self.branch[:5]
+			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0, padx=0, text=branch, state='disabled')
+			
+			if 'main' in self.branch or 'master' in self.branch:
+				self.btn_git.config(disabledforeground='brown1')
 		else:
 			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0, padx=0, bitmap='info', state='disabled')
 		
@@ -535,16 +537,18 @@ class Editor(tkinter.Toplevel):
 		for widget in self.to_be_closed:
 			widget.destroy()
 		
-		# affects load()
-		# but also for the future possible waiting callbacks.
-		# they must check this right after waiting.
-		for waiter in self.wait_list:
-			waiter.set('quit')
-		
 		self.quit()
 		self.destroy()
 		
+		if self.trace_callback_name:
+			self.tracevar_filename.trace_remove('write', self.trace_callback_name)
 		
+		self.font.__del__()
+		self.menufont.__del__()
+		
+		del self.font
+		del self.menufont
+		 
 ############## Linenumbers Begin
 
 	def no_copy_ln(self, event=None):
@@ -1416,8 +1420,12 @@ class Editor(tkinter.Toplevel):
 	def copy(self):
 		''' When copy is selected from popup-menu
 		'''
-		self.clipboard_clear()
-		self.clipboard_append(self.selection_get())
+		try:
+			self.clipboard_clear()
+			self.clipboard_append(self.selection_get())
+		except tkinter.TclError:
+			# is empty
+			return 'break'
 		
 		
 	def paste(self, event=None):
@@ -1629,7 +1637,8 @@ class Editor(tkinter.Toplevel):
 	
 	def trace_filename(self, *args):
 		
-		if self.filename_tracevar.get() in ['empty', 'quit']:
+		# canceled
+		if self.tracevar_filename.get() == '':
 			self.entry.delete(0, tkinter.END)
 			
 			if self.tabs[self.tabindex].filepath != None:
@@ -1637,13 +1646,15 @@ class Editor(tkinter.Toplevel):
 				
 		else:
 			# update self.lastdir
-			filename = pathlib.Path().cwd() / self.filename_tracevar.get()
+			filename = pathlib.Path().cwd() / self.tracevar_filename.get()
 			self.lastdir = pathlib.Path(*filename.parts[:-1])
 		
 			self.loadfile(filename)
 		
 		
-		self.filename_tracevar.trace_remove('write', self.trace_callback_name)
+		self.tracevar_filename.trace_remove('write', self.trace_callback_name)
+		self.trace_callback_name = None
+		self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
 		
 		return 'break'
 		
@@ -1698,23 +1709,24 @@ class Editor(tkinter.Toplevel):
 		return
 		
 	
-	
 	def load(self, event=None):
+		'''	Get just the filename,
+			on success, pass it to loadfile()
+		'''
 
 		if self.state != 'normal':
 			self.bell()
 			return 'break'
 		
-		##################### Get filename begin
 		
 		# Pressed Open-button
 		if event == None:
 			
-			self.filename_tracevar.set('empty')
-			self.trace_callback_name = self.filename_tracevar.trace_add('write', self.trace_filename)
+			self.contents.bind( "<Alt-Return>", self.do_nothing)
+		
+			self.tracevar_filename.set('empty')
+			self.trace_callback_name = self.tracevar_filename.trace_add('write', self.trace_filename)
 			
-			
-			#s = tkinter.StringVar()
 			p = pathlib.Path().cwd()
 			
 			if self.lastdir:
@@ -1723,33 +1735,11 @@ class Editor(tkinter.Toplevel):
 			filetop = tkinter.Toplevel()
 			filetop.title('Select File')
 			self.to_be_closed.append(filetop)
-			#self.wait_list.append(s)
 			
-			fd = fdialog.FDialog(filetop, p, self.filename_tracevar, self.font, self.menufont)
+			fd = fdialog.FDialog(filetop, p, self.tracevar_filename, self.font, self.menufont)
 			
 			return 'break'
 			
-			
-##			# it is important to set s in fd, if not,
-##			# then we are going to wait long time
-##			# even after closing editor
-##			self.wait_variable(s)
-##
-##			if s.get() == 'quit':
-##				return 'break'
-##
-##			# avoid bell when dialog is closed without selection
-##			if s.get() == '':
-##				self.entry.delete(0, tkinter.END)
-##				if self.tabs[self.tabindex].filepath != None:
-##					self.entry.insert(0, self.tabs[self.tabindex].filepath)
-##				return 'break'
-##
-##			else:
-##				# update self.lastdir
-##				filename = pathlib.Path().cwd() / s.get()
-##				self.lastdir = pathlib.Path(*filename.parts[:-1])
-		
 
 		# Entered filename to be opened in entry:
 		else:
@@ -1762,55 +1752,10 @@ class Editor(tkinter.Toplevel):
 			filename = pathlib.Path().cwd() / tmp
 			
 			self.loadfile(filename)
+			
 			return 'break'
 
-		###################################### Get filename end
-		
-		
-##		openfiles = [tab.filepath for tab in self.tabs]
-##
-##		if filename in openfiles:
-##			print(f'file: {filename} is already open')
-##			self.bell()
-##			self.entry.delete(0, tkinter.END)
-##
-##			if self.tabs[self.tabindex].filepath != None:
-##				self.entry.insert(0, self.tabs[self.tabindex].filepath)
-##			return 'break'
-##
-##		if self.tabs[self.tabindex].type == 'normal':
-##			self.save(activetab=True)
-##
-##		# Using same tab:
-##		try:
-##			with open(filename, 'r', encoding='utf-8') as f:
-##				fcontents = f.read()
-##				self.tabs[self.tabindex].contents = fcontents
-##				self.tabs[self.tabindex].oldcontents = self.tabs[self.tabindex].contents
-##				self.contents.delete('1.0', tkinter.END)
-##				self.entry.delete(0, tkinter.END)
-##				self.tabs[self.tabindex].filepath = filename
-##				self.tabs[self.tabindex].type = 'normal'
-##				self.tabs[self.tabindex].position = '1.0'
-##
-##				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-##				self.contents.focus_set()
-##				self.contents.see('1.0')
-##				self.contents.mark_set('insert', '1.0')
-##				self.entry.insert(0, filename)
-##				self.contents.edit_reset()
-##				self.contents.edit_modified(0)
-##		except (EnvironmentError, UnicodeDecodeError) as e:
-##			print(e.__str__())
-##			print(f'\n Could not open file: {filename}')
-##			self.entry.delete(0, tkinter.END)
-##
-##			if self.tabs[self.tabindex].filepath != None:
-##				self.entry.insert(0, self.tabs[self.tabindex].filepath)
-##
-##		return 'break'
-			
-
+					
 	def save(self, activetab=False, forced=False):
 		''' forced when run() or quit_me()
 			activetab=True from load() and del_tab()
