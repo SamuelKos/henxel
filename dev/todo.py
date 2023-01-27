@@ -5,24 +5,6 @@
 # >>> e=todo.Ed()
 
 
-# fix for not being able to open files from entry					ok ?
-
-# fdialog show path, carousel, tab from dirs to files same line		ok ?
-
-# fdialog like fontchoose, disable self, trace var					ok ?
-
-# git main master red												ok ?
-
-# no multiple fontchoose colorchoose filedialog						ok ?
-
-# font choose cntrl-p bind from self to cont cur line up			ok ?
-
-# disable self when filedialog										ok ?
-
-# changefont font names												ok ?
-# font listbox see
-
-
 
 
 

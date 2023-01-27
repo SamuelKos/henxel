@@ -1,6 +1,22 @@
 # Changelog
-* To version: 	0.0.9
+* To version: 	0.1.0
 * From version:	0.0.3
+
+
+# 0.1.0
+* Files can again be opened from entry.
+* Improvements for fdialog.Fdialog like show current directory.
+* File loading is no more blocking but more like fontchoose, using tracevar.
+* If current git-branch is main or master it is shown with red color.
+* No more multiple fontchoose-, colorchoose- or filedialogs or editors.
+* Binding for fontchoose: ctrl-p moved from self to contents reason being
+the same as usual, it has default binding in Text()-widget which moves
+cursor line up. Which is actually pretty good choice, also that ctrl-n for down.
+But I need those and I can scroll.
+* Widgets are now disabled when filedialog is open.
+* changefont.FontChooser no longer initiates its toplevel-window, and font names are taken from font-instances name-attribute rather than using dummy-names.
+* etc. small fixes
+
 
 # 0.0.9
 * Fix for: being able modify contents at the beginning of search.
