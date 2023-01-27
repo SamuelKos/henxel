@@ -1013,10 +1013,10 @@ class Editor(tkinter.Toplevel):
 		fonttop.title('Choose Font')
 		
 		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
-				self.bind( "<Control-p>", self.font_choose)) )
+				self.contents.bind( "<Control-p>", self.font_choose)) )
 			
 		changefont.FontChooser(fonttop, [self.font, self.menufont])
-		self.bind( "<Control-p>", self.do_nothing)
+		self.contents.bind( "<Control-p>", self.do_nothing)
 		self.to_be_closed.append(fonttop)
 	
 		return 'break'
