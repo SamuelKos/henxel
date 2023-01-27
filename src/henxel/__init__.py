@@ -122,9 +122,12 @@ class Editor(tkinter.Toplevel):
 			return super(Editor, cls).__new__(cls)
 			
 		else:
-			print('Instance of ', cls, ' already running!')
+			print('Instance of ', cls, ' already running!\n')
 			
-			return
+			# return here would be a bit shady, so
+			# by raising error the object creation is totally aborted.
+			raise ValueError()
+			
 			
 
 	def __init__(self):

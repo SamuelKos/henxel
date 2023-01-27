@@ -1,7 +1,11 @@
 # Changelog
-* To version: 	0.1.0
+* To version: 	0.1.1
 * From version:	0.0.3
 
+
+# 0.1.1
+* Quick fix for: wrong bind in font_choose
+* And for: __new__ should not alter existing object types
 
 # 0.1.0
 * Files can again be opened from entry.
