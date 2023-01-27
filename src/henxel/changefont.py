@@ -1,14 +1,15 @@
+import tkinter.font
 import tkinter
 
 
-class FontChooser(tkinter.Toplevel):
+class FontChooser:
 		
-	def __init__(self, fontlist):
-		'''	fontlist is list of tkinter.font.Font instances
+	def __init__(self, master, fontlist):
+		'''	master	tkinter.Toplevel
+			fontlist is list of tkinter.font.Font instances
 		'''
-		self.root = tkinter.Tk().withdraw()
-		super().__init__(self.root)
-		self.title('Choose Font')
+		
+		self.top = master
 		self.fonts = fontlist
 		self.badfonts = frozenset([
 					'Standard Symbols PS',
@@ -29,66 +30,58 @@ class FontChooser(tkinter.Toplevel):
 		self.max = 42
 		self.min = 8
 		
-		# Next, naming fonts to be configured in optionmenu:
-		# self.fonts[0] ==> 'FONT 0' 	etc..
-		# They are dummy-names used only to distinguish fonts in list
-		# user gave as input.
-		self.fontdict = dict()
 		self.option_menu_list = list()
 
-		for i in range(len(self.fonts)):
-			pattern = f'FONT {i}'
-			self.fontdict[pattern] = i
-			# Here adding dummy-name to list which is used in optionmenu later:
-			self.option_menu_list.append(pattern)
+		for font in self.fonts:
+			self.option_menu_list.append(font.name)
 		
 		self.var = tkinter.StringVar()
 		self.var.set(self.option_menu_list[0])
-		self.font = self.fonts[self.fontdict[self.var.get()]]
+		self.font = tkinter.font.nametofont(self.var.get())
 		
-		self.optionmenu = tkinter.OptionMenu(self, self.var, *self.option_menu_list, command=self.optionmenu_command)
+		self.optionmenu = tkinter.OptionMenu(self.top, self.var, *self.option_menu_list, command=self.optionmenu_command)
 		
 		# Set font of dropdown button:
 		self.optionmenu.config(font=('TkDefaultFont',10))
 		
 		# Set font of dropdown items:
-		menu = self.nametowidget(self.optionmenu.menuname)
+		menu = self.top.nametowidget(self.optionmenu.menuname)
 		menu.config(font=('TkDefaultFont',10))
 		
 		# Optionmenu contains font-instances to be configured:
 		self.optionmenu.pack(side=tkinter.LEFT)
-		self.button = tkinter.Button(self, text='BIG', command=self.button_command)
+		self.button = tkinter.Button(self.top, text='BIG', command=self.button_command)
 		self.button.pack()
-		self.scrollbar = tkinter.Scrollbar(self)
+		self.scrollbar = tkinter.Scrollbar(self.top)
 		
 		# Listbox contains font-choises to select from:
-		self.lb = tkinter.Listbox(self, font=('TkDefaultFont', 10), selectmode=tkinter.SINGLE, width=80, yscrollcommand=self.scrollbar.set)
+		self.lb = tkinter.Listbox(self.top, font=('TkDefaultFont', 10), selectmode=tkinter.SINGLE, width=40, yscrollcommand=self.scrollbar.set)
 		self.lb.pack(pady=10, side='left')
 		self.scrollbar.pack(side='left', fill='y')
 		self.scrollbar.config(width=30, elementborderwidth=4, command=self.lb.yview)
 		
 		# With spinbox we set font size:
-		self.sb = tkinter.Spinbox(self, font=('TkDefaultFont', 10), from_=self.min, to=self.max, increment=2, width=3, command=self.change_font)
+		self.sb = tkinter.Spinbox(self.top, font=('TkDefaultFont', 10), from_=self.min, to=self.max, increment=2, width=3, command=self.change_font)
 		self.sb.pack(pady=10)
 		
 		# Make four checkboxes for other font configurations
 		self.bold = tkinter.StringVar()
-		self.cb1 = tkinter.Checkbutton(self, font=('TkDefaultFont', 10), offvalue='normal', onvalue='bold', text='Bold', variable=self.bold)
+		self.cb1 = tkinter.Checkbutton(self.top, font=('TkDefaultFont', 10), offvalue='normal', onvalue='bold', text='Bold', variable=self.bold)
 		self.cb1.pack(pady=10, anchor='w')
 		self.cb1.config(command=lambda args=[self.bold, 'weight']: self.checkbutton_command(args))
 		
 		self.italic = tkinter.StringVar()
-		self.cb2 = tkinter.Checkbutton(self, font=('TkDefaultFont', 10), offvalue='roman', onvalue='italic', text='Italic', variable=self.italic)
+		self.cb2 = tkinter.Checkbutton(self.top, font=('TkDefaultFont', 10), offvalue='roman', onvalue='italic', text='Italic', variable=self.italic)
 		self.cb2.pack(pady=10, anchor='w')
 		self.cb2.config(command=lambda args=[self.italic, 'slant']: self.checkbutton_command(args))
 		
 		self.underline = tkinter.StringVar()
-		self.cb3 = tkinter.Checkbutton(self, font=('TkDefaultFont', 10), offvalue=0, onvalue=1, text='Underline', variable=self.underline)
+		self.cb3 = tkinter.Checkbutton(self.top, font=('TkDefaultFont', 10), offvalue=0, onvalue=1, text='Underline', variable=self.underline)
 		self.cb3.pack(pady=10, anchor='w')
 		self.cb3.config(command=lambda args=[self.underline, 'underline']: self.checkbutton_command(args))
 		
 		self.overstrike = tkinter.StringVar()
-		self.cb4 = tkinter.Checkbutton(self, font=('TkDefaultFont', 10), offvalue=0, onvalue=1, text='Overstrike', variable=self.overstrike)
+		self.cb4 = tkinter.Checkbutton(self.top, font=('TkDefaultFont', 10), offvalue=0, onvalue=1, text='Overstrike', variable=self.overstrike)
 		self.cb4.pack(pady=10, anchor='w')
 		self.cb4.config(command=lambda args=[self.overstrike, 'overstrike']: self.checkbutton_command(args))
 		
@@ -162,10 +155,10 @@ class FontChooser(tkinter.Toplevel):
 	def optionmenu_command(self, event=None):
 		'''	When font(instance) is selected from optionmenu.
 		'''
-		self.font = self.fonts[self.fontdict[self.var.get()]]
+		self.font = tkinter.font.nametofont(self.var.get())
 		fontname = self.font.actual("family")
 		fontindex = self.fontnames.index(fontname)
-		self.selection_clear()
+		self.top.selection_clear()
 		self.lb.select_set(fontindex)
 		self.lb.see(fontindex)
 		self.sb.delete(0, 'end')

@@ -16,6 +16,7 @@
 # Theme Related
 # Run file Related
 # Overrides
+# Utilities
 # Save and Load
 # Gotoline and Help
 # Indent and Comment
@@ -112,13 +113,27 @@ GOODFONTS = [
 			
 class Editor(tkinter.Toplevel):
 
+	alive = False
+	
+	
+	def __new__(cls):
+	
+		if not cls.alive:
+			return super(Editor, cls).__new__(cls)
+			
+		else:
+			print('Instance of ', cls, ' already running!')
+			
+			return
+			
 
 	def __init__(self):
+	
 		self.root = tkinter.Tk().withdraw()
 		super().__init__(self.root, class_='Henxel', bd=4)
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		
-		# widgets
+		# other widgets
 		self.to_be_closed = list()
 		
 		self.ln_string = ''
@@ -133,6 +148,10 @@ class Editor(tkinter.Toplevel):
 		self.tabs = list()
 		self.tabindex = None
 		self.branch = None
+		
+		
+		self.font = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
+		self.menufont = tkinter.font.Font(family='TkDefaulFont', size=10, name='menufont')
 		
 		# get current git-branch
 		try:
@@ -158,9 +177,6 @@ class Editor(tkinter.Toplevel):
 		self.state = 'normal'
 		
 		
-		self.font = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
-		self.menufont = tkinter.font.Font(family='TkDefaulFont', size=10, name='menufont')
-		
 		# IMPORTANT if binding to 'root':
 		# https://stackoverflow.com/questions/54185434/python-tkinter-override-default-ctrl-h-binding
 		# https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/binding-levels.html
@@ -174,7 +190,6 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Button-3>", self.raise_popup)
 		self.bind( "<Control-g>", self.gotoline)
 		self.bind( "<Control-r>", self.replace)
-		self.bind( "<Control-p>", self.font_choose)
 		self.bind( "<Control-s>", self.color_choose)
 		self.bind( "<Alt-t>", self.toggle_color)
 		self.bind( "<Alt-w>", self.walk_files)
@@ -247,7 +262,7 @@ class Editor(tkinter.Toplevel):
 			self.oldconf = string_representation
 			self.load_config(data)
 			
-			
+		
 		self.ln_widget = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4)
 		self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
 		
@@ -281,6 +296,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Alt-l>", self.toggle_ln)
 		self.contents.bind( "<Control-f>", self.search)
 		self.contents.bind( "<Control-n>", self.new_tab)
+		self.contents.bind( "<Control-p>", self.font_choose)
 		self.contents.bind( "<Return>", self.return_override)
 		self.contents.bind( "<Control-d>", self.del_tab)
 		self.contents.bind( "<Shift-Return>", self.comment)
@@ -424,8 +440,10 @@ class Editor(tkinter.Toplevel):
 			self.contents.see('1.0')
 			self.contents.mark_set('insert', '1.0')
 		
+		
 		self.update_idletasks()
 		self.viewsync()
+		self.__class__.alive = True
 		self.update_title()
 		
 		############################# init End ######################
@@ -439,101 +457,14 @@ class Editor(tkinter.Toplevel):
 	def do_nothing(self, event=None):
 		self.bell()
 		return 'break'
-	
-	
-	def insert_inspected(self):
-		''' Tries to inspect selection. On success: opens new tab and pastes lines there.
-			New tab can be safely closed with ctrl-d later, or saved with new filename.
-		'''
-		try:
-			target = self.contents.selection_get()
-		except tkinter.TclError:
-			self.bell()
-			return 'break'
-		
-		target=target.strip()
-		
-		if not len(target) > 0:
-			self.bell()
-			return 'break'
 		
 		
-		import inspect
-		is_module = False
-		
-		try:
-			mod = importlib.import_module(target)
-			is_module = True
-			filepath = inspect.getsourcefile(mod)
-			
-			if not filepath:
-				self.bell()
-				return 'break'
-			
-			try:
-				with open(filepath, 'r', encoding='utf-8') as f:
-					fcontents = f.read()
-					
-					self.new_tab()
-					self.tabs[self.tabindex].contents = fcontents
-					self.contents.insert(tkinter.INSERT, fcontents)
-					self.contents.edit_reset()
-					self.contents.edit_modified(0)
-					self.contents.focus_set()
-					return 'break'
-					
-			except (EnvironmentError, UnicodeDecodeError) as e:
-				print(e.__str__())
-				print(f'\n Could not open file: {filepath}')
-				self.bell()
-				return 'break'
-					
-		except ModuleNotFoundError:
-			print(f'\n Is not a module: {target}')
-		except TypeError as ee:
-			print(ee.__str__())
-			self.bell()
-			return 'break'
-			
-			
-		if not is_module:
-		
-			try:
-				modulepart = target[:target.rindex('.')]
-				object_part = target[target.rindex('.')+1:]
-				mod = importlib.import_module(modulepart)
-				target_object = getattr(mod, object_part)
-				
-				l = inspect.getsourcelines(target_object)
-				tmp = ''.join(l[0])
-				 
-				self.new_tab()
-				self.tabs[self.tabindex].contents = tmp
-				self.contents.insert(tkinter.INSERT, tmp)
-				self.contents.edit_reset()
-				self.contents.edit_modified(0)
-				self.contents.focus_set()
-				return 'break'
-			
-			# from .rindex()
-			except ValueError:
-				self.bell()
-				return 'break'
-				
-			except Exception as e:
-				self.bell()
-				print(e.__str__())
-				return 'break'
-		
-		return 'break'
-		
-	
 	def quit_me(self):
 	
 		self.save(forced=True)
 		self.save_config()
 		
-		# affects color and fontchoose:
+		# affects color, fontchoose, load:
 		for widget in self.to_be_closed:
 			widget.destroy()
 		
@@ -543,12 +474,37 @@ class Editor(tkinter.Toplevel):
 		if self.trace_callback_name:
 			self.tracevar_filename.trace_remove('write', self.trace_callback_name)
 		
-		self.font.__del__()
-		self.menufont.__del__()
-		
 		del self.font
 		del self.menufont
-		 
+		
+		# this is maybe not necessary
+		del self.entry
+		del self.btn_open
+		del self.btn_save
+		del self.btn_git
+		del self.contents
+		del self.ln_widget
+		del self.scrollbar
+		del self.popup
+				
+		self.__class__.alive = False
+		
+		
+	def viewsync(self, event=None):
+		'''	Triggered when event is <<WidgetViewSync>>
+		
+			This event itself is generated when inserting, deleting or on screen geometry change, but
+			not when just scrolling (like yview). Almost all font-changes also generates this event,
+			so that is good to know because I yet have not seen that TkWorldChange -event.
+		'''
+		
+		# More info in update_linenums()
+		self.bbox_height = self.contents.bbox('@0,0')[3]
+		self.text_widget_height = self.scrollbar.winfo_height()
+		
+		self.update_linenums()
+
+	
 ############## Linenumbers Begin
 
 	def no_copy_ln(self, event=None):
@@ -571,21 +527,6 @@ class Editor(tkinter.Toplevel):
 		
 		return 'break'
 		
-
-	def viewsync(self, event=None):
-		'''	Triggered when event is <<WidgetViewSync>>
-		
-			This event itself is generated when inserting, deleting or on screen geometry change, but
-			not when just scrolling (like yview). Almost all font-changes also generates this event,
-			so that is good to know because I yet have not seen that TkWorldChange -event.
-		'''
-		
-		# More info in update_linenums()
-		self.bbox_height = self.contents.bbox('@0,0')[3]
-		self.text_widget_height = self.scrollbar.winfo_height()
-		
-		self.update_linenums()
-
 	
 	def get_linenums(self):
 
@@ -674,7 +615,7 @@ class Editor(tkinter.Toplevel):
 		# event == None when clicked hyper-link in tag_link()
 		if self.state != 'normal' and event != None:
 			self.bell()
-			return
+			return 'break'
 	
 		if len(self.tabs) > 0  and not error:
 			try:
@@ -971,6 +912,8 @@ class Editor(tkinter.Toplevel):
 				self.tabindex = i
 				break
 		
+
+	def apply_config(self):
 		
 		if self.tabindex == None:
 			if len(self.tabs) == 0:
@@ -981,8 +924,6 @@ class Editor(tkinter.Toplevel):
 				self.tabindex = 0
 				self.tabs[self.tabindex].active = True
 		
-
-	def apply_config(self):
 	
 		self.tab_width = self.font.measure(TAB_WIDTH * TAB_WIDTH_CHAR)
 		self.contents.config(font=self.font, foreground=self.fgcolor,
@@ -1067,10 +1008,17 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-			
-		choose = changefont.FontChooser([self.font, self.menufont])
-		self.to_be_closed.append(choose)
 		
+		fonttop = tkinter.Toplevel()
+		fonttop.title('Choose Font')
+		
+		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
+				self.bind( "<Control-p>", self.font_choose)) )
+			
+		changefont.FontChooser(fonttop, [self.font, self.menufont])
+		self.bind( "<Control-p>", self.do_nothing)
+		self.to_be_closed.append(fonttop)
+	
 		return 'break'
 		
 			
@@ -1079,11 +1027,14 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return "break"
 			
-		# I am not sure why this works but it is possibly related
-		# to fact that there can only be one root window,
-		# or actually one Tcl-interpreter in single python-program or -console.
 		colortop = tkinter.Toplevel()
 		colortop.title('Choose Color')
+		
+		colortop.protocol("WM_DELETE_WINDOW", lambda: ( colortop.destroy(),
+				self.bind( "<Control-s>", self.color_choose)) )
+				
+		self.bind( "<Control-s>", self.do_nothing)
+		
 		colortop.btnfg = tkinter.Button(colortop, text='Text color', font=('TkDefaultFont', 16),
 				command = lambda args=['fg']: self.chcolor(args) )
 				
@@ -1107,6 +1058,8 @@ class Editor(tkinter.Toplevel):
 		colortop.lb.bind('<ButtonRelease-1>', lambda event, args=[colortop]: self.choose_daynight(args, event))
 		
 		self.to_be_closed.append(colortop)
+		
+		return 'break'
 		
 		
 		
@@ -1408,6 +1361,10 @@ class Editor(tkinter.Toplevel):
 ########## Overrides Begin
 
 	def raise_popup(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+		
 		self.popup_whohasfocus = event.widget
 		self.popup.post(event.x_root, event.y_root)
 		self.popup.focus_set() # Needed to remove popup when clicked outside.
@@ -1596,6 +1553,96 @@ class Editor(tkinter.Toplevel):
 		
 
 ########## Overrides End
+########## Utilities Begin
+
+	def insert_inspected(self):
+		''' Tries to inspect selection. On success: opens new tab and pastes lines there.
+			New tab can be safely closed with ctrl-d later, or saved with new filename.
+		'''
+		try:
+			target = self.contents.selection_get()
+		except tkinter.TclError:
+			self.bell()
+			return 'break'
+		
+		target=target.strip()
+		
+		if not len(target) > 0:
+			self.bell()
+			return 'break'
+		
+		
+		import inspect
+		is_module = False
+		
+		try:
+			mod = importlib.import_module(target)
+			is_module = True
+			filepath = inspect.getsourcefile(mod)
+			
+			if not filepath:
+				self.bell()
+				return 'break'
+			
+			try:
+				with open(filepath, 'r', encoding='utf-8') as f:
+					fcontents = f.read()
+					
+					self.new_tab()
+					self.tabs[self.tabindex].contents = fcontents
+					self.contents.insert(tkinter.INSERT, fcontents)
+					self.contents.edit_reset()
+					self.contents.edit_modified(0)
+					self.contents.focus_set()
+					return 'break'
+					
+			except (EnvironmentError, UnicodeDecodeError) as e:
+				print(e.__str__())
+				print(f'\n Could not open file: {filepath}')
+				self.bell()
+				return 'break'
+					
+		except ModuleNotFoundError:
+			print(f'\n Is not a module: {target}')
+		except TypeError as ee:
+			print(ee.__str__())
+			self.bell()
+			return 'break'
+			
+			
+		if not is_module:
+		
+			try:
+				modulepart = target[:target.rindex('.')]
+				object_part = target[target.rindex('.')+1:]
+				mod = importlib.import_module(modulepart)
+				target_object = getattr(mod, object_part)
+				
+				l = inspect.getsourcelines(target_object)
+				tmp = ''.join(l[0])
+				 
+				self.new_tab()
+				self.tabs[self.tabindex].contents = tmp
+				self.contents.insert(tkinter.INSERT, tmp)
+				self.contents.edit_reset()
+				self.contents.edit_modified(0)
+				self.contents.focus_set()
+				return 'break'
+			
+			# from .rindex()
+			except ValueError:
+				self.bell()
+				return 'break'
+				
+			except Exception as e:
+				self.bell()
+				print(e.__str__())
+				return 'break'
+		
+		return 'break'
+	
+
+########## Utilities End
 ########## Save and Load Begin
 
 	def tabify(self, line):
@@ -1656,6 +1703,12 @@ class Editor(tkinter.Toplevel):
 		self.trace_callback_name = None
 		self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
 		
+		self.state = 'normal'
+		
+	
+		for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
+			widget.config(state='normal')
+		
 		return 'break'
 		
 			
@@ -1665,6 +1718,10 @@ class Editor(tkinter.Toplevel):
 
 		filename = filepath
 		openfiles = [tab.filepath for tab in self.tabs]
+		
+		for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
+			widget.config(state='normal')
+		
 		
 		if filename in openfiles:
 			print(f'file: {filename} is already open')
@@ -1713,7 +1770,7 @@ class Editor(tkinter.Toplevel):
 		'''	Get just the filename,
 			on success, pass it to loadfile()
 		'''
-
+		
 		if self.state != 'normal':
 			self.bell()
 			return 'break'
@@ -1721,9 +1778,13 @@ class Editor(tkinter.Toplevel):
 		
 		# Pressed Open-button
 		if event == None:
-			
-			self.contents.bind( "<Alt-Return>", self.do_nothing)
 		
+			self.state = 'filedialog'
+			self.contents.bind( "<Alt-Return>", self.do_nothing)
+			
+			for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
+				widget.config(state='disabled')
+				
 			self.tracevar_filename.set('empty')
 			self.trace_callback_name = self.tracevar_filename.trace_add('write', self.trace_filename)
 			
@@ -2027,6 +2088,10 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def help(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		self.state = 'help'
 		
 		try:

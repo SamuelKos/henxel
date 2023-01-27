@@ -15,12 +15,15 @@ class FDialog:
 		Tab		switch focus between dirs and files
 		
 		
-		Note that there is no function to call like this:
+		Note that there is no function to be called like this:
 		fd = FDialog(*args, **kwargs)
-		filepath = fd.not_existing_function_that_returns_filepath_as_string()
+		filepath = fd.non_existing_function_that_returns_filepath_as_string()
 		
-		Instead you must arrange a variable observer for stringvar with tracing
-		or you can just wait for it to change.
+		Instead you must arrange a variable observer for stringvar with
+			stringvar.trace_add('write', my_callback)
+		
+		or you can just wait for it to change with
+			tkinter.wait_variable(stringvar)
 		
 	'''
 
