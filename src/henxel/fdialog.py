@@ -20,7 +20,7 @@ class FDialog:
 		filepath = fd.non_existing_function_that_returns_filepath_as_string()
 		
 		Instead you must arrange a variable observer for stringvar with
-			stringvar.trace_add('write', my_callback)
+			stringvar.trace_add('write', my_tracefunc)
 		
 		or you can just wait for it to change with
 			tkinter.wait_variable(stringvar)

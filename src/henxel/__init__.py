@@ -174,7 +174,7 @@ class Editor(tkinter.Toplevel):
 		
 		# used in load()
 		self.tracevar_filename = tkinter.StringVar()
-		self.trace_callback_name = None
+		self.tracefunc_name = None
 		self.lastdir = None
 		
 		self.state = 'normal'
@@ -229,12 +229,16 @@ class Editor(tkinter.Toplevel):
 		
 		if self.branch:
 			branch = self.branch[:5]
-			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0, padx=0, text=branch, state='disabled')
+			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0,
+						padx=0, text=branch, state='disabled')
 			
 			if 'main' in self.branch or 'master' in self.branch:
 				self.btn_git.config(disabledforeground='brown1')
+				
 		else:
-			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0, padx=0, bitmap='info', state='disabled')
+			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0,
+						padx=0, bitmap='info', state='disabled')
+		
 		
 		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, bg='#d9d9d9')
 		self.entry.bind("<Return>", self.load)
@@ -474,8 +478,8 @@ class Editor(tkinter.Toplevel):
 		self.quit()
 		self.destroy()
 		
-		if self.trace_callback_name:
-			self.tracevar_filename.trace_remove('write', self.trace_callback_name)
+		if self.tracefunc_name:
+			self.tracevar_filename.trace_remove('write', self.tracefunc_name)
 		
 		del self.font
 		del self.menufont
@@ -1702,8 +1706,8 @@ class Editor(tkinter.Toplevel):
 			self.loadfile(filename)
 		
 		
-		self.tracevar_filename.trace_remove('write', self.trace_callback_name)
-		self.trace_callback_name = None
+		self.tracevar_filename.trace_remove('write', self.tracefunc_name)
+		self.tracefunc_name = None
 		self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
 		
 		self.state = 'normal'
@@ -1789,7 +1793,7 @@ class Editor(tkinter.Toplevel):
 				widget.config(state='disabled')
 				
 			self.tracevar_filename.set('empty')
-			self.trace_callback_name = self.tracevar_filename.trace_add('write', self.trace_filename)
+			self.tracefunc_name = self.tracevar_filename.trace_add('write', self.trace_filename)
 			
 			p = pathlib.Path().cwd()
 			
