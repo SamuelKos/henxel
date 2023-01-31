@@ -39,6 +39,15 @@ import tkinter
 import pathlib
 import json
 
+
+#import tokenize
+
+from tokenize import tokenize, NUMBER, STRING, NAME, OP
+
+from io import BytesIO
+
+
+
 import importlib.resources
 import sys
 
@@ -452,6 +461,96 @@ class Editor(tkinter.Toplevel):
 		self.viewsync()
 		self.__class__.alive = True
 		self.update_title()
+		
+		
+		# Try to highlight syntax:
+		tmp = self.contents.get('1.0', tkinter.END)
+		res = tokenize( BytesIO(tmp.encode('utf-8')).readline )
+
+
+		self.bools = ['False', 'True', 'None']
+		
+		self.keywords = [
+						'False',
+						'True',
+						'None',
+						'break',
+						'for',
+						'not',
+						'class',
+						'from',
+						'or',
+						'continue',
+						'global',
+						'pass',
+						'def',
+						'if',
+						'raise',
+						'and',
+						'del',
+						'import',
+						'return',
+						'as',
+						'elif',
+						'in',
+						'try',
+						'assert',
+						'else',
+						'is',
+						'while',
+						'async',
+						'except',
+						'lambda',
+						'with',
+						'await',
+						'finally',
+						'nonlocal',
+						'yield'
+						]
+						
+
+		# blue = r'#12488b'
+		red = r'#c01c28'
+		# yellow = r'#a2734c'
+		cyan = r'#2aa1b3'
+		magenta = r'#a347ba'
+		
+		# yellow, green?
+		# COMMENT
+		# STRING
+		
+			
+		self.contents.tag_config('keywords', foreground=cyan)
+		self.contents.tag_config('numbers', foreground=red)
+		self.contents.tag_config('bools', foreground=magenta)
+		#self.contents.tag_config('keywords', foreground='black')
+		#self.contents.tag_config('keywords', foreground='black')
+		
+
+		for token in res:
+			if (token.type == NAME  and token.string in self.keywords) or \
+				(token.type == NUMBER):
+				
+				
+				s0, s1 = map(str, token.start)
+				e0, e1 = map(str, token.end)
+				idx_start = s0 + '.' + s1
+				idx_end = e0 + '.' + e1
+			
+			
+				if token.type == NAME:
+				
+					if token.string in self.bools:
+						self.contents.tag_add('bools', idx_start, idx_end)
+						
+					else:
+						self.contents.tag_add('keywords', idx_start, idx_end)
+		
+				elif token.type == NUMBER:
+					self.contents.tag_add('numbers', idx_start, idx_end)
+		
+
+		
 		
 		############################# init End ######################
 		
