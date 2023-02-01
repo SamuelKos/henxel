@@ -5,12 +5,15 @@
 # >>> e=todo.Ed()
 
 
-
-# test tokenizer
-
+# tabify strip all tabs						ok ############
 
 
-# all string to fstring ~150 cases
+
+# syntax highlight
+
+
+
+# all string to fstring
 
 
 

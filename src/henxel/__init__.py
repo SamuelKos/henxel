@@ -28,7 +28,7 @@
 ############ Stucture briefing End
 ############ TODO Begin
 
-# all string to fstring ~150 cases
+# all string to fstring
 
 ############ TODO End
 ############ Imports Begin
@@ -463,12 +463,14 @@ class Editor(tkinter.Toplevel):
 		self.update_title()
 		
 		
-		# Try to highlight syntax:
+		#### Syntax-highlight Begin ################
+		
 		tmp = self.contents.get('1.0', tkinter.END)
 		res = tokenize( BytesIO(tmp.encode('utf-8')).readline )
-
-
+		
+		
 		self.bools = ['False', 'True', 'None']
+		self.dots = '.,'
 		
 		self.keywords = [
 						'False',
@@ -509,27 +511,29 @@ class Editor(tkinter.Toplevel):
 						]
 						
 
-		# blue = r'#12488b'
+		blue = r'#12488b'
 		red = r'#c01c28'
-		# yellow = r'#a2734c'
+		yellow = r'#a2734c'
 		cyan = r'#2aa1b3'
 		magenta = r'#a347ba'
+		green = r'#26a269'
 		
-		# yellow, green?
 		# COMMENT
-		# STRING
 		
-			
-		self.contents.tag_config('keywords', foreground=cyan)
-		self.contents.tag_config('numbers', foreground=red)
-		self.contents.tag_config('bools', foreground=magenta)
-		#self.contents.tag_config('keywords', foreground='black')
-		#self.contents.tag_config('keywords', foreground='black')
+		self.boldfont = self.font.copy()
+		self.boldfont.config(weight='bold')
+		
+		self.contents.tag_config('keywords', font=self.boldfont, foreground=cyan)
+		self.contents.tag_config('numbers', font=self.boldfont, foreground=red)
+		self.contents.tag_config('bools', font=self.boldfont, foreground=magenta)
+		self.contents.tag_config('strings', font=self.boldfont, foreground=green)
+		self.contents.tag_config('dots', foreground=yellow)
 		
 
 		for token in res:
-			if (token.type == NAME  and token.string in self.keywords) or \
-				(token.type == NUMBER):
+			if ( token.type == NAME  and token.string in self.keywords ) or \
+				( token.type == OP  and token.string in self.dots ) or \
+				( token.type in [ NUMBER, STRING] ):
 				
 				
 				s0, s1 = map(str, token.start)
@@ -537,7 +541,7 @@ class Editor(tkinter.Toplevel):
 				idx_start = s0 + '.' + s1
 				idx_end = e0 + '.' + e1
 			
-			
+					
 				if token.type == NAME:
 				
 					if token.string in self.bools:
@@ -548,6 +552,14 @@ class Editor(tkinter.Toplevel):
 		
 				elif token.type == NUMBER:
 					self.contents.tag_add('numbers', idx_start, idx_end)
+					
+				elif token.type == STRING:
+					self.contents.tag_add('strings', idx_start, idx_end)
+					
+				elif token.type == OP:
+					self.contents.tag_add('dots', idx_start, idx_end)
+		
+		
 		
 
 		
@@ -1958,6 +1970,12 @@ class Editor(tkinter.Toplevel):
 					
 					try:
 						with open(tab.filepath, 'w', encoding='utf-8') as f:
+							# Strip line-ends:
+							tmp = tab.contents.splitlines(True)
+							tmp[:] = [self.tabify(line) for line in tmp]
+							tmp = ''.join(tmp)[:-1]
+							tab.contents = tmp
+							
 							f.write(tab.contents)
 							tab.oldcontents = tab.contents
 					except EnvironmentError as e:
@@ -2681,4 +2699,3 @@ class Editor(tkinter.Toplevel):
 
 ################ Replace End
 ########### Class Editor End
-
