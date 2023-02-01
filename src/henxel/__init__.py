@@ -42,7 +42,7 @@ import json
 
 #import tokenize
 
-from tokenize import tokenize, NUMBER, STRING, NAME, OP
+from tokenize import tokenize, NUMBER, STRING, NAME, OP, COMMENT
 
 from io import BytesIO
 
@@ -442,10 +442,6 @@ class Editor(tkinter.Toplevel):
 				
 		
 		#### Syntax-highlight Begin ################
-		
-		tmp = self.contents.get('1.0', tkinter.END)
-		res = tokenize( BytesIO(tmp.encode('utf-8')).readline )
-		
 		self.keywords = [
 						'self',
 						'False',
@@ -485,9 +481,31 @@ class Editor(tkinter.Toplevel):
 						'yield'
 						]
 						
+		self.ops = [
+					'+',
+					'-',
+					'+=',
+					'-=',
+					'*=',
+					'/=',
+					'//=',
+					'/',
+					'//',
+					'\\',
+					'!=',
+					'==',
+					'<=',
+					'>=',
+					'<',
+					'>',
+					'%',
+					'%=',
+					'*',
+					'**'
+					]
+					
 		self.bools = ['False', 'True', 'None']
-		self.dots = '.,'
-		self.ops = '+-'
+		self.dots = ['.', ',', '=']
 		
 		blue = r'#12488b'
 		red = r'#c01c28'
@@ -496,7 +514,6 @@ class Editor(tkinter.Toplevel):
 		magenta = r'#a347ba'
 		green = r'#26a269'
 		
-		# COMMENT
 		
 		self.boldfont = self.font.copy()
 		self.boldfont.config(weight='bold')
@@ -505,13 +522,20 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('numbers', font=self.boldfont, foreground=red)
 		self.contents.tag_config('bools', font=self.boldfont, foreground=magenta)
 		self.contents.tag_config('strings', font=self.boldfont, foreground=green)
-		self.contents.tag_config('dots', foreground=yellow)
+		self.contents.tag_config('generic', font=self.boldfont)
 		
-
+		self.contents.tag_config('dots', foreground=yellow)
+		self.contents.tag_config('comments', foreground=red)
+		
+		
+		tmp = self.tabs[self.tabindex].contents
+		res = tokenize( BytesIO(tmp.encode('utf-8')).readline )
+		
+		
 		for token in res:
 			if ( token.type == NAME and token.string in self.keywords ) or \
 				( token.type == OP and token.string in self.dots + self.ops ) or \
-				( token.type in [ NUMBER, STRING] ):
+				( token.type in [ NUMBER, STRING, COMMENT] ):
 				
 				
 				s0, s1 = map(str, token.start)
@@ -530,20 +554,30 @@ class Editor(tkinter.Toplevel):
 					
 					else:
 						self.contents.tag_add('keywords', idx_start, idx_end)
-		
-				elif token.type == NUMBER:
-					self.contents.tag_add('numbers', idx_start, idx_end)
-					
-				elif token.type == STRING:
-					self.contents.tag_add('strings', idx_start, idx_end)
-					
+			
+			
 				elif token.type == OP:
-					if token.string in self.dots:
+					if token.string == '=':
+						self.contents.tag_add('keywords', idx_start, idx_end)
+					
+					elif token.string in self.dots:
 						self.contents.tag_add('dots', idx_start, idx_end)
+					
 					else:
 						self.contents.tag_add('numbers', idx_start, idx_end)
 		
 		
+				elif token.type == STRING:
+							self.contents.tag_add('strings', idx_start, idx_end)
+		
+				elif token.type == COMMENT:
+					self.contents.tag_add('comments', idx_start, idx_end)
+									
+				elif token.type == NUMBER:
+					self.contents.tag_add('numbers', idx_start, idx_end)
+		
+							
+				
 		
 		# set cursor pos:
 		try:
@@ -567,6 +601,65 @@ class Editor(tkinter.Toplevel):
 		self.update_title()
 		
 		############################# init End ######################
+		
+	
+	def update_tokens(self, string=None):
+
+		if not string:
+			first_line_idx	= self.contents.index( '@0,0' )
+			last_line_idx	= self.contents.index( '@0,%d' % self.text_widget_height )
+			
+			string = self.contents.get(first_line_idx, last_line_idx)
+
+
+		tmp = self.tabs[self.tabindex].contents
+		res = tokenize( BytesIO(tmp.encode('utf-8')).readline )
+		
+		
+		for token in res:
+			if ( token.type == NAME and token.string in self.keywords ) or \
+				( token.type == OP and token.string in self.dots + self.ops ) or \
+				( token.type in [ NUMBER, STRING, COMMENT] ):
+				
+				
+				s0, s1 = map(str, token.start)
+				e0, e1 = map(str, token.end)
+				idx_start = s0 + '.' + s1
+				idx_end = e0 + '.' + e1
+			
+					
+				if token.type == NAME:
+				
+					if token.string in self.bools:
+						self.contents.tag_add('bools', idx_start, idx_end)
+						
+					elif token.string == 'self':
+						self.contents.tag_add('dots', idx_start, idx_end)
+					
+					else:
+						self.contents.tag_add('keywords', idx_start, idx_end)
+			
+			
+				elif token.type == OP:
+					if token.string == '=':
+						self.contents.tag_add('keywords', idx_start, idx_end)
+					
+					elif token.string in self.dots:
+						self.contents.tag_add('dots', idx_start, idx_end)
+					
+					else:
+						self.contents.tag_add('numbers', idx_start, idx_end)
+		
+		
+				elif token.type == STRING:
+							self.contents.tag_add('strings', idx_start, idx_end)
+		
+				elif token.type == COMMENT:
+					self.contents.tag_add('comments', idx_start, idx_end)
+									
+				elif token.type == NUMBER:
+					self.contents.tag_add('numbers', idx_start, idx_end)
+		
 		
 	
 	def update_title(self, event=None):
@@ -682,7 +775,6 @@ class Editor(tkinter.Toplevel):
 				# then starts again from 0 (when actually 10000)
 				ln += (lineMask % line)[-5:]
 				
-		# remove unwanted newline:
 		return ln
 
 	
