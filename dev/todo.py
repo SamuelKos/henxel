@@ -6,6 +6,12 @@
 
 
 # tabify strip all tabs						ok ############
+# tabify start load							ok ?
+
+
+# tabify popup
+
+
 
 
 

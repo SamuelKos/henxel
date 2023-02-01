@@ -186,4 +186,4 @@ class FontChooser:
 				)
 		except tkinter.TclError as e:
 			print(e)
-
+			

@@ -439,40 +439,15 @@ class Editor(tkinter.Toplevel):
 			self.ln_widget.grid_remove()
 			
 		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
-		
-		
-		# set cursor pos:
-		try:
-			line = self.tabs[self.tabindex].position
-			self.contents.focus_set()
-			# ensure we see something before and after
-			self.contents.see('%s - 2 lines' % line)
-			self.update_idletasks()
-			self.contents.see('%s + 2 lines' % line)
-			self.contents.mark_set('insert', line)
-		except tkinter.TclError:
-			self.tabs[self.tabindex].position = '1.0'
-			self.contents.focus_set()
-			self.contents.see('1.0')
-			self.contents.mark_set('insert', '1.0')
-		
-		
-		self.update_idletasks()
-		self.viewsync()
-		self.__class__.alive = True
-		self.update_title()
-		
+				
 		
 		#### Syntax-highlight Begin ################
 		
 		tmp = self.contents.get('1.0', tkinter.END)
 		res = tokenize( BytesIO(tmp.encode('utf-8')).readline )
 		
-		
-		self.bools = ['False', 'True', 'None']
-		self.dots = '.,'
-		
 		self.keywords = [
+						'self',
 						'False',
 						'True',
 						'None',
@@ -510,7 +485,10 @@ class Editor(tkinter.Toplevel):
 						'yield'
 						]
 						
-
+		self.bools = ['False', 'True', 'None']
+		self.dots = '.,'
+		self.ops = '+-'
+		
 		blue = r'#12488b'
 		red = r'#c01c28'
 		yellow = r'#a2734c'
@@ -531,8 +509,8 @@ class Editor(tkinter.Toplevel):
 		
 
 		for token in res:
-			if ( token.type == NAME  and token.string in self.keywords ) or \
-				( token.type == OP  and token.string in self.dots ) or \
+			if ( token.type == NAME and token.string in self.keywords ) or \
+				( token.type == OP and token.string in self.dots + self.ops ) or \
 				( token.type in [ NUMBER, STRING] ):
 				
 				
@@ -547,6 +525,9 @@ class Editor(tkinter.Toplevel):
 					if token.string in self.bools:
 						self.contents.tag_add('bools', idx_start, idx_end)
 						
+					elif token.string == 'self':
+						self.contents.tag_add('dots', idx_start, idx_end)
+					
 					else:
 						self.contents.tag_add('keywords', idx_start, idx_end)
 		
@@ -557,12 +538,33 @@ class Editor(tkinter.Toplevel):
 					self.contents.tag_add('strings', idx_start, idx_end)
 					
 				elif token.type == OP:
-					self.contents.tag_add('dots', idx_start, idx_end)
+					if token.string in self.dots:
+						self.contents.tag_add('dots', idx_start, idx_end)
+					else:
+						self.contents.tag_add('numbers', idx_start, idx_end)
 		
 		
 		
-
+		# set cursor pos:
+		try:
+			line = self.tabs[self.tabindex].position
+			self.contents.focus_set()
+			# ensure we see something before and after
+			self.contents.see('%s - 2 lines' % line)
+			self.update_idletasks()
+			self.contents.see('%s + 2 lines' % line)
+			self.contents.mark_set('insert', line)
+		except tkinter.TclError:
+			self.tabs[self.tabindex].position = '1.0'
+			self.contents.focus_set()
+			self.contents.see('1.0')
+			self.contents.mark_set('insert', '1.0')
 		
+		
+		self.update_idletasks()
+		self.viewsync()
+		self.__class__.alive = True
+		self.update_title()
 		
 		############################# init End ######################
 		
@@ -1015,8 +1017,16 @@ class Editor(tkinter.Toplevel):
 			if tab.type == 'normal':
 				try:
 					with open(tab.filepath, 'r', encoding='utf-8') as f:
-						tab.contents = f.read()
-						tab.oldcontents = tab.contents
+						tmp = f.read()
+						tab.oldcontents = tmp
+						
+						# Check indent (tabify) and rstrip:
+						tmp = tmp.splitlines(True)
+						tmp[:] = [self.tabify(line) for line in tmp]
+						tmp = ''.join(tmp)[:-1]
+						
+						tab.contents = tmp
+									
 					tab.filepath = pathlib.Path(tab.filepath)
 				except (EnvironmentError, UnicodeDecodeError) as e:
 					print(e.__str__())
@@ -1857,9 +1867,16 @@ class Editor(tkinter.Toplevel):
 		# Using same tab:
 		try:
 			with open(filename, 'r', encoding='utf-8') as f:
-				fcontents = f.read()
-				self.tabs[self.tabindex].contents = fcontents
-				self.tabs[self.tabindex].oldcontents = self.tabs[self.tabindex].contents
+				tmp = f.read()
+				self.tabs[self.tabindex].oldcontents = tmp
+				
+				# Check indent (tabify) and rstrip:
+				tmp = tmp.splitlines(True)
+				tmp[:] = [self.tabify(line) for line in tmp]
+				tmp = ''.join(tmp)[:-1]
+				
+				self.tabs[self.tabindex].contents = tmp
+				
 				self.contents.delete('1.0', tkinter.END)
 				self.entry.delete(0, tkinter.END)
 				self.tabs[self.tabindex].filepath = filename
@@ -1954,7 +1971,7 @@ class Editor(tkinter.Toplevel):
 				
 			tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
 	
-			# Check indent (tabify):
+			# Check indent (tabify) and rstrip:
 			tmp[:] = [self.tabify(line) for line in tmp]
 			tmp = ''.join(tmp)[:-1]
 			
@@ -1970,10 +1987,11 @@ class Editor(tkinter.Toplevel):
 					
 					try:
 						with open(tab.filepath, 'w', encoding='utf-8') as f:
-							# Strip line-ends:
+							# Check indent (tabify) and rstrip:
 							tmp = tab.contents.splitlines(True)
 							tmp[:] = [self.tabify(line) for line in tmp]
 							tmp = ''.join(tmp)[:-1]
+							
 							tab.contents = tmp
 							
 							f.write(tab.contents)
