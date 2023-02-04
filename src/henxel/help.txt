@@ -80,6 +80,10 @@
 		version-controlled with git, the current git-branch will be shown
 		in top-left corner.
 		
+	  - If you do something in python-console that waits for user input,
+		Editor will be freezed during that time, like when viewing help
+		of some function.
+		
 			
 	Undo
 	  - Undo is only partly functional due to lack of motivation. But it

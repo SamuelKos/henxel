@@ -527,6 +527,17 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('dots', foreground=yellow)
 		self.contents.tag_config('comments', foreground=red)
 		
+		self.tag_idx = dict()
+		
+		self.tag_idx['keywords'] = list()
+		self.tag_idx['numbers'] = list()
+		self.tag_idx['bools'] = list()
+		self.tag_idx['strings'] = list()
+		self.tag_idx['generic'] = list()
+		self.tag_idx['dots'] = list()
+		self.tag_idx['comments'] = list()
+		
+		
 		
 		tmp = self.tabs[self.tabindex].contents
 		res = tokenize( BytesIO(tmp.encode('utf-8')).readline )
@@ -548,34 +559,42 @@ class Editor(tkinter.Toplevel):
 				
 					if token.string in self.bools:
 						self.contents.tag_add('bools', idx_start, idx_end)
+						self.tag_idx['bools'].append((idx_start, idx_end))
 						
 					elif token.string == 'self':
 						self.contents.tag_add('dots', idx_start, idx_end)
+						self.tag_idx['dots'].append((idx_start, idx_end))
 					
 					else:
 						self.contents.tag_add('keywords', idx_start, idx_end)
+						self.tag_idx['keywords'].append((idx_start, idx_end))
 			
 			
 				elif token.type == OP:
 					if token.string == '=':
 						self.contents.tag_add('keywords', idx_start, idx_end)
-					
+						self.tag_idx['keywords'].append((idx_start, idx_end))
+		
 					elif token.string in self.dots:
 						self.contents.tag_add('dots', idx_start, idx_end)
+						self.tag_idx['dots'].append((idx_start, idx_end))
 					
 					else:
 						self.contents.tag_add('numbers', idx_start, idx_end)
-		
+						self.tag_idx['numbers'].append((idx_start, idx_end))
+						
 		
 				elif token.type == STRING:
 							self.contents.tag_add('strings', idx_start, idx_end)
+							self.tag_idx['strings'].append((idx_start, idx_end))
 		
 				elif token.type == COMMENT:
 					self.contents.tag_add('comments', idx_start, idx_end)
+					self.tag_idx['comments'].append((idx_start, idx_end))
 									
 				elif token.type == NUMBER:
 					self.contents.tag_add('numbers', idx_start, idx_end)
-		
+					self.tag_idx['numbers'].append((idx_start, idx_end))
 							
 				
 		
@@ -600,22 +619,84 @@ class Editor(tkinter.Toplevel):
 		self.__class__.alive = True
 		self.update_title()
 		
+		self.tag_open = None
+		self.tag_close = None
+		self.kw_tag_idx_list = list()
+		
+		
 		############################# init End ######################
 		
 	
+	def tag_reloader(self, *args):
+		
+		print(args)
+		
+		if args[0] == 'tagon':
+			if args[1] == 'keywords':
+				self.tag_open = args[2]
+				
+		elif args[1] == 'keywords':
+			self.tag_close = args[2]
+			self.kw_tag_idx_list.append( (self.tag_open, self.tag_close) )
+		
+		
+	
+	
 	def update_tokens(self, string=None):
+	
+	
+##		milloin update tokens?
+##			- should be mutable attribute, not saved
+##			- have:
+##				list_of_tokens = tokenize( BytesIO(content_string.encode('utf-8')).readline )
+##			- must filter a lot, slow
+##
+##			- keep list or just tags?
+##
+##			- on load
+##			- on view change
+##				need to dump tags to attribute, and reload
+##
+##				contents.dump(1.0, 20.0, parser_function ,**{'tag':True})
+##
+##				[('tagon', 'comments', '1.0'), ('tagoff', 'comments', '1.35')]
+##
+##
+##			- on action
+##
+##
+##			kun update tokens, minkä verran?
 
-		if not string:
+	
+	
+	
+	
+	
+		tmp = string
+
+		# Get idx of first and last line on screen:
+		# what if not full?
+		if not tmp:
 			first_line_idx	= self.contents.index( '@0,0' )
+			first_line = first_line_idx.split('.')[0]
 			last_line_idx	= self.contents.index( '@0,%d' % self.text_widget_height )
 			
-			string = self.contents.get(first_line_idx, last_line_idx)
+			tmp = self.contents.get(first_line_idx, last_line_idx)
 
 
-		tmp = self.tabs[self.tabindex].contents
 		res = tokenize( BytesIO(tmp.encode('utf-8')).readline )
 		
-		
+		for tag in [
+					'keywords',
+					'numbers',
+					'bools',
+					'strings',
+					'generic',
+					'dots',
+					'comments'
+					]:
+			self.contents.tag_remove(tag, first_line_idx, last_line_idx)
+			
 		for token in res:
 			if ( token.type == NAME and token.string in self.keywords ) or \
 				( token.type == OP and token.string in self.dots + self.ops ) or \
@@ -627,38 +708,42 @@ class Editor(tkinter.Toplevel):
 				idx_start = s0 + '.' + s1
 				idx_end = e0 + '.' + e1
 			
+			
+			
+				start_patt = '%s + %s lines' % (idx_start, first_line)
+				end_patt = '%s + %s lines' % (idx_end, first_line)
 					
 				if token.type == NAME:
 				
 					if token.string in self.bools:
-						self.contents.tag_add('bools', idx_start, idx_end)
+						self.contents.tag_add('bools', start_patt, end_patt)
 						
 					elif token.string == 'self':
-						self.contents.tag_add('dots', idx_start, idx_end)
+						self.contents.tag_add('dots', start_patt, end_patt)
 					
 					else:
-						self.contents.tag_add('keywords', idx_start, idx_end)
+						self.contents.tag_add('keywords', start_patt, end_patt)
 			
 			
 				elif token.type == OP:
 					if token.string == '=':
-						self.contents.tag_add('keywords', idx_start, idx_end)
+						self.contents.tag_add('keywords', start_patt, end_patt)
 					
 					elif token.string in self.dots:
-						self.contents.tag_add('dots', idx_start, idx_end)
+						self.contents.tag_add('dots', start_patt, end_patt)
 					
 					else:
-						self.contents.tag_add('numbers', idx_start, idx_end)
+						self.contents.tag_add('numbers', start_patt, end_patt)
 		
 		
 				elif token.type == STRING:
-							self.contents.tag_add('strings', idx_start, idx_end)
+							self.contents.tag_add('strings', start_patt, end_patt)
 		
 				elif token.type == COMMENT:
-					self.contents.tag_add('comments', idx_start, idx_end)
+					self.contents.tag_add('comments', start_patt, end_patt)
 									
 				elif token.type == NUMBER:
-					self.contents.tag_add('numbers', idx_start, idx_end)
+					self.contents.tag_add('numbers', start_patt, end_patt)
 		
 		
 	
