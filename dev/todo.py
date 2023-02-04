@@ -6,9 +6,7 @@
 
 
 # tabify strip all tabs on disk save					ok ############
-
-
-# tabify popup
+# tabify popup											ok ############
 
 
 

@@ -334,6 +334,7 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="       paste", command=self.paste)
 		self.popup.add_command(label="##   comment", command=self.comment)
 		self.popup.add_command(label="   uncomment", command=self.uncomment)
+		self.popup.add_command(label="      tabify", command=self.tabify_lines)
 		self.popup.add_command(label="     inspect", command=self.insert_inspected)
 		self.popup.add_command(label="      errors", command=self.show_errors)
 		self.popup.add_command(label="         run", command=self.run)
@@ -638,9 +639,9 @@ class Editor(tkinter.Toplevel):
 		
 	
 	
-	def update_tokens(self, string=None):
-	
-	
+##	def update_tokens(self, string=None):
+##
+##
 ##		milloin update tokens?
 ##			- should be mutable attribute, not saved
 ##			- have:
@@ -668,78 +669,78 @@ class Editor(tkinter.Toplevel):
 	
 	
 	
-		tmp = string
-
-		# Get idx of first and last line on screen:
-		# what if not full?
-		if not tmp:
-			first_line_idx	= self.contents.index( '@0,0' )
-			first_line = first_line_idx.split('.')[0]
-			last_line_idx	= self.contents.index( '@0,%d' % self.text_widget_height )
-			
-			tmp = self.contents.get(first_line_idx, last_line_idx)
-
-
-		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
-		
-		for tag in [
-					'keywords',
-					'numbers',
-					'bools',
-					'strings',
-					'generic',
-					'dots',
-					'comments'
-					]:
-			self.contents.tag_remove(tag, first_line_idx, last_line_idx)
-			
-		for token in res:
-			if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
-				( token.type == tokenize.OP and token.string in self.dots + self.ops ) or \
-				( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
-				
-				
-				s0, s1 = map(str, token.start)
-				e0, e1 = map(str, token.end)
-				idx_start = s0 + '.' + s1
-				idx_end = e0 + '.' + e1
-			
-			
-			
-				start_patt = '%s + %s lines' % (idx_start, first_line)
-				end_patt = '%s + %s lines' % (idx_end, first_line)
-					
-				if token.type == tokenize.NAME:
-				
-					if token.string in self.bools:
-						self.contents.tag_add('bools', start_patt, end_patt)
-						
-					elif token.string == 'self':
-						self.contents.tag_add('dots', start_patt, end_patt)
-					
-					else:
-						self.contents.tag_add('keywords', start_patt, end_patt)
-			
-			
-				elif token.type == tokenize.OP:
-					if token.string == '=':
-						self.contents.tag_add('keywords', start_patt, end_patt)
-					
-					elif token.string in self.dots:
-						self.contents.tag_add('dots', start_patt, end_patt)
-					
-					else:
-						self.contents.tag_add('numbers', start_patt, end_patt)
-		
-		
-				elif token.type == tokenize.STRING:
-							self.contents.tag_add('strings', start_patt, end_patt)
-		
-				elif token.type == tokenize.COMMENT:
-					self.contents.tag_add('comments', start_patt, end_patt)
-									
-				elif token.type == tokenize.NUMBER:
-					self.contents.tag_add('numbers', start_patt, end_patt)
+##		tmp = string
+##
+##		# Get idx of first and last line on screen:
+##		# what if not full?
+##		if not tmp:
+##			first_line_idx	= self.contents.index( '@0,0' )
+##			first_line = first_line_idx.split('.')[0]
+##			last_line_idx	= self.contents.index( '@0,%d' % self.text_widget_height )
+##
+##			tmp = self.contents.get(first_line_idx, last_line_idx)
+##
+##
+##		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
+##
+##		for tag in [
+##					'keywords',
+##					'numbers',
+##					'bools',
+##					'strings',
+##					'generic',
+##					'dots',
+##					'comments'
+##					]:
+##			self.contents.tag_remove(tag, first_line_idx, last_line_idx)
+##
+##		for token in res:
+##			if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
+##				( token.type == tokenize.OP and token.string in self.dots + self.ops ) or \
+##				( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
+##
+##
+##				s0, s1 = map(str, token.start)
+##				e0, e1 = map(str, token.end)
+##				idx_start = s0 + '.' + s1
+##				idx_end = e0 + '.' + e1
+##
+##
+##
+##				start_patt = '%s + %s lines' % (idx_start, first_line)
+##				end_patt = '%s + %s lines' % (idx_end, first_line)
+##
+##				if token.type == tokenize.NAME:
+##
+##					if token.string in self.bools:
+##						self.contents.tag_add('bools', start_patt, end_patt)
+##
+##					elif token.string == 'self':
+##						self.contents.tag_add('dots', start_patt, end_patt)
+##
+##					else:
+##						self.contents.tag_add('keywords', start_patt, end_patt)
+##
+##
+##				elif token.type == tokenize.OP:
+##					if token.string == '=':
+##						self.contents.tag_add('keywords', start_patt, end_patt)
+##
+##					elif token.string in self.dots:
+##						self.contents.tag_add('dots', start_patt, end_patt)
+##
+##					else:
+##						self.contents.tag_add('numbers', start_patt, end_patt)
+##
+##
+##				elif token.type == tokenize.STRING:
+##							self.contents.tag_add('strings', start_patt, end_patt)
+##
+##				elif token.type == tokenize.COMMENT:
+##					self.contents.tag_add('comments', start_patt, end_patt)
+##
+##				elif token.type == tokenize.NUMBER:
+##					self.contents.tag_add('numbers', start_patt, end_patt)
 		
 		
 	
@@ -1935,10 +1936,32 @@ class Editor(tkinter.Toplevel):
 		
 		return 'break'
 	
-
-########## Utilities End
-########## Save and Load Begin
-
+	
+	def tabify_lines(self):
+	
+		try:
+			startline = self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0]
+			endline = self.contents.index(tkinter.SEL_LAST).split(sep='.')[0]
+			
+			start = '%s.0' % startline
+			end = '%s.0 lineend' % endline
+			
+			# Check indent (tabify) and rstrip:
+			tmp = self.contents.get(start, end).splitlines(True)
+			tmp[:] = [self.tabify(line) for line in tmp]
+			tmp = ''.join(tmp)[:-1]
+			
+			self.contents.delete(start, end)
+			self.contents.insert(start, tmp)
+					
+			self.contents.edit_separator()
+			return "break"
+		
+		except tkinter.TclError as e:
+			print(e)
+			return "break"
+	
+	
 	def tabify(self, line):
 		
 		indent_stop_index = 0
@@ -1975,6 +1998,11 @@ class Editor(tkinter.Toplevel):
 		tabified_line = ''.join([indent_string, line])
 		return tabified_line
 	
+	
+
+########## Utilities End
+########## Save and Load Begin
+
 	
 	def trace_filename(self, *args):
 		
