@@ -28,7 +28,7 @@
 ############ Stucture briefing End
 ############ TODO Begin
 
-# all string to fstring
+#
 
 ############ TODO End
 ############ Imports Begin
@@ -39,17 +39,13 @@ import tkinter
 import pathlib
 import json
 
-
-#import tokenize
-
-from tokenize import tokenize, NUMBER, STRING, NAME, OP, COMMENT
-
-from io import BytesIO
-
-
-
+# used in init
 import importlib.resources
 import sys
+
+# used in syntax highlight
+import tokenize
+import io
 
 # from current directory
 from . import changefont
@@ -540,13 +536,13 @@ class Editor(tkinter.Toplevel):
 		
 		
 		tmp = self.tabs[self.tabindex].contents
-		res = tokenize( BytesIO(tmp.encode('utf-8')).readline )
+		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
 		
 		
 		for token in res:
-			if ( token.type == NAME and token.string in self.keywords ) or \
-				( token.type == OP and token.string in self.dots + self.ops ) or \
-				( token.type in [ NUMBER, STRING, COMMENT] ):
+			if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
+				( token.type == tokenize.OP and token.string in self.dots + self.ops ) or \
+				( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
 				
 				
 				s0, s1 = map(str, token.start)
@@ -555,7 +551,7 @@ class Editor(tkinter.Toplevel):
 				idx_end = e0 + '.' + e1
 			
 					
-				if token.type == NAME:
+				if token.type == tokenize.NAME:
 				
 					if token.string in self.bools:
 						self.contents.tag_add('bools', idx_start, idx_end)
@@ -570,7 +566,7 @@ class Editor(tkinter.Toplevel):
 						self.tag_idx['keywords'].append((idx_start, idx_end))
 			
 			
-				elif token.type == OP:
+				elif token.type == tokenize.OP:
 					if token.string == '=':
 						self.contents.tag_add('keywords', idx_start, idx_end)
 						self.tag_idx['keywords'].append((idx_start, idx_end))
@@ -584,15 +580,15 @@ class Editor(tkinter.Toplevel):
 						self.tag_idx['numbers'].append((idx_start, idx_end))
 						
 		
-				elif token.type == STRING:
+				elif token.type == tokenize.STRING:
 							self.contents.tag_add('strings', idx_start, idx_end)
 							self.tag_idx['strings'].append((idx_start, idx_end))
 		
-				elif token.type == COMMENT:
+				elif token.type == tokenize.COMMENT:
 					self.contents.tag_add('comments', idx_start, idx_end)
 					self.tag_idx['comments'].append((idx_start, idx_end))
 									
-				elif token.type == NUMBER:
+				elif token.type == tokenize.NUMBER:
 					self.contents.tag_add('numbers', idx_start, idx_end)
 					self.tag_idx['numbers'].append((idx_start, idx_end))
 							
@@ -648,7 +644,7 @@ class Editor(tkinter.Toplevel):
 ##		milloin update tokens?
 ##			- should be mutable attribute, not saved
 ##			- have:
-##				list_of_tokens = tokenize( BytesIO(content_string.encode('utf-8')).readline )
+##				list_of_tokens = tokenize.tokenize( io.BytesIO(content_string.encode('utf-8')).readline )
 ##			- must filter a lot, slow
 ##
 ##			- keep list or just tags?
@@ -684,7 +680,7 @@ class Editor(tkinter.Toplevel):
 			tmp = self.contents.get(first_line_idx, last_line_idx)
 
 
-		res = tokenize( BytesIO(tmp.encode('utf-8')).readline )
+		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
 		
 		for tag in [
 					'keywords',
@@ -698,9 +694,9 @@ class Editor(tkinter.Toplevel):
 			self.contents.tag_remove(tag, first_line_idx, last_line_idx)
 			
 		for token in res:
-			if ( token.type == NAME and token.string in self.keywords ) or \
-				( token.type == OP and token.string in self.dots + self.ops ) or \
-				( token.type in [ NUMBER, STRING, COMMENT] ):
+			if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
+				( token.type == tokenize.OP and token.string in self.dots + self.ops ) or \
+				( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
 				
 				
 				s0, s1 = map(str, token.start)
@@ -713,7 +709,7 @@ class Editor(tkinter.Toplevel):
 				start_patt = '%s + %s lines' % (idx_start, first_line)
 				end_patt = '%s + %s lines' % (idx_end, first_line)
 					
-				if token.type == NAME:
+				if token.type == tokenize.NAME:
 				
 					if token.string in self.bools:
 						self.contents.tag_add('bools', start_patt, end_patt)
@@ -725,7 +721,7 @@ class Editor(tkinter.Toplevel):
 						self.contents.tag_add('keywords', start_patt, end_patt)
 			
 			
-				elif token.type == OP:
+				elif token.type == tokenize.OP:
 					if token.string == '=':
 						self.contents.tag_add('keywords', start_patt, end_patt)
 					
@@ -736,13 +732,13 @@ class Editor(tkinter.Toplevel):
 						self.contents.tag_add('numbers', start_patt, end_patt)
 		
 		
-				elif token.type == STRING:
+				elif token.type == tokenize.STRING:
 							self.contents.tag_add('strings', start_patt, end_patt)
 		
-				elif token.type == COMMENT:
+				elif token.type == tokenize.COMMENT:
 					self.contents.tag_add('comments', start_patt, end_patt)
 									
-				elif token.type == NUMBER:
+				elif token.type == tokenize.NUMBER:
 					self.contents.tag_add('numbers', start_patt, end_patt)
 		
 		
@@ -1194,16 +1190,9 @@ class Editor(tkinter.Toplevel):
 			if tab.type == 'normal':
 				try:
 					with open(tab.filepath, 'r', encoding='utf-8') as f:
-						tmp = f.read()
-						tab.oldcontents = tmp
+						tab.contents = f.read()
+						tab.oldcontents = tab.contents
 						
-						# Check indent (tabify) and rstrip:
-						tmp = tmp.splitlines(True)
-						tmp[:] = [self.tabify(line) for line in tmp]
-						tmp = ''.join(tmp)[:-1]
-						
-						tab.contents = tmp
-									
 					tab.filepath = pathlib.Path(tab.filepath)
 				except (EnvironmentError, UnicodeDecodeError) as e:
 					print(e.__str__())
@@ -2044,15 +2033,8 @@ class Editor(tkinter.Toplevel):
 		# Using same tab:
 		try:
 			with open(filename, 'r', encoding='utf-8') as f:
-				tmp = f.read()
-				self.tabs[self.tabindex].oldcontents = tmp
-				
-				# Check indent (tabify) and rstrip:
-				tmp = tmp.splitlines(True)
-				tmp[:] = [self.tabify(line) for line in tmp]
-				tmp = ''.join(tmp)[:-1]
-				
-				self.tabs[self.tabindex].contents = tmp
+				self.tabs[self.tabindex].contents = f.read()
+				self.tabs[self.tabindex].oldcontents = self.tabs[self.tabindex].contents
 				
 				self.contents.delete('1.0', tkinter.END)
 				self.entry.delete(0, tkinter.END)
@@ -2146,33 +2128,31 @@ class Editor(tkinter.Toplevel):
 			except tkinter.TclError:
 				pos = '1.0'
 				
-			tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
+			tmp = self.contents.get('1.0', tkinter.END)
 	
-			# Check indent (tabify) and rstrip:
-			tmp[:] = [self.tabify(line) for line in tmp]
-			tmp = ''.join(tmp)[:-1]
-			
 			self.tabs[self.tabindex].position = pos
 			self.tabs[self.tabindex].contents = tmp
 			
-			# then save tabs to disk
+			
+			# Then save tabs to disk
 			for tab in self.tabs:
 				if tab.type == 'normal':
-				
+					
+					# Check indent (tabify) and rstrip:
+					tmp = tab.contents.splitlines(True)
+					tmp[:] = [self.tabify(line) for line in tmp]
+					tmp = ''.join(tmp)[:-1]
+					
+					tab.contents = tmp
+					
 					if tab.contents == tab.oldcontents:
 						continue
 					
 					try:
 						with open(tab.filepath, 'w', encoding='utf-8') as f:
-							# Check indent (tabify) and rstrip:
-							tmp = tab.contents.splitlines(True)
-							tmp[:] = [self.tabify(line) for line in tmp]
-							tmp = ''.join(tmp)[:-1]
-							
-							tab.contents = tmp
-							
 							f.write(tab.contents)
 							tab.oldcontents = tab.contents
+							
 					except EnvironmentError as e:
 						print(e.__str__())
 						print(f'\n Could not save file: {tab.filepath}')
@@ -2197,16 +2177,13 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			pos = '1.0'
 					
-		tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
-		
-		# Check indent (tabify):
-		tmp[:] = [self.tabify(line) for line in tmp]
-		tmp = ''.join(tmp)[:-1]
+		tmp = self.contents.get('1.0', tkinter.END)
 		
 		self.tabs[self.tabindex].position = pos
 		self.tabs[self.tabindex].contents = tmp
 
 		openfiles = [tab.filepath for tab in self.tabs]
+		
 		
 		# creating new file
 		if fpath_in_entry != self.tabs[self.tabindex].filepath and not activetab:
@@ -2288,6 +2265,11 @@ class Editor(tkinter.Toplevel):
 				return
 
 			# if closing tab or loading file:
+		
+			# Check indent (tabify) and rstrip:
+			tmp = self.tabs[self.tabindex].contents.splitlines(True)
+			tmp[:] = [self.tabify(line) for line in tmp]
+			tmp = ''.join(tmp)[:-1]
 			
 			if self.tabs[self.tabindex].contents == self.tabs[self.tabindex].oldcontents:
 				return

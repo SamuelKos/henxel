@@ -5,8 +5,7 @@
 # >>> e=todo.Ed()
 
 
-# tabify strip all tabs						ok ############
-# tabify start load							ok ?
+# tabify strip all tabs on disk save					ok ############
 
 
 # tabify popup
@@ -18,8 +17,6 @@
 # syntax highlight
 
 
-
-# all string to fstring
 
 
 
