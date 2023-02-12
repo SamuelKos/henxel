@@ -1949,7 +1949,7 @@ class Editor(tkinter.Toplevel):
 			# Check indent (tabify) and rstrip:
 			tmp = self.contents.get(start, end).splitlines(True)
 			tmp[:] = [self.tabify(line) for line in tmp]
-			tmp = ''.join(tmp)[:-1]
+			tmp = ''.join(tmp)
 			
 			self.contents.delete(start, end)
 			self.contents.insert(start, tmp)
@@ -1996,6 +1996,7 @@ class Editor(tkinter.Toplevel):
 				count = 0
 		
 		tabified_line = ''.join([indent_string, line])
+		
 		return tabified_line
 	
 	
@@ -2904,3 +2905,5 @@ class Editor(tkinter.Toplevel):
 
 ################ Replace End
 ########### Class Editor End
+
+	

@@ -9,7 +9,8 @@
 # tabify popup											ok ############
 
 
-
+# tabify check keep lines, change, on import and load ok
+# on close and load extra line
 
 
 # syntax highlight
@@ -256,5 +257,3 @@ class Ed(tkinter.Toplevel):
 		# about double cpu compared to after(100ms), but is smoother:
 ##		cls.updateId = ed.contents.after_idle(
 ##			cls.updateAllLineNumbers)
-			
-			
