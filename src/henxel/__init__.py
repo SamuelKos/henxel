@@ -548,7 +548,6 @@ class Editor(tkinter.Toplevel):
 				( token.type == tokenize.OP and token.string in self.dots + self.ops ) or \
 				( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
 				
-				
 				s0, s1 = map(str, token.start)
 				e0, e1 = map(str, token.end)
 				idx_start = s0 + '.' + s1
@@ -623,69 +622,52 @@ class Editor(tkinter.Toplevel):
 		
 	
 	
-##	def update_tokens(self, string=None):
-##
-##
-##		milloin update tokens?
-##			- should be mutable attribute, not saved
-##			- have:
-##				list_of_tokens = tokenize.tokenize( io.BytesIO(content_string.encode('utf-8')).readline )
-##			- must filter a lot, slow
-##
-##			- keep list or just tags?
-##
-##			- on load
-##			- on view change
-##				need to dump tags to attribute, and reload
-##
-##				contents.dump(1.0, 20.0, parser_function ,**{'tag':True})
-##
-##				[('tagon', 'comments', '1.0'), ('tagoff', 'comments', '1.35')]
-##
-##
-##			- on action
-##
-##
-##			kun update tokens, minkä verran?
+	def update_tokens(self, string=None):
 
-	
-	
-	
-##		tmp = string
-##		tags = [
-##				'keywords',
-##				'numbers',
-##				'bools',
-##				'strings',
-##				'generic',
-##				'dots',
-##				'comments'
-##				]
-##
-##
-##		if not tmp:
-##			line_idx = self.contents.index( tkinter.INSERT )
-##			tmp = self.contents.get( line_idx, '%s lineend' % line_idx )
-##
-##			linestart = '%s linestart' % line_idx
-##			lineend = '%s lineend' % line_idx
-##
-##
-##		# Remove old tags from self.tags:
-##		for tag in tags:
-##
-##			ind = self.contents.tag_nextrange( tag, linestart, lineend )
-##
-##			while len(ind) == 2 and self.contents.compare( ind[0] '<' lineend ):
-##				self.tags[tag].remove(ind)
-##
-##				linestart = ind[1]
-##				ind = self.contents.tag_nextrange( tag, linestart, lineend )
-##
-##
-##		# Remove old tags from contents:
-##		for tag in tags:
-##			self.contents.tag_remove( tag, linestart, lineend )
+		tmp = string
+		tags = [
+				'keywords',
+				'numbers',
+				'bools',
+				'strings',
+				'generic',
+				'dots',
+				'comments'
+				]
+
+
+		if not tmp:
+			line_idx = self.contents.index( tkinter.INSERT )
+			tmp = self.contents.get( line_idx, '%s lineend' % line_idx )
+
+			lineend = '%s lineend' % line_idx
+		
+		# Remove old tags from self.tags:
+		for tag in tags:
+		
+			linestart = '%s linestart' % line_idx
+			
+			try:
+				ind = self.contents.tag_nextrange( tag, linestart, lineend )
+			except tkinter.TclError:
+				continue
+				
+			#print(tag, linestart, lineend, ind)
+
+			while len(ind) == 2 and self.contents.compare( ind[0], '<', lineend ):
+				self.tags[tag].remove(ind)
+
+				linestart = ind[1]
+				
+				try:
+					ind = self.contents.tag_nextrange( tag, linestart, lineend )
+				except tkinter.TclError:
+					break
+
+		# Remove old tags from contents:
+		linestart = '%s linestart' % line_idx
+		for tag in tags:
+			self.contents.tag_remove( tag, linestart, lineend )
 ##
 ##
 ##
@@ -786,8 +768,7 @@ class Editor(tkinter.Toplevel):
 		'''	Triggered when event is <<WidgetViewSync>>
 		
 			This event itself is generated when inserting, deleting or on screen geometry change, but
-			not when just scrolling (like yview). Almost all font-changes also generates this event,
-			so that is good to know because I yet have not seen that TkWorldChange -event.
+			not when just scrolling (like yview). Almost all font-changes also generates this event.
 		'''
 		
 		# More info in update_linenums()
@@ -795,6 +776,7 @@ class Editor(tkinter.Toplevel):
 		self.text_widget_height = self.scrollbar.winfo_height()
 		
 		self.update_linenums()
+		self.update_tokens()
 
 	
 ############## Linenumbers Begin
