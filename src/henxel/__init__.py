@@ -69,6 +69,7 @@ class Tab:
 		self.oldcontents = ''
 		self.position = '1.0'
 		self.type = 'newtab'
+#		self.tags = None
 		
 		self.__dict__.update(entries)
 		
@@ -438,7 +439,9 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 				
 		
-		#### Syntax-highlight Begin ################
+		
+		####  Syntax-highlight Begin  ###################################
+		
 		self.keywords = [
 						'self',
 						'False',
@@ -524,15 +527,15 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('dots', foreground=yellow)
 		self.contents.tag_config('comments', foreground=red)
 		
-		self.tag_idx = dict()
+		self.tags = dict()
 		
-		self.tag_idx['keywords'] = list()
-		self.tag_idx['numbers'] = list()
-		self.tag_idx['bools'] = list()
-		self.tag_idx['strings'] = list()
-		self.tag_idx['generic'] = list()
-		self.tag_idx['dots'] = list()
-		self.tag_idx['comments'] = list()
+		self.tags['keywords'] = list()
+		self.tags['numbers'] = list()
+		self.tags['bools'] = list()
+		self.tags['strings'] = list()
+		self.tags['generic'] = list()
+		self.tags['dots'] = list()
+		self.tags['comments'] = list()
 		
 		
 		
@@ -556,42 +559,42 @@ class Editor(tkinter.Toplevel):
 				
 					if token.string in self.bools:
 						self.contents.tag_add('bools', idx_start, idx_end)
-						self.tag_idx['bools'].append((idx_start, idx_end))
+						self.tags['bools'].append((idx_start, idx_end))
 						
 					elif token.string == 'self':
 						self.contents.tag_add('dots', idx_start, idx_end)
-						self.tag_idx['dots'].append((idx_start, idx_end))
+						self.tags['dots'].append((idx_start, idx_end))
 					
 					else:
 						self.contents.tag_add('keywords', idx_start, idx_end)
-						self.tag_idx['keywords'].append((idx_start, idx_end))
+						self.tags['keywords'].append((idx_start, idx_end))
 			
 			
 				elif token.type == tokenize.OP:
 					if token.string == '=':
 						self.contents.tag_add('keywords', idx_start, idx_end)
-						self.tag_idx['keywords'].append((idx_start, idx_end))
+						self.tags['keywords'].append((idx_start, idx_end))
 		
 					elif token.string in self.dots:
 						self.contents.tag_add('dots', idx_start, idx_end)
-						self.tag_idx['dots'].append((idx_start, idx_end))
+						self.tags['dots'].append((idx_start, idx_end))
 					
 					else:
 						self.contents.tag_add('numbers', idx_start, idx_end)
-						self.tag_idx['numbers'].append((idx_start, idx_end))
+						self.tags['numbers'].append((idx_start, idx_end))
 						
 		
 				elif token.type == tokenize.STRING:
 							self.contents.tag_add('strings', idx_start, idx_end)
-							self.tag_idx['strings'].append((idx_start, idx_end))
+							self.tags['strings'].append((idx_start, idx_end))
 		
 				elif token.type == tokenize.COMMENT:
 					self.contents.tag_add('comments', idx_start, idx_end)
-					self.tag_idx['comments'].append((idx_start, idx_end))
+					self.tags['comments'].append((idx_start, idx_end))
 									
 				elif token.type == tokenize.NUMBER:
 					self.contents.tag_add('numbers', idx_start, idx_end)
-					self.tag_idx['numbers'].append((idx_start, idx_end))
+					self.tags['numbers'].append((idx_start, idx_end))
 							
 				
 		
@@ -616,26 +619,7 @@ class Editor(tkinter.Toplevel):
 		self.__class__.alive = True
 		self.update_title()
 		
-		self.tag_open = None
-		self.tag_close = None
-		self.kw_tag_idx_list = list()
-		
-		
 		############################# init End ######################
-		
-	
-	def tag_reloader(self, *args):
-		
-		print(args)
-		
-		if args[0] == 'tagon':
-			if args[1] == 'keywords':
-				self.tag_open = args[2]
-				
-		elif args[1] == 'keywords':
-			self.tag_close = args[2]
-			self.kw_tag_idx_list.append( (self.tag_open, self.tag_close) )
-		
 		
 	
 	
@@ -667,32 +651,45 @@ class Editor(tkinter.Toplevel):
 	
 	
 	
-	
-	
 ##		tmp = string
+##		tags = [
+##				'keywords',
+##				'numbers',
+##				'bools',
+##				'strings',
+##				'generic',
+##				'dots',
+##				'comments'
+##				]
 ##
-##		# Get idx of first and last line on screen:
-##		# what if not full?
+##
 ##		if not tmp:
-##			first_line_idx	= self.contents.index( '@0,0' )
-##			first_line = first_line_idx.split('.')[0]
-##			last_line_idx	= self.contents.index( '@0,%d' % self.text_widget_height )
+##			line_idx = self.contents.index( tkinter.INSERT )
+##			tmp = self.contents.get( line_idx, '%s lineend' % line_idx )
 ##
-##			tmp = self.contents.get(first_line_idx, last_line_idx)
+##			linestart = '%s linestart' % line_idx
+##			lineend = '%s lineend' % line_idx
+##
+##
+##		# Remove old tags from self.tags:
+##		for tag in tags:
+##
+##			ind = self.contents.tag_nextrange( tag, linestart, lineend )
+##
+##			while len(ind) == 2 and self.contents.compare( ind[0] '<' lineend ):
+##				self.tags[tag].remove(ind)
+##
+##				linestart = ind[1]
+##				ind = self.contents.tag_nextrange( tag, linestart, lineend )
+##
+##
+##		# Remove old tags from contents:
+##		for tag in tags:
+##			self.contents.tag_remove( tag, linestart, lineend )
+##
 ##
 ##
 ##		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
-##
-##		for tag in [
-##					'keywords',
-##					'numbers',
-##					'bools',
-##					'strings',
-##					'generic',
-##					'dots',
-##					'comments'
-##					]:
-##			self.contents.tag_remove(tag, first_line_idx, last_line_idx)
 ##
 ##		for token in res:
 ##			if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
@@ -933,6 +930,17 @@ class Editor(tkinter.Toplevel):
 			
 		newtab = Tab()
 		
+##		newtab.tags = dict()
+##
+##		newtab.tags['keywords'] = list()
+##		newtab.tags['numbers'] = list()
+##		newtab.tags['bools'] = list()
+##		newtab.tags['strings'] = list()
+##		newtab.tags['generic'] = list()
+##		newtab.tags['dots'] = list()
+##		newtab.tags['comments'] = list()
+		
+		
 		self.tabindex += 1
 		self.tabs.insert(self.tabindex, newtab)
 		
@@ -1130,6 +1138,7 @@ class Editor(tkinter.Toplevel):
 		for tab in self.tabs:
 			tab.contents = ''
 			tab.oldcontents = ''
+			tab.tags = None
 			
 			# Convert tab.filepath to string for serialization
 			if tab.filepath:
@@ -1947,7 +1956,7 @@ class Editor(tkinter.Toplevel):
 			end = '%s.0 lineend' % endline
 			
 			# Check indent (tabify) and rstrip:
-			tmp = self.contents.get(start, end).splitlines(True)
+			tmp = self.contents.get(start, end).splitlines()
 			tmp[:] = [self.tabify(line) for line in tmp]
 			tmp = ''.join(tmp)
 			
@@ -2170,7 +2179,10 @@ class Editor(tkinter.Toplevel):
 					# Check indent (tabify) and rstrip:
 					tmp = tab.contents.splitlines(True)
 					tmp[:] = [self.tabify(line) for line in tmp]
-					tmp = ''.join(tmp)[:-1]
+					tmp = ''.join(tmp)
+					
+					if tab.active == True:
+						tmp = tmp[:-1]
 					
 					tab.contents = tmp
 					
@@ -2906,4 +2918,3 @@ class Editor(tkinter.Toplevel):
 ################ Replace End
 ########### Class Editor End
 
-	
