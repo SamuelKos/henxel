@@ -11,10 +11,11 @@
 
 
 
-# syntax highlight
+# syntax highlight   paste  delete
 # tab self.tags newtab
+# what if indent err or open brace?
 
-
+# alt p alt n alt f cntrl s
 
 
 
@@ -50,6 +51,13 @@ import tkinter.font
 
 ########################## Maybe interesting end
 
+
+class Ed(tkinter.Toplevel):
+
+	# use 10000 (10s) if need slow update interval for linenumbers
+	UPDATE_PERIOD = 100 #ms
+
+	updateId = None
 
 
 

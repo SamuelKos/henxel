@@ -321,7 +321,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-Z>", self.redo_override)
 		self.contents.bind( "<Control-v>", self.paste)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
-	
+		self.contents.bind( "<BackSpace>", self.backspace_override)
+		
 		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 		
 		
@@ -511,50 +512,9 @@ class Editor(tkinter.Toplevel):
 		self.tags['strings'] = list()
 		self.tags['comments'] = list()
 		self.tags['breaks'] = list()
-		
-		
-		tmp = self.tabs[self.tabindex].contents
-		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
-		
-		
-		for token in res:
-			if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
-				( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
-				
-				s0, s1 = map(str, token.start)
-				e0, e1 = map(str, token.end)
-				idx_start = s0 + '.' + s1
-				idx_end = e0 + '.' + e1
-			
-					
-				if token.type == tokenize.NAME:
-				
-					if token.string in self.bools:
-						self.contents.tag_add('bools', idx_start, idx_end)
-						self.tags['bools'].append((idx_start, idx_end))
-						
-					elif token.string in self.breaks:
-						self.contents.tag_add('breaks', idx_start, idx_end)
-						self.tags['breaks'].append((idx_start, idx_end))
-						
-					else:
-						self.contents.tag_add('keywords', idx_start, idx_end)
-						self.tags['keywords'].append((idx_start, idx_end))
-		
-		
-				elif token.type == tokenize.STRING:
-					self.contents.tag_add('strings', idx_start, idx_end)
-					self.tags['strings'].append((idx_start, idx_end))
-		
-				elif token.type == tokenize.COMMENT:
-					self.contents.tag_add('comments', idx_start, idx_end)
-					self.tags['comments'].append((idx_start, idx_end))
 									
-				elif token.type == tokenize.NUMBER:
-					self.contents.tag_add('numbers', idx_start, idx_end)
-					self.tags['numbers'].append((idx_start, idx_end))
-							
-				
+		self.update_tokens_of_all_contents()
+			
 		
 		# set cursor pos:
 		try:
@@ -579,10 +539,8 @@ class Editor(tkinter.Toplevel):
 		
 		############################# init End ######################
 		
+	def update_tokens_of_all_contents(self):
 	
-	def update_tokens(self, string=None):
-	
-		tmp = string
 		tags = [
 				'keywords',
 				'numbers',
@@ -593,16 +551,93 @@ class Editor(tkinter.Toplevel):
 				]
 
 
-		if not tmp:
-			# want linenum
+		# Remove old tags from self.tags:
+		for tag in tags:
+		
+			self.tags[tag].clear()
+			self.contents.tag_remove( tag, 1.0, tkinter.END )
+	
+	
+		tmp = self.tabs[self.tabindex].contents
+		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
+		
+		try:
+			for token in res:
+				if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
+					( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
+					
+					s0, s1 = map(str, token.start)
+					e0, e1 = map(str, token.end)
+					idx_start = s0 + '.' + s1
+					idx_end = e0 + '.' + e1
+				
+						
+					if token.type == tokenize.NAME:
+					
+						if token.string in self.bools:
+							self.contents.tag_add('bools', idx_start, idx_end)
+							self.tags['bools'].append((idx_start, idx_end))
+							
+						elif token.string in self.breaks:
+							self.contents.tag_add('breaks', idx_start, idx_end)
+							self.tags['breaks'].append((idx_start, idx_end))
+							
+						else:
+							self.contents.tag_add('keywords', idx_start, idx_end)
+							self.tags['keywords'].append((idx_start, idx_end))
 			
-			line_idx = self.contents.index( tkinter.INSERT )
-			linenum = line_idx.split('.')[0]
-			tmp = self.contents.get( '%s linestart' % line_idx, '%s lineend' % line_idx )
 			
-			res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
+					elif token.type == tokenize.STRING:
+						self.contents.tag_add('strings', idx_start, idx_end)
+						self.tags['strings'].append((idx_start, idx_end))
+			
+					elif token.type == tokenize.COMMENT:
+						self.contents.tag_add('comments', idx_start, idx_end)
+						self.tags['comments'].append((idx_start, idx_end))
+										
+					elif token.type == tokenize.NUMBER:
+						self.contents.tag_add('numbers', idx_start, idx_end)
+						self.tags['numbers'].append((idx_start, idx_end))
+					
+		except IndentationError:
+			#self.token_indent_err = True
+			#self.tmpcont = self.contents.get(1.0, tkinter.END)
+			#print(self.token_indent_err)
+			#return
+			pass
+			
+		# Brace deletion for example:
+		# untag line?
+		except tokenize.TokenError:
+			return
+		
+						
+	def update_tokens_of_curline(self, start=None, end=None):
+	
+		tags = [
+				'keywords',
+				'numbers',
+				'bools',
+				'strings',
+				'comments',
+				'breaks'
+				]
 
+		# if paste:
+		if start and end:
+			line_idx = start
+			tmp = self.contents.get( '%s linestart' % start, '%s lineend' % end )
+			lineend = '%s lineend' % end
+
+		else:
+			line_idx = self.contents.index( tkinter.INSERT )
+			tmp = self.contents.get( '%s linestart' % line_idx, '%s lineend' % line_idx )
 			lineend = '%s lineend' % line_idx
+			
+			
+		linenum = int(line_idx.split('.')[0])
+		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
+		
 		
 		# Remove old tags from self.tags:
 		for tag in tags:
@@ -628,12 +663,12 @@ class Editor(tkinter.Toplevel):
 				except tkinter.TclError:
 					break
 
-		# Remove old tags from contents:
+		# Remove old tags from line:
 		linestart = '%s linestart' % line_idx
 		for tag in tags:
 			self.contents.tag_remove( tag, linestart, lineend )
 			
-		# check arrow left indent
+			
 		# Retag line:
 		try:
 			for token in res:
@@ -641,10 +676,11 @@ class Editor(tkinter.Toplevel):
 				if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
 					( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
 					
-					_, s1 = map(str, token.start)
-					_, e1 = map(str, token.end)
-					idx_start = linenum + '.' + s1
-					idx_end = linenum + '.' + e1
+					# initiate indexes with correct linenum
+					s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
+					e0, e1 = map(str, [ token.end[0] + linenum - 1, token.end[1] ] )
+					idx_start = s0 + '.' + s1
+					idx_end = e0 + '.' + e1
 				
 						
 					if token.type == tokenize.NAME:
@@ -674,6 +710,14 @@ class Editor(tkinter.Toplevel):
 						self.contents.tag_add('numbers', idx_start, idx_end)
 						self.tags['numbers'].append((idx_start, idx_end))
 		
+		
+		except IndentationError:
+			#self.token_indent_err = True
+			#self.tmpcont = self.contents.get(1.0, tkinter.END)
+			#print(self.token_indent_err)
+			#return
+			pass
+			
 		# Brace deletion for example:
 		# untag line?
 		except tokenize.TokenError:
@@ -743,10 +787,16 @@ class Editor(tkinter.Toplevel):
 		
 		tmp = self.contents.get( linestart, lineend )
 
+
+##		if self.token_indent_err:
+##			curcont = self.contents.get(1.0, tkinter.END)
+##			if self.tmpcont != curcont:
+##				self.tmpcont = curcont
+##				self.update_tokens_of_all_contents()
 		
 		if self.oldline != tmp:
 			self.oldline = tmp
-			self.update_tokens()
+			self.update_tokens_of_curline()
 
 	
 ############## Linenumbers Begin
@@ -1664,7 +1714,10 @@ class Editor(tkinter.Toplevel):
 			
 			lastpos = "%s + %dc" % (pos, wordlen)
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			
+			self.update_tokens_of_curline(start=pos, end=lastpos)
 			self.contents.tag_add('sel', pos, lastpos)
+			
 			
 			self.contents.mark_set('insert', pos)
 		
@@ -1740,6 +1793,56 @@ class Editor(tkinter.Toplevel):
 			return
 
 
+	def backspace_override(self, event):
+	
+		if self.state != 'normal' or event.state != 0:
+			return
+
+		try:
+			tmp = self.contents.selection_get()
+			wordlen = len(tmp)
+			tmp = tmp.splitlines(True)
+		except tkinter.TclError:
+			# is empty
+			return
+		
+		if len(tmp) > 1:
+			tags = [
+				'keywords',
+				'numbers',
+				'bools',
+				'strings',
+				'comments',
+				'breaks'
+				]
+		
+			line_idx = self.contents.index( tkinter.SEL_FIRST )
+			lineend = '%s lineend' % tkinter.SEL_LAST
+			
+			for tag in tags:
+	
+				linestart = '%s linestart' % line_idx
+	
+				try:
+					ind = self.contents.tag_nextrange( tag, linestart, lineend )
+				except tkinter.TclError:
+					continue
+	
+				while len(ind) == 2 and self.contents.compare( ind[0], '<', lineend ):
+					
+					try:
+						self.tags[tag].remove(ind)
+					except ValueError:
+						break
+						
+					linestart = ind[1]
+	
+					try:
+						ind = self.contents.tag_nextrange( tag, linestart, lineend )
+					except tkinter.TclError:
+						break
+	
+			
 	def return_override(self, event):
 	
 		# Cursor indexes when pressed return:
