@@ -492,6 +492,14 @@ class Editor(tkinter.Toplevel):
 		green = r'#26a269'
 		orange = r'#e95b38'
 		
+		self.tagnames = [
+				'keywords',
+				'numbers',
+				'bools',
+				'strings',
+				'comments',
+				'breaks'
+				]
 		
 		self.boldfont = self.font.copy()
 		self.boldfont.config(weight='bold')
@@ -540,19 +548,9 @@ class Editor(tkinter.Toplevel):
 		############################# init End ######################
 		
 	def update_tokens_of_all_contents(self):
-	
-		tags = [
-				'keywords',
-				'numbers',
-				'bools',
-				'strings',
-				'comments',
-				'breaks'
-				]
-
 
 		# Remove old tags from self.tags:
-		for tag in tags:
+		for tag in self.tagnames:
 		
 			self.tags[tag].clear()
 			self.contents.tag_remove( tag, 1.0, tkinter.END )
@@ -613,15 +611,6 @@ class Editor(tkinter.Toplevel):
 		
 						
 	def update_tokens_of_curline(self, start=None, end=None):
-	
-		tags = [
-				'keywords',
-				'numbers',
-				'bools',
-				'strings',
-				'comments',
-				'breaks'
-				]
 
 		# if paste:
 		if start and end:
@@ -640,7 +629,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 		# Remove old tags from self.tags:
-		for tag in tags:
+		for tag in self.tagnames:
 
 			linestart = '%s linestart' % line_idx
 
@@ -665,7 +654,7 @@ class Editor(tkinter.Toplevel):
 
 		# Remove old tags from line:
 		linestart = '%s linestart' % line_idx
-		for tag in tags:
+		for tag in self.tagnames:
 			self.contents.tag_remove( tag, linestart, lineend )
 			
 			
@@ -1807,19 +1796,11 @@ class Editor(tkinter.Toplevel):
 			return
 		
 		if len(tmp) > 1:
-			tags = [
-				'keywords',
-				'numbers',
-				'bools',
-				'strings',
-				'comments',
-				'breaks'
-				]
 		
 			line_idx = self.contents.index( tkinter.SEL_FIRST )
 			lineend = '%s lineend' % tkinter.SEL_LAST
 			
-			for tag in tags:
+			for tag in self.tagnames:
 	
 				linestart = '%s linestart' % line_idx
 	
@@ -2619,7 +2600,31 @@ class Editor(tkinter.Toplevel):
 		
 ########## Indent and Comment End
 ################ Search Begin
-
+	
+	def check_next_event(self, event=None):
+		# how to lambda to nothing example
+		# dont need it here though
+		#self.contents.bind( "<Left>", lambda event: ...)
+		
+		if event.keysym == 'Left':
+			pos = self.lastcursorpos
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.contents.mark_set('insert', pos)
+			
+			self.contents.see('%s - 2 lines' % pos)
+			self.update_idletasks()
+			self.contents.see('%s + 2 lines' % pos)
+		
+			self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
+			self.contents.unbind("<Any-Button>", funcid=self.anybutid)
+		
+			return 'break'
+		else:
+			self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
+			self.contents.unbind("<Any-Button>", funcid=self.anybutid)
+			return
+			
+		
 	def search_next(self, event=None):
 		'''	Do last search from cursor position, show and select next match.
 			
@@ -2646,6 +2651,7 @@ class Editor(tkinter.Toplevel):
 			return "break"
 		
 		wordlen = len(self.old_word)
+		self.lastcursorpos = self.contents.index(tkinter.INSERT)
 		pos = self.contents.search(self.old_word, tkinter.INSERT, tkinter.END)
 		
 		# Try again from the beginning this time:
@@ -2656,6 +2662,10 @@ class Editor(tkinter.Toplevel):
 			if not pos:
 				self.bell()
 				return "break"
+		
+		# go back to last place with arrow left
+		self.anykeyid = self.contents.bind( "<Any-Key>", self.check_next_event)
+		self.anybutid = self.contents.bind( "<Any-Button>", self.check_next_event)
 		
 		lastpos = "%s + %dc" % (pos, wordlen)
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
@@ -2791,15 +2801,29 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 				
 				
+	def clear_search_tags(self, event=None):
+		if self.state != 'normal':
+			return "break"
+			
+		self.contents.tag_remove('match', '1.0', tkinter.END)
+		self.bind("<Escape>", self.do_nothing)
+		
+	
 	def stop_search(self, event=None):
 		self.contents.config(state='normal')
 		self.entry.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
-		self.contents.tag_remove('match', '1.0', tkinter.END)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
-		self.bind("<Escape>", self.do_nothing)
+		
+		# leave tags on normal search, Esc clears
+		if self.state == 'search':
+			self.bind("<Escape>", self.clear_search_tags)
+		else:
+			self.contents.tag_remove('match', '1.0', tkinter.END)
+			self.bind("<Escape>", self.do_nothing)
+		
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
 	

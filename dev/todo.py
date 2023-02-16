@@ -7,7 +7,10 @@
 
 # tabify strip all tabs on disk save					ok ############
 # tabify popup											ok ############
-# tabify check keep lines								ok?
+# tabify check keep lines								ok ?
+# search leave tags escape clear						ok ?
+# search focus after no match, checked, tab moves		ok ?
+# seach next go back last curpos with arrow left		ok ?
 
 
 
@@ -17,6 +20,9 @@
 
 # alt p alt n alt f cntrl s
 
+# on font change update tags
+
+
 
 
 import tkinter
@@ -25,6 +31,27 @@ import tkinter.font
 
 
 ########################## Maybe interesting Begin:
+
+# with these one should handle all binding-situations
+
+# howto: lambda to nothing:
+# self.contents.bind( "<Left>", lambda event: ...)
+	
+
+# howto: unbind in tkinter:
+
+# def mycallback1(self, event=None):
+#	print(1, event.keysum, event.num)
+
+# def mycallback2(self, event=None):
+#	print(2, event.keysum, event.num)
+	
+# self.anykeyid = self.mywidget1.bind( "<Any-Key>", self.mycallback1)
+# self.anybutid = self.mywidget1.bind( "<Any-Button>", self.mycallback2)
+
+# self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
+# self.contents.unbind("<Any-Button>", funcid=self.anybutid)
+		
 
 
 ############# About screen dimensions Begin
