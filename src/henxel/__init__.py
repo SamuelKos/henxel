@@ -442,8 +442,9 @@ class Editor(tkinter.Toplevel):
 		
 		####  Syntax-highlight Begin  ###################################
 		
+		self.oldline = ''
+		
 		self.keywords = [
-						'self',
 						'False',
 						'True',
 						'None',
@@ -481,38 +482,14 @@ class Editor(tkinter.Toplevel):
 						'yield'
 						]
 						
-		self.ops = [
-					'+',
-					'-',
-					'+=',
-					'-=',
-					'*=',
-					'/=',
-					'//=',
-					'/',
-					'//',
-					'\\',
-					'!=',
-					'==',
-					'<=',
-					'>=',
-					'<',
-					'>',
-					'%',
-					'%=',
-					'*',
-					'**'
-					]
-					
 		self.bools = ['False', 'True', 'None']
-		self.dots = ['.', ',', '=']
+		self.breaks = ['break', 'return', 'continue', 'pass', 'raise']
 		
-		blue = r'#12488b'
 		red = r'#c01c28'
-		yellow = r'#a2734c'
 		cyan = r'#2aa1b3'
 		magenta = r'#a347ba'
 		green = r'#26a269'
+		orange = r'#e95b38'
 		
 		
 		self.boldfont = self.font.copy()
@@ -520,12 +497,11 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.tag_config('keywords', font=self.boldfont, foreground=cyan)
 		self.contents.tag_config('numbers', font=self.boldfont, foreground=red)
-		self.contents.tag_config('bools', font=self.boldfont, foreground=magenta)
-		self.contents.tag_config('strings', font=self.boldfont, foreground=green)
-		self.contents.tag_config('generic', font=self.boldfont)
+		self.contents.tag_config('comments', font=self.boldfont, foreground=red)
+		self.contents.tag_config('breaks', font=self.boldfont, foreground=orange)
+		self.contents.tag_config('bools', foreground=magenta)
+		self.contents.tag_config('strings', foreground=green)
 		
-		self.contents.tag_config('dots', foreground=yellow)
-		self.contents.tag_config('comments', foreground=red)
 		
 		self.tags = dict()
 		
@@ -533,10 +509,8 @@ class Editor(tkinter.Toplevel):
 		self.tags['numbers'] = list()
 		self.tags['bools'] = list()
 		self.tags['strings'] = list()
-		self.tags['generic'] = list()
-		self.tags['dots'] = list()
 		self.tags['comments'] = list()
-		
+		self.tags['breaks'] = list()
 		
 		
 		tmp = self.tabs[self.tabindex].contents
@@ -545,7 +519,6 @@ class Editor(tkinter.Toplevel):
 		
 		for token in res:
 			if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
-				( token.type == tokenize.OP and token.string in self.dots + self.ops ) or \
 				( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
 				
 				s0, s1 = map(str, token.start)
@@ -560,32 +533,18 @@ class Editor(tkinter.Toplevel):
 						self.contents.tag_add('bools', idx_start, idx_end)
 						self.tags['bools'].append((idx_start, idx_end))
 						
-					elif token.string == 'self':
-						self.contents.tag_add('dots', idx_start, idx_end)
-						self.tags['dots'].append((idx_start, idx_end))
-					
+					elif token.string in self.breaks:
+						self.contents.tag_add('breaks', idx_start, idx_end)
+						self.tags['breaks'].append((idx_start, idx_end))
+						
 					else:
-						self.contents.tag_add('keywords', idx_start, idx_end)
-						self.tags['keywords'].append((idx_start, idx_end))
-			
-			
-				elif token.type == tokenize.OP:
-					if token.string == '=':
 						self.contents.tag_add('keywords', idx_start, idx_end)
 						self.tags['keywords'].append((idx_start, idx_end))
 		
-					elif token.string in self.dots:
-						self.contents.tag_add('dots', idx_start, idx_end)
-						self.tags['dots'].append((idx_start, idx_end))
-					
-					else:
-						self.contents.tag_add('numbers', idx_start, idx_end)
-						self.tags['numbers'].append((idx_start, idx_end))
-						
 		
 				elif token.type == tokenize.STRING:
-							self.contents.tag_add('strings', idx_start, idx_end)
-							self.tags['strings'].append((idx_start, idx_end))
+					self.contents.tag_add('strings', idx_start, idx_end)
+					self.tags['strings'].append((idx_start, idx_end))
 		
 				elif token.type == tokenize.COMMENT:
 					self.contents.tag_add('comments', idx_start, idx_end)
@@ -621,44 +580,49 @@ class Editor(tkinter.Toplevel):
 		############################# init End ######################
 		
 	
-	
 	def update_tokens(self, string=None):
-
+	
 		tmp = string
 		tags = [
 				'keywords',
 				'numbers',
 				'bools',
 				'strings',
-				'generic',
-				'dots',
-				'comments'
+				'comments',
+				'breaks'
 				]
 
 
 		if not tmp:
+			# want linenum
+			
 			line_idx = self.contents.index( tkinter.INSERT )
-			tmp = self.contents.get( line_idx, '%s lineend' % line_idx )
+			linenum = line_idx.split('.')[0]
+			tmp = self.contents.get( '%s linestart' % line_idx, '%s lineend' % line_idx )
+			
+			res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
 
 			lineend = '%s lineend' % line_idx
 		
 		# Remove old tags from self.tags:
 		for tag in tags:
-		
+
 			linestart = '%s linestart' % line_idx
-			
+
 			try:
 				ind = self.contents.tag_nextrange( tag, linestart, lineend )
 			except tkinter.TclError:
 				continue
-				
-			#print(tag, linestart, lineend, ind)
 
 			while len(ind) == 2 and self.contents.compare( ind[0], '<', lineend ):
-				self.tags[tag].remove(ind)
-
-				linestart = ind[1]
 				
+				try:
+					self.tags[tag].remove(ind)
+				except ValueError:
+					break
+					
+				linestart = ind[1]
+
 				try:
 					ind = self.contents.tag_nextrange( tag, linestart, lineend )
 				except tkinter.TclError:
@@ -668,61 +632,55 @@ class Editor(tkinter.Toplevel):
 		linestart = '%s linestart' % line_idx
 		for tag in tags:
 			self.contents.tag_remove( tag, linestart, lineend )
-##
-##
-##
-##		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
-##
-##		for token in res:
-##			if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
-##				( token.type == tokenize.OP and token.string in self.dots + self.ops ) or \
-##				( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
-##
-##
-##				s0, s1 = map(str, token.start)
-##				e0, e1 = map(str, token.end)
-##				idx_start = s0 + '.' + s1
-##				idx_end = e0 + '.' + e1
-##
-##
-##
-##				start_patt = '%s + %s lines' % (idx_start, first_line)
-##				end_patt = '%s + %s lines' % (idx_end, first_line)
-##
-##				if token.type == tokenize.NAME:
-##
-##					if token.string in self.bools:
-##						self.contents.tag_add('bools', start_patt, end_patt)
-##
-##					elif token.string == 'self':
-##						self.contents.tag_add('dots', start_patt, end_patt)
-##
-##					else:
-##						self.contents.tag_add('keywords', start_patt, end_patt)
-##
-##
-##				elif token.type == tokenize.OP:
-##					if token.string == '=':
-##						self.contents.tag_add('keywords', start_patt, end_patt)
-##
-##					elif token.string in self.dots:
-##						self.contents.tag_add('dots', start_patt, end_patt)
-##
-##					else:
-##						self.contents.tag_add('numbers', start_patt, end_patt)
-##
-##
-##				elif token.type == tokenize.STRING:
-##							self.contents.tag_add('strings', start_patt, end_patt)
-##
-##				elif token.type == tokenize.COMMENT:
-##					self.contents.tag_add('comments', start_patt, end_patt)
-##
-##				elif token.type == tokenize.NUMBER:
-##					self.contents.tag_add('numbers', start_patt, end_patt)
+			
+		# check arrow left indent
+		# Retag line:
+		try:
+			for token in res:
+			
+				if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
+					( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
+					
+					_, s1 = map(str, token.start)
+					_, e1 = map(str, token.end)
+					idx_start = linenum + '.' + s1
+					idx_end = linenum + '.' + e1
+				
+						
+					if token.type == tokenize.NAME:
+					
+						if token.string in self.bools:
+							self.contents.tag_add('bools', idx_start, idx_end)
+							self.tags['bools'].append((idx_start, idx_end))
+							
+						elif token.string in self.breaks:
+							self.contents.tag_add('breaks', idx_start, idx_end)
+							self.tags['breaks'].append((idx_start, idx_end))
+							
+						else:
+							self.contents.tag_add('keywords', idx_start, idx_end)
+							self.tags['keywords'].append((idx_start, idx_end))
+			
+			
+					elif token.type == tokenize.STRING:
+						self.contents.tag_add('strings', idx_start, idx_end)
+						self.tags['strings'].append((idx_start, idx_end))
+			
+					elif token.type == tokenize.COMMENT:
+						self.contents.tag_add('comments', idx_start, idx_end)
+						self.tags['comments'].append((idx_start, idx_end))
+										
+					elif token.type == tokenize.NUMBER:
+						self.contents.tag_add('numbers', idx_start, idx_end)
+						self.tags['numbers'].append((idx_start, idx_end))
+		
+		# Brace deletion for example:
+		# untag line?
+		except tokenize.TokenError:
+			return
 		
 		
-	
+		
 	def update_title(self, event=None):
 		tail = len(self.tabs) - self.tabindex - 1
 		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
@@ -776,7 +734,19 @@ class Editor(tkinter.Toplevel):
 		self.text_widget_height = self.scrollbar.winfo_height()
 		
 		self.update_linenums()
-		self.update_tokens()
+		
+		# tag alter triggers this event
+		# --> need to check if line is changed to prevent recursion
+		line_idx = self.contents.index( tkinter.INSERT )
+		lineend = '%s lineend' % line_idx
+		linestart = '%s linestart' % line_idx
+		
+		tmp = self.contents.get( linestart, lineend )
+
+		
+		if self.oldline != tmp:
+			self.oldline = tmp
+			self.update_tokens()
 
 	
 ############## Linenumbers Begin
