@@ -6,6 +6,13 @@
 
 
 
+# unify tokenfuncs							ok ##########
+# grid last									ok ##########
+# give filename give tag					ok ##########
+
+
+
+
 
 # multiline strings
 
@@ -79,14 +86,14 @@ class Ed(tkinter.Toplevel):
 	# self.__class__.editors.append(self)
 	editors = []
 	
-
+	
 	def __init__(self):
 		self.root = tkinter.Tk().withdraw()
 		super().__init__(self.root)
 		self.__class__.editors.append(self)
 		
 		self.lineNumbers = ''
-
+	
 		self.rowconfigure(1, weight=1)
 		self.columnconfigure(1, weight=1)
 		

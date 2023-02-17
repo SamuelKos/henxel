@@ -410,31 +410,8 @@ class Editor(tkinter.Toplevel):
 
 		# Widgets are configured
 		###############################
-		# Layout Begin
-		################################
-		self.rowconfigure(1, weight=1)
-		self.columnconfigure(1, weight=1)
-		
-		# It seems that widget is shown on screen when doing grid_configure
-		self.btn_git.grid_configure(row=0, column = 0, sticky='nsew')
-		self.entry.grid_configure(row=0, column = 1, sticky='nsew')
-		self.btn_open.grid_configure(row=0, column = 2, sticky='nsew')
-		self.btn_save.grid_configure(row=0, column = 3, columnspan=2, sticky='nsew')
-		
-		self.ln_widget.grid_configure(row=1, column = 0, sticky='nsw')
-			
-		# If want linenumbers:
-		if self.want_ln:
-			self.contents.grid_configure(row=1, column=1, columnspan=3, sticky='nswe')
-		
-		else:
-			self.contents.grid_configure(row=1, column=0, columnspan=4, sticky='nswe')
-			self.ln_widget.grid_remove()
-			
-		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
-				
-		
-		####  Syntax-highlight Begin  ###################################
+		#
+		# Syntax-highlight Begin #################
 		
 		self.oldline = ''
 		
@@ -519,13 +496,34 @@ class Editor(tkinter.Toplevel):
 		
 		
 		self.token_err = False
-		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
-		
-		self.update_tokens_of_all_contents()
+		self.update_tokens_of_curline(start='1.0', end=tkinter.END)
 		
 		####  Syntax-highlight End  ######################################
 	
-	
+		# Layout Begin
+		################################
+		self.rowconfigure(1, weight=1)
+		self.columnconfigure(1, weight=1)
+		
+		# It seems that widget is shown on screen when doing grid_configure
+		self.btn_git.grid_configure(row=0, column = 0, sticky='nsew')
+		self.entry.grid_configure(row=0, column = 1, sticky='nsew')
+		self.btn_open.grid_configure(row=0, column = 2, sticky='nsew')
+		self.btn_save.grid_configure(row=0, column = 3, columnspan=2, sticky='nsew')
+		
+		self.ln_widget.grid_configure(row=1, column = 0, sticky='nsw')
+			
+		# If want linenumbers:
+		if self.want_ln:
+			self.contents.grid_configure(row=1, column=1, columnspan=3, sticky='nswe')
+		
+		else:
+			self.contents.grid_configure(row=1, column=0, columnspan=4, sticky='nswe')
+			self.ln_widget.grid_remove()
+			
+		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
+		
+		
 		# set cursor pos:
 		try:
 			line = self.tabs[self.tabindex].position
@@ -542,12 +540,14 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', '1.0')
 		
 		
+		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 		self.update_idletasks()
 		self.viewsync()
 		self.__class__.alive = True
 		self.update_title()
 		
 		############################# init End ##########################
+		
 		
 	def update_title(self, event=None):
 		tail = len(self.tabs) - self.tabindex - 1
@@ -619,10 +619,10 @@ class Editor(tkinter.Toplevel):
 			self.oldline = tmp
 			
 ##			if self.token_err:
-##				self.update_tokens_of_all_contents()
+##				self.update_tokens_of_curline(start='1.0', end=tkinter.END)
 ##
 ##			else:
-			self.update_tokens_of_curline()
+			self.update_tokens_of_curline(start=linestart, end=lineend)
 
 	
 ############## Linenumbers Begin
@@ -798,7 +798,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].filepath:
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				self.update_tokens_of_all_contents()
+				self.update_tokens_of_curline(start='1.0', end=tkinter.END)
 		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 
@@ -865,7 +865,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].filepath:
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				self.update_tokens_of_all_contents()
+				self.update_tokens_of_curline(start='1.0', end=tkinter.END)
 		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		
@@ -1077,91 +1077,23 @@ class Editor(tkinter.Toplevel):
 		
 ########## Configuration Related End
 ########## Syntax highlight Begin
-
-	def update_tokens_of_all_contents(self):
-	
-		flag_err = False
-		tmp = self.contents.get( 1.0, tkinter.END )
-		
-		try:
-			with io.BytesIO( tmp.encode('utf-8') ) as fo:
-				
-				res = tokenize.tokenize( fo.readline )
-		
-				for token in res:
-					if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
-						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
-						
-						s0, s1 = map(str, token.start)
-						e0, e1 = map(str, token.end)
-						idx_start = s0 + '.' + s1
-						idx_end = e0 + '.' + e1
 					
-							
-						if token.type == tokenize.NAME:
-						
-							if token.string in self.bools:
-								self.contents.tag_add('bools', idx_start, idx_end)
-								
-							elif token.string in self.breaks:
-								self.contents.tag_add('breaks', idx_start, idx_end)
-								
-							else:
-								self.contents.tag_add('keywords', idx_start, idx_end)
-								
-				
-						elif token.type == tokenize.STRING:
-							self.contents.tag_add('strings', idx_start, idx_end)
-							
-						elif token.type == tokenize.COMMENT:
-							self.contents.tag_add('comments', idx_start, idx_end)
-											
-						elif token.type == tokenize.NUMBER:
-							self.contents.tag_add('numbers', idx_start, idx_end)
-			
-			
-		except (IndentationError, tokenize.TokenError) as e:
-			#print(e)
-			flag_err = True
-			pass
-			
-##		if flag_err:
-##			self.token_err = True
-##		else:
-##			self.token_err = False
-							
-						
 	def update_tokens_of_curline(self, start=None, end=None):
 
-		# if paste:
-		if start and end:
-			line_idx = start
-			tmp = self.contents.get( '%s linestart' % start, '%s lineend' % end )
-			lineend = '%s lineend' % end
-
-		else:
-			line_idx = self.contents.index( tkinter.INSERT )
-			tmp = self.contents.get( '%s linestart' % line_idx, '%s lineend' % line_idx )
-			lineend = '%s lineend' % line_idx
-			
-		
-		flag_err = False
-	
-		linenum = int(line_idx.split('.')[0])
-		
+		tmp = self.contents.get( start, end )
+		linenum = int(start.split('.')[0])
+		#flag_err = False
 		
 		try:
 			with io.BytesIO( tmp.encode('utf-8') ) as fo:
 			
 				res = tokenize.tokenize( fo.readline )
 			
-				# Remove old tags from line:
-				linestart = '%s linestart' % line_idx
+				# Remove old tags:
 				for tag in self.tagnames:
-					self.contents.tag_remove( tag, linestart, lineend )
+					self.contents.tag_remove( tag, start, end )
 					
-					
-				# Retag line:
+				# Retag:
 				for token in res:
 				
 					if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
@@ -1468,7 +1400,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].type == 'normal':
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				self.update_tokens_of_all_contents()
+				self.update_tokens_of_curline(start='1.0', end=tkinter.END)
 		
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
@@ -1617,7 +1549,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].type == 'normal':
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-					self.update_tokens_of_all_contents()
+					self.update_tokens_of_curline(start='1.0', end=tkinter.END)
 		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			
@@ -1749,7 +1681,7 @@ class Editor(tkinter.Toplevel):
 			# Could be anything and we have zero info about action, so:
 			if self.tabs[self.tabindex].type == 'normal':
 				if '.py' in self.tabs[self.tabindex].filepath.suffix:
-					self.update_tokens_of_all_contents()
+					self.update_tokens_of_curline(start='1.0', end=tkinter.END)
 			
 		except tkinter.TclError:
 			self.bell()
@@ -1768,7 +1700,7 @@ class Editor(tkinter.Toplevel):
 			# Could be anything and we have zero info about action, so:
 			if self.tabs[self.tabindex].type == 'normal':
 				if '.py' in self.tabs[self.tabindex].filepath.suffix:
-					self.update_tokens_of_all_contents()
+					self.update_tokens_of_curline(start='1.0', end=tkinter.END)
 			
 		except tkinter.TclError:
 			self.bell()
@@ -1915,11 +1847,15 @@ class Editor(tkinter.Toplevel):
 					self.tabs[self.tabindex].contents = fcontents
 					self.contents.insert(tkinter.INSERT, fcontents)
 					
-					self.update_tokens_of_all_contents()
-		
+					self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+					self.tabs[self.tabindex].position = '1.0'
+				
+					self.contents.focus_set()
+					self.contents.see('1.0')
+					self.contents.mark_set('insert', '1.0')
 					self.contents.edit_reset()
 					self.contents.edit_modified(0)
-					self.contents.focus_set()
+					
 					return 'break'
 					
 			except (EnvironmentError, UnicodeDecodeError) as e:
@@ -1951,11 +1887,16 @@ class Editor(tkinter.Toplevel):
 				self.tabs[self.tabindex].contents = tmp
 				self.contents.insert(tkinter.INSERT, tmp)
 				
-				self.update_tokens_of_all_contents()
+				self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+				self.tabs[self.tabindex].position = '1.0'
+				
+				self.contents.focus_set()
+				self.contents.see('1.0')
+				self.contents.mark_set('insert', '1.0')
 				
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
-				self.contents.focus_set()
+				
 				return 'break'
 			
 			# from .rindex()
@@ -2108,7 +2049,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
 				if '.py' in self.tabs[self.tabindex].filepath.suffix:
-					self.update_tokens_of_all_contents()
+					self.update_tokens_of_curline(start='1.0', end=tkinter.END)
 				
 				self.contents.focus_set()
 				self.contents.see('1.0')
@@ -2292,6 +2233,10 @@ class Editor(tkinter.Toplevel):
 				if self.tabs[self.tabindex].filepath != None:
 					self.entry.delete(0, tkinter.END)
 					self.entry.insert(0, self.tabs[self.tabindex].filepath)
+					
+					if '.py' in self.tabs[self.tabindex].filepath.suffix:
+						self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+				
 
 			# want to create new file with same contents:
 			else:
@@ -2318,7 +2263,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
 				if '.py' in self.tabs[self.tabindex].filepath.suffix:
-					self.update_tokens_of_all_contents()
+					self.update_tokens_of_curline(start='1.0', end=tkinter.END)
 				
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
@@ -2448,7 +2393,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].filepath:
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				self.update_tokens_of_all_contents()
+				self.update_tokens_of_curline(start='1.0', end=tkinter.END)
 		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		
