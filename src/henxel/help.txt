@@ -2,7 +2,8 @@
 
 		Alt-Return		Open file
 		Ctrl-BackSpace  Show and select next occurence of last search.
-						If got too far, press arrowleft togoto lastcursorpos
+						If got too far, press arrowleft to go to last
+						cursor position.
 		Ctrl-f  Search
 		Ctrl-r  Replace
 		Ctrl-R  Replace all

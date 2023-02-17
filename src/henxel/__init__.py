@@ -13,6 +13,7 @@
 # Linenumbers
 # Tab Related
 # Configuration Related
+# Syntax highlight
 # Theme Related
 # Run file Related
 # Overrides
@@ -366,9 +367,9 @@ class Editor(tkinter.Toplevel):
 			
 			self.bgnightcolor = black
 			self.fgnightcolor = white
-			self.fgcolor = self.fgdaycolor
-			self.bgcolor = self.bgdaycolor
-			self.curcolor = 'day'
+			self.fgcolor = self.fgnightcolor
+			self.bgcolor = self.bgnightcolor
+			self.curcolor = 'night'
 			
 			# Set Font Begin ##################################################
 			fontname = None
@@ -524,8 +525,7 @@ class Editor(tkinter.Toplevel):
 		
 		####  Syntax-highlight End  ######################################
 	
-			
-		
+	
 		# set cursor pos:
 		try:
 			line = self.tabs[self.tabindex].position
@@ -548,135 +548,6 @@ class Editor(tkinter.Toplevel):
 		self.update_title()
 		
 		############################# init End ##########################
-		
-		
-	def update_tokens_of_all_contents(self):
-	
-		flag_err = False
-		tmp = self.contents.get( 1.0, tkinter.END )
-		
-		try:
-			with io.BytesIO( tmp.encode('utf-8') ) as fo:
-				
-				res = tokenize.tokenize( fo.readline )
-		
-				for token in res:
-					if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
-						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
-						
-						s0, s1 = map(str, token.start)
-						e0, e1 = map(str, token.end)
-						idx_start = s0 + '.' + s1
-						idx_end = e0 + '.' + e1
-					
-							
-						if token.type == tokenize.NAME:
-						
-							if token.string in self.bools:
-								self.contents.tag_add('bools', idx_start, idx_end)
-								
-							elif token.string in self.breaks:
-								self.contents.tag_add('breaks', idx_start, idx_end)
-								
-							else:
-								self.contents.tag_add('keywords', idx_start, idx_end)
-								
-				
-						elif token.type == tokenize.STRING:
-							self.contents.tag_add('strings', idx_start, idx_end)
-							
-						elif token.type == tokenize.COMMENT:
-							self.contents.tag_add('comments', idx_start, idx_end)
-											
-						elif token.type == tokenize.NUMBER:
-							self.contents.tag_add('numbers', idx_start, idx_end)
-			
-			
-		except (IndentationError, tokenize.TokenError) as e:
-			#print(e)
-			flag_err = True
-			pass
-			
-##		if flag_err:
-##			self.token_err = True
-##		else:
-##			self.token_err = False
-			
-						
-	def update_tokens_of_curline(self, start=None, end=None):
-
-		# if paste:
-		if start and end:
-			line_idx = start
-			tmp = self.contents.get( '%s linestart' % start, '%s lineend' % end )
-			lineend = '%s lineend' % end
-
-		else:
-			line_idx = self.contents.index( tkinter.INSERT )
-			tmp = self.contents.get( '%s linestart' % line_idx, '%s lineend' % line_idx )
-			lineend = '%s lineend' % line_idx
-			
-		
-		flag_err = False
-	
-		linenum = int(line_idx.split('.')[0])
-		
-		
-		try:
-			with io.BytesIO( tmp.encode('utf-8') ) as fo:
-			
-				res = tokenize.tokenize( fo.readline )
-			
-				# Remove old tags from line:
-				linestart = '%s linestart' % line_idx
-				for tag in self.tagnames:
-					self.contents.tag_remove( tag, linestart, lineend )
-					
-					
-				# Retag line:
-				for token in res:
-				
-					if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
-						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
-						
-						# initiate indexes with correct linenum
-						s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
-						e0, e1 = map(str, [ token.end[0] + linenum - 1, token.end[1] ] )
-						idx_start = s0 + '.' + s1
-						idx_end = e0 + '.' + e1
-					
-							
-						if token.type == tokenize.NAME:
-						
-							if token.string in self.bools:
-								self.contents.tag_add('bools', idx_start, idx_end)
-								
-							elif token.string in self.breaks:
-								self.contents.tag_add('breaks', idx_start, idx_end)
-								
-							else:
-								self.contents.tag_add('keywords', idx_start, idx_end)
-								
-				
-						elif token.type == tokenize.STRING:
-							self.contents.tag_add('strings', idx_start, idx_end)
-							
-						elif token.type == tokenize.COMMENT:
-							self.contents.tag_add('comments', idx_start, idx_end)
-											
-						elif token.type == tokenize.NUMBER:
-							self.contents.tag_add('numbers', idx_start, idx_end)
-							
-			
-		except (IndentationError, tokenize.TokenError) as e:
-			#print(e)
-##			flag_err = True
-##			self.token_err = True
-			pass
-			
-##		if flag_err:
-##			self.token_err = True
-		
 		
 	def update_title(self, event=None):
 		tail = len(self.tabs) - self.tabindex - 1
@@ -1205,6 +1076,136 @@ class Editor(tkinter.Toplevel):
 		self.contents.edit_modified(0)
 		
 ########## Configuration Related End
+########## Syntax highlight Begin
+
+	def update_tokens_of_all_contents(self):
+	
+		flag_err = False
+		tmp = self.contents.get( 1.0, tkinter.END )
+		
+		try:
+			with io.BytesIO( tmp.encode('utf-8') ) as fo:
+				
+				res = tokenize.tokenize( fo.readline )
+		
+				for token in res:
+					if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
+						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
+						
+						s0, s1 = map(str, token.start)
+						e0, e1 = map(str, token.end)
+						idx_start = s0 + '.' + s1
+						idx_end = e0 + '.' + e1
+					
+							
+						if token.type == tokenize.NAME:
+						
+							if token.string in self.bools:
+								self.contents.tag_add('bools', idx_start, idx_end)
+								
+							elif token.string in self.breaks:
+								self.contents.tag_add('breaks', idx_start, idx_end)
+								
+							else:
+								self.contents.tag_add('keywords', idx_start, idx_end)
+								
+				
+						elif token.type == tokenize.STRING:
+							self.contents.tag_add('strings', idx_start, idx_end)
+							
+						elif token.type == tokenize.COMMENT:
+							self.contents.tag_add('comments', idx_start, idx_end)
+											
+						elif token.type == tokenize.NUMBER:
+							self.contents.tag_add('numbers', idx_start, idx_end)
+			
+			
+		except (IndentationError, tokenize.TokenError) as e:
+			#print(e)
+			flag_err = True
+			pass
+			
+##		if flag_err:
+##			self.token_err = True
+##		else:
+##			self.token_err = False
+							
+						
+	def update_tokens_of_curline(self, start=None, end=None):
+
+		# if paste:
+		if start and end:
+			line_idx = start
+			tmp = self.contents.get( '%s linestart' % start, '%s lineend' % end )
+			lineend = '%s lineend' % end
+
+		else:
+			line_idx = self.contents.index( tkinter.INSERT )
+			tmp = self.contents.get( '%s linestart' % line_idx, '%s lineend' % line_idx )
+			lineend = '%s lineend' % line_idx
+			
+		
+		flag_err = False
+	
+		linenum = int(line_idx.split('.')[0])
+		
+		
+		try:
+			with io.BytesIO( tmp.encode('utf-8') ) as fo:
+			
+				res = tokenize.tokenize( fo.readline )
+			
+				# Remove old tags from line:
+				linestart = '%s linestart' % line_idx
+				for tag in self.tagnames:
+					self.contents.tag_remove( tag, linestart, lineend )
+					
+					
+				# Retag line:
+				for token in res:
+				
+					if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
+						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
+						
+						# initiate indexes with correct linenum
+						s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
+						e0, e1 = map(str, [ token.end[0] + linenum - 1, token.end[1] ] )
+						idx_start = s0 + '.' + s1
+						idx_end = e0 + '.' + e1
+					
+							
+						if token.type == tokenize.NAME:
+						
+							if token.string in self.bools:
+								self.contents.tag_add('bools', idx_start, idx_end)
+								
+							elif token.string in self.breaks:
+								self.contents.tag_add('breaks', idx_start, idx_end)
+								
+							else:
+								self.contents.tag_add('keywords', idx_start, idx_end)
+								
+				
+						elif token.type == tokenize.STRING:
+							self.contents.tag_add('strings', idx_start, idx_end)
+							
+						elif token.type == tokenize.COMMENT:
+							self.contents.tag_add('comments', idx_start, idx_end)
+											
+						elif token.type == tokenize.NUMBER:
+							self.contents.tag_add('numbers', idx_start, idx_end)
+							
+			
+		except (IndentationError, tokenize.TokenError) as e:
+			#print(e)
+##			flag_err = True
+##			self.token_err = True
+			pass
+			
+##		if flag_err:
+##			self.token_err = True
+				
+########## Syntax highlight End
 ########## Theme Related Begin
 
 	def increase_scrollbar_width(self, event=None):
@@ -1464,6 +1465,11 @@ class Editor(tkinter.Toplevel):
 		self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+		
+		if self.tabs[self.tabindex].type == 'normal':
+			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				self.update_tokens_of_all_contents()
+		
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		self.contents.focus_set()
@@ -1698,7 +1704,7 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			# is empty
 			return 'break'
-		
+
 		if len(tmp) >= 1:
 			pos = self.contents.index(tkinter.INSERT)
 			lastpos = self.contents.index( '%s + %dc' % (pos, wordlen) )

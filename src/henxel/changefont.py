@@ -7,7 +7,10 @@ class FontChooser:
 	def __init__(self, master, fontlist, tracefunc=None):
 		'''	master		tkinter.Toplevel
 			fontlist	list of tkinter.font.Font instances
-			tracefunc	callable, used in change_font
+			tracefunc	callable, used in change_font. It arranges variable
+						observer for change on any item in fontlist.
+						This is practically same as if there would be virtual
+						event <<FontChanged>> and tracefunc binded to it.
 		'''
 		
 		self.top = master
