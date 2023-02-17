@@ -16,17 +16,20 @@
 # menu paste test										ok ?
 # walk-files walk-tabs									ok ?
 # tab remove self.tags newtab							ok ?
+# on font change update tags							ok ?
+# py-file												ok ?
+# paste selects too much down							ok ?
+# ctrl p --> alt f,  ctrl s --> alt s					ok ?
+# ctrl n --> alt n										ok ?
 
-# on font change update tags
 
+# check def binds
 
-# paste selects too much down
-# py-file
+# multiline strings
 
 
 # what if indent err or open brace?
 
-# alt p alt n alt f ctrl s
 
 
 

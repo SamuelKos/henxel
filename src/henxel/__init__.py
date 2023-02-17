@@ -197,7 +197,7 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Button-3>", self.raise_popup)
 		self.bind( "<Control-g>", self.gotoline)
 		self.bind( "<Control-r>", self.replace)
-		self.bind( "<Control-s>", self.color_choose)
+		self.bind( "<Alt-s>", self.color_choose)
 		self.bind( "<Alt-t>", self.toggle_color)
 		self.bind( "<Alt-w>", self.walk_tabs)
 		
@@ -306,8 +306,10 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.bind( "<Alt-l>", self.toggle_ln)
 		self.contents.bind( "<Control-f>", self.search)
-		self.contents.bind( "<Control-n>", self.new_tab)
-		self.contents.bind( "<Control-p>", self.font_choose)
+		
+		self.contents.bind( "<Alt-n>", self.new_tab)
+		self.contents.bind( "<Alt-f>", self.font_choose)
+		
 		self.contents.bind( "<Return>", self.return_override)
 		self.contents.bind( "<Control-d>", self.del_tab)
 		self.contents.bind( "<Shift-Return>", self.comment)
@@ -353,14 +355,7 @@ class Editor(tkinter.Toplevel):
 			self.tabindex = -1
 			self.new_tab()
 			
-			# Colors Begin #################################
-			
-			# not used, for the future:
-			# blue = r'#12488b'
-			# red = r'#c01c28'
-			# yellow = r'#a2734c'
-			# cyan = r'#2aa1b3'
-			# magenta = r'#a347ba'
+			# Colors Begin #######################
 			
 			black = r'#000000'
 			white = r'#D3D7CF'
@@ -505,6 +500,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('numbers', font=self.boldfont, foreground=red)
 		self.contents.tag_config('comments', font=self.boldfont, foreground=red)
 		self.contents.tag_config('breaks', font=self.boldfont, foreground=orange)
+		
 		self.contents.tag_config('bools', foreground=magenta)
 		self.contents.tag_config('strings', foreground=green)
 		
@@ -538,7 +534,8 @@ class Editor(tkinter.Toplevel):
 		
 	def update_tokens_of_all_contents(self):
 	
-		tmp = self.tabs[self.tabindex].contents
+		tmp = self.contents.get( 1.0, tkinter.END )
+		#self.tabs[self.tabindex].contents
 		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
 		
 		try:
@@ -687,6 +684,7 @@ class Editor(tkinter.Toplevel):
 		
 		del self.font
 		del self.menufont
+		del self.boldfont
 		
 		# this is maybe not necessary
 		del self.entry
@@ -1231,8 +1229,18 @@ class Editor(tkinter.Toplevel):
 		self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
 		
 		return 'break'
+
 		
-			
+	def update_fonts(self):
+		self.boldfont = self.font.copy()
+		self.boldfont.config(weight='bold')
+		
+		self.contents.tag_config('keywords', font=self.boldfont)
+		self.contents.tag_config('numbers', font=self.boldfont)
+		self.contents.tag_config('comments', font=self.boldfont)
+		self.contents.tag_config('breaks', font=self.boldfont)
+		
+					
 	def font_choose(self, event=None):
 		if self.state != 'normal':
 			self.bell()
@@ -1242,10 +1250,10 @@ class Editor(tkinter.Toplevel):
 		fonttop.title('Choose Font')
 		
 		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
-				self.contents.bind( "<Control-p>", self.font_choose)) )
+				self.contents.bind( "<Alt-f>", self.font_choose)) )
 			
-		changefont.FontChooser(fonttop, [self.font, self.menufont])
-		self.contents.bind( "<Control-p>", self.do_nothing)
+		changefont.FontChooser( fonttop, [self.font, self.menufont], tracefunc=self.update_fonts )
+		self.contents.bind( "<Alt-f>", self.do_nothing)
 		self.to_be_closed.append(fonttop)
 	
 		return 'break'
@@ -1260,9 +1268,9 @@ class Editor(tkinter.Toplevel):
 		colortop.title('Choose Color')
 		
 		colortop.protocol("WM_DELETE_WINDOW", lambda: ( colortop.destroy(),
-				self.bind( "<Control-s>", self.color_choose)) )
+				self.bind( "<Alt-s>", self.color_choose)) )
 				
-		self.bind( "<Control-s>", self.do_nothing)
+		self.bind( "<Alt-s>", self.do_nothing)
 		
 		colortop.btnfg = tkinter.Button(colortop, text='Text color', font=('TkDefaultFont', 16),
 				command = lambda args=['fg']: self.chcolor(args) )
@@ -1644,8 +1652,9 @@ class Editor(tkinter.Toplevel):
 			self.contents.event_generate('<<Paste>>')
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			
-			self.update_tokens_of_curline(start=pos, end=lastpos)
-			self.contents.tag_add('sel', pos, lastpos)
+			self.update_tokens_of_curline(start=startpos, end=endpos)
+
+			self.contents.tag_add('sel', pos, tkinter.INSERT)
 			
 			
 			self.contents.mark_set('insert', pos)
@@ -1672,6 +1681,9 @@ class Editor(tkinter.Toplevel):
 		try:
 			self.contents.edit_undo()
 			
+			# Could be anything and we have zero info about action, so:
+			self.update_tokens_of_all_contents()
+			
 		except tkinter.TclError:
 			self.bell()
 			
@@ -1685,6 +1697,10 @@ class Editor(tkinter.Toplevel):
 			
 		try:
 			self.contents.edit_redo()
+			
+			# Could be anything and we have zero info about action, so:
+			self.update_tokens_of_all_contents()
+			
 		except tkinter.TclError:
 			self.bell()
 			

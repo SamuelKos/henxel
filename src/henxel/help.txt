@@ -1,7 +1,8 @@
 		Keyboard shortcuts:
 
 		Alt-Return		Open file
-		Ctrl-BackSpace  Search next
+		Ctrl-BackSpace  Show and select next occurence of last search.
+						If got too far, press arrowleft togoto lastcursorpos
 		Ctrl-f  Search
 		Ctrl-r  Replace
 		Ctrl-R  Replace all
@@ -19,12 +20,12 @@
 		Ctrl-z  Undo
 		Ctrl-Z  Redo
 		
-		Ctrl-p  Font setting
-		Ctrl-s  Color setting
+		Alt-f   Font setting
+		Alt-s   Color setting
 		Alt-t   Toggle color setting
 		Alt-l   Toggle linenumbers
 		
-		Ctrl-n  Open new tab
+		Alt-n   Open new tab
 		Ctrl-d  Close current tab
 		Alt-w   Walk tabs forward
 		Alt-q   Walk tabs backwards

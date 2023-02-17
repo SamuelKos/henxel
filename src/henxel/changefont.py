@@ -4,13 +4,20 @@ import tkinter
 
 class FontChooser:
 		
-	def __init__(self, master, fontlist):
-		'''	master	tkinter.Toplevel
-			fontlist is list of tkinter.font.Font instances
+	def __init__(self, master, fontlist, tracefunc=None):
+		'''	master		tkinter.Toplevel
+			fontlist	list of tkinter.font.Font instances
+			tracefunc	callable, used in change_font
 		'''
 		
 		self.top = master
 		self.fonts = fontlist
+		
+		if tracefunc:
+			self.tracefunc = tracefunc
+		else:
+			self.tracefunc = None
+		
 		self.badfonts = frozenset([
 					'Standard Symbols PS',
 					'OpenSymbol',
@@ -184,6 +191,16 @@ class FontChooser:
 				family=self.lb.get(self.lb.curselection()),
 				size=self.sb.get()
 				)
+				
+			if self.tracefunc:
+				self.tracefunc()
+				
 		except tkinter.TclError as e:
 			print(e)
+			
+			
+			
+			
+			
+			
 			
