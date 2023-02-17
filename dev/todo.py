@@ -11,16 +11,22 @@
 # search leave tags escape clear						ok ?
 # search focus after no match, checked, tab moves		ok ?
 # seach next go back last curpos with arrow left		ok ?
-
-
-
-# syntax highlight   paste  delete
-# tab self.tags newtab
-# what if indent err or open brace?
-
-# alt p alt n alt f cntrl s
+# comment uncomment sh 									ok ?
+# syntax highlight   paste  delete						ok ?
+# menu paste test										ok ?
+# walk-files walk-tabs									ok ?
+# tab remove self.tags newtab							ok ?
 
 # on font change update tags
+
+
+# paste selects too much down
+# py-file
+
+
+# what if indent err or open brace?
+
+# alt p alt n alt f ctrl s
 
 
 

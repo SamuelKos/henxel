@@ -69,7 +69,6 @@ class Tab:
 		self.oldcontents = ''
 		self.position = '1.0'
 		self.type = 'newtab'
-#		self.tags = None
 		
 		self.__dict__.update(entries)
 		
@@ -130,8 +129,7 @@ class Editor(tkinter.Toplevel):
 		else:
 			print('Instance of ', cls, ' already running!\n')
 			
-			# return here would be a bit shady, so
-			# by raising error the object creation is totally aborted.
+			# By raising error the object creation is totally aborted.
 			raise ValueError()
 			
 			
@@ -201,10 +199,10 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Control-r>", self.replace)
 		self.bind( "<Control-s>", self.color_choose)
 		self.bind( "<Alt-t>", self.toggle_color)
-		self.bind( "<Alt-w>", self.walk_files)
+		self.bind( "<Alt-w>", self.walk_tabs)
 		
 		
-		self.bind( "<Alt-q>", lambda event: self.walk_files(event, **{'back':True}) )
+		self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
 		
 		pkg_contents = importlib.resources.files(__name__)
 		
@@ -321,7 +319,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-Z>", self.redo_override)
 		self.contents.bind( "<Control-v>", self.paste)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
-		self.contents.bind( "<BackSpace>", self.backspace_override)
 		
 		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 		
@@ -511,15 +508,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('bools', foreground=magenta)
 		self.contents.tag_config('strings', foreground=green)
 		
-		
-		self.tags = dict()
-		
-		self.tags['keywords'] = list()
-		self.tags['numbers'] = list()
-		self.tags['bools'] = list()
-		self.tags['strings'] = list()
-		self.tags['comments'] = list()
-		self.tags['breaks'] = list()
 									
 		self.update_tokens_of_all_contents()
 			
@@ -545,16 +533,10 @@ class Editor(tkinter.Toplevel):
 		self.__class__.alive = True
 		self.update_title()
 		
-		############################# init End ######################
+		############################# init End ##########################
+		
 		
 	def update_tokens_of_all_contents(self):
-
-		# Remove old tags from self.tags:
-		for tag in self.tagnames:
-		
-			self.tags[tag].clear()
-			self.contents.tag_remove( tag, 1.0, tkinter.END )
-	
 	
 		tmp = self.tabs[self.tabindex].contents
 		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
@@ -574,29 +556,23 @@ class Editor(tkinter.Toplevel):
 					
 						if token.string in self.bools:
 							self.contents.tag_add('bools', idx_start, idx_end)
-							self.tags['bools'].append((idx_start, idx_end))
 							
 						elif token.string in self.breaks:
 							self.contents.tag_add('breaks', idx_start, idx_end)
-							self.tags['breaks'].append((idx_start, idx_end))
 							
 						else:
 							self.contents.tag_add('keywords', idx_start, idx_end)
-							self.tags['keywords'].append((idx_start, idx_end))
-			
+							
 			
 					elif token.type == tokenize.STRING:
 						self.contents.tag_add('strings', idx_start, idx_end)
-						self.tags['strings'].append((idx_start, idx_end))
-			
+						
 					elif token.type == tokenize.COMMENT:
 						self.contents.tag_add('comments', idx_start, idx_end)
-						self.tags['comments'].append((idx_start, idx_end))
 										
 					elif token.type == tokenize.NUMBER:
 						self.contents.tag_add('numbers', idx_start, idx_end)
-						self.tags['numbers'].append((idx_start, idx_end))
-					
+						
 		except IndentationError:
 			#self.token_indent_err = True
 			#self.tmpcont = self.contents.get(1.0, tkinter.END)
@@ -628,30 +604,6 @@ class Editor(tkinter.Toplevel):
 		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
 		
 		
-		# Remove old tags from self.tags:
-		for tag in self.tagnames:
-
-			linestart = '%s linestart' % line_idx
-
-			try:
-				ind = self.contents.tag_nextrange( tag, linestart, lineend )
-			except tkinter.TclError:
-				continue
-
-			while len(ind) == 2 and self.contents.compare( ind[0], '<', lineend ):
-				
-				try:
-					self.tags[tag].remove(ind)
-				except ValueError:
-					break
-					
-				linestart = ind[1]
-
-				try:
-					ind = self.contents.tag_nextrange( tag, linestart, lineend )
-				except tkinter.TclError:
-					break
-
 		# Remove old tags from line:
 		linestart = '%s linestart' % line_idx
 		for tag in self.tagnames:
@@ -676,29 +628,23 @@ class Editor(tkinter.Toplevel):
 					
 						if token.string in self.bools:
 							self.contents.tag_add('bools', idx_start, idx_end)
-							self.tags['bools'].append((idx_start, idx_end))
 							
 						elif token.string in self.breaks:
 							self.contents.tag_add('breaks', idx_start, idx_end)
-							self.tags['breaks'].append((idx_start, idx_end))
 							
 						else:
 							self.contents.tag_add('keywords', idx_start, idx_end)
-							self.tags['keywords'].append((idx_start, idx_end))
-			
+							
 			
 					elif token.type == tokenize.STRING:
 						self.contents.tag_add('strings', idx_start, idx_end)
-						self.tags['strings'].append((idx_start, idx_end))
-			
+						
 					elif token.type == tokenize.COMMENT:
 						self.contents.tag_add('comments', idx_start, idx_end)
-						self.tags['comments'].append((idx_start, idx_end))
 										
 					elif token.type == tokenize.NUMBER:
 						self.contents.tag_add('numbers', idx_start, idx_end)
-						self.tags['numbers'].append((idx_start, idx_end))
-		
+						
 		
 		except IndentationError:
 			#self.token_indent_err = True
@@ -775,13 +721,6 @@ class Editor(tkinter.Toplevel):
 		linestart = '%s linestart' % line_idx
 		
 		tmp = self.contents.get( linestart, lineend )
-
-
-##		if self.token_indent_err:
-##			curcont = self.contents.get(1.0, tkinter.END)
-##			if self.tmpcont != curcont:
-##				self.tmpcont = curcont
-##				self.update_tokens_of_all_contents()
 		
 		if self.oldline != tmp:
 			self.oldline = tmp
@@ -921,17 +860,6 @@ class Editor(tkinter.Toplevel):
 			
 		newtab = Tab()
 		
-##		newtab.tags = dict()
-##
-##		newtab.tags['keywords'] = list()
-##		newtab.tags['numbers'] = list()
-##		newtab.tags['bools'] = list()
-##		newtab.tags['strings'] = list()
-##		newtab.tags['generic'] = list()
-##		newtab.tags['dots'] = list()
-##		newtab.tags['comments'] = list()
-		
-		
 		self.tabindex += 1
 		self.tabs.insert(self.tabindex, newtab)
 		
@@ -969,7 +897,11 @@ class Editor(tkinter.Toplevel):
 		self.tabs[self.tabindex].active = True
 
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+		
 		if self.tabs[self.tabindex].filepath:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				self.update_tokens_of_all_contents()
+		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 
 		try:
@@ -995,7 +927,7 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 
 		
-	def walk_files(self, event=None, back=False):
+	def walk_tabs(self, event=None, back=False):
 	
 		if self.state != 'normal' or len(self.tabs) < 2:
 			self.bell()
@@ -1034,6 +966,9 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		
 		if self.tabs[self.tabindex].filepath:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				self.update_tokens_of_all_contents()
+		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		
 		try:
@@ -1129,7 +1064,6 @@ class Editor(tkinter.Toplevel):
 		for tab in self.tabs:
 			tab.contents = ''
 			tab.oldcontents = ''
-			tab.tags = None
 			
 			# Convert tab.filepath to string for serialization
 			if tab.filepath:
@@ -1639,6 +1573,9 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		
 		if self.tabs[self.tabindex].type == 'normal':
+			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+					self.update_tokens_of_all_contents()
+		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			
 		self.contents.edit_reset()
@@ -1697,11 +1634,14 @@ class Editor(tkinter.Toplevel):
 			# is empty
 			return 'break'
 		
-		if len(tmp) > 1:
+		if len(tmp) >= 1:
 			pos = self.contents.index(tkinter.INSERT)
-			self.contents.event_generate('<<Paste>>')
+			lastpos = self.contents.index( '%s + %dc' % (pos, wordlen) )
+					
+			startpos = self.contents.index('%s linestart' % tkinter.INSERT)
+			endpos = self.contents.index('%s lineend' % lastpos)
 			
-			lastpos = "%s + %dc" % (pos, wordlen)
+			self.contents.event_generate('<<Paste>>')
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			
 			self.update_tokens_of_curline(start=pos, end=lastpos)
@@ -1781,49 +1721,7 @@ class Editor(tkinter.Toplevel):
 			# No selection, continue to next bindtag
 			return
 
-
-	def backspace_override(self, event):
-	
-		if self.state != 'normal' or event.state != 0:
-			return
-
-		try:
-			tmp = self.contents.selection_get()
-			wordlen = len(tmp)
-			tmp = tmp.splitlines(True)
-		except tkinter.TclError:
-			# is empty
-			return
 		
-		if len(tmp) > 1:
-		
-			line_idx = self.contents.index( tkinter.SEL_FIRST )
-			lineend = '%s lineend' % tkinter.SEL_LAST
-			
-			for tag in self.tagnames:
-	
-				linestart = '%s linestart' % line_idx
-	
-				try:
-					ind = self.contents.tag_nextrange( tag, linestart, lineend )
-				except tkinter.TclError:
-					continue
-	
-				while len(ind) == 2 and self.contents.compare( ind[0], '<', lineend ):
-					
-					try:
-						self.tags[tag].remove(ind)
-					except ValueError:
-						break
-						
-					linestart = ind[1]
-	
-					try:
-						ind = self.contents.tag_nextrange( tag, linestart, lineend )
-					except tkinter.TclError:
-						break
-	
-			
 	def return_override(self, event):
 	
 		# Cursor indexes when pressed return:
@@ -1931,6 +1829,9 @@ class Editor(tkinter.Toplevel):
 					self.new_tab()
 					self.tabs[self.tabindex].contents = fcontents
 					self.contents.insert(tkinter.INSERT, fcontents)
+					
+					self.update_tokens_of_all_contents()
+		
 					self.contents.edit_reset()
 					self.contents.edit_modified(0)
 					self.contents.focus_set()
@@ -1964,6 +1865,9 @@ class Editor(tkinter.Toplevel):
 				self.new_tab()
 				self.tabs[self.tabindex].contents = tmp
 				self.contents.insert(tkinter.INSERT, tmp)
+				
+				self.update_tokens_of_all_contents()
+				
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 				self.contents.focus_set()
@@ -2117,12 +2021,17 @@ class Editor(tkinter.Toplevel):
 				self.tabs[self.tabindex].position = '1.0'
 				
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+				
+				if '.py' in self.tabs[self.tabindex].filepath.suffix:
+					self.update_tokens_of_all_contents()
+				
 				self.contents.focus_set()
 				self.contents.see('1.0')
 				self.contents.mark_set('insert', '1.0')
 				self.entry.insert(0, filename)
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
+				
 		except (EnvironmentError, UnicodeDecodeError) as e:
 			print(e.__str__())
 			print(f'\n Could not open file: {filename}')
@@ -2322,6 +2231,10 @@ class Editor(tkinter.Toplevel):
 				self.entry.delete(0, tkinter.END)
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+				
+				if '.py' in self.tabs[self.tabindex].filepath.suffix:
+					self.update_tokens_of_all_contents()
+				
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 				
@@ -2359,6 +2272,8 @@ class Editor(tkinter.Toplevel):
 				print(e.__str__())
 				print(f'\n Could not save file: {self.tabs[self.tabindex].filepath}')
 				return
+				
+		############# Save End #######################################
 	
 ########## Save and Load End
 ########## Gotoline and Help Begin
@@ -2445,11 +2360,16 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+		
+		if self.tabs[self.tabindex].filepath:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				self.update_tokens_of_all_contents()
+		
+			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+		
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		
-		if self.tabs[self.tabindex].filepath:
-			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
@@ -2557,11 +2477,18 @@ class Editor(tkinter.Toplevel):
 			
 		try:
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
+			startpos = self.contents.index('%s linestart' % tkinter.SEL_FIRST)
+			
 			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
+			endpos = self.contents.index('%s lineend' % tkinter.SEL_LAST)
+			
 			
 			for linenum in range(startline, endline+1):
 				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 				self.contents.insert(tkinter.INSERT, '##')
+				
+			self.update_tokens_of_curline(start=startpos, end=endpos)
+			
 			
 			self.contents.edit_separator()
 			return "break"
@@ -2580,6 +2507,9 @@ class Editor(tkinter.Toplevel):
 		try:
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
+			startpos = self.contents.index('%s linestart' % tkinter.SEL_FIRST)
+			endpos = self.contents.index('%s lineend' % tkinter.SEL_LAST)
+				
 			changed = False
 			
 			for linenum in range(startline, endline+1):
@@ -2592,7 +2522,10 @@ class Editor(tkinter.Toplevel):
 					self.contents.insert(tkinter.INSERT, tmp)
 					changed = True
 					
-			if changed: self.contents.edit_separator()
+			if changed:
+				self.update_tokens_of_curline(start=startpos, end=endpos)
+				
+				self.contents.edit_separator()
 			
 		except tkinter.TclError as e:
 			print(e)
@@ -2602,9 +2535,6 @@ class Editor(tkinter.Toplevel):
 ################ Search Begin
 	
 	def check_next_event(self, event=None):
-		# how to lambda to nothing example
-		# dont need it here though
-		#self.contents.bind( "<Left>", lambda event: ...)
 		
 		if event.keysym == 'Left':
 			pos = self.lastcursorpos
