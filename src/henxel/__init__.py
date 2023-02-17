@@ -199,7 +199,9 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Control-r>", self.replace)
 		self.bind( "<Alt-s>", self.color_choose)
 		self.bind( "<Alt-t>", self.toggle_color)
+		self.bind( "<Alt-n>", self.new_tab)
 		self.bind( "<Alt-w>", self.walk_tabs)
+		
 		
 		
 		self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
@@ -300,16 +302,17 @@ class Editor(tkinter.Toplevel):
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 		
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
-		self.contents.tag_config('focus', background='lightgreen')
+		self.contents.tag_config('focus', background='lightgreen', foreground='black')
 		
 		self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
 		
 		self.contents.bind( "<Alt-l>", self.toggle_ln)
 		self.contents.bind( "<Control-f>", self.search)
 		
-		self.contents.bind( "<Alt-n>", self.new_tab)
-		self.contents.bind( "<Alt-f>", self.font_choose)
+		self.contents.bind( "<Control-s>", self.goto_linestart)
+		self.contents.bind( "<Control-i>", self.move_right)
 		
+		self.contents.bind( "<Alt-f>", self.font_choose)
 		self.contents.bind( "<Return>", self.return_override)
 		self.contents.bind( "<Control-d>", self.del_tab)
 		self.contents.bind( "<Shift-Return>", self.comment)
@@ -321,8 +324,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-Z>", self.redo_override)
 		self.contents.bind( "<Control-v>", self.paste)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
-		
-		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 		
 		
 		# Needed in leave() taglink in: Run file Related
@@ -432,7 +433,6 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 				
 		
-		
 		####  Syntax-highlight Begin  ###################################
 		
 		self.oldline = ''
@@ -472,11 +472,19 @@ class Editor(tkinter.Toplevel):
 						'await',
 						'finally',
 						'nonlocal',
-						'yield'
+						'yield',
+						'open',
+						'imporlib'
 						]
 						
-		self.bools = ['False', 'True', 'None']
-		self.breaks = ['break', 'return', 'continue', 'pass', 'raise']
+		self.bools = [ 'False', 'True', 'None' ]
+		self.breaks = [
+						'break',
+						'return',
+						'continue',
+						'pass',
+						'raise'
+						]
 		
 		red = r'#c01c28'
 		cyan = r'#2aa1b3'
@@ -504,8 +512,18 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('bools', foreground=magenta)
 		self.contents.tag_config('strings', foreground=green)
 		
-									
+		# search tags have highest priority
+		self.contents.tag_raise('match')
+		self.contents.tag_raise('focus')
+		
+		
+		self.token_err = False
+		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
+		
 		self.update_tokens_of_all_contents()
+		
+		####  Syntax-highlight End  ######################################
+	
 			
 		
 		# set cursor pos:
@@ -534,54 +552,56 @@ class Editor(tkinter.Toplevel):
 		
 	def update_tokens_of_all_contents(self):
 	
+		flag_err = False
 		tmp = self.contents.get( 1.0, tkinter.END )
-		#self.tabs[self.tabindex].contents
-		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
 		
 		try:
-			for token in res:
-				if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
-					( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
-					
-					s0, s1 = map(str, token.start)
-					e0, e1 = map(str, token.end)
-					idx_start = s0 + '.' + s1
-					idx_end = e0 + '.' + e1
+			with io.BytesIO( tmp.encode('utf-8') ) as fo:
 				
+				res = tokenize.tokenize( fo.readline )
+		
+				for token in res:
+					if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
+						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
 						
-					if token.type == tokenize.NAME:
+						s0, s1 = map(str, token.start)
+						e0, e1 = map(str, token.end)
+						idx_start = s0 + '.' + s1
+						idx_end = e0 + '.' + e1
 					
-						if token.string in self.bools:
-							self.contents.tag_add('bools', idx_start, idx_end)
 							
-						elif token.string in self.breaks:
-							self.contents.tag_add('breaks', idx_start, idx_end)
+						if token.type == tokenize.NAME:
+						
+							if token.string in self.bools:
+								self.contents.tag_add('bools', idx_start, idx_end)
+								
+							elif token.string in self.breaks:
+								self.contents.tag_add('breaks', idx_start, idx_end)
+								
+							else:
+								self.contents.tag_add('keywords', idx_start, idx_end)
+								
+				
+						elif token.type == tokenize.STRING:
+							self.contents.tag_add('strings', idx_start, idx_end)
 							
-						else:
-							self.contents.tag_add('keywords', idx_start, idx_end)
-							
+						elif token.type == tokenize.COMMENT:
+							self.contents.tag_add('comments', idx_start, idx_end)
+											
+						elif token.type == tokenize.NUMBER:
+							self.contents.tag_add('numbers', idx_start, idx_end)
 			
-					elif token.type == tokenize.STRING:
-						self.contents.tag_add('strings', idx_start, idx_end)
-						
-					elif token.type == tokenize.COMMENT:
-						self.contents.tag_add('comments', idx_start, idx_end)
-										
-					elif token.type == tokenize.NUMBER:
-						self.contents.tag_add('numbers', idx_start, idx_end)
-						
-		except IndentationError:
-			#self.token_indent_err = True
-			#self.tmpcont = self.contents.get(1.0, tkinter.END)
-			#print(self.token_indent_err)
-			#return
+			
+		except (IndentationError, tokenize.TokenError) as e:
+			#print(e)
+			flag_err = True
 			pass
 			
-		# Brace deletion for example:
-		# untag line?
-		except tokenize.TokenError:
-			return
-		
+##		if flag_err:
+##			self.token_err = True
+##		else:
+##			self.token_err = False
+			
 						
 	def update_tokens_of_curline(self, start=None, end=None):
 
@@ -596,65 +616,66 @@ class Editor(tkinter.Toplevel):
 			tmp = self.contents.get( '%s linestart' % line_idx, '%s lineend' % line_idx )
 			lineend = '%s lineend' % line_idx
 			
-			
+		
+		flag_err = False
+	
 		linenum = int(line_idx.split('.')[0])
-		res = tokenize.tokenize( io.BytesIO(tmp.encode('utf-8')).readline )
 		
 		
-		# Remove old tags from line:
-		linestart = '%s linestart' % line_idx
-		for tag in self.tagnames:
-			self.contents.tag_remove( tag, linestart, lineend )
-			
-			
-		# Retag line:
 		try:
-			for token in res:
+			with io.BytesIO( tmp.encode('utf-8') ) as fo:
 			
-				if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
-					( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
+				res = tokenize.tokenize( fo.readline )
+			
+				# Remove old tags from line:
+				linestart = '%s linestart' % line_idx
+				for tag in self.tagnames:
+					self.contents.tag_remove( tag, linestart, lineend )
 					
-					# initiate indexes with correct linenum
-					s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
-					e0, e1 = map(str, [ token.end[0] + linenum - 1, token.end[1] ] )
-					idx_start = s0 + '.' + s1
-					idx_end = e0 + '.' + e1
+					
+				# Retag line:
+				for token in res:
 				
+					if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
+						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
 						
-					if token.type == tokenize.NAME:
+						# initiate indexes with correct linenum
+						s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
+						e0, e1 = map(str, [ token.end[0] + linenum - 1, token.end[1] ] )
+						idx_start = s0 + '.' + s1
+						idx_end = e0 + '.' + e1
 					
-						if token.string in self.bools:
-							self.contents.tag_add('bools', idx_start, idx_end)
 							
-						elif token.string in self.breaks:
-							self.contents.tag_add('breaks', idx_start, idx_end)
+						if token.type == tokenize.NAME:
+						
+							if token.string in self.bools:
+								self.contents.tag_add('bools', idx_start, idx_end)
+								
+							elif token.string in self.breaks:
+								self.contents.tag_add('breaks', idx_start, idx_end)
+								
+							else:
+								self.contents.tag_add('keywords', idx_start, idx_end)
+								
+				
+						elif token.type == tokenize.STRING:
+							self.contents.tag_add('strings', idx_start, idx_end)
 							
-						else:
-							self.contents.tag_add('keywords', idx_start, idx_end)
+						elif token.type == tokenize.COMMENT:
+							self.contents.tag_add('comments', idx_start, idx_end)
+											
+						elif token.type == tokenize.NUMBER:
+							self.contents.tag_add('numbers', idx_start, idx_end)
 							
 			
-					elif token.type == tokenize.STRING:
-						self.contents.tag_add('strings', idx_start, idx_end)
-						
-					elif token.type == tokenize.COMMENT:
-						self.contents.tag_add('comments', idx_start, idx_end)
-										
-					elif token.type == tokenize.NUMBER:
-						self.contents.tag_add('numbers', idx_start, idx_end)
-						
-		
-		except IndentationError:
-			#self.token_indent_err = True
-			#self.tmpcont = self.contents.get(1.0, tkinter.END)
-			#print(self.token_indent_err)
-			#return
+		except (IndentationError, tokenize.TokenError) as e:
+			#print(e)
+##			flag_err = True
+##			self.token_err = True
 			pass
 			
-		# Brace deletion for example:
-		# untag line?
-		except tokenize.TokenError:
-			return
-		
+##		if flag_err:
+##			self.token_err = True
 		
 		
 	def update_title(self, event=None):
@@ -713,15 +734,23 @@ class Editor(tkinter.Toplevel):
 		self.update_linenums()
 		
 		# tag alter triggers this event
-		# --> need to check if line is changed to prevent recursion
+		# --> need to check if line is changed to prevent self-trigger
 		line_idx = self.contents.index( tkinter.INSERT )
 		lineend = '%s lineend' % line_idx
 		linestart = '%s linestart' % line_idx
 		
 		tmp = self.contents.get( linestart, lineend )
 		
-		if self.oldline != tmp:
+		if ( self.tabs[self.tabindex].type == 'normal' ) and \
+				( '.py' in self.tabs[self.tabindex].filepath.suffix ) and \
+				( self.oldline != tmp ):
+				
 			self.oldline = tmp
+			
+##			if self.token_err:
+##				self.update_tokens_of_all_contents()
+##
+##			else:
 			self.update_tokens_of_curline()
 
 	
@@ -1600,6 +1629,34 @@ class Editor(tkinter.Toplevel):
 ########## Run file Related End
 ########## Overrides Begin
 
+	def move_right(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+		
+		pos = self.contents.index( '%s + 1c' % tkinter.INSERT)
+		self.contents.see(pos)
+		self.contents.mark_set('insert', pos)
+		
+		return "break"
+		
+	
+	def goto_linestart(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
+		# In case of wrapped lines
+		y_cursor = self.contents.bbox(tkinter.INSERT)[1]
+		pos = self.contents.index( '@0,%s' % y_cursor)
+		
+		self.contents.see(pos)
+		self.contents.mark_set('insert', pos)
+		
+		return "break"
+		
+	
+	
 	def raise_popup(self, event=None):
 		if self.state != 'normal':
 			self.bell()
@@ -1682,7 +1739,9 @@ class Editor(tkinter.Toplevel):
 			self.contents.edit_undo()
 			
 			# Could be anything and we have zero info about action, so:
-			self.update_tokens_of_all_contents()
+			if self.tabs[self.tabindex].type == 'normal':
+				if '.py' in self.tabs[self.tabindex].filepath.suffix:
+					self.update_tokens_of_all_contents()
 			
 		except tkinter.TclError:
 			self.bell()
@@ -1699,7 +1758,9 @@ class Editor(tkinter.Toplevel):
 			self.contents.edit_redo()
 			
 			# Could be anything and we have zero info about action, so:
-			self.update_tokens_of_all_contents()
+			if self.tabs[self.tabindex].type == 'normal':
+				if '.py' in self.tabs[self.tabindex].filepath.suffix:
+					self.update_tokens_of_all_contents()
 			
 		except tkinter.TclError:
 			self.bell()
@@ -2761,6 +2822,7 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
+		self.bind( "<Alt-n>", self.new_tab)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		
 		# leave tags on normal search, Esc clears

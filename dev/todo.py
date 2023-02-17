@@ -21,11 +21,25 @@
 # paste selects too much down							ok ?
 # ctrl p --> alt f,  ctrl s --> alt s					ok ?
 # ctrl n --> alt n										ok ?
+# raised search tags									ok ?
+# undo redo if											ok ?
+# new shortcuts to help									ok ?
+						
+# ctrl o insert linebreak
+# ctrl i move right
+# ctrl b move left
 
+# ctrl e move to line end
+# ctrl s move to line end
 
-# check def binds
+# ctrl k remove from cur to lineend
+
+# ok here
+
 
 # multiline strings
+
+
 
 
 # what if indent err or open brace?

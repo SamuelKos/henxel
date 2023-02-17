@@ -30,6 +30,13 @@
 		Alt-w   Walk tabs forward
 		Alt-q   Walk tabs backwards
 		
+		Ctrl-o  Insert linebreak at cursor
+		Ctrl-i  Move cursor right
+		Ctrl-b  Move cursor left
+		Ctrl-e  Move cursor to lineend
+		Ctrl-s  Move cursor to linestart
+		Ctrl-k  Remove from cursor to lineend
+		
 		Ctrl-plus 	Increase scrollbar-width
 		Ctrl-minus	Decrease scrollbar-width
 
