@@ -14,6 +14,7 @@ GUI-editor for Python development. Tested to work with Debian Bullseye
 * Search - Replace
 * Indent - Unindent
 * Comment - Uncomment
+* Syntax highlighting
 * Click to open errors
 * Persistent configuration
 * Near persistent contents
@@ -21,7 +22,6 @@ GUI-editor for Python development. Tested to work with Debian Bullseye
 # Lacking
 * Auto-completion
 * Hinting
-* Syntax highlighting
 
 # Prerequisites
 Python modules required that are sometimes not installed with OS: tkinter. Check:

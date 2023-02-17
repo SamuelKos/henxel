@@ -5,42 +5,9 @@
 # >>> e=todo.Ed()
 
 
-# tabify strip all tabs on disk save					ok ############
-# tabify popup											ok ############
-# tabify check keep lines								ok ?
-# search leave tags escape clear						ok ?
-# search focus after no match, checked, tab moves		ok ?
-# seach next go back last curpos with arrow left		ok ?
-# comment uncomment sh 									ok ?
-# syntax highlight   paste  delete						ok ?
-# menu paste test										ok ?
-# walk-files walk-tabs									ok ?
-# tab remove self.tags newtab							ok ?
-# on font change update tags							ok ?
-# py-file												ok ?
-# paste selects too much down							ok ?
-# ctrl p --> alt f,  ctrl s --> alt s					ok ?
-# ctrl n --> alt n										ok ?
-# raised search tags									ok ?
-# undo redo if											ok ?
-# new shortcuts to help									ok ?
-						
-# ctrl o insert linebreak
-# ctrl i move right
-# ctrl b move left
-
-# ctrl e move to line end
-# ctrl s move to line end
-
-# ctrl k remove from cur to lineend
-
-# ok here
 
 
 # multiline strings
-
-
-
 
 # what if indent err or open brace?
 
@@ -98,15 +65,6 @@ import tkinter.font
 # myTextwidget.tag_config('sel', bgstipple='gray12')
 
 ########################## Maybe interesting end
-
-
-class Ed(tkinter.Toplevel):
-
-	# use 10000 (10s) if need slow update interval for linenumbers
-	UPDATE_PERIOD = 100 #ms
-
-	updateId = None
-
 
 
 class Ed(tkinter.Toplevel):

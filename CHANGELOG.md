@@ -1,7 +1,25 @@
 # Changelog
-* To version: 	0.1.1
+* To version: 	0.1.2
 * From version:	0.0.3
 
+
+# 0.1.2
+* Add initial syntax highlight for python-files.
+* Fixed tabify to correctly strip all tabs on disk save.
+* Add tabify region-utility to popup-menu.
+* Search now leaves tags on. Double-Esc clears.
+* It is now possible to go back to last cursor position with arrow left
+when doing seach_next if have gone too far.
+* changefont.py now takes optional tracefunc as kw-argument to perform whatever action is needed
+on font changes.
+* changes on shortcuts:
+* ctrl-p --> alt-f,  ctrl-s --> alt-s,  ctrl-n --> alt-n
+* ctrl-o  insert linebreak
+* ctrl-i  move right
+* ctrl-b  move left
+* ctrl-e  move to line end
+* ctrl-s  move to line end
+* ctrl-k  remove from cursor to lineend
 
 # 0.1.1
 * Quick fix for: wrong bind in font_choose

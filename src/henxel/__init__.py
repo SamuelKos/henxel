@@ -1715,7 +1715,9 @@ class Editor(tkinter.Toplevel):
 			self.contents.event_generate('<<Paste>>')
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			
-			self.update_tokens_of_curline(start=startpos, end=endpos)
+			if self.tabs[self.tabindex].type == 'normal':
+				if '.py' in self.tabs[self.tabindex].filepath.suffix:
+					self.update_tokens_of_curline(start=startpos, end=endpos)
 
 			self.contents.tag_add('sel', pos, tkinter.INSERT)
 			
