@@ -7,12 +7,12 @@
 
 
 # unify tokenfuncs							ok ##########
-# grid last									ok ##########
-# give filename give tag					ok ##########
+# grid last									ok ?
+# when give filename ->  do tags			ok ?
+# ctrl-super-return -> run()				ok ?
 
 
-
-
+# binder, unbinder ?
 
 # multiline strings
 

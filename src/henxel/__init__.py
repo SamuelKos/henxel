@@ -204,7 +204,6 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Alt-w>", self.walk_tabs)
 		
 		
-		
 		self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
 		
 		pkg_contents = importlib.resources.files(__name__)
@@ -333,6 +332,7 @@ class Editor(tkinter.Toplevel):
 		self.popup_whohasfocus = None
 		self.popup = tkinter.Menu(self, tearoff=0, bd=0, activeborderwidth=0)
 		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
+		self.popup.add_command(label="         run", command=self.run)
 		self.popup.add_command(label="        copy", command=self.copy)
 		self.popup.add_command(label="       paste", command=self.paste)
 		self.popup.add_command(label="##   comment", command=self.comment)
@@ -340,7 +340,6 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="      tabify", command=self.tabify_lines)
 		self.popup.add_command(label="     inspect", command=self.insert_inspected)
 		self.popup.add_command(label="      errors", command=self.show_errors)
-		self.popup.add_command(label="         run", command=self.run)
 		self.popup.add_command(label="        help", command=self.help)
 		
 		
@@ -1437,7 +1436,7 @@ class Editor(tkinter.Toplevel):
 		'''
 		if (self.state != 'normal') or (self.tabs[self.tabindex].type == 'newtab'):
 			self.bell()
-			return
+			return 'break'
 			
 		self.save(forced=True)
 		
@@ -1498,6 +1497,9 @@ class Editor(tkinter.Toplevel):
 					self.contents.insert(tkinter.INSERT, tmp +"\n", tagname)
 				else:
 					self.contents.insert(tkinter.INSERT, tmp +"\n")
+					
+					
+		return 'break'
 				
 
 	def show_errors(self):
@@ -1740,6 +1742,15 @@ class Editor(tkinter.Toplevel):
 
 		
 	def return_override(self, event):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+		
+		# ctrl_L-super_L-return
+		if event.state == 68:
+			self.run()
+			return "break"
+		
 	
 		# Cursor indexes when pressed return:
 		line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
