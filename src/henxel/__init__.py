@@ -330,8 +330,7 @@ class Editor(tkinter.Toplevel):
 		# Needed in leave() taglink in: Run file Related
 		self.name_of_cursor_in_text_widget = self.contents['cursor']
 		
-		self.popup_whohasfocus = None
-		self.popup = tkinter.Menu(self, tearoff=0, bd=0, activeborderwidth=0)
+		self.popup = tkinter.Menu(self.contents, tearoff=0, bd=0, activeborderwidth=0)
 		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
 		self.popup.add_command(label="         run", command=self.run)
 		self.popup.add_command(label="        copy", command=self.copy)
@@ -616,12 +615,9 @@ class Editor(tkinter.Toplevel):
 				( '.py' in self.tabs[self.tabindex].filepath.suffix ) and \
 				( self.oldline != tmp ):
 				
+			#print('sync')
 			self.oldline = tmp
-			
-			if self.token_err:
-				self.update_tokens(start='1.0', end=tkinter.END)
-			else:
-				self.update_tokens(start=linestart, end=lineend)
+			self.update_tokens(start=linestart, end=lineend)
 
 	
 ############## Linenumbers Begin
@@ -862,6 +858,13 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.entry.delete(0, tkinter.END)
 		
+		if self.tabs[self.tabindex].filepath:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				self.update_tokens(start='1.0', end=tkinter.END)
+				
+			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+		
+		
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
@@ -877,12 +880,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.see('1.0')
 			self.contents.mark_set('insert', '1.0')
 			
-		if self.tabs[self.tabindex].filepath:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				self.token_err = True
-				
-			self.entry.insert(0, self.tabs[self.tabindex].filepath)
-		
+			
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		
@@ -1144,23 +1142,19 @@ class Editor(tkinter.Toplevel):
 							
 			
 		except (IndentationError, tokenize.TokenError) as e:
-			print(e)
+			
 			#print(e.args)
 			if e.args[0] == 'EOF in multi-line string':
 				errline = e.args[1][0] + linenum - 1
 				
 				#print('multiline string error', errline)
-			
-			flag_err = True
-			self.token_err = True
+				print(e)
+				flag_err = True
+				self.token_err = True
 			
 			
 		if not flag_err and ( start == '1.0' and end == tkinter.END ):
-			'''	BBB
-				AAA
-				AAA
-			'''
-			
+					
 			print('ok')
 			self.token_err = False
 			
@@ -1631,7 +1625,6 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return "break"
 		
-		self.popup_whohasfocus = event.widget
 		self.popup.post(event.x_root, event.y_root)
 		self.popup.focus_set() # Needed to remove popup when clicked outside.
 		
@@ -1669,13 +1662,12 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			# is empty
 			return 'break'
-			
-		self.token_err = True
-
+	
+		pos = self.contents.index(tkinter.INSERT)
+		self.contents.event_generate('<<Paste>>')
+				
 		if len(tmp) > 1:
-			pos = self.contents.index(tkinter.INSERT)
-					
-			self.contents.event_generate('<<Paste>>')
+				
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			self.contents.tag_add('sel', pos, tkinter.INSERT)
 			
@@ -1683,15 +1675,13 @@ class Editor(tkinter.Toplevel):
 			self.contents.see('%s - 2 lines' % pos)
 			self.update_idletasks()
 			self.contents.see('%s + 2 lines' % pos)
-			
-			return 'break'
-			
-		else:
-			if event == None:
-				self.popup_whohasfocus.event_generate('<<Paste>>')
-				return 'break'
-			else:
-				return
+				
+				
+		if self.tabs[self.tabindex].filepath:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				self.update_tokens(start='1.0', end=tkinter.END)
+		
+		return 'break'
 
 
 	def undo_override(self, event=None):
@@ -1762,20 +1752,27 @@ class Editor(tkinter.Toplevel):
 			# No selection, continue to next bindtag
 			return
 
-
+	
 	def backspace_override(self, event):
 		''' for syntax highlight
 		'''
-	
+		
 		if self.state != 'normal' or event.state != 0:
 			return
 			
-		
-		self.token_err = True
+		try:
+			_ = self.contents.index(tkinter.SEL_FIRST)
+			self.token_err = True
+				
+		except tkinter.TclError:
+			prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
+			
+			if prev_char in ['#', "'", '"']:
+				self.token_err = True
+				
 		return
 
-
-		
+	
 	def return_override(self, event):
 		if self.state != 'normal':
 			self.bell()
@@ -1893,12 +1890,13 @@ class Editor(tkinter.Toplevel):
 					self.tabs[self.tabindex].contents = fcontents
 					self.contents.insert(tkinter.INSERT, fcontents)
 					
-					self.update_tokens(start='1.0', end=tkinter.END)
 					self.tabs[self.tabindex].position = '1.0'
-				
 					self.contents.focus_set()
 					self.contents.see('1.0')
 					self.contents.mark_set('insert', '1.0')
+					
+					self.update_tokens(start='1.0', end=tkinter.END)
+					
 					self.contents.edit_reset()
 					self.contents.edit_modified(0)
 					
@@ -1931,14 +1929,14 @@ class Editor(tkinter.Toplevel):
 				 
 				self.new_tab()
 				self.tabs[self.tabindex].contents = tmp
+					
 				self.contents.insert(tkinter.INSERT, tmp)
-				
-				self.update_tokens(start='1.0', end=tkinter.END)
 				self.tabs[self.tabindex].position = '1.0'
-				
 				self.contents.focus_set()
 				self.contents.see('1.0')
 				self.contents.mark_set('insert', '1.0')
+				
+				self.update_tokens(start='1.0', end=tkinter.END)
 				
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
@@ -2563,7 +2561,8 @@ class Editor(tkinter.Toplevel):
 				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 				self.contents.insert(tkinter.INSERT, '##')
 				
-			self.update_tokens(start=startpos, end=endpos)
+			self.token_err = True
+			#self.update_tokens(start=startpos, end=endpos)
 			
 			
 			self.contents.edit_separator()
@@ -2599,7 +2598,8 @@ class Editor(tkinter.Toplevel):
 					changed = True
 					
 			if changed:
-				self.update_tokens(start=startpos, end=endpos)
+				self.token_err = True
+				#self.update_tokens(start=startpos, end=endpos)
 				
 				self.contents.edit_separator()
 			
