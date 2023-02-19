@@ -324,6 +324,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-Z>", self.redo_override)
 		self.contents.bind( "<Control-v>", self.paste)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
+		self.contents.bind( "<BackSpace>", self.backspace_override)
 		
 		
 		# Needed in leave() taglink in: Run file Related
@@ -495,7 +496,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 		self.token_err = False
-		self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+		self.update_tokens(start='1.0', end=tkinter.END)
 		
 		####  Syntax-highlight End  ######################################
 	
@@ -617,11 +618,10 @@ class Editor(tkinter.Toplevel):
 				
 			self.oldline = tmp
 			
-##			if self.token_err:
-##				self.update_tokens_of_curline(start='1.0', end=tkinter.END)
-##
-##			else:
-			self.update_tokens_of_curline(start=linestart, end=lineend)
+			if self.token_err:
+				self.update_tokens(start='1.0', end=tkinter.END)
+			else:
+				self.update_tokens(start=linestart, end=lineend)
 
 	
 ############## Linenumbers Begin
@@ -797,7 +797,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].filepath:
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+				self.update_tokens(start='1.0', end=tkinter.END)
 		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 
@@ -862,12 +862,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.entry.delete(0, tkinter.END)
 		
-		if self.tabs[self.tabindex].filepath:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				self.update_tokens_of_curline(start='1.0', end=tkinter.END)
-		
-			self.entry.insert(0, self.tabs[self.tabindex].filepath)
-		
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
@@ -883,6 +877,11 @@ class Editor(tkinter.Toplevel):
 			self.contents.see('1.0')
 			self.contents.mark_set('insert', '1.0')
 			
+		if self.tabs[self.tabindex].filepath:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				self.token_err = True
+				
+			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
@@ -1077,11 +1076,28 @@ class Editor(tkinter.Toplevel):
 ########## Configuration Related End
 ########## Syntax highlight Begin
 					
-	def update_tokens_of_curline(self, start=None, end=None):
+	def update_tokens(self, start=None, end=None):
 
+		if self.token_err:
+			print('err')
+			start = '1.0'
+			end = tkinter.END
+	
+		# check if inside multiline string
+		elif 'strings' in self.contents.tag_names(tkinter.INSERT) and \
+				not ( start == '1.0' and end == tkinter.END ):
+		
+			s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
+	
+			l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
+			
+			if l0 != l1:
+				start, end = (s, e)
+	
+	
 		tmp = self.contents.get( start, end )
 		linenum = int(start.split('.')[0])
-		#flag_err = False
+		flag_err = False
 		
 		try:
 			with io.BytesIO( tmp.encode('utf-8') ) as fo:
@@ -1128,13 +1144,26 @@ class Editor(tkinter.Toplevel):
 							
 			
 		except (IndentationError, tokenize.TokenError) as e:
-			#print(e)
-##			flag_err = True
-##			self.token_err = True
-			pass
+			print(e)
+			#print(e.args)
+			if e.args[0] == 'EOF in multi-line string':
+				errline = e.args[1][0] + linenum - 1
+				
+				#print('multiline string error', errline)
 			
-##		if flag_err:
-##			self.token_err = True
+			flag_err = True
+			self.token_err = True
+			
+			
+		if not flag_err and ( start == '1.0' and end == tkinter.END ):
+			'''	BBB
+				AAA
+				AAA
+			'''
+			
+			print('ok')
+			self.token_err = False
+			
 				
 ########## Syntax highlight End
 ########## Theme Related Begin
@@ -1399,7 +1428,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].type == 'normal':
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+				self.update_tokens(start='1.0', end=tkinter.END)
 		
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
@@ -1551,7 +1580,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].type == 'normal':
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-					self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+					self.update_tokens(start='1.0', end=tkinter.END)
 		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			
@@ -1631,33 +1660,26 @@ class Editor(tkinter.Toplevel):
 			starting copying of a block at the empty line before first line of
 			the block.
 		'''
+			
+		
 		try:
 			tmp = self.clipboard_get()
-			wordlen = len(tmp)
 			tmp = tmp.splitlines(True)
+		
 		except tkinter.TclError:
 			# is empty
 			return 'break'
-
-		if len(tmp) >= 1:
-			pos = self.contents.index(tkinter.INSERT)
-			lastpos = self.contents.index( '%s + %dc' % (pos, wordlen) )
-					
-			startpos = self.contents.index('%s linestart' % tkinter.INSERT)
-			endpos = self.contents.index('%s lineend' % lastpos)
 			
+		self.token_err = True
+
+		if len(tmp) > 1:
+			pos = self.contents.index(tkinter.INSERT)
+					
 			self.contents.event_generate('<<Paste>>')
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			
-			if self.tabs[self.tabindex].type == 'normal':
-				if '.py' in self.tabs[self.tabindex].filepath.suffix:
-					self.update_tokens_of_curline(start=startpos, end=endpos)
-
 			self.contents.tag_add('sel', pos, tkinter.INSERT)
 			
-			
 			self.contents.mark_set('insert', pos)
-		
 			self.contents.see('%s - 2 lines' % pos)
 			self.update_idletasks()
 			self.contents.see('%s + 2 lines' % pos)
@@ -1683,7 +1705,7 @@ class Editor(tkinter.Toplevel):
 			# Could be anything and we have zero info about action, so:
 			if self.tabs[self.tabindex].type == 'normal':
 				if '.py' in self.tabs[self.tabindex].filepath.suffix:
-					self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+					self.update_tokens(start='1.0', end=tkinter.END)
 			
 		except tkinter.TclError:
 			self.bell()
@@ -1702,7 +1724,7 @@ class Editor(tkinter.Toplevel):
 			# Could be anything and we have zero info about action, so:
 			if self.tabs[self.tabindex].type == 'normal':
 				if '.py' in self.tabs[self.tabindex].filepath.suffix:
-					self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+					self.update_tokens(start='1.0', end=tkinter.END)
 			
 		except tkinter.TclError:
 			self.bell()
@@ -1739,6 +1761,19 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			# No selection, continue to next bindtag
 			return
+
+
+	def backspace_override(self, event):
+		''' for syntax highlight
+		'''
+	
+		if self.state != 'normal' or event.state != 0:
+			return
+			
+		
+		self.token_err = True
+		return
+
 
 		
 	def return_override(self, event):
@@ -1858,7 +1893,7 @@ class Editor(tkinter.Toplevel):
 					self.tabs[self.tabindex].contents = fcontents
 					self.contents.insert(tkinter.INSERT, fcontents)
 					
-					self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+					self.update_tokens(start='1.0', end=tkinter.END)
 					self.tabs[self.tabindex].position = '1.0'
 				
 					self.contents.focus_set()
@@ -1898,7 +1933,7 @@ class Editor(tkinter.Toplevel):
 				self.tabs[self.tabindex].contents = tmp
 				self.contents.insert(tkinter.INSERT, tmp)
 				
-				self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+				self.update_tokens(start='1.0', end=tkinter.END)
 				self.tabs[self.tabindex].position = '1.0'
 				
 				self.contents.focus_set()
@@ -2060,7 +2095,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
 				if '.py' in self.tabs[self.tabindex].filepath.suffix:
-					self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+					self.update_tokens(start='1.0', end=tkinter.END)
 				
 				self.contents.focus_set()
 				self.contents.see('1.0')
@@ -2246,7 +2281,7 @@ class Editor(tkinter.Toplevel):
 					self.entry.insert(0, self.tabs[self.tabindex].filepath)
 					
 					if '.py' in self.tabs[self.tabindex].filepath.suffix:
-						self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+						self.update_tokens(start='1.0', end=tkinter.END)
 				
 
 			# want to create new file with same contents:
@@ -2274,7 +2309,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
 				if '.py' in self.tabs[self.tabindex].filepath.suffix:
-					self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+					self.update_tokens(start='1.0', end=tkinter.END)
 				
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
@@ -2404,7 +2439,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].filepath:
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				self.update_tokens_of_curline(start='1.0', end=tkinter.END)
+				self.update_tokens(start='1.0', end=tkinter.END)
 		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		
@@ -2528,7 +2563,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 				self.contents.insert(tkinter.INSERT, '##')
 				
-			self.update_tokens_of_curline(start=startpos, end=endpos)
+			self.update_tokens(start=startpos, end=endpos)
 			
 			
 			self.contents.edit_separator()
@@ -2564,7 +2599,7 @@ class Editor(tkinter.Toplevel):
 					changed = True
 					
 			if changed:
-				self.update_tokens_of_curline(start=startpos, end=endpos)
+				self.update_tokens(start=startpos, end=endpos)
 				
 				self.contents.edit_separator()
 			
@@ -2771,7 +2806,9 @@ class Editor(tkinter.Toplevel):
 		else:
 			self.bell()
 				
-				
+		return 'break'
+		
+					
 	def clear_search_tags(self, event=None):
 		if self.state != 'normal':
 			return "break"
@@ -2786,15 +2823,30 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
-		self.bind( "<Alt-n>", self.new_tab)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
-		
-		# leave tags on normal search, Esc clears
+			
+		# Leave tags on, if not normal replace, Esc clears.
 		if self.state == 'search':
 			self.bind("<Escape>", self.clear_search_tags)
-		else:
+			
+		elif self.state == 'replace_all':
 			self.contents.tag_remove('match', '1.0', tkinter.END)
-			self.bind("<Escape>", self.do_nothing)
+			wordlen = len(self.new_word)
+			pos = '1.0'
+
+			while True:
+				pos = self.contents.search(self.new_word, pos, stopindex=tkinter.END)
+				if not pos: break
+
+				lastpos = "%s + %dc" % (pos, wordlen)
+				self.contents.tag_add('match', pos, lastpos)
+				pos = "%s + %dc" % (pos, wordlen+1)
+
+			self.bind("<Escape>", self.clear_search_tags)
+			
+		elif self.state == 'replace':
+			self.contents.tag_remove('match', '1.0', tkinter.END)
+		
 		
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
@@ -2806,7 +2858,16 @@ class Editor(tkinter.Toplevel):
 		self.search_matches = 0
 		self.replace_overlap_index = None
 		self.update_title()
+		
+		if self.tabs[self.tabindex].filepath and self.state in [ 'replace_all', 'replace' ] and \
+			'.py' in self.tabs[self.tabindex].filepath.suffix:
+				
+				self.state = 'normal'
+				self.update_tokens(start='1.0', end=tkinter.END)
+		
+		
 		self.state = 'normal'
+		self.bind( "<Alt-n>", self.new_tab)
 		self.contents.focus_set()
 		
 
@@ -2894,9 +2955,8 @@ class Editor(tkinter.Toplevel):
 		# This is why when there is a match, we move
 		# replace_overlap_index characters back and check if there already is
 		# new_word. If so, it means there have already happened a replacement
-		# and therefore search pos must be recalculated over this manifestation
-		# of new_word.
-		 
+		# and therefore search pos must be recalculated over new_word.
+		
 		while True:
 			pos = self.contents.search(self.old_word, pos, tkinter.END)
 			if not pos: break
@@ -2915,6 +2975,8 @@ class Editor(tkinter.Toplevel):
 					self.contents.tag_add('match', pos, lastpos)
 					pos = "%s + %dc" % (pos, wordlen+1)
 					self.search_matches += 1
+			
+			# this is the normal case:
 			else:
 				lastpos = "%s + %dc" % (pos, wordlen)
 				self.contents.tag_add('match', pos, lastpos)
@@ -2939,7 +3001,7 @@ class Editor(tkinter.Toplevel):
 		for i in range(count):
 			self.do_single_replace()
 			if i < (count - 1): self.show_next()
-				
+			
 		
 	def start_replace(self, event=None):
 		self.new_word = self.entry.get()

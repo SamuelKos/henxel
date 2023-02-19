@@ -12,9 +12,22 @@
 # ctrl-super-return -> run()				ok ?
 
 
+# multiline strings,  check inside string ok
+# what if stuff before ''' ?
+
+# what if remove or add # ?					ok ?
+# from: self.update_tokens(start='1.0', end=tkinter.END)
+# to: self.token_err = True
+				
+
+
+# search should start from curpos
+
+# replace browse after first enter?
+# replace all no view refresh focus back to orig curpos
+
 # binder, unbinder ?
 
-# multiline strings
 
 # what if indent err or open brace?
 
@@ -72,6 +85,7 @@ import tkinter.font
 # myTextwidget.tag_config('sel', bgstipple='gray12')
 
 ########################## Maybe interesting end
+
 
 
 class Ed(tkinter.Toplevel):
