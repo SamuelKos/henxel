@@ -10,15 +10,12 @@
 # grid last									ok ?
 # when give filename ->  do tags			ok ?
 # ctrl-super-return -> run()				ok ?
+# alt-x toggle syntax						ok ?
+# multiline strings							ok ?
 
 
-# multiline strings,  check inside string ok
-# what if stuff before ''' ?
 
-# what if remove or add # ?					ok ?
-# from: self.update_tokens(start='1.0', end=tkinter.END)
-# to: self.token_err = True
-				
+# alt n after replacing is bad
 
 
 # search should start from curpos
@@ -27,11 +24,6 @@
 # replace all no view refresh focus back to orig curpos
 
 # binder, unbinder ?
-
-# paste one line no tag
-
-# what if indent err or open brace?
-
 
 
 import tkinter
@@ -100,7 +92,6 @@ class Ed(tkinter.Toplevel):
 	# Self must be then added to this list in init with:
 	# self.__class__.editors.append(self)
 	editors = []
-	
 	
 	def __init__(self):
 		self.root = tkinter.Tk().withdraw()

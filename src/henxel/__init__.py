@@ -313,6 +313,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-i>", self.move_right)
 		
 		self.contents.bind( "<Alt-f>", self.font_choose)
+		self.contents.bind( "<Alt-x>", self.toggle_syntax)
 		self.contents.bind( "<Return>", self.return_override)
 		self.contents.bind( "<Control-d>", self.del_tab)
 		self.contents.bind( "<Shift-Return>", self.comment)
@@ -493,9 +494,11 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_raise('match')
 		self.contents.tag_raise('focus')
 		
-		
+		self.syntax = True
 		self.token_err = False
-		self.update_tokens(start='1.0', end=tkinter.END)
+		
+		if self.syntax:
+			self.update_tokens(start='1.0', end=tkinter.END)
 		
 		####  Syntax-highlight End  ######################################
 	
@@ -551,7 +554,7 @@ class Editor(tkinter.Toplevel):
 	def update_title(self, event=None):
 		tail = len(self.tabs) - self.tabindex - 1
 		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
-			
+		
 				
 	def do_nothing(self, event=None):
 		self.bell()
@@ -613,7 +616,7 @@ class Editor(tkinter.Toplevel):
 		
 		if ( self.tabs[self.tabindex].type == 'normal' ) and \
 				( '.py' in self.tabs[self.tabindex].filepath.suffix ) and \
-				( self.oldline != tmp ):
+				( self.oldline != tmp ) and self.syntax:
 				
 			#print('sync')
 			self.oldline = tmp
@@ -792,7 +795,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 		if self.tabs[self.tabindex].filepath:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
 				self.update_tokens(start='1.0', end=tkinter.END)
 		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
@@ -859,7 +862,7 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		
 		if self.tabs[self.tabindex].filepath:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
 				self.update_tokens(start='1.0', end=tkinter.END)
 				
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
@@ -1073,26 +1076,54 @@ class Editor(tkinter.Toplevel):
 		
 ########## Configuration Related End
 ########## Syntax highlight Begin
-					
+	
+	def toggle_syntax(self, event=None):
+		
+		if self.syntax:
+			self.syntax = False
+			
+			for tag in self.tagnames:
+				self.contents.tag_remove( tag, '1.0', tkinter.END )
+				
+			return 'break'
+	
+		else:
+			self.syntax = True
+			
+			if ( self.tabs[self.tabindex].type == 'normal' ) and \
+				( '.py' in self.tabs[self.tabindex].filepath.suffix ):
+	
+				self.update_tokens(start='1.0', end=tkinter.END)
+			
+			return 'break'
+	
+	
 	def update_tokens(self, start=None, end=None):
 
-		if self.token_err:
-			print('err')
+		if self.token_err or \
+			(
+			self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT ) in ['#', "'", '"'] and \
+			not ( start == '1.0' and end == tkinter.END )
+			):
+			
 			start = '1.0'
 			end = tkinter.END
 	
 		# check if inside multiline string
 		elif 'strings' in self.contents.tag_names(tkinter.INSERT) and \
 				not ( start == '1.0' and end == tkinter.END ):
-		
-			s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
-	
-			l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
 			
-			if l0 != l1:
-				start, end = (s, e)
+			try:
+				s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
+				l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
+			
+				if l0 != l1:
+					start, end = (s, e)
 	
-	
+			except ValueError:
+				pass
+			
+			
 		tmp = self.contents.get( start, end )
 		linenum = int(start.split('.')[0])
 		flag_err = False
@@ -1144,18 +1175,17 @@ class Editor(tkinter.Toplevel):
 		except (IndentationError, tokenize.TokenError) as e:
 			
 			#print(e.args)
-			if e.args[0] == 'EOF in multi-line string':
-				errline = e.args[1][0] + linenum - 1
+			#if e.args[0] == 'EOF in multi-line string':
+			#errline = e.args[1][0] + linenum - 1
 				
-				#print('multiline string error', errline)
-				print(e)
-				flag_err = True
-				self.token_err = True
+			#print('multiline string error', errline)
+			#print(e, errline)
+			flag_err = True
+			self.token_err = True
 			
 			
 		if not flag_err and ( start == '1.0' and end == tkinter.END ):
-					
-			print('ok')
+			#print('ok')
 			self.token_err = False
 			
 				
@@ -1421,7 +1451,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 		if self.tabs[self.tabindex].type == 'normal':
-			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
 				self.update_tokens(start='1.0', end=tkinter.END)
 		
 		self.contents.edit_reset()
@@ -1573,7 +1603,7 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		
 		if self.tabs[self.tabindex].type == 'normal':
-			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
 					self.update_tokens(start='1.0', end=tkinter.END)
 		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
@@ -1678,7 +1708,7 @@ class Editor(tkinter.Toplevel):
 				
 				
 		if self.tabs[self.tabindex].filepath:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
 				self.update_tokens(start='1.0', end=tkinter.END)
 		
 		return 'break'
@@ -1694,7 +1724,7 @@ class Editor(tkinter.Toplevel):
 			
 			# Could be anything and we have zero info about action, so:
 			if self.tabs[self.tabindex].type == 'normal':
-				if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
 					self.update_tokens(start='1.0', end=tkinter.END)
 			
 		except tkinter.TclError:
@@ -1713,7 +1743,7 @@ class Editor(tkinter.Toplevel):
 			
 			# Could be anything and we have zero info about action, so:
 			if self.tabs[self.tabindex].type == 'normal':
-				if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
 					self.update_tokens(start='1.0', end=tkinter.END)
 			
 		except tkinter.TclError:
@@ -2092,7 +2122,7 @@ class Editor(tkinter.Toplevel):
 				
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
-				if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
 					self.update_tokens(start='1.0', end=tkinter.END)
 				
 				self.contents.focus_set()
@@ -2278,7 +2308,7 @@ class Editor(tkinter.Toplevel):
 					self.entry.delete(0, tkinter.END)
 					self.entry.insert(0, self.tabs[self.tabindex].filepath)
 					
-					if '.py' in self.tabs[self.tabindex].filepath.suffix:
+					if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
 						self.update_tokens(start='1.0', end=tkinter.END)
 				
 
@@ -2306,7 +2336,7 @@ class Editor(tkinter.Toplevel):
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
-				if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
 					self.update_tokens(start='1.0', end=tkinter.END)
 				
 				self.contents.edit_reset()
@@ -2436,7 +2466,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 		if self.tabs[self.tabindex].filepath:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
 				self.update_tokens(start='1.0', end=tkinter.END)
 		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
