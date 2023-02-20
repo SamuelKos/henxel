@@ -6,24 +6,6 @@
 
 
 
-# unify tokenfuncs							ok ##########
-# grid last									ok ?
-# when give filename ->  do tags			ok ?
-# ctrl-super-return -> run()				ok ?
-# alt-x toggle syntax						ok ?
-# multiline strings							ok ?
-# replace all now much faster				ok ?
-# show next now much faster					ok ?
-# replace focus fix							ok ?
-# syntax errors								ok ?
-
-# alt n after replacing is bad
-# ctrl n p next prev						ok ?
-# help text update							ok ?
-
-
-
-
 
 import tkinter
 import tkinter.font

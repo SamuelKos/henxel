@@ -1,7 +1,19 @@
 # Changelog
-* To version: 	0.1.2
+* To version: 	0.1.3
 * From version:	0.0.3
 
+
+# 0.1.3
+* Unified tokenfuncs.
+* Added syntax-option to conf.
+* Tab is syntax-highlighted when it has/gets py-filename.
+* Added shortcut for run-file: Ctrl-Super-Return. Super means search-key.
+* Alt-x toggles syntax.
+* Fixed syntax-highlighting to handle multiline strings etc.
+* Replace all is now much faster and so is show_next and prev.
+* Error-view has also syntax.
+* Because Alt-n after replacing is bad, dont want to open new tab, but also
+want Alt-n-Return, so now: ctrl-n is show_next and ctrl-p show_prev when searching.
 
 # 0.1.2
 * Add initial syntax highlight for python-files.
