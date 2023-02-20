@@ -12,15 +12,15 @@
 # ctrl-super-return -> run()				ok ?
 # alt-x toggle syntax						ok ?
 # multiline strings							ok ?
+# replace all now much faster				ok ?
 
 
-
-# alt n after replacing is bad
+# alt n after replacing is bad ?
 
 
 # search should start from curpos
 
-# replace browse after first enter?
+# replace, browse after first enter?
 # replace all no view refresh focus back to orig curpos
 
 # binder, unbinder ?

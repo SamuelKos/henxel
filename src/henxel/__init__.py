@@ -613,12 +613,11 @@ class Editor(tkinter.Toplevel):
 		linestart = '%s linestart' % line_idx
 		
 		tmp = self.contents.get( linestart, lineend )
-		
+			
 		if ( self.tabs[self.tabindex].type == 'normal' ) and \
 				( '.py' in self.tabs[self.tabindex].filepath.suffix ) and \
 				( self.oldline != tmp ) and self.syntax:
 				
-			#print('sync')
 			self.oldline = tmp
 			self.update_tokens(start=linestart, end=lineend)
 
@@ -3026,12 +3025,30 @@ class Editor(tkinter.Toplevel):
 
 	
 	def do_replace_all(self, event=None):
-		count = self.search_matches
 		
-		for i in range(count):
-			self.do_single_replace()
-			if i < (count - 1): self.show_next()
+		self.contents.config(state='normal')
+		wordlen = len(self.old_word)
+		pos = '1.0'
+		
+		while True:
+			pos = self.contents.search(self.old_word, pos, tkinter.END)
+			if not pos: break
 			
+			lastpos = "%s + %dc" % ( pos, wordlen )
+			
+			#self.contents.tag_add( 'match', pos, lastpos )
+			self.contents.delete( pos, lastpos )
+			self.contents.insert( pos, self.new_word )
+				
+			pos = "%s + %dc" % (pos, wordlen+1)
+			
+		# show lastpos but dont put cursor on it
+		self.contents.see('%s - 2 lines' % lastpos )
+		self.update_idletasks()
+		self.contents.see('%s + 2 lines' % lastpos )
+
+		self.stop_search()
+		
 		
 	def start_replace(self, event=None):
 		self.new_word = self.entry.get()
