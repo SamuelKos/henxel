@@ -14,6 +14,9 @@
 		
 		Shift-Return	Comment
 		Shift-BackSpace	Uncomment
+				
+		# Super means search-key.
+		Ctrl-Super-Return	run file
 		
 		Ctrl-a  Select all
 		Ctrl-c  Copy
@@ -25,6 +28,7 @@
 		Alt-s   Color setting
 		Alt-t   Toggle color setting
 		Alt-l   Toggle linenumbers
+		Alt-x   Toggle syntax highlight
 		
 		Alt-n   Open new tab
 		Ctrl-d  Close current tab
@@ -34,6 +38,8 @@
 		Ctrl-o  Insert linebreak at cursor
 		Ctrl-i  Move cursor right
 		Ctrl-b  Move cursor left
+		Ctrl-n  Move cursor down
+		Ctrl-p  Move cursor up
 		Ctrl-e  Move cursor to lineend
 		Ctrl-s  Move cursor to linestart
 		Ctrl-k  Remove from cursor to lineend
@@ -42,8 +48,8 @@
 		Ctrl-minus	Decrease scrollbar-width
 
 		While searching:
-			Alt-n  Next match
-			Alt-p  Prev match
+			Ctrl-n  Next match
+			Ctrl-p  Prev match
 			-	copying text to clipboard is possible
 			-	press or select text where you want cursor to
 				be after closing searching with esc. Otherwise

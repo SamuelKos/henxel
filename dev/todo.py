@@ -14,16 +14,14 @@
 # multiline strings							ok ?
 # replace all now much faster				ok ?
 # replace focus fix							ok ?
+# syntax errors								ok ?
 
-# alt n after replacing is bad ?
+# alt n after replacing is bad
+# ctrl n p next prev						ok ?
+# help text update							ok ?
 
-# entry enter
-# search should start from curpos
 
-# replace, browse after first enter?
-# replace all no view refresh focus back to orig curpos
 
-# binder, unbinder ?
 
 
 import tkinter
@@ -78,7 +76,6 @@ import tkinter.font
 # myTextwidget.tag_config('sel', bgstipple='gray12')
 
 ########################## Maybe interesting end
-
 
 
 class Ed(tkinter.Toplevel):

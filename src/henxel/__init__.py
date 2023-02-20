@@ -620,6 +620,7 @@ class Editor(tkinter.Toplevel):
 				( '.py' in self.tabs[self.tabindex].filepath.suffix ) and \
 				( self.oldline != tmp ) and self.syntax:
 				
+			#print('sync')
 			self.oldline = tmp
 			self.update_tokens(start=linestart, end=lineend)
 
@@ -1100,11 +1101,10 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def update_tokens(self, start=None, end=None):
-
+	
 		if self.token_err or \
 			(
-			self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT ) in ['#', "'", '"'] and \
-			not ( start == '1.0' and end == tkinter.END )
+			self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT ) in ['#', "'", '"']
 			):
 			
 			start = '1.0'
@@ -1173,13 +1173,13 @@ class Editor(tkinter.Toplevel):
 							self.contents.tag_add('numbers', idx_start, idx_end)
 							
 			
-		except (IndentationError, tokenize.TokenError) as e:
-			
+		except IndentationError:
+			flag_err = True
+			self.token_err = True
+		
+		except tokenize.TokenError as e:
 			#print(e.args)
 			#if e.args[0] == 'EOF in multi-line string':
-			#errline = e.args[1][0] + linenum - 1
-				
-			#print('multiline string error', errline)
 			#print(e, errline)
 			flag_err = True
 			self.token_err = True
@@ -1546,12 +1546,17 @@ class Editor(tkinter.Toplevel):
 					
 					if filepath in openfiles:
 						self.contents.tag_config(tagname, foreground='brown1')
-					
+						self.contents.tag_raise(tagname)
+						
 					self.errlines.append((filepath, linenum))
 					self.contents.insert(tkinter.INSERT, tmp +"\n", tagname)
 				else:
 					self.contents.insert(tkinter.INSERT, tmp +"\n")
-					
+			
+						
+			# Make look bit nicer:
+			self.update_tokens(start='1.0', end=tkinter.END)
+			
 					
 		return 'break'
 				
@@ -1592,6 +1597,11 @@ class Editor(tkinter.Toplevel):
 					i += 1
 				else:
 					self.contents.insert(tkinter.INSERT, tmp +"\n")
+			
+						
+			# Make look bit nicer:
+			self.update_tokens(start='1.0', end=tkinter.END)
+		
 
 									
 	def stop_show_errors(self, event=None):
@@ -1624,7 +1634,7 @@ class Editor(tkinter.Toplevel):
 ########## Overrides Begin
 
 	def move_right(self, event=None):
-		if self.state != 'normal':
+		if self.state not in  [ 'normal', 'error' ]:
 			self.bell()
 			return "break"
 		
@@ -2755,8 +2765,8 @@ class Editor(tkinter.Toplevel):
 		self.title('Search: %s/%s' % (str(c+1), str(self.search_matches)))
 		
 		if self.search_matches == 1:
-			self.bind("<Alt-n>", self.do_nothing)
-			self.bind("<Alt-p>", self.do_nothing)
+			self.bind("<Control-n>", self.do_nothing)
+			self.bind("<Control-p>", self.do_nothing)
 		
 
 	def show_prev(self, event=None):
@@ -2796,8 +2806,8 @@ class Editor(tkinter.Toplevel):
 		self.title('Search: %s/%s' % (str(c+1), str(self.search_matches)))
 		
 		if self.search_matches == 1:
-			self.bind("<Alt-n>", self.do_nothing)
-			self.bind("<Alt-p>", self.do_nothing)
+			self.bind("<Control-n>", self.do_nothing)
+			self.bind("<Control-p>", self.do_nothing)
 			
 		
 	def start_search(self, event=None):
@@ -2829,12 +2839,10 @@ class Editor(tkinter.Toplevel):
 			
 			if self.state == 'search':
 				self.title('Found: %s matches' % str(self.search_matches))
-				self.bind("<Alt-n>", self.show_next)
-				self.bind("<Alt-p>", self.show_prev)
+				self.bind("<Control-n>", self.show_next)
+				self.bind("<Control-p>", self.show_prev)
+			
 			else:
-				self.bind("<Alt-n>", self.do_nothing)
-				self.bind("<Alt-p>", self.do_nothing)
-
 				self.title('Replace %s matches with:' % str(self.search_matches))
 				self.entry.bind("<Return>", self.start_replace)
 				self.entry.focus_set()
@@ -2902,12 +2910,17 @@ class Editor(tkinter.Toplevel):
 		
 		
 		self.state = 'normal'
-		self.bind( "<Alt-n>", self.new_tab)
 		self.bind( "<Return>", self.do_nothing)
+		self.contents.unbind( "<Control-n>", funcid=self.bid1 )
+		self.contents.unbind( "<Control-p>", funcid=self.bid2 )
 		
 		self.contents.focus_set()
 		
-
+		
+	def skip_bindlevel(self, event=None):
+		return 'continue'
+		
+	
 	def search(self, event=None):
 		if self.state != 'normal':
 			self.bell()
@@ -2918,6 +2931,10 @@ class Editor(tkinter.Toplevel):
 		self.btn_save.config(state='disabled')
 		self.entry.bind("<Return>", self.start_search)
 		self.bind("<Escape>", self.stop_search)
+		
+		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
+		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
+		
 		self.title('Search:')
 		self.entry.delete(0, tkinter.END)
 		
@@ -2951,6 +2968,8 @@ class Editor(tkinter.Toplevel):
 		self.btn_save.config(state='disabled')
 		self.entry.bind("<Return>", self.start_search)
 		self.bind("<Escape>", self.stop_search)
+		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
+		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
 		self.title('Replace this:')
 		self.entry.delete(0, tkinter.END)
 		
@@ -3065,8 +3084,8 @@ class Editor(tkinter.Toplevel):
 		else:
 		
 			self.replace_overlap_index = None
-			self.bind("<Alt-n>", self.show_next)
-			self.bind("<Alt-p>", self.show_prev)
+			self.bind("<Control-n>", self.show_next)
+			self.bind("<Control-p>", self.show_prev)
 			
 			# prevent focus messing
 			self.entry.bind("<Return>", self.do_nothing)
