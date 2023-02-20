@@ -146,6 +146,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.ln_string = ''
 		self.want_ln = True
+		self.syntax = True
 		self.oldconf = None
 		
 		if sys.prefix != sys.base_prefix:
@@ -171,7 +172,6 @@ class Editor(tkinter.Toplevel):
 		self.replace_overlap_index = None
 		self.search_idx = ('1.0', '1.0')
 		self.search_matches = 0
-		self.search_pos = 0
 		self.old_word = ''
 		self.new_word = ''
 		
@@ -453,8 +453,7 @@ class Editor(tkinter.Toplevel):
 						'finally',
 						'nonlocal',
 						'yield',
-						'open',
-						'imporlib'
+						'open'
 						]
 						
 		self.bools = [ 'False', 'True', 'None' ]
@@ -463,7 +462,9 @@ class Editor(tkinter.Toplevel):
 						'return',
 						'continue',
 						'pass',
-						'raise'
+						'raise',
+						'assert',
+						'yield'
 						]
 		
 		red = r'#c01c28'
@@ -496,7 +497,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_raise('match')
 		self.contents.tag_raise('focus')
 		
-		self.syntax = True
 		self.token_err = False
 		
 		if self.syntax:
@@ -561,6 +561,10 @@ class Editor(tkinter.Toplevel):
 	def do_nothing(self, event=None):
 		self.bell()
 		return 'break'
+	
+		
+	def skip_bindlevel(self, event=None):
+		return 'continue'
 		
 		
 	def quit_me(self):
@@ -608,7 +612,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.update_linenums()
 		
-		# tag alter triggers this event
+		# tag alter triggers this event if font changes, like from normal to bold.
 		# --> need to check if line is changed to prevent self-trigger
 		line_idx = self.contents.index( tkinter.INSERT )
 		lineend = '%s lineend' % line_idx
@@ -959,6 +963,7 @@ class Editor(tkinter.Toplevel):
 		dictionary['scrollbar_width'] = self.scrollbar_width
 		dictionary['elementborderwidth'] = self.elementborderwidth
 		dictionary['want_ln'] = self.want_ln
+		dictionary['syntax'] = self.syntax
 		
 		for tab in self.tabs:
 			tab.contents = ''
@@ -1005,6 +1010,7 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar_width 	= dictionary['scrollbar_width']
 		self.elementborderwidth	= dictionary['elementborderwidth']
 		self.want_ln = dictionary['want_ln']
+		self.syntax = dictionary['syntax']
 		
 		self.lastdir = dictionary['lastdir']
 		
@@ -1168,8 +1174,9 @@ class Editor(tkinter.Toplevel):
 							
 						elif token.type == tokenize.COMMENT:
 							self.contents.tag_add('comments', idx_start, idx_end)
-											
-						elif token.type == tokenize.NUMBER:
+						
+						# token.type == tokenize.NUMBER
+						else:
 							self.contents.tag_add('numbers', idx_start, idx_end)
 							
 			
@@ -2017,7 +2024,13 @@ class Editor(tkinter.Toplevel):
 			
 			self.contents.delete(start, end)
 			self.contents.insert(start, tmp)
-					
+			
+			if ( self.tabs[self.tabindex].type == 'normal' ) and \
+				( '.py' in self.tabs[self.tabindex].filepath.suffix ):
+				
+				self.update_tokens(start='1.0', end=tkinter.END)
+		
+			
 			self.contents.edit_separator()
 			return "break"
 		
@@ -2734,15 +2747,21 @@ class Editor(tkinter.Toplevel):
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
 			
+		match_ranges = self.contents.tag_ranges('match')
+		
 		# check if at last match or beyond:
-		i = len(self.contents.tag_ranges('match')) - 2
-		last = self.contents.tag_ranges('match')[i]
+		i = len(match_ranges) - 2
+		last = match_ranges[i]
 	
 		if self.contents.compare(self.search_idx[0], '>=', last):
 			self.search_idx = ('1.0', '1.0')
-			self.search_pos = 0
 				
-		self.contents.tag_remove('focus', '1.0', tkinter.END)
+		if self.search_idx != ('1.0', '1.0'):
+			self.contents.tag_remove('focus', self.search_idx[0], self.search_idx[1])
+		else:
+			self.contents.tag_remove('focus', '1.0', tkinter.END)
+		
+		
 		self.search_idx = self.contents.tag_nextrange('match', self.search_idx[1])
 		# change color
 		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
@@ -2751,22 +2770,22 @@ class Editor(tkinter.Toplevel):
 		self.contents.see('%s - 2 lines' % self.search_idx[0])
 		self.update_idletasks()
 		self.contents.see('%s + 2 lines' % self.search_idx[0])
-
-		self.search_pos += 1
 		
 		# compare found to match
-		num_matches = int(len(self.contents.tag_ranges('match'))/2)
 		ref = self.contents.tag_ranges('focus')[0]
 		
-		for c in range(num_matches):
-			tmp = self.contents.tag_ranges('match')[c*2]
+		for idx in range(self.search_matches):
+			tmp = match_ranges[idx*2]
 			if self.contents.compare(ref, '==', tmp): break
 		
-		self.title('Search: %s/%s' % (str(c+1), str(self.search_matches)))
+		
+		self.title( f'Search: {idx+1}/{self.search_matches}' )
 		
 		if self.search_matches == 1:
 			self.bind("<Control-n>", self.do_nothing)
 			self.bind("<Control-p>", self.do_nothing)
+		
+		return 'break'
 		
 
 	def show_prev(self, event=None):
@@ -2774,14 +2793,17 @@ class Editor(tkinter.Toplevel):
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
 		
-		first = self.contents.tag_ranges('match')[0]
+		match_ranges = self.contents.tag_ranges('match')
+		
+		first = match_ranges[0]
 	
 		if self.contents.compare(self.search_idx[0], '<=', first):
 			self.search_idx = (tkinter.END, tkinter.END)
-			self.search_pos = self.search_matches + 1
-
-			
-		self.contents.tag_remove('focus', '1.0', tkinter.END)
+		
+		if self.search_idx != (tkinter.END, tkinter.END):
+			self.contents.tag_remove('focus', self.search_idx[0], self.search_idx[1])
+		else:
+			self.contents.tag_remove('focus', '1.0', tkinter.END)
 		
 		self.search_idx = self.contents.tag_prevrange('match', self.search_idx[0])
 		
@@ -2793,22 +2815,22 @@ class Editor(tkinter.Toplevel):
 		self.update_idletasks()
 		self.contents.see('%s + 2 lines' % self.search_idx[0])
 		
-		self.search_pos -= 1
-		
 		# compare found to match
-		num_matches = int(len(self.contents.tag_ranges('match'))/2)
 		ref = self.contents.tag_ranges('focus')[0]
 		
-		for c in range(num_matches):
-			tmp = self.contents.tag_ranges('match')[c*2]
+		for idx in range(self.search_matches):
+			tmp = match_ranges[idx*2]
 			if self.contents.compare(ref, '==', tmp): break
 			
-		self.title('Search: %s/%s' % (str(c+1), str(self.search_matches)))
+			
+		self.title( f'Search: {idx+1}/{self.search_matches}' )
 		
 		if self.search_matches == 1:
 			self.bind("<Control-n>", self.do_nothing)
 			self.bind("<Control-p>", self.do_nothing)
 			
+		return 'break'
+		
 		
 	def start_search(self, event=None):
 		self.old_word = self.entry.get()
@@ -2816,7 +2838,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.search_idx = ('1.0', '1.0')
 		self.search_matches = 0
-		self.search_pos = 0
+		
 		if len(self.old_word) != 0:
 			pos = '1.0'
 			wordlen = len(self.old_word)
@@ -2889,7 +2911,8 @@ class Editor(tkinter.Toplevel):
 			
 		elif self.state == 'replace':
 			self.contents.tag_remove('match', '1.0', tkinter.END)
-		
+			self.bind("<Escape>", self.do_nothing)
+			
 		
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
@@ -2915,11 +2938,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.unbind( "<Control-p>", funcid=self.bid2 )
 		
 		self.contents.focus_set()
-		
-		
-	def skip_bindlevel(self, event=None):
-		return 'continue'
-		
+			
 	
 	def search(self, event=None):
 		if self.state != 'normal':

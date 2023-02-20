@@ -3,4 +3,5 @@
 import aa
 print('before')
 aa.f1()
+
 print('after')

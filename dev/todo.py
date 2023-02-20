@@ -13,6 +13,7 @@
 # alt-x toggle syntax						ok ?
 # multiline strings							ok ?
 # replace all now much faster				ok ?
+# show next now much faster					ok ?
 # replace focus fix							ok ?
 # syntax errors								ok ?
 
@@ -31,13 +32,31 @@ import tkinter.font
 
 ########################## Maybe interesting Begin:
 
-# with these one should handle all binding-situations
+# Handling of states and bindings is hard. One really should read a book about
+# stateful programming or something similar if doing something more serious.
 
-# howto: lambda to nothing:
+
+# Howto: cancel (not unbind) certain binding for time being:
+
+# def cancelbind(self, event=None):
+#	return 'break'
+
+# self.keyid = self.mywidget.bind( "<Some-Key>", func=self.cancelbind)
+
+
+# Howto: skip bindlevel for certain binding for time being:
+
+# def skip_bindlevel(self, event=None):
+#	return 'continue'
+
+# self.keyid = self.mywidget.bind( "<Some-Key>", func=self.skip_bindlevel)
+
+
+# Howto: lambda to nothing:
 # self.contents.bind( "<Left>", lambda event: ...)
 	
 
-# howto: unbind in tkinter:
+# Howto: unbind in tkinter:
 
 # def mycallback1(self, event=None):
 #	print(1, event.keysum, event.num)
@@ -45,8 +64,8 @@ import tkinter.font
 # def mycallback2(self, event=None):
 #	print(2, event.keysum, event.num)
 	
-# self.anykeyid = self.mywidget1.bind( "<Any-Key>", self.mycallback1)
-# self.anybutid = self.mywidget1.bind( "<Any-Button>", self.mycallback2)
+# self.anykeyid = self.mywidget1.bind( "<Any-Key>", func=self.mycallback1)
+# self.anybutid = self.mywidget1.bind( "<Any-Button>", func=self.mycallback2)
 
 # self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
 # self.contents.unbind("<Any-Button>", funcid=self.anybutid)
