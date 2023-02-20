@@ -13,11 +13,11 @@
 # alt-x toggle syntax						ok ?
 # multiline strings							ok ?
 # replace all now much faster				ok ?
-
+# replace focus fix							ok ?
 
 # alt n after replacing is bad ?
 
-
+# entry enter
 # search should start from curpos
 
 # replace, browse after first enter?

@@ -192,6 +192,7 @@ class Editor(tkinter.Toplevel):
 		# If you can, avoid binding to root.
 		
 		self.bind( "<Escape>", self.do_nothing )
+		self.bind( "<Return>", self.do_nothing)
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
 		self.bind( "<Control-plus>", self.increase_scrollbar_width)
 		self.bind( "<Control-R>", self.replace_all)
@@ -315,6 +316,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Alt-f>", self.font_choose)
 		self.contents.bind( "<Alt-x>", self.toggle_syntax)
 		self.contents.bind( "<Return>", self.return_override)
+		
 		self.contents.bind( "<Control-d>", self.del_tab)
 		self.contents.bind( "<Shift-Return>", self.comment)
 		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
@@ -1761,6 +1763,10 @@ class Editor(tkinter.Toplevel):
 		'''	Used to bind Tab-key with indent()
 		'''
 		
+		if self.state in [ 'search', 'replace', 'replace_all' ]:
+			return 'break'
+				
+		# dont know if this is needed
 		if hasattr(event, 'state') and event.state != 0:
 			return
 		
@@ -2897,6 +2903,8 @@ class Editor(tkinter.Toplevel):
 		
 		self.state = 'normal'
 		self.bind( "<Alt-n>", self.new_tab)
+		self.bind( "<Return>", self.do_nothing)
+		
 		self.contents.focus_set()
 		
 
@@ -2972,7 +2980,6 @@ class Editor(tkinter.Toplevel):
 		
 	def do_single_replace(self, event=None):
 		self.contents.config(state='normal')
-		self.entry.config(state='disabled')
 		self.search_matches = 0
 		wordlen = len(self.old_word)
 		wordlen2 = len(self.new_word)
@@ -3061,6 +3068,11 @@ class Editor(tkinter.Toplevel):
 			self.bind("<Alt-n>", self.show_next)
 			self.bind("<Alt-p>", self.show_prev)
 			
+			# prevent focus messing
+			self.entry.bind("<Return>", self.do_nothing)
+			self.entry.config(state='disabled')
+			self.focus_set()
+			
 			# Check if new_word contains old_word, if so:
 			# record its overlap-index, which we need in do_single_replace()
 			# (explanation for why this is needed is given there)
@@ -3068,10 +3080,10 @@ class Editor(tkinter.Toplevel):
 				self.replace_overlap_index = self.new_word.index(self.old_word)
 				
 			if self.state == 'replace':
-				self.entry.bind("<Return>", self.do_single_replace)
+				self.bind( "<Return>", self.do_single_replace)
 				self.title('Replacing %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )
 			elif self.state == 'replace_all':
-				self.entry.bind("<Return>", self.do_replace_all)
+				self.bind( "<Return>", self.do_replace_all)
 				self.title('Replacing ALL %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )
 
 
