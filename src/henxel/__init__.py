@@ -624,7 +624,7 @@ class Editor(tkinter.Toplevel):
 				( '.py' in self.tabs[self.tabindex].filepath.suffix ) and \
 				( self.oldline != tmp ) and self.syntax:
 				
-			#print('sync')
+			print('sync')
 			self.oldline = tmp
 			self.update_tokens(start=linestart, end=lineend)
 
@@ -1562,7 +1562,8 @@ class Editor(tkinter.Toplevel):
 			
 						
 			# Make look bit nicer:
-			self.update_tokens(start='1.0', end=tkinter.END)
+			if self.syntax:
+				self.update_tokens(start='1.0', end=tkinter.END)
 			
 					
 		return 'break'
@@ -1607,9 +1608,9 @@ class Editor(tkinter.Toplevel):
 			
 						
 			# Make look bit nicer:
-			self.update_tokens(start='1.0', end=tkinter.END)
-		
-
+			if self.syntax:
+				self.update_tokens(start='1.0', end=tkinter.END)
+					
 									
 	def stop_show_errors(self, event=None):
 		self.state = 'normal'
@@ -1806,8 +1807,8 @@ class Editor(tkinter.Toplevel):
 
 	
 	def backspace_override(self, event):
-		''' for syntax highlight
-		'''
+		""" for syntax highlight
+		"""
 		
 		if self.state != 'normal' or event.state != 0:
 			return
@@ -1817,10 +1818,48 @@ class Editor(tkinter.Toplevel):
 			self.token_err = True
 				
 		except tkinter.TclError:
-			prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
+		
+			# Rest is multiline string check
+			chars = self.contents.get( '%s - 3c' % tkinter.INSERT, '%s + 2c' % tkinter.INSERT )
 			
-			if prev_char in ['#', "'", '"']:
+			at_start = \
+				self.contents.compare('%s linestart' % tkinter.INSERT, '==', '%s -1c' % tkinter.INSERT)
+			
+			# check first if no content or at linestart
+			if len(chars) < 5 or at_start:
+				#print('start')
 				self.token_err = True
+			
+			else:
+				triples = ["'''", '"""']
+				doubles = ["''", '""']
+				singles = ["'", '"']
+				
+				prev_3chars = chars[:3]
+				
+				prev_2chars = chars[1:3]
+				next_2chars = chars[-2:]
+				
+				prev_char = chars[2:3]
+				next_char = chars[-2:-1]
+			
+				#print(prev_3chars, '/', prev_2chars, '/', next_2chars,'/', prev_char,'/', next_char)
+				
+				tests = [
+						bool(prev_3chars in triples),
+						bool( (prev_2chars in doubles) and (next_char in singles) ),
+						bool( (prev_char in singles) and (next_2chars in doubles) )
+						]
+				
+				if any(tests):
+					print('#')
+					self.token_err = True
+				
+				# when add: check if ''' or """
+				# when add #: check if ''' or """ in same line
+			
+			
+		#print('deleting')
 				
 		return
 
@@ -1947,8 +1986,9 @@ class Editor(tkinter.Toplevel):
 					self.contents.see('1.0')
 					self.contents.mark_set('insert', '1.0')
 					
-					self.update_tokens(start='1.0', end=tkinter.END)
-					
+					if self.syntax:
+						self.update_tokens(start='1.0', end=tkinter.END)
+								
 					self.contents.edit_reset()
 					self.contents.edit_modified(0)
 					
@@ -1988,8 +2028,9 @@ class Editor(tkinter.Toplevel):
 				self.contents.see('1.0')
 				self.contents.mark_set('insert', '1.0')
 				
-				self.update_tokens(start='1.0', end=tkinter.END)
-				
+				if self.syntax:
+					self.update_tokens(start='1.0', end=tkinter.END)
+											
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 				
@@ -2028,9 +2069,9 @@ class Editor(tkinter.Toplevel):
 			if ( self.tabs[self.tabindex].type == 'normal' ) and \
 				( '.py' in self.tabs[self.tabindex].filepath.suffix ):
 				
-				self.update_tokens(start='1.0', end=tkinter.END)
-		
-			
+				if self.syntax:
+					self.update_tokens(start='1.0', end=tkinter.END)
+											
 			self.contents.edit_separator()
 			return "break"
 		
@@ -2929,8 +2970,9 @@ class Editor(tkinter.Toplevel):
 			'.py' in self.tabs[self.tabindex].filepath.suffix:
 				
 				self.state = 'normal'
-				self.update_tokens(start='1.0', end=tkinter.END)
-		
+				if self.syntax:
+					self.update_tokens(start='1.0', end=tkinter.END)
+									
 		
 		self.state = 'normal'
 		self.bind( "<Return>", self.do_nothing)

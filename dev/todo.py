@@ -5,7 +5,16 @@
 # >>> e=todo.Ed()
 
 
+# check syntax when update tokens
 
+# delete is before sync
+
+# when delete: check if ''' or """
+# when add: check if ''' or """
+# when add #: check if ''' or """ in same line
+# when delete #: check if ''' or """ in same line
+"""
+"""
 
 import tkinter
 import tkinter.font
