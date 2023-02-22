@@ -4,17 +4,24 @@
 # >>> import todo
 # >>> e=todo.Ed()
 
+# remove printings before build
+
+# see check if visible if not then see()
+# sync need line check
+# when view change
 
 # check syntax when update tokens
 
+# open braces trigger tokenError ?
 # delete is before sync
+# walktab tokenerr
 
 # when delete: check if ''' or """
 # when add: check if ''' or """
 # when add #: check if ''' or """ in same line
 # when delete #: check if ''' or """ in same line
-"""
-"""
+''' sdff
+'''
 
 import tkinter
 import tkinter.font

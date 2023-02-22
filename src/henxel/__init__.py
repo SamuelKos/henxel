@@ -497,10 +497,17 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_raise('match')
 		self.contents.tag_raise('focus')
 		
-		self.token_err = False
+		self.token_err = True
+		self.view_changed = True
 		
-		if self.syntax:
-			self.update_tokens(start='1.0', end=tkinter.END)
+		if ( self.tabs[self.tabindex].type == 'normal' ) and \
+				( '.py' in self.tabs[self.tabindex].filepath.suffix ) and self.syntax:
+			self.token_can_update = True
+		
+		else:
+			self.token_can_update = False
+			
+		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 		
 		####  Syntax-highlight End  ######################################
 	
@@ -544,7 +551,6 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', '1.0')
 		
 		
-		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 		self.update_idletasks()
 		self.viewsync()
 		self.__class__.alive = True
@@ -565,6 +571,15 @@ class Editor(tkinter.Toplevel):
 		
 	def skip_bindlevel(self, event=None):
 		return 'continue'
+	
+	
+	def update_oldline(self):
+		line_idx = self.contents.index( tkinter.INSERT )
+		lineend = '%s lineend' % line_idx
+		linestart = '%s linestart' % line_idx
+		
+		return self.contents.get( linestart, lineend )
+		
 		
 		
 	def quit_me(self):
@@ -612,23 +627,29 @@ class Editor(tkinter.Toplevel):
 		
 		self.update_linenums()
 		
-		# tag alter triggers this event if font changes, like from normal to bold.
-		# --> need to check if line is changed to prevent self-trigger
-		line_idx = self.contents.index( tkinter.INSERT )
-		lineend = '%s lineend' % line_idx
-		linestart = '%s linestart' % line_idx
+		if self.token_can_update:
 		
-		tmp = self.contents.get( linestart, lineend )
+			#  tag alter triggers this event if font changes, like from normal to bold.
+			# --> need to check if line is changed to prevent self-trigger
+			line_idx = self.contents.index( tkinter.INSERT )
+			lineend = '%s lineend' % line_idx
+			linestart = '%s linestart' % line_idx
 			
-		if ( self.tabs[self.tabindex].type == 'normal' ) and \
-				( '.py' in self.tabs[self.tabindex].filepath.suffix ) and \
-				( self.oldline != tmp ) and self.syntax:
+			tmp = self.contents.get( linestart, lineend )
+			
+			if self.oldline != tmp:
+				#print('sync')
+				self.oldline = tmp
+				self.update_tokens(start=linestart, end=lineend, line=tmp)
+				self.view_changed = False
+			
+			elif self.view_changed:
+				#print('sync')
+				self.oldline = tmp
+				self.update_tokens()
+				self.view_changed = False
 				
-			print('sync')
-			self.oldline = tmp
-			self.update_tokens(start=linestart, end=lineend)
 
-	
 ############## Linenumbers Begin
 
 	def no_copy_ln(self, event=None):
@@ -801,11 +822,17 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 		if self.tabs[self.tabindex].filepath:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-				self.update_tokens(start='1.0', end=tkinter.END)
-		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 
+			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
+				self.token_err = True
+				self.token_can_update = True
+				self.view_changed = True
+			
+			else:
+				self.token_can_update = False
+				
+			
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
@@ -868,11 +895,15 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		
 		if self.tabs[self.tabindex].filepath:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-				self.update_tokens(start='1.0', end=tkinter.END)
-				
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
-		
+
+			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
+				self.token_err = True
+				self.token_can_update = True
+				self.view_changed = True
+			else:
+				self.token_can_update = False
+				
 		
 		try:
 			line = self.tabs[self.tabindex].position
@@ -880,7 +911,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', line)
 			# ensure we see something before and after
 			self.contents.see('%s - 2 lines' % line)
-			self.update_idletasks()
+			#self.update_idletasks()
 			self.contents.see('%s + 2 lines' % line)
 			
 		except tkinter.TclError:
@@ -1100,40 +1131,68 @@ class Editor(tkinter.Toplevel):
 			
 			if ( self.tabs[self.tabindex].type == 'normal' ) and \
 				( '.py' in self.tabs[self.tabindex].filepath.suffix ):
-	
-				self.update_tokens(start='1.0', end=tkinter.END)
+				self.token_err = True
+				self.token_can_update = True
+				self.view_changed = True
+			else:
+				self.token_can_update = False
+		
 			
 			return 'break'
-	
-	
-	def update_tokens(self, start=None, end=None):
-	
-		if self.token_err or \
-			(
-			self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT ) in ['#', "'", '"']
-			):
 			
-			start = '1.0'
-			end = tkinter.END
+			
+	def update_token_states(self,):
+	
+		if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
+			self.token_err = True
+			self.token_can_update = True
+			self.view_changed = True
+
+		else:
+			self.token_can_update = False
+	
+	
+	def update_tokens(self, start=None, end=None, line=None):
+	
+		start_idx = start
+		end_idx = end
+		
+		if line:
+			linecontents = line
+			test1 = [
+				self.token_err,
+				( '"""' in linecontents ),
+				( "'''" in linecontents )
+				]
+		else:
+			test1 = [self.token_err]
+			
+			
+		if any(test1) or self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT ) in ['#', "'", '"']:
+			
+			start_idx = '1.0'
+			end_idx = tkinter.END
+			#print('err')
 	
 		# check if inside multiline string
 		elif 'strings' in self.contents.tag_names(tkinter.INSERT) and \
-				not ( start == '1.0' and end == tkinter.END ):
+				not ( start_idx == '1.0' and end_idx == tkinter.END ):
 			
 			try:
 				s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
 				l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
 			
 				if l0 != l1:
-					start, end = (s, e)
+					start_idx, end_idx = (s, e)
 	
 			except ValueError:
 				pass
 			
 			
-		tmp = self.contents.get( start, end )
-		linenum = int(start.split('.')[0])
+		tmp = self.contents.get( start_idx, end_idx )
+		linenum = int(start_idx.split('.')[0])
 		flag_err = False
+		
 		
 		try:
 			with io.BytesIO( tmp.encode('utf-8') ) as fo:
@@ -1142,7 +1201,7 @@ class Editor(tkinter.Toplevel):
 			
 				# Remove old tags:
 				for tag in self.tagnames:
-					self.contents.tag_remove( tag, start, end )
+					self.contents.tag_remove( tag, start_idx, end_idx )
 					
 				# Retag:
 				for token in res:
@@ -1180,19 +1239,28 @@ class Editor(tkinter.Toplevel):
 							self.contents.tag_add('numbers', idx_start, idx_end)
 							
 			
-		except IndentationError:
+		except IndentationError as e:
+##			for attr in ['args', 'filename', 'lineno', 'msg', 'offset', 'text']:
+##				item = getattr( e, attr)
+##				print( attr,': ', item )
+
+			print('Indentation errline: ', self.contents.index(tkinter.INSERT) )
+			
 			flag_err = True
 			self.token_err = True
-		
-		except tokenize.TokenError as e:
-			#print(e.args)
-			#if e.args[0] == 'EOF in multi-line string':
-			#print(e, errline)
+			
+		except tokenize.TokenError as ee:
+			
+			if 'EOF in multi-line' in ee.args[0]:
+				print( 'errline: ', self.contents.index(tkinter.INSERT) )
+			else:
+				print(ee)
+			
 			flag_err = True
 			self.token_err = True
 			
 			
-		if not flag_err and ( start == '1.0' and end == tkinter.END ):
+		if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
 			#print('ok')
 			self.token_err = False
 			
@@ -1427,9 +1495,11 @@ class Editor(tkinter.Toplevel):
 		filepath = pathlib.Path(filepath)
 		openfiles = [tab.filepath for tab in self.tabs]
 		
+		# clicked activetab, do nothing
 		if filepath == self.tabs[self.tabindex].filepath:
 			pass
 			
+		# clicked file that is open, switch activetab
 		elif filepath in openfiles:
 			for i,tab in enumerate(self.tabs):
 				if tab.filepath == filepath:
@@ -1437,6 +1507,8 @@ class Editor(tkinter.Toplevel):
 					self.tabindex = i
 					self.tabs[self.tabindex].active = True
 					break
+					
+		# open file in newtab
 		else:
 			try:
 				with open(filepath, 'r', encoding='utf-8') as f:
@@ -1459,8 +1531,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 		if self.tabs[self.tabindex].type == 'normal':
-			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-				self.update_tokens(start='1.0', end=tkinter.END)
+			self.update_token_states()
 		
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
@@ -1622,10 +1693,8 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		
 		if self.tabs[self.tabindex].type == 'normal':
-			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-					self.update_tokens(start='1.0', end=tkinter.END)
-		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+			self.update_token_states()
 			
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
@@ -1727,8 +1796,7 @@ class Editor(tkinter.Toplevel):
 				
 				
 		if self.tabs[self.tabindex].filepath:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-				self.update_tokens(start='1.0', end=tkinter.END)
+			self.update_token_states()
 		
 		return 'break'
 
@@ -1743,8 +1811,7 @@ class Editor(tkinter.Toplevel):
 			
 			# Could be anything and we have zero info about action, so:
 			if self.tabs[self.tabindex].type == 'normal':
-				if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-					self.update_tokens(start='1.0', end=tkinter.END)
+				self.update_token_states()
 			
 		except tkinter.TclError:
 			self.bell()
@@ -1762,8 +1829,7 @@ class Editor(tkinter.Toplevel):
 			
 			# Could be anything and we have zero info about action, so:
 			if self.tabs[self.tabindex].type == 'normal':
-				if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-					self.update_tokens(start='1.0', end=tkinter.END)
+				self.update_token_states()
 			
 		except tkinter.TclError:
 			self.bell()
@@ -1815,50 +1881,38 @@ class Editor(tkinter.Toplevel):
 			
 		try:
 			_ = self.contents.index(tkinter.SEL_FIRST)
-			self.token_err = True
+			
+			if self.tabs[self.tabindex].type == 'normal':
+				self.update_token_states()
+			
 				
 		except tkinter.TclError:
 		
 			# Rest is multiline string check
 			chars = self.contents.get( '%s - 3c' % tkinter.INSERT, '%s + 2c' % tkinter.INSERT )
 			
-			at_start = \
-				self.contents.compare('%s linestart' % tkinter.INSERT, '==', '%s -1c' % tkinter.INSERT)
+			triples = ["'''", '"""']
+			doubles = ["''", '""']
+			singles = ["'", '"']
 			
-			# check first if no content or at linestart
-			if len(chars) < 5 or at_start:
-				#print('start')
-				self.token_err = True
+			prev_3chars = chars[:3]
+			prev_2chars = chars[1:3]
+			next_2chars = chars[-2:]
 			
-			else:
-				triples = ["'''", '"""']
-				doubles = ["''", '""']
-				singles = ["'", '"']
-				
-				prev_3chars = chars[:3]
-				
-				prev_2chars = chars[1:3]
-				next_2chars = chars[-2:]
-				
-				prev_char = chars[2:3]
-				next_char = chars[-2:-1]
-			
-				#print(prev_3chars, '/', prev_2chars, '/', next_2chars,'/', prev_char,'/', next_char)
-				
-				tests = [
-						bool(prev_3chars in triples),
-						bool( (prev_2chars in doubles) and (next_char in singles) ),
-						bool( (prev_char in singles) and (next_2chars in doubles) )
-						]
-				
-				if any(tests):
-					print('#')
-					self.token_err = True
-				
-				# when add: check if ''' or """
-				# when add #: check if ''' or """ in same line
-			
-			
+			prev_char = chars[2:3]
+			next_char = chars[-2:-1]
+		
+			quote_tests = map( bool, [
+						(prev_3chars in triples),
+						( (prev_2chars in doubles) and (next_char in singles) ),
+						( (prev_char in singles) and (next_2chars in doubles) )
+						])
+						
+			if any(quote_tests):
+				#print('#')
+				if self.tabs[self.tabindex].type == 'normal':
+					self.update_token_states()
+					
 		#print('deleting')
 				
 		return
@@ -1987,8 +2041,13 @@ class Editor(tkinter.Toplevel):
 					self.contents.mark_set('insert', '1.0')
 					
 					if self.syntax:
-						self.update_tokens(start='1.0', end=tkinter.END)
-								
+						self.token_err = True
+						self.token_can_update = True
+						self.view_changed = True
+					else:
+						self.token_can_update = False
+						
+						
 					self.contents.edit_reset()
 					self.contents.edit_modified(0)
 					
@@ -2029,7 +2088,12 @@ class Editor(tkinter.Toplevel):
 				self.contents.mark_set('insert', '1.0')
 				
 				if self.syntax:
-					self.update_tokens(start='1.0', end=tkinter.END)
+					self.token_err = True
+					self.token_can_update = True
+					self.view_changed = True
+				else:
+					self.token_can_update = False
+				
 											
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
@@ -2066,11 +2130,8 @@ class Editor(tkinter.Toplevel):
 			self.contents.delete(start, end)
 			self.contents.insert(start, tmp)
 			
-			if ( self.tabs[self.tabindex].type == 'normal' ) and \
-				( '.py' in self.tabs[self.tabindex].filepath.suffix ):
-				
-				if self.syntax:
-					self.update_tokens(start='1.0', end=tkinter.END)
+			if self.tabs[self.tabindex].type == 'normal':
+				self.update_token_states()
 											
 			self.contents.edit_separator()
 			return "break"
@@ -2191,8 +2252,7 @@ class Editor(tkinter.Toplevel):
 				
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
-				if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-					self.update_tokens(start='1.0', end=tkinter.END)
+				self.update_token_states()
 				
 				self.contents.focus_set()
 				self.contents.see('1.0')
@@ -2377,9 +2437,7 @@ class Editor(tkinter.Toplevel):
 					self.entry.delete(0, tkinter.END)
 					self.entry.insert(0, self.tabs[self.tabindex].filepath)
 					
-					if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-						self.update_tokens(start='1.0', end=tkinter.END)
-				
+					self.update_token_states()
 
 			# want to create new file with same contents:
 			else:
@@ -2405,8 +2463,7 @@ class Editor(tkinter.Toplevel):
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
-				if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-					self.update_tokens(start='1.0', end=tkinter.END)
+				self.update_token_states()
 				
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
@@ -2535,11 +2592,10 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 		if self.tabs[self.tabindex].filepath:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-				self.update_tokens(start='1.0', end=tkinter.END)
-		
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		
+			self.update_token_states()
+			
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		
@@ -2660,9 +2716,8 @@ class Editor(tkinter.Toplevel):
 				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 				self.contents.insert(tkinter.INSERT, '##')
 				
-			self.token_err = True
-			#self.update_tokens(start=startpos, end=endpos)
-			
+			if self.tabs[self.tabindex].filepath:
+				self.update_token_states()
 			
 			self.contents.edit_separator()
 			return "break"
@@ -2697,9 +2752,10 @@ class Editor(tkinter.Toplevel):
 					changed = True
 					
 			if changed:
-				self.token_err = True
-				#self.update_tokens(start=startpos, end=endpos)
-				
+			
+				if self.tabs[self.tabindex].filepath:
+					self.update_token_states()
+					
 				self.contents.edit_separator()
 			
 		except tkinter.TclError as e:
@@ -2970,9 +3026,7 @@ class Editor(tkinter.Toplevel):
 			'.py' in self.tabs[self.tabindex].filepath.suffix:
 				
 				self.state = 'normal'
-				if self.syntax:
-					self.update_tokens(start='1.0', end=tkinter.END)
-									
+				self.update_token_states()
 		
 		self.state = 'normal'
 		self.bind( "<Return>", self.do_nothing)
