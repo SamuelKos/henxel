@@ -410,6 +410,22 @@ class Editor(tkinter.Toplevel):
 			
 			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled')
 
+
+		# set cursor pos:
+		try:
+		
+			line = self.tabs[self.tabindex].position
+			self.contents.focus_set()
+			self.contents.mark_set('insert', line)
+			self.ensure_idx_visibility(line)
+			
+		except tkinter.TclError:
+			self.tabs[self.tabindex].position = '1.0'
+			self.contents.focus_set()
+			self.contents.see('1.0')
+			self.contents.mark_set('insert', '1.0')
+		
+		
 		# Widgets are configured
 		###############################
 		#
@@ -535,22 +551,6 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 		
 		
-		# set cursor pos:
-		try:
-			line = self.tabs[self.tabindex].position
-			self.contents.focus_set()
-			# ensure we see something before and after
-			self.contents.see('%s - 2 lines' % line)
-			self.update_idletasks()
-			self.contents.see('%s + 2 lines' % line)
-			self.contents.mark_set('insert', line)
-		except tkinter.TclError:
-			self.tabs[self.tabindex].position = '1.0'
-			self.contents.focus_set()
-			self.contents.see('1.0')
-			self.contents.mark_set('insert', '1.0')
-		
-		
 		self.update_idletasks()
 		self.viewsync()
 		self.__class__.alive = True
@@ -571,7 +571,15 @@ class Editor(tkinter.Toplevel):
 		
 	def skip_bindlevel(self, event=None):
 		return 'continue'
+		
 	
+	def ensure_idx_visibility(self, index):
+		
+		b = self.contents.bbox(index)
+		
+		if not b or b[1] < 0:
+			self.contents.see(index)
+			
 	
 	def update_oldline(self):
 		line_idx = self.contents.index( tkinter.INSERT )
@@ -821,6 +829,20 @@ class Editor(tkinter.Toplevel):
 
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
+			
+		try:
+			line = self.tabs[self.tabindex].position
+			self.contents.focus_set()
+			self.contents.mark_set('insert', line)
+			self.ensure_idx_visibility(line)
+			
+		except tkinter.TclError:
+			self.tabs[self.tabindex].position = '1.0'
+			self.contents.focus_set()
+			self.contents.see('1.0')
+			self.contents.mark_set('insert', '1.0')
+		
+		
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 
@@ -832,21 +854,6 @@ class Editor(tkinter.Toplevel):
 			else:
 				self.token_can_update = False
 				
-			
-		try:
-			line = self.tabs[self.tabindex].position
-			self.contents.focus_set()
-			self.contents.mark_set('insert', line)
-			# ensure we see something before and after
-			self.contents.see('%s - 2 lines' % line)
-			self.update_idletasks()
-			self.contents.see('%s + 2 lines' % line)
-			
-		except tkinter.TclError:
-			self.tabs[self.tabindex].position = '1.0'
-			self.contents.focus_set()
-			self.contents.see('1.0')
-			self.contents.mark_set('insert', '1.0')
 			
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
@@ -894,6 +901,20 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.entry.delete(0, tkinter.END)
 		
+		
+		try:
+			line = self.tabs[self.tabindex].position
+			self.contents.focus_set()
+			self.contents.mark_set('insert', line)
+			self.ensure_idx_visibility(line)
+			
+		except tkinter.TclError:
+			self.tabs[self.tabindex].position = '1.0'
+			self.contents.focus_set()
+			self.contents.see('1.0')
+			self.contents.mark_set('insert', '1.0')
+			
+		
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 
@@ -904,22 +925,6 @@ class Editor(tkinter.Toplevel):
 			else:
 				self.token_can_update = False
 				
-		
-		try:
-			line = self.tabs[self.tabindex].position
-			self.contents.focus_set()
-			self.contents.mark_set('insert', line)
-			# ensure we see something before and after
-			self.contents.see('%s - 2 lines' % line)
-			#self.update_idletasks()
-			self.contents.see('%s + 2 lines' % line)
-			
-		except tkinter.TclError:
-			self.tabs[self.tabindex].position = '1.0'
-			self.contents.focus_set()
-			self.contents.see('1.0')
-			self.contents.mark_set('insert', '1.0')
-			
 			
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
@@ -1530,19 +1535,19 @@ class Editor(tkinter.Toplevel):
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
+			
+		line = errline + '.0'
+		self.contents.focus_set()
+		self.contents.mark_set('insert', line)
+		self.ensure_idx_visibility(line)
+		
+		
 		if self.tabs[self.tabindex].type == 'normal':
 			self.update_token_states()
 		
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		self.contents.focus_set()
 		
-		line = errline + '.0'
-		# ensure we see something before and after
-		self.contents.see('%s - 2 lines' % line)
-		self.update_idletasks()
-		self.contents.see('%s + 2 lines' % line)
-		self.contents.mark_set('insert', line)
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		self.state = 'normal'
 		self.update_title()
@@ -1692,20 +1697,20 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.entry.delete(0, tkinter.END)
 		
+		
+		line = self.tabs[self.tabindex].position
+		self.contents.focus_set()
+		self.contents.mark_set('insert', line)
+		self.ensure_idx_visibility(line)
+		
+		
 		if self.tabs[self.tabindex].type == 'normal':
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.update_token_states()
 			
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		self.contents.focus_set()
-
-		# ensure we see something before and after
-		pos = self.tabs[self.tabindex].position
-		self.contents.see('%s - 2 lines' % pos)
-		self.update_idletasks()
-		self.contents.see('%s + 2 lines' % pos)
-		self.contents.mark_set('insert', pos)
+		
 		
 ########## Run file Related End
 ########## Overrides Begin
@@ -1781,20 +1786,19 @@ class Editor(tkinter.Toplevel):
 			# is empty
 			return 'break'
 	
-		pos = self.contents.index(tkinter.INSERT)
+		line = self.contents.index(tkinter.INSERT)
 		self.contents.event_generate('<<Paste>>')
 				
 		if len(tmp) > 1:
 				
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			self.contents.tag_add('sel', pos, tkinter.INSERT)
+			self.contents.tag_add('sel', line, tkinter.INSERT)
 			
-			self.contents.mark_set('insert', pos)
-			self.contents.see('%s - 2 lines' % pos)
-			self.update_idletasks()
-			self.contents.see('%s + 2 lines' % pos)
+			self.contents.mark_set('insert', line)
+			
 				
-				
+		self.ensure_idx_visibility(line)
+			
 		if self.tabs[self.tabindex].filepath:
 			self.update_token_states()
 		
@@ -1902,11 +1906,11 @@ class Editor(tkinter.Toplevel):
 			prev_char = chars[2:3]
 			next_char = chars[-2:-1]
 		
-			quote_tests = map( bool, [
+			quote_tests = [
 						(prev_3chars in triples),
 						( (prev_2chars in doubles) and (next_char in singles) ),
 						( (prev_char in singles) and (next_2chars in doubles) )
-						])
+						]
 						
 			if any(quote_tests):
 				#print('#')
@@ -2463,21 +2467,22 @@ class Editor(tkinter.Toplevel):
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
+				
+				try:
+					line = self.tabs[self.tabindex].position
+					self.contents.focus_set()
+					self.contents.mark_set('insert', line)
+					self.ensure_idx_visibility(line)
+					
+				except tkinter.TclError:
+					self.tabs[self.tabindex].position = '1.0'
+				
+				
 				self.update_token_states()
 				
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 				
-				try:
-					line = self.tabs[self.tabindex].position
-					self.contents.focus_set()
-					# ensure we see something before and after
-					self.contents.see('%s - 2 lines' % line)
-					self.update_idletasks()
-					self.contents.see('%s + 2 lines' % line)
-					self.contents.mark_set('insert', line)
-				except tkinter.TclError:
-					self.tabs[self.tabindex].position = '1.0'
 				
 		else:
 			# skip unnecessary disk-writing silently
@@ -2518,11 +2523,9 @@ class Editor(tkinter.Toplevel):
 				line = tmp + '.0'
 			
 			self.contents.focus_set()
-			# ensure we see something before and after
-			self.contents.see('%s - 2 lines' % line)
-			self.update_idletasks()
-			self.contents.see('%s + 2 lines' % line)
 			self.contents.mark_set('insert', line)
+			self.ensure_idx_visibility(line)
+			
 			
 			try:
 				pos = self.contents.index(tkinter.INSERT)
@@ -2548,11 +2551,9 @@ class Editor(tkinter.Toplevel):
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
-			# ensure we see something before and after
-			self.contents.see('%s - 2 lines' % line)
-			self.update_idletasks()
-			self.contents.see('%s + 2 lines' % line)
 			self.contents.mark_set('insert', line)
+			self.ensure_idx_visibility(line)
+			
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'
 		
@@ -2591,24 +2592,24 @@ class Editor(tkinter.Toplevel):
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
+		try:
+			line = self.tabs[self.tabindex].position
+			self.contents.focus_set()
+			self.contents.mark_set('insert', line)
+			self.ensure_idx_visibility(line)
+			
+		except tkinter.TclError:
+			self.tabs[self.tabindex].position = '1.0'
+		
+		
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		
 			self.update_token_states()
 			
+			
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		
-		try:
-			line = self.tabs[self.tabindex].position
-			self.contents.focus_set()
-			# ensure we see something before and after
-			self.contents.see('%s - 2 lines' % line)
-			self.update_idletasks()
-			self.contents.see('%s + 2 lines' % line)
-			self.contents.mark_set('insert', line)
-		except tkinter.TclError:
-			self.tabs[self.tabindex].position = '1.0'
 		
 		self.bind("<Escape>", self.do_nothing)
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
@@ -2768,14 +2769,12 @@ class Editor(tkinter.Toplevel):
 	def check_next_event(self, event=None):
 		
 		if event.keysym == 'Left':
-			pos = self.lastcursorpos
+			line = self.lastcursorpos
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			self.contents.mark_set('insert', pos)
+			self.contents.mark_set('insert', line)
+			self.ensure_idx_visibility(line)
 			
-			self.contents.see('%s - 2 lines' % pos)
-			self.update_idletasks()
-			self.contents.see('%s + 2 lines' % pos)
-		
+			
 			self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
 			self.contents.unbind("<Any-Button>", funcid=self.anybutid)
 		
@@ -2832,11 +2831,10 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		self.contents.tag_add('sel', pos, lastpos)
 		self.contents.mark_set('insert', lastpos)
+		line = pos
+		self.ensure_idx_visibility(line)
 		
-		self.contents.see('%s - 2 lines' % pos)
-		self.update_idletasks()
-		self.contents.see('%s + 2 lines' % pos)
-		
+					
 		return "break"
 
 
@@ -2863,10 +2861,9 @@ class Editor(tkinter.Toplevel):
 		# change color
 		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
-		# ensure we see something before and after
-		self.contents.see('%s - 2 lines' % self.search_idx[0])
-		self.update_idletasks()
-		self.contents.see('%s + 2 lines' % self.search_idx[0])
+		line = self.search_idx[0]
+		self.ensure_idx_visibility(line)
+		
 		
 		# compare found to match
 		ref = self.contents.tag_ranges('focus')[0]
@@ -2907,10 +2904,9 @@ class Editor(tkinter.Toplevel):
 		# change color
 		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
-		# ensure we see something before and after
-		self.contents.see('%s - 2 lines' % self.search_idx[0])
-		self.update_idletasks()
-		self.contents.see('%s + 2 lines' % self.search_idx[0])
+		line = self.search_idx[0]
+		self.ensure_idx_visibility(line)
+		
 		
 		# compare found to match
 		ref = self.contents.tag_ranges('focus')[0]
@@ -3184,9 +3180,9 @@ class Editor(tkinter.Toplevel):
 			pos = "%s + %dc" % (pos, wordlen+1)
 			
 		# show lastpos but dont put cursor on it
-		self.contents.see('%s - 2 lines' % lastpos )
-		self.update_idletasks()
-		self.contents.see('%s + 2 lines' % lastpos )
+		line = lastpos
+		self.ensure_idx_visibility(line)
+
 
 		self.stop_search()
 		
