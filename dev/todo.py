@@ -6,6 +6,22 @@
 
 # remove printings before build
 
+# search no leave tags, only replace all
+
+# move start to stripped?
+
+# fast view changes are blinky
+
+# if inserting and line is same as before tokens not updated, but dont want to compare linenums
+
+
+# show err position 2 lines over curline
+# delete and insert is before sync
+
+# see +2 -2												ok ?
+
+# err args
+
 # see check if visible if not then see()				ok ?
 # sync need line check
 # when view change
@@ -13,7 +29,6 @@
 # check syntax when update tokens
 
 # open braces trigger tokenError ?
-# delete is before sync
 
 
 ''' sdff

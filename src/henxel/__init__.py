@@ -417,7 +417,7 @@ class Editor(tkinter.Toplevel):
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
+			self.contents.see(line)
 			
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'
@@ -430,8 +430,6 @@ class Editor(tkinter.Toplevel):
 		###############################
 		#
 		# Syntax-highlight Begin #################
-		
-		self.oldline = ''
 		
 		self.keywords = [
 						'False',
@@ -513,8 +511,12 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_raise('match')
 		self.contents.tag_raise('focus')
 		
+		
 		self.token_err = True
 		self.view_changed = True
+		self.oldline = ''
+		self.oldlinenum = 0
+		
 		
 		if ( self.tabs[self.tabindex].type == 'normal' ) and \
 				( '.py' in self.tabs[self.tabindex].filepath.suffix ) and self.syntax:
@@ -526,7 +528,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 		
 		####  Syntax-highlight End  ######################################
-	
+		
 		# Layout Begin
 		################################
 		self.rowconfigure(1, weight=1)
@@ -575,10 +577,19 @@ class Editor(tkinter.Toplevel):
 	
 	def ensure_idx_visibility(self, index):
 		
-		b = self.contents.bbox(index)
+		start = self.contents.bbox('%s - 2lines' % index)
+		end = self.contents.bbox('%s + 2lines' % index)
 		
-		if not b or b[1] < 0:
-			self.contents.see(index)
+		tests = [
+				( not start ),
+				( not end ),
+				( start and start[1] < 0 )
+				]
+		
+		if any(tests):
+			self.contents.see('%s + 2lines' % index)
+			self.update_idletasks()
+			self.contents.see('%s - 2lines' % index)
 			
 	
 	def update_oldline(self):
@@ -640,6 +651,10 @@ class Editor(tkinter.Toplevel):
 			#  tag alter triggers this event if font changes, like from normal to bold.
 			# --> need to check if line is changed to prevent self-trigger
 			line_idx = self.contents.index( tkinter.INSERT )
+			#linenum = line_idx.split('.')[0]
+			prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT )
+			
+			
 			lineend = '%s lineend' % line_idx
 			linestart = '%s linestart' % line_idx
 			
@@ -647,13 +662,17 @@ class Editor(tkinter.Toplevel):
 			
 			if self.oldline != tmp:
 				#print('sync')
+				#print('sync')
 				self.oldline = tmp
+				#self.oldlinenum = linenum
 				self.update_tokens(start=linestart, end=lineend, line=tmp)
 				self.view_changed = False
 			
 			elif self.view_changed:
 				#print('sync')
+				#print('sync')
 				self.oldline = tmp
+				#self.oldlinenum = linenum
 				self.update_tokens()
 				self.view_changed = False
 				
@@ -834,7 +853,7 @@ class Editor(tkinter.Toplevel):
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
+			self.contents.see(line)
 			
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'
@@ -845,14 +864,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
-
-			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-				self.token_err = True
-				self.token_can_update = True
-				self.view_changed = True
-			
-			else:
-				self.token_can_update = False
+			self.update_token_states()
 				
 			
 		self.contents.edit_reset()
@@ -896,17 +908,23 @@ class Editor(tkinter.Toplevel):
 		
 		self.tabindex = idx
 		self.tabs[self.tabindex].active = True
+		self.entry.delete(0, tkinter.END)
 
+
+		if self.tabs[self.tabindex].filepath:
+			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+			self.update_token_states()
+			
+			
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-		self.entry.delete(0, tkinter.END)
-		
+
 		
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
+			self.contents.see(line)
 			
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'
@@ -914,17 +932,6 @@ class Editor(tkinter.Toplevel):
 			self.contents.see('1.0')
 			self.contents.mark_set('insert', '1.0')
 			
-		
-		if self.tabs[self.tabindex].filepath:
-			self.entry.insert(0, self.tabs[self.tabindex].filepath)
-
-			if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
-				self.token_err = True
-				self.token_can_update = True
-				self.view_changed = True
-			else:
-				self.token_can_update = False
-				
 			
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
@@ -1133,20 +1140,12 @@ class Editor(tkinter.Toplevel):
 	
 		else:
 			self.syntax = True
-			
-			if ( self.tabs[self.tabindex].type == 'normal' ) and \
-				( '.py' in self.tabs[self.tabindex].filepath.suffix ):
-				self.token_err = True
-				self.token_can_update = True
-				self.view_changed = True
-			else:
-				self.token_can_update = False
-		
+			self.update_token_states()
 			
 			return 'break'
 			
 			
-	def update_token_states(self,):
+	def update_token_states(self):
 	
 		if '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax:
 			self.token_err = True
@@ -1173,8 +1172,7 @@ class Editor(tkinter.Toplevel):
 			test1 = [self.token_err]
 			
 			
-		if any(test1) or self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT ) in ['#', "'", '"']:
-			
+		if any(test1):
 			start_idx = '1.0'
 			end_idx = tkinter.END
 			#print('err')
@@ -1249,17 +1247,14 @@ class Editor(tkinter.Toplevel):
 ##				item = getattr( e, attr)
 ##				print( attr,': ', item )
 
-			print('Indentation errline: ', self.contents.index(tkinter.INSERT) )
+			#print( e.args[0], '\nIndentation errline: ', self.contents.index(tkinter.INSERT) )
 			
 			flag_err = True
 			self.token_err = True
 			
 		except tokenize.TokenError as ee:
-			
-			if 'EOF in multi-line' in ee.args[0]:
-				print( 'errline: ', self.contents.index(tkinter.INSERT) )
-			else:
-				print(ee)
+		
+			#print( ee.args[0], '\nerrline: ', self.contents.index(tkinter.INSERT) )
 			
 			flag_err = True
 			self.token_err = True
@@ -1539,7 +1534,7 @@ class Editor(tkinter.Toplevel):
 		line = errline + '.0'
 		self.contents.focus_set()
 		self.contents.mark_set('insert', line)
-		self.ensure_idx_visibility(line)
+		self.contents.see(line)
 		
 		
 		if self.tabs[self.tabindex].type == 'normal':
@@ -1701,7 +1696,7 @@ class Editor(tkinter.Toplevel):
 		line = self.tabs[self.tabindex].position
 		self.contents.focus_set()
 		self.contents.mark_set('insert', line)
-		self.ensure_idx_visibility(line)
+		self.contents.see(line)
 		
 		
 		if self.tabs[self.tabindex].type == 'normal':
@@ -1797,7 +1792,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', line)
 			
 				
-		self.ensure_idx_visibility(line)
+		self.contents.see(line)
 			
 		if self.tabs[self.tabindex].filepath:
 			self.update_token_states()
@@ -1907,6 +1902,7 @@ class Editor(tkinter.Toplevel):
 			next_char = chars[-2:-1]
 		
 			quote_tests = [
+						(prev_char == '#'),
 						(prev_3chars in triples),
 						( (prev_2chars in doubles) and (next_char in singles) ),
 						( (prev_char in singles) and (next_2chars in doubles) )
@@ -2472,7 +2468,7 @@ class Editor(tkinter.Toplevel):
 					line = self.tabs[self.tabindex].position
 					self.contents.focus_set()
 					self.contents.mark_set('insert', line)
-					self.ensure_idx_visibility(line)
+					self.contents.see(line)
 					
 				except tkinter.TclError:
 					self.tabs[self.tabindex].position = '1.0'
@@ -2596,7 +2592,7 @@ class Editor(tkinter.Toplevel):
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
+			self.contents.see(line)
 			
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'
@@ -2983,11 +2979,8 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 			
-		# Leave tags on, if not normal replace, Esc clears.
-		if self.state == 'search':
-			self.bind("<Escape>", self.clear_search_tags)
-			
-		elif self.state == 'replace_all':
+		# Leave tags on, if replace_all, Esc clears.
+		if self.state == 'replace_all':
 			self.contents.tag_remove('match', '1.0', tkinter.END)
 			wordlen = len(self.new_word)
 			pos = '1.0'
@@ -3002,7 +2995,7 @@ class Editor(tkinter.Toplevel):
 
 			self.bind("<Escape>", self.clear_search_tags)
 			
-		elif self.state == 'replace':
+		else:
 			self.contents.tag_remove('match', '1.0', tkinter.END)
 			self.bind("<Escape>", self.do_nothing)
 			
