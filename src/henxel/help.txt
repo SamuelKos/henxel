@@ -19,7 +19,7 @@
 		Ctrl-Super-Return	run file
 		
 		Ctrl-a  Select all
-		Ctrl-c  Copy
+		Ctrl-c  Copy		Try this: Ctrl-c-f
 		Ctrl-v  Paste
 		Ctrl-z  Undo
 		Ctrl-Z  Redo
@@ -30,7 +30,7 @@
 		Alt-l   Toggle linenumbers
 		Alt-x   Toggle syntax highlight
 		
-		Alt-n   Open new tab
+		Alt-n   Open new tab			Try this: Alt-n-Return
 		Ctrl-d  Close current tab
 		Alt-w   Walk tabs forward
 		Alt-q   Walk tabs backwards

@@ -1,7 +1,11 @@
 # Changelog
-* To version: 	0.1.3
+* To version: 	0.1.4
 * From version:	0.0.3
 
+
+# 0.1.4
+# Updating whole-files syntax is now much faster like when walking tabs etc. It is done by calling update_tokens directly, without waiting for sync-event. Sync-event is still used to detect changes and syntax-highlighting is now much ahead last version.
+# Only replace_all leaves tags on now, after searching.
 
 # 0.1.3
 * Unified tokenfuncs.

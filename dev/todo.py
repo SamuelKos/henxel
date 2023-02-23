@@ -5,20 +5,12 @@
 # >>> e=todo.Ed()
 
 
-#
-#
 
 
 
 
 # remove printings before build
 
-# updating whole file with sync is slow,
-# better call update_tokens directly
-
-# search no leave tags, only replace all
-
-# fast view changes are blinky no more					ok ?
 
 
 #############
