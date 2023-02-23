@@ -1154,7 +1154,15 @@ class Editor(tkinter.Toplevel):
 				self.token_err = True
 				self.update_tokens(start='1.0', end=tkinter.END)
 				self.token_can_update = True
-	
+			
+			else:
+				self.token_err = False
+				self.token_can_update = False
+			
+		else:
+			self.token_err = False
+			self.token_can_update = False
+			
 	
 	def update_tokens(self, start=None, end=None, line=None):
 	
@@ -1261,7 +1269,11 @@ class Editor(tkinter.Toplevel):
 			flag_err = True
 			self.token_err = True
 			
+								
+##		if flag_err:
+##			print('err')
 			
+
 		if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
 			#print('ok')
 			self.token_err = False
