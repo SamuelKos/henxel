@@ -4,13 +4,23 @@
 # >>> import todo
 # >>> e=todo.Ed()
 
+
+#
+#
+
+
+
+
 # remove printings before build
+
+# updating whole file with sync is slow,
+# better call update_tokens directly
 
 # search no leave tags, only replace all
 
 # move start to stripped?
 
-# fast view changes are blinky
+# fast view changes are blinky no more					ok ?
 
 # if inserting and line is same as before tokens not updated, but dont want to compare linenums
 
@@ -29,10 +39,9 @@
 # check syntax when update tokens
 
 # open braces trigger tokenError ?
-
-
-''' sdff
+''' asdd
 '''
+
 
 import tkinter
 import tkinter.font
