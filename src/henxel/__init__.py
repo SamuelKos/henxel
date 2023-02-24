@@ -436,6 +436,7 @@ class Editor(tkinter.Toplevel):
 		# Syntax-highlight Begin #################
 		
 		self.keywords = [
+						'self',
 						'False',
 						'True',
 						'None',
@@ -484,12 +485,21 @@ class Editor(tkinter.Toplevel):
 						'assert',
 						'yield'
 						]
+						
+		self.tests = [
+					'not',
+					'or',
+					'and',
+					'in',
+					'as'
+					]
 		
 		red = r'#c01c28'
 		cyan = r'#2aa1b3'
 		magenta = r'#a347ba'
 		green = r'#26a269'
 		orange = r'#e95b38'
+		gray = r'#508490'
 		
 		self.tagnames = [
 				'keywords',
@@ -497,7 +507,8 @@ class Editor(tkinter.Toplevel):
 				'bools',
 				'strings',
 				'comments',
-				'breaks'
+				'breaks',
+				'calls'
 				]
 		
 		self.boldfont = self.font.copy()
@@ -510,6 +521,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.tag_config('bools', foreground=magenta)
 		self.contents.tag_config('strings', foreground=green)
+		self.contents.tag_config('calls', foreground=gray)
 		
 		# search tags have highest priority
 		self.contents.tag_raise('match')
@@ -1213,28 +1225,45 @@ class Editor(tkinter.Toplevel):
 				# Retag:
 				for token in res:
 				
-					if ( token.type == tokenize.NAME and token.string in self.keywords ) or \
-						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ):
+					if token.type == tokenize.NAME or \
+						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
+						( token.type == tokenize.OP and token.string == '(' ):
 						
 						# initiate indexes with correct linenum
 						s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
 						e0, e1 = map(str, [ token.end[0] + linenum - 1, token.end[1] ] )
 						idx_start = s0 + '.' + s1
 						idx_end = e0 + '.' + e1
+						
+						self.contents.get( '%s - 1c' % idx_start )
 					
 							
 						if token.type == tokenize.NAME:
+							
+							#lastoken = token
+							last_idx_start = idx_start
+							last_idx_end = idx_end
+							
+							if token.string in self.keywords:
+							
+								if token.string == 'self':
+									self.contents.tag_add('calls', idx_start, idx_end)
+								
+								elif token.string in self.bools:
+									self.contents.tag_add('bools', idx_start, idx_end)
+									
+								elif token.string in self.breaks:
+									self.contents.tag_add('breaks', idx_start, idx_end)
+									
+								else:
+									self.contents.tag_add('keywords', idx_start, idx_end)
+								
 						
-							if token.string in self.bools:
-								self.contents.tag_add('bools', idx_start, idx_end)
+						# calls
+						elif token.type == tokenize.OP:
+							if self.contents.get( '%s - 1c' % idx_start, idx_start ).strip():
+								self.contents.tag_add('calls', last_idx_start, last_idx_end)
 								
-							elif token.string in self.breaks:
-								self.contents.tag_add('breaks', idx_start, idx_end)
-								
-							else:
-								self.contents.tag_add('keywords', idx_start, idx_end)
-								
-				
 						elif token.type == tokenize.STRING:
 							self.contents.tag_add('strings', idx_start, idx_end)
 							
@@ -1254,20 +1283,23 @@ class Editor(tkinter.Toplevel):
 			# This Error needs info about whole block, one line is not enough, so quite rare.
 			#print( e.args[0], '\nIndentation errline: ', self.contents.index(tkinter.INSERT) )
 			
-			flag_err = True
-			self.token_err = True
+			#flag_err = True
+			#self.token_err = True
+			pass
 			
 		except tokenize.TokenError as ee:
-		
+			
 			# This could be used with something
 			#print( ee.args[0], '\nerrline: ', self.contents.index(tkinter.INSERT) )
 			#print(ee.args)
-			flag_err = True
-			self.token_err = True
+			
+			if 'multi-line string' in ee.args[0]:
+				flag_err = True
+				self.token_err = True
 			
 																				
-##		if flag_err:
-##			print('err')
+		if flag_err:
+			print('err')
 			
 
 		if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):

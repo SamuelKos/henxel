@@ -8,6 +8,11 @@
 # from CHANGELOG.md to CHANGELOG			ok ?
 # get version number						ok ?
 
+# no eof statement							ok ?
+
+# last name if char before ( tag lastname
+
+# check ken_states
 
 
 
