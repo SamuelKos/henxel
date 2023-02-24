@@ -5,6 +5,12 @@
 # >>> e=todo.Ed()
 
 
+# from CHANGELOG.md to CHANGELOG			ok ?
+# get version number						ok ?
+
+
+
+
 
 
 
@@ -14,8 +20,9 @@
 
 
 #############
-''' asdd
+''' asd
 '''
+
 
 
 import tkinter

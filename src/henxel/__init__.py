@@ -44,6 +44,11 @@ import json
 import importlib.resources
 import sys
 
+# get version, (or with file VERSION, then include in MANIFEST.in)
+##import importlib.metadata as m
+##print( m.version(__name__) )
+
+
 # used in syntax highlight
 import tokenize
 import io
@@ -412,19 +417,18 @@ class Editor(tkinter.Toplevel):
 
 
 		# set cursor pos:
-		try:
+		line = self.tabs[self.tabindex].position
+		self.contents.focus_set()
 		
-			line = self.tabs[self.tabindex].position
-			self.contents.focus_set()
+		try:
 			self.contents.mark_set('insert', line)
-			self.contents.see(line)
+			self.ensure_idx_visibility(line)
 			
 		except tkinter.TclError:
-			self.tabs[self.tabindex].position = '1.0'
-			self.contents.focus_set()
-			self.contents.see('1.0')
 			self.contents.mark_set('insert', '1.0')
-		
+			self.tabs[self.tabindex].position = '1.0'
+			self.contents.see('1.0')
+			
 		
 		# Widgets are configured
 		###############################
@@ -585,15 +589,6 @@ class Editor(tkinter.Toplevel):
 			self.update_idletasks()
 			self.contents.see('%s - 2lines' % index)
 			
-	
-	def update_oldline(self):
-		line_idx = self.contents.index( tkinter.INSERT )
-		lineend = '%s lineend' % line_idx
-		linestart = '%s linestart' % line_idx
-		
-		return self.contents.get( linestart, lineend )
-		
-		
 		
 	def quit_me(self):
 	
@@ -840,18 +835,18 @@ class Editor(tkinter.Toplevel):
 		
 		self.do_syntax()
 		
-			
+		# set cursor pos
+		line = self.tabs[self.tabindex].position
+		self.contents.focus_set()
+		
 		try:
-			line = self.tabs[self.tabindex].position
-			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
-			self.contents.see(line)
+			self.ensure_idx_visibility(line)
 			
 		except tkinter.TclError:
-			self.tabs[self.tabindex].position = '1.0'
-			self.contents.focus_set()
-			self.contents.see('1.0')
 			self.contents.mark_set('insert', '1.0')
+			self.tabs[self.tabindex].position = '1.0'
+			self.contents.see('1.0')
 		
 			
 		self.contents.edit_reset()
@@ -908,19 +903,20 @@ class Editor(tkinter.Toplevel):
 
 		self.do_syntax()
 
+
+		# set cursor pos
+		line = self.tabs[self.tabindex].position
+		self.contents.focus_set()
 		
 		try:
-			line = self.tabs[self.tabindex].position
-			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
-			self.contents.see(line)
+			self.ensure_idx_visibility(line)
 			
 		except tkinter.TclError:
-			self.tabs[self.tabindex].position = '1.0'
-			self.contents.focus_set()
-			self.contents.see('1.0')
 			self.contents.mark_set('insert', '1.0')
-			
+			self.tabs[self.tabindex].position = '1.0'
+			self.contents.see('1.0')
+
 			
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
@@ -1173,8 +1169,8 @@ class Editor(tkinter.Toplevel):
 			linecontents = line
 			test1 = [
 				self.token_err,
-				( '"""' in linecontents ),
-				( "'''" in linecontents )
+				( '"""' in linecontents and '#' in linecontents ),
+				( "'''" in linecontents and '#' in linecontents )
 				]
 		else:
 			test1 = [self.token_err]
@@ -1183,7 +1179,7 @@ class Editor(tkinter.Toplevel):
 		if any(test1):
 			start_idx = '1.0'
 			end_idx = tkinter.END
-			#print('err')
+			print('err')
 	
 		# check if inside multiline string
 		elif 'strings' in self.contents.tag_names(tkinter.INSERT) and \
@@ -1263,19 +1259,19 @@ class Editor(tkinter.Toplevel):
 			
 		except tokenize.TokenError as ee:
 		
-			# This could be used to something someday somewhere
+			# This could be used with something
 			#print( ee.args[0], '\nerrline: ', self.contents.index(tkinter.INSERT) )
-			
+			#print(ee.args)
 			flag_err = True
 			self.token_err = True
 			
-								
+																				
 ##		if flag_err:
 ##			print('err')
 			
 
 		if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
-			#print('ok')
+			print('ok')
 			self.token_err = False
 			
 				
@@ -1560,11 +1556,12 @@ class Editor(tkinter.Toplevel):
 			self.token_can_update = True
 		
 		
+		# set cursor pos
 		line = errline + '.0'
 		self.contents.focus_set()
 		self.contents.mark_set('insert', line)
-		self.contents.see(line)
-		
+		self.ensure_idx_visibility(line)
+					
 		
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
@@ -1727,10 +1724,11 @@ class Editor(tkinter.Toplevel):
 		self.do_syntax()
 		
 		
+		# set cursor pos
 		line = self.tabs[self.tabindex].position
 		self.contents.focus_set()
 		self.contents.mark_set('insert', line)
-		self.contents.see(line)
+		self.ensure_idx_visibility(line)
 			
 			
 		self.contents.edit_reset()
@@ -1825,8 +1823,7 @@ class Editor(tkinter.Toplevel):
 		self.do_syntax()
 		
 		
-		self.contents.see(line)
-		
+		self.ensure_idx_visibility(line)
 		return 'break'
 
 
@@ -1940,8 +1937,7 @@ class Editor(tkinter.Toplevel):
 						
 			if any(quote_tests):
 				#print('#')
-				
-				self.do_syntax()
+				self.token_err = True
 				
 					
 		#print('deleting')
@@ -2510,11 +2506,12 @@ class Editor(tkinter.Toplevel):
 				self.do_syntax()
 				
 				
+				# set cursor pos
 				try:
 					line = self.tabs[self.tabindex].position
 					self.contents.focus_set()
 					self.contents.mark_set('insert', line)
-					self.contents.see(line)
+					self.ensure_idx_visibility(line)
 					
 				except tkinter.TclError:
 					self.tabs[self.tabindex].position = '1.0'
@@ -2588,6 +2585,7 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		self.update_title()
 		
+		# set cursor pos
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
@@ -2640,11 +2638,12 @@ class Editor(tkinter.Toplevel):
 		self.do_syntax()
 		
 		
+		# set cursor pos
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
-			self.contents.see(line)
+			self.ensure_idx_visibility(line)
 			
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'

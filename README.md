@@ -137,7 +137,7 @@ are doing something with GUI this is what you want.
 
 
 # More resources
-[Changelog](https://github.com/SamuelKos/henxel/blob/main/CHANGELOG.md)
+[Changelog](https://github.com/SamuelKos/henxel/blob/main/CHANGELOG)
 
 # Licence
 This project is licensed under the terms of the GNU General Public License v3.0.
