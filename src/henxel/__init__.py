@@ -516,7 +516,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.tag_config('keywords', font=self.boldfont, foreground=cyan)
 		self.contents.tag_config('numbers', font=self.boldfont, foreground=red)
-		self.contents.tag_config('comments', font=self.boldfont, foreground=red)
+		self.contents.tag_config('comments', font=self.boldfont, foreground=gray)
 		self.contents.tag_config('breaks', font=self.boldfont, foreground=orange)
 		
 		self.contents.tag_config('bools', foreground=magenta)
