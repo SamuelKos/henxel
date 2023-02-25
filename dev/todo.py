@@ -6,17 +6,19 @@
 
 
 # from CHANGELOG.md to CHANGELOG			ok ?
-# get version number						ok ?
+# get version number put to help			ok ?
 
 # no eof statement							ok ?
 
-# last name if char before ( tag lastname
+# last name if char before ( tag lastname	ok ?
 
-# check ken_states
+# paste			ok ?
+# comment range	ok?
+# tabify		ok?
 
+# check token update
 
-
-
+# return over
 
 
 
@@ -27,8 +29,6 @@
 #############
 ''' asd
 '''
-
-
 
 import tkinter
 import tkinter.font

@@ -500,6 +500,7 @@ class Editor(tkinter.Toplevel):
 		green = r'#26a269'
 		orange = r'#e95b38'
 		gray = r'#508490'
+		#blue = r'#68c4e0'
 		
 		self.tagnames = [
 				'keywords',
@@ -514,14 +515,15 @@ class Editor(tkinter.Toplevel):
 		self.boldfont = self.font.copy()
 		self.boldfont.config(weight='bold')
 		
-		self.contents.tag_config('keywords', font=self.boldfont, foreground=cyan)
+		self.contents.tag_config('keywords', font=self.boldfont, foreground='deep sky blue')
 		self.contents.tag_config('numbers', font=self.boldfont, foreground=red)
 		self.contents.tag_config('comments', font=self.boldfont, foreground=gray)
 		self.contents.tag_config('breaks', font=self.boldfont, foreground=orange)
+		self.contents.tag_config('calls', font=self.boldfont, foreground=cyan)
 		
 		self.contents.tag_config('bools', foreground=magenta)
 		self.contents.tag_config('strings', foreground=green)
-		self.contents.tag_config('calls', foreground=gray)
+		self.contents.tag_config('selfs', foreground=gray)
 		
 		# search tags have highest priority
 		self.contents.tag_raise('match')
@@ -533,7 +535,7 @@ class Editor(tkinter.Toplevel):
 		self.token_can_update = False
 		self.oldlinenum = self.contents.index(tkinter.INSERT).split('.')[0]
 		
-		self.do_syntax()
+		self.do_syntax(all=True)
 			
 		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 		
@@ -653,7 +655,7 @@ class Editor(tkinter.Toplevel):
 			# --> need to check if line is changed to prevent self-trigger
 			line_idx = self.contents.index( tkinter.INSERT )
 			linenum = line_idx.split('.')[0]
-			prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT )
+			#prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT )
 			
 			
 			lineend = '%s lineend' % line_idx
@@ -662,6 +664,7 @@ class Editor(tkinter.Toplevel):
 			tmp = self.contents.get( linestart, lineend )
 			
 			if self.oldline != tmp or self.oldlinenum != linenum:
+			
 				#print('sync')
 				#print('sync')
 				self.oldline = tmp
@@ -845,7 +848,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 		
-		self.do_syntax()
+		self.do_syntax(all=True)
 		
 		# set cursor pos
 		line = self.tabs[self.tabindex].position
@@ -908,12 +911,12 @@ class Editor(tkinter.Toplevel):
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			
-			
+		
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 
-
-		self.do_syntax()
+	
+		self.do_syntax(all=True)
 
 
 		# set cursor pos
@@ -1138,7 +1141,7 @@ class Editor(tkinter.Toplevel):
 	
 		else:
 			self.syntax = True
-			self.do_syntax()
+			self.do_syntax(all=True)
 			
 			return 'break'
 			
@@ -1148,21 +1151,16 @@ class Editor(tkinter.Toplevel):
 		return '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax
 		
 		
-	def do_syntax(self):
+	def do_syntax(self, all=False):
 	
 		if self.tabs[self.tabindex].filepath:
 			if self.can_do_syntax():
 			
-				lineend = '%s lineend' % tkinter.INSERT
-				linestart = '%s linestart' % tkinter.INSERT
-				
-				tmp = self.contents.get( linestart, lineend )
-				self.oldline = tmp
-				
 				self.token_err = True
-				self.update_tokens(start='1.0', end=tkinter.END)
+				content_is_uptodate = all
+				self.update_tokens(start='1.0', end=tkinter.END, all=content_is_uptodate)
 				self.token_can_update = True
-			
+				
 			else:
 				self.token_err = False
 				self.token_can_update = False
@@ -1172,58 +1170,63 @@ class Editor(tkinter.Toplevel):
 			self.token_can_update = False
 			
 	
-	def update_tokens(self, start=None, end=None, line=None):
+	def update_tokens(self, start=None, end=None, line=None, all=False):
 	
 		start_idx = start
 		end_idx = end
 		
-		if line:
-			linecontents = line
-			test1 = [
-				self.token_err,
-				( '"""' in linecontents and '#' in linecontents ),
-				( "'''" in linecontents and '#' in linecontents )
-				]
+		if not all:
+			if line:
+				linecontents = line
+				test1 = [
+					self.token_err,
+					( '"""' in linecontents and '#' in linecontents ),
+					( "'''" in linecontents and '#' in linecontents )
+					]
+			else:
+				test1 = [self.token_err]
+				
+				
+			if any(test1):
+				start_idx = '1.0'
+				end_idx = tkinter.END
+				#print('err')
+		
+			# check if inside multiline string
+			elif 'strings' in self.contents.tag_names(tkinter.INSERT) and \
+					not ( start_idx == '1.0' and end_idx == tkinter.END ):
+				
+				try:
+					s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
+					l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
+				
+					if l0 != l1:
+						start_idx, end_idx = (s, e)
+		
+				except ValueError:
+					pass
+			
+			
+			tmp = self.contents.get( start_idx, end_idx )
+		
 		else:
-			test1 = [self.token_err]
+			tmp = self.tabs[self.tabindex].contents
 			
-			
-		if any(test1):
-			start_idx = '1.0'
-			end_idx = tkinter.END
-			print('err')
-	
-		# check if inside multiline string
-		elif 'strings' in self.contents.tag_names(tkinter.INSERT) and \
-				not ( start_idx == '1.0' and end_idx == tkinter.END ):
-			
-			try:
-				s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
-				l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
-			
-				if l0 != l1:
-					start_idx, end_idx = (s, e)
-	
-			except ValueError:
-				pass
-			
-			
-		tmp = self.contents.get( start_idx, end_idx )
 		linenum = int(start_idx.split('.')[0])
 		flag_err = False
-		
+		#print(self.token_err)
 		
 		try:
 			with io.BytesIO( tmp.encode('utf-8') ) as fo:
 			
-				res = tokenize.tokenize( fo.readline )
+				tokens = tokenize.tokenize( fo.readline )
 			
 				# Remove old tags:
 				for tag in self.tagnames:
 					self.contents.tag_remove( tag, start_idx, end_idx )
 					
 				# Retag:
-				for token in res:
+				for token in tokens:
 				
 					if token.type == tokenize.NAME or \
 						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
@@ -1235,8 +1238,6 @@ class Editor(tkinter.Toplevel):
 						idx_start = s0 + '.' + s1
 						idx_end = e0 + '.' + e1
 						
-						self.contents.get( '%s - 1c' % idx_start )
-					
 							
 						if token.type == tokenize.NAME:
 							
@@ -1247,7 +1248,7 @@ class Editor(tkinter.Toplevel):
 							if token.string in self.keywords:
 							
 								if token.string == 'self':
-									self.contents.tag_add('calls', idx_start, idx_end)
+									self.contents.tag_add('selfs', idx_start, idx_end)
 								
 								elif token.string in self.bools:
 									self.contents.tag_add('bools', idx_start, idx_end)
@@ -1298,12 +1299,12 @@ class Editor(tkinter.Toplevel):
 				self.token_err = True
 			
 																				
-		if flag_err:
-			print('err')
+##		if flag_err:
+##			print('err')
 			
 
 		if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
-			print('ok')
+			#print('ok')
 			self.token_err = False
 			
 				
@@ -1371,6 +1372,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('numbers', font=self.boldfont)
 		self.contents.tag_config('comments', font=self.boldfont)
 		self.contents.tag_config('breaks', font=self.boldfont)
+		self.contents.tag_config('calls', font=self.boldfont)
 		
 					
 	def font_choose(self, event=None):
@@ -1753,7 +1755,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 		
-		self.do_syntax()
+		self.do_syntax(all=True)
 		
 		
 		# set cursor pos
@@ -1851,9 +1853,8 @@ class Editor(tkinter.Toplevel):
 			
 			self.contents.mark_set('insert', line)
 			
+			self.do_syntax()
 			
-		self.do_syntax()
-		
 		
 		self.ensure_idx_visibility(line)
 		return 'break'
@@ -1971,7 +1972,7 @@ class Editor(tkinter.Toplevel):
 				#print('#')
 				self.token_err = True
 				
-					
+				
 		#print('deleting')
 				
 		return
@@ -2187,13 +2188,13 @@ class Editor(tkinter.Toplevel):
 			tmp = self.contents.get(start, end).splitlines()
 			tmp[:] = [self.tabify(line) for line in tmp]
 			tmp = ''.join(tmp)
-			
+	
+
 			self.contents.delete(start, end)
 			self.contents.insert(start, tmp)
 			
 			
-			# Use range here instead of whole file?
-			self.do_syntax()
+			self.update_tokens(start=start, end=end)
 						
 															
 			self.contents.edit_separator()
@@ -2318,7 +2319,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
 				
-				self.do_syntax()
+				self.do_syntax(all=True)
 				
 				
 				self.contents.focus_set()
@@ -2535,7 +2536,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 				
-				self.do_syntax()
+				self.do_syntax(all=True)
 				
 				
 				# set cursor pos
@@ -2667,7 +2668,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 		
-		self.do_syntax()
+		self.do_syntax(all=True)
 		
 		
 		# set cursor pos
@@ -2779,19 +2780,22 @@ class Editor(tkinter.Toplevel):
 			return "break"
 			
 		try:
-			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
-			startpos = self.contents.index('%s linestart' % tkinter.SEL_FIRST)
+			s = self.contents.index(tkinter.SEL_FIRST)
+			e = self.contents.index(tkinter.SEL_LAST)
+		
+			startline = int( s.split('.')[0] )
+			startpos = self.contents.index( '%s linestart' % s )
 			
-			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
-			endpos = self.contents.index('%s lineend' % tkinter.SEL_LAST)
+			endline = int( e.split('.')[0] )
+			endpos = self.contents.index( '%s lineend' % e )
 			
 			
 			for linenum in range(startline, endline+1):
 				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 				self.contents.insert(tkinter.INSERT, '##')
 				
-			
-			self.do_syntax()
+						
+			self.update_tokens(start=startpos, end=endpos)
 			
 				
 			self.contents.edit_separator()
@@ -2809,10 +2813,13 @@ class Editor(tkinter.Toplevel):
 			return "break"
 			
 		try:
-			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
-			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
-			startpos = self.contents.index('%s linestart' % tkinter.SEL_FIRST)
-			endpos = self.contents.index('%s lineend' % tkinter.SEL_LAST)
+			s = self.contents.index(tkinter.SEL_FIRST)
+			e = self.contents.index(tkinter.SEL_LAST)
+		
+			startline = int(s.split('.')[0])
+			endline = int(e.split('.')[0])
+			startpos = self.contents.index('%s linestart' % s)
+			endpos = self.contents.index('%s lineend' % e)
 				
 			changed = False
 			
@@ -2828,10 +2835,8 @@ class Editor(tkinter.Toplevel):
 					
 					
 			if changed:
-				
-				
-				self.do_syntax()
-				
+			
+				self.update_tokens(start=startpos, end=endpos)
 				
 				self.contents.edit_separator()
 			
