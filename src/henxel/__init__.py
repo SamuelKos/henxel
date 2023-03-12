@@ -42,12 +42,8 @@ import json
 
 # used in init
 import importlib.resources
+import importlib.metadata
 import sys
-
-# get version, (or with file VERSION, then include in MANIFEST.in)
-##import importlib.metadata as m
-##print( m.version(__name__) )
-
 
 # used in syntax highlight
 import tokenize
@@ -104,6 +100,9 @@ class Tab:
 CONFPATH = 'editor.cnf'
 ICONPATH = 'editor.png'
 HELPPATH = 'help.txt'
+VERSION = importlib.metadata.version(__name__)
+
+
 
 TAB_WIDTH = 4
 TAB_WIDTH_CHAR = ' '
@@ -153,7 +152,8 @@ class Editor(tkinter.Toplevel):
 		self.want_ln = True
 		self.syntax = True
 		self.oldconf = None
-		
+		self.tab_char = TAB_WIDTH_CHAR
+			
 		if sys.prefix != sys.base_prefix:
 			self.env = sys.prefix
 		else:
@@ -162,6 +162,7 @@ class Editor(tkinter.Toplevel):
 		self.tabs = list()
 		self.tabindex = None
 		self.branch = None
+		self.version = VERSION
 		
 		
 		self.font = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
@@ -335,9 +336,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<BackSpace>", self.backspace_override)
 		
 		
-		self.contents.bind( "<Alt-k>", self.check_indent_depth)
-		
-		
 		# Needed in leave() taglink in: Run file Related
 		self.name_of_cursor_in_text_widget = self.contents['cursor']
 		
@@ -404,7 +402,8 @@ class Editor(tkinter.Toplevel):
 			self.scrollbar.config(width=self.scrollbar_width)
 			self.scrollbar.config(elementborderwidth=self.elementborderwidth)
 			
-			self.tab_width = self.font.measure(TAB_WIDTH * TAB_WIDTH_CHAR)
+			self.ind_depth = TAB_WIDTH
+			self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
 			self.contents.config(font=self.font, foreground=self.fgcolor,
 				background=self.bgcolor, insertbackground=self.fgcolor,
 				tabs=(self.tab_width, ))
@@ -418,7 +417,7 @@ class Editor(tkinter.Toplevel):
 			
 			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled')
 
-
+		#self.helptext = f'\t\tHenxel {self.version}\n\n'
 		# set cursor pos:
 		line = self.tabs[self.tabindex].position
 		self.contents.focus_set()
@@ -538,7 +537,7 @@ class Editor(tkinter.Toplevel):
 		self.token_can_update = False
 		self.oldlinenum = self.contents.index(tkinter.INSERT).split('.')[0]
 		
-		self.do_syntax(all=True)
+		self.do_syntax(everything=True)
 			
 		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 		
@@ -590,7 +589,8 @@ class Editor(tkinter.Toplevel):
 		return 'continue'
 		
 	
-	def check_indent_depth(self, event=None):
+	def check_indent_depth(self, contents):
+		'''Contents is contents of py-file as string.'''
 		
 		words = [
 				'def ',
@@ -599,99 +599,77 @@ class Editor(tkinter.Toplevel):
 				'while ',
 				'class '
 				]
-
-		endline = int(self.contents.index(tkinter.END).split('.')[0]) - 1
-		
-		pos = None
+				
+		tmp = contents.splitlines()
 		
 		for word in words:
-			pos = self.contents.search(word, '1.0', tkinter.END)
-
-			if not pos:
-				continue
 			
-			# Trying to check if at the beginning of new block:
-			line = self.contents.get('%s linestart' % pos, '%s lineend' % pos)
-
-			if line.strip()[-1:] == ':':
-				# offset is num of empty lines
-				offset = 1
-				start = f'{pos} +{offset}lines linestart'
-				end = f'{pos} +{offset}lines lineend'
-
-				nextline = self.contents.get(start, end)
-				
-
-				while nextline.strip() == '':
-					offset += 1
-					start = f'{pos} +{offset}lines linestart'
-					end = f'{pos} +{offset}lines lineend'
+			for i in range(len(tmp)):
+				line = tmp[i]
+				if word in line:
 					
-					if self.contents.compare(end, '>=', tkinter.END ):
-						break
+					# Trying to check if at the beginning of new block:
+					if line.strip()[-1] == ':':
+						# Offset is num of empty lines between this line and next
+						# non empty line
+						nextline = None
+						
+						for offset in range(1, len(tmp)-i):
+							nextline = tmp[i+offset]
+							if nextline.strip() == '': continue
+							else: break
+							
+							
+						if not nextline:
+							continue
+						
+						
+						# Now should have next non empty line,
+						# so start parsing it:
+						flag_space = False
+						indent_0 = 0
+						indent_1 = 0
+		
+						for char in line:
+							if char in [' ', '\t']: indent_0 += 1
+							else: break
+		
+						for char in nextline:
+							# Check if indent done with spaces:
+							if char == ' ':
+								flag_space = True
+		
+							if char in [' ', '\t']: indent_1 += 1
+							else: break
+						
+						
+						indent = indent_1 - indent_0
+						#print(indent)
+						tests = [
+								( indent <= 0 ),
+								( not flag_space and indent > 1 )
+								]
+						
+						if any(tests):
+							#print('indent err')
+							#skipping
+							continue
+						
+						
+						# All is good, do nothing:
+						if not flag_space:
+							return False, 0
+							
+						# Found one block with spaced indentation,
+						# assuming it is used in whole file.
+						else:
+							if indent != self.tab_width:
+								return True, indent
+							
+							else:
+								return False, 0
 					
-					try:
-						nextline = self.contents.get(start, end)
-					except tkinter.TclError as e:
-						#print(e)
-						nextline = False
-						break
-				
-				if not nextline:
-					continue
-				
-				
-				# Now should have non empty line,
-				# so start parsing it:
-				flag_space = False
-				indent_0 = 0
-				indent_1 = 0
-
-				for char in line:
-					if char in [' ', '\t']: indent_0 += 1
-					else: break
-
-				for char in nextline:
-					# Check if indent done with spaces:
-					if char == ' ':
-						flag_space = True
-
-					if char in [' ', '\t']: indent_1 += 1
-					else: break
-				
-				
-				indent = indent_1 - indent_0
-				print(indent)
-				tests = [
-						( indent <= 0 ),
-						( not flag_space and indent > 1 )
-						]
-				
-				if any(tests):
-					print('miss')
-					continue
-				
-				
-				# all is good, do nothing:
-				if not flag_space:
-					return True, 'tabbed'
-					
-				# Found one block with spaced indentation,
-				# assuming it is used in whole file.
-				else:
-					if indent != TAB_WIDTH:
-						return True, indent
-						#self.tabify(width=indent)
-					
-					else:
-						return True, 'normal'
-					
-				
-		if not pos:
-			return False
-
-		return False
-
+		return False, 0
 	
 	
 	def ensure_idx_visibility(self, index):
@@ -956,7 +934,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 		
-		self.do_syntax(all=True)
+		self.do_syntax(everything=True)
 		
 		# set cursor pos
 		line = self.tabs[self.tabindex].position
@@ -1024,7 +1002,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 
 	
-		self.do_syntax(all=True)
+		self.do_syntax(everything=True)
 
 
 		# set cursor pos
@@ -1115,6 +1093,7 @@ class Editor(tkinter.Toplevel):
 		dictionary['elementborderwidth'] = self.elementborderwidth
 		dictionary['want_ln'] = self.want_ln
 		dictionary['syntax'] = self.syntax
+		dictionary['ind_depth'] = self.ind_depth
 		
 		for tab in self.tabs:
 			tab.contents = ''
@@ -1162,6 +1141,7 @@ class Editor(tkinter.Toplevel):
 		self.elementborderwidth	= dictionary['elementborderwidth']
 		self.want_ln = dictionary['want_ln']
 		self.syntax = dictionary['syntax']
+		self.ind_depth = dictionary['ind_depth']
 		
 		self.lastdir = dictionary['lastdir']
 		
@@ -1181,10 +1161,13 @@ class Editor(tkinter.Toplevel):
 			if tab.type == 'normal':
 				try:
 					with open(tab.filepath, 'r', encoding='utf-8') as f:
-						tab.contents = f.read()
+						tmp = f.read()
+						tab.contents = tmp
 						tab.oldcontents = tab.contents
 						
 					tab.filepath = pathlib.Path(tab.filepath)
+					
+					
 				except (EnvironmentError, UnicodeDecodeError) as e:
 					print(e.__str__())
 					self.tabs.pop(i)
@@ -1210,7 +1193,7 @@ class Editor(tkinter.Toplevel):
 				self.tabs[self.tabindex].active = True
 		
 	
-		self.tab_width = self.font.measure(TAB_WIDTH * TAB_WIDTH_CHAR)
+		self.tab_width = self.font.measure(self.ind_depth * TAB_WIDTH_CHAR)
 		self.contents.config(font=self.font, foreground=self.fgcolor,
 			background=self.bgcolor, insertbackground=self.fgcolor,
 			tabs=(self.tab_width, ))
@@ -1249,7 +1232,7 @@ class Editor(tkinter.Toplevel):
 	
 		else:
 			self.syntax = True
-			self.do_syntax(all=True)
+			self.do_syntax(everything=True)
 			
 			return 'break'
 			
@@ -1259,14 +1242,14 @@ class Editor(tkinter.Toplevel):
 		return '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax
 		
 		
-	def do_syntax(self, all=False):
+	def do_syntax(self, everything=False):
 	
 		if self.tabs[self.tabindex].filepath:
 			if self.can_do_syntax():
 			
 				self.token_err = True
-				content_is_uptodate = all
-				self.update_tokens(start='1.0', end=tkinter.END, all=content_is_uptodate)
+				content_is_uptodate = everything
+				self.update_tokens(start='1.0', end=tkinter.END, everything=content_is_uptodate)
 				self.token_can_update = True
 				
 			else:
@@ -1278,12 +1261,12 @@ class Editor(tkinter.Toplevel):
 			self.token_can_update = False
 			
 	
-	def update_tokens(self, start=None, end=None, line=None, all=False):
+	def update_tokens(self, start=None, end=None, line=None, everything=False):
 	
 		start_idx = start
 		end_idx = end
 		
-		if not all:
+		if not everything:
 			if line:
 				linecontents = line
 				test1 = [
@@ -1320,6 +1303,7 @@ class Editor(tkinter.Toplevel):
 		else:
 			tmp = self.tabs[self.tabindex].contents
 			
+			
 		linenum = int(start_idx.split('.')[0])
 		flag_err = False
 		#print(self.token_err)
@@ -1335,7 +1319,7 @@ class Editor(tkinter.Toplevel):
 					
 				# Retag:
 				for token in tokens:
-				
+					#print(token)
 					if token.type == tokenize.NAME or \
 						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
 						( token.type == tokenize.OP and token.string == '(' ):
@@ -1419,6 +1403,18 @@ class Editor(tkinter.Toplevel):
 ########## Syntax highlight End
 ########## Theme Related Begin
 
+	def change_indentation_width(self, width):
+		
+		if type(width) != int: return
+		elif width == self.ind_depth: return
+		elif not 0 < width <= 8: return
+		
+		
+		self.ind_depth = width
+		self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
+		self.contents.config(tabs=(self.tab_width, ))
+
+
 	def increase_scrollbar_width(self, event=None):
 		'''	Change width of scrollbar and self.contents
 			Shortcut: Ctrl-plus
@@ -1482,6 +1478,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('breaks', font=self.boldfont)
 		self.contents.tag_config('calls', font=self.boldfont)
 		
+		self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
+		self.contents.config(tabs=(self.tab_width, ))
+
 					
 	def font_choose(self, event=None):
 		if self.state != 'normal':
@@ -1660,15 +1659,31 @@ class Editor(tkinter.Toplevel):
 					self.tabs[self.tabindex].active = True
 					break
 					
-		# open file in newtab
+		# else: open file in newtab
 		else:
 			try:
 				with open(filepath, 'r', encoding='utf-8') as f:
 					self.new_tab(error=True)
-					fcontents = f.read()
-					self.tabs[self.tabindex].contents = fcontents
+					tmp = f.read()
+					self.tabs[self.tabindex].oldcontents = tmp
+					
+					if '.py' in filepath.suffix:
+						indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
+						
+						if indentation_is_alien:
+							# Assuming user wants TABWIDTH, change it without notice:
+							tmp = self.tabs[self.tabindex].oldcontents.splitlines(True)
+							tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
+							tmp = ''.join(tmp)
+							self.tabs[self.tabindex].contents = tmp
+							
+						else:
+							self.tabs[self.tabindex].contents = self.tabs[self.tabindex].oldcontents
+					else:
+						self.tabs[self.tabindex].contents = self.tabs[self.tabindex].oldcontents
+				
+					
 					self.tabs[self.tabindex].filepath = filepath
-					self.tabs[self.tabindex].oldcontents = self.tabs[self.tabindex].contents
 					self.tabs[self.tabindex].type = 'normal'
 			except (EnvironmentError, UnicodeDecodeError) as e:
 				print(e.__str__())
@@ -1863,7 +1878,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 		
-		self.do_syntax(all=True)
+		self.do_syntax(everything=True)
 		
 		
 		# set cursor pos
@@ -2195,15 +2210,30 @@ class Editor(tkinter.Toplevel):
 			try:
 				with open(filepath, 'r', encoding='utf-8') as f:
 					fcontents = f.read()
-					
 					self.new_tab()
-					self.tabs[self.tabindex].contents = fcontents
-					self.contents.insert(tkinter.INSERT, fcontents)
+					
+					# just in case:
+					if '.py' in filepath:
+						indentation_is_alien, indent_depth = self.check_indent_depth(fcontents)
+						
+						if indentation_is_alien:
+							# Assuming user wants TABWIDTH, change it without notice:
+							tmp = fcontents.splitlines(True)
+							tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
+							tmp = ''.join(tmp)
+							self.tabs[self.tabindex].contents = tmp
+							
+						else:
+							self.tabs[self.tabindex].contents = fcontents
+					else:
+						self.tabs[self.tabindex].contents = fcontents
+				
 					
 					self.tabs[self.tabindex].position = '1.0'
 					self.contents.focus_set()
 					self.contents.see('1.0')
 					self.contents.mark_set('insert', '1.0')
+					self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 					
 					if self.syntax:
 						self.token_err = True
@@ -2242,16 +2272,29 @@ class Editor(tkinter.Toplevel):
 				target_object = getattr(mod, object_part)
 				
 				l = inspect.getsourcelines(target_object)
-				tmp = ''.join(l[0])
-				 
+				t = ''.join(l[0])
+				
 				self.new_tab()
-				self.tabs[self.tabindex].contents = tmp
+				
+				# just in case:
+				indentation_is_alien, indent_depth = self.check_indent_depth(t)
+				
+				if indentation_is_alien:
+					# Assuming user wants TABWIDTH, change it without notice:
+					tmp = t.splitlines(True)
+					tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
+					tmp = ''.join(tmp)
+					self.tabs[self.tabindex].contents = tmp
 					
-				self.contents.insert(tkinter.INSERT, tmp)
+				else:
+					self.tabs[self.tabindex].contents = t
+				
+				
 				self.tabs[self.tabindex].position = '1.0'
 				self.contents.focus_set()
 				self.contents.see('1.0')
 				self.contents.mark_set('insert', '1.0')
+				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
 				if self.syntax:
 					self.token_err = True
@@ -2345,7 +2388,7 @@ class Editor(tkinter.Toplevel):
 				continue
 			if char == ' ': count += 1
 			if count == ind_width:
-				indent_string = indent_string.replace(TAB_WIDTH * ' ', '\t', True)
+				indent_string = indent_string.replace(ind_width * ' ', '\t', True)
 				count = 0
 		
 		tabified_line = ''.join([indent_string, line])
@@ -2415,8 +2458,25 @@ class Editor(tkinter.Toplevel):
 		# Using same tab:
 		try:
 			with open(filename, 'r', encoding='utf-8') as f:
-				self.tabs[self.tabindex].contents = f.read()
-				self.tabs[self.tabindex].oldcontents = self.tabs[self.tabindex].contents
+				tmp = f.read()
+				self.tabs[self.tabindex].oldcontents = tmp
+				
+				if '.py' in filename.suffix:
+					indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
+					
+					if indentation_is_alien:
+						# Assuming user wants TABWIDTH, change it without notice:
+						tmp = self.tabs[self.tabindex].oldcontents.splitlines(True)
+						tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
+						tmp = ''.join(tmp)
+						self.tabs[self.tabindex].contents = tmp
+						
+					else:
+						self.tabs[self.tabindex].contents = self.tabs[self.tabindex].oldcontents
+				else:
+					self.tabs[self.tabindex].contents = self.tabs[self.tabindex].oldcontents
+				
+			
 				
 				self.entry.delete(0, tkinter.END)
 				self.tabs[self.tabindex].filepath = filename
@@ -2429,7 +2489,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
 				
-				self.do_syntax(all=True)
+				self.do_syntax(everything=True)
 				
 				
 				self.contents.focus_set()
@@ -2646,7 +2706,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 				
-				self.do_syntax(all=True)
+				self.do_syntax(everything=True)
 				
 				
 				# set cursor pos
@@ -2778,7 +2838,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
 		
-		self.do_syntax(all=True)
+		self.do_syntax(everything=True)
 		
 		
 		# set cursor pos

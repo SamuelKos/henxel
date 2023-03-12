@@ -16,14 +16,10 @@
 # comment range	ok ?
 # tabify		ok ?
 
-# check token update
+# change TABWIDTH ok ?
+# check indent depth ok ?
+# self tag leaves on
 
-# return over
-# if space in line and return at one tab left, more tabs
-# ''.isspace() == False
-
-# indent check, start, loadfile, taglink
-# set
 
 
 
@@ -37,6 +33,7 @@
 
 import tkinter
 import tkinter.font
+
 
 
 

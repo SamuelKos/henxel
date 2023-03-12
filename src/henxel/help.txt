@@ -141,6 +141,12 @@
 		similar.
 		
 	
+	How to: change indent-depth
+	  - If you started editor with: import henxel and e=henxel.Editor(),
+		then to change indent-depth in python-console:
+		e.change_indentation_width(8)
+	
+	
 	Running file
 	  - input from stdin does not work, so use test-data for that.
 	  
