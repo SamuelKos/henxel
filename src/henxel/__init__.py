@@ -335,6 +335,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<BackSpace>", self.backspace_override)
 		
 		
+		self.contents.bind( "<Alt-k>", self.check_indent_depth)
+		
+		
 		# Needed in leave() taglink in: Run file Related
 		self.name_of_cursor_in_text_widget = self.contents['cursor']
 		
@@ -587,6 +590,110 @@ class Editor(tkinter.Toplevel):
 		return 'continue'
 		
 	
+	def check_indent_depth(self, event=None):
+		
+		words = [
+				'def ',
+				'if ',
+				'for ',
+				'while ',
+				'class '
+				]
+
+		endline = int(self.contents.index(tkinter.END).split('.')[0]) - 1
+		
+		pos = None
+		
+		for word in words:
+			pos = self.contents.search(word, '1.0', tkinter.END)
+
+			if not pos:
+				continue
+			
+			# Trying to check if at the beginning of new block:
+			line = self.contents.get('%s linestart' % pos, '%s lineend' % pos)
+
+			if line.strip()[-1:] == ':':
+				# offset is num of empty lines
+				offset = 1
+				start = f'{pos} +{offset}lines linestart'
+				end = f'{pos} +{offset}lines lineend'
+
+				nextline = self.contents.get(start, end)
+				
+
+				while nextline.strip() == '':
+					offset += 1
+					start = f'{pos} +{offset}lines linestart'
+					end = f'{pos} +{offset}lines lineend'
+					
+					if self.contents.compare(end, '>=', tkinter.END ):
+						break
+					
+					try:
+						nextline = self.contents.get(start, end)
+					except tkinter.TclError as e:
+						#print(e)
+						nextline = False
+						break
+				
+				if not nextline:
+					continue
+				
+				
+				# Now should have non empty line,
+				# so start parsing it:
+				flag_space = False
+				indent_0 = 0
+				indent_1 = 0
+
+				for char in line:
+					if char in [' ', '\t']: indent_0 += 1
+					else: break
+
+				for char in nextline:
+					# Check if indent done with spaces:
+					if char == ' ':
+						flag_space = True
+
+					if char in [' ', '\t']: indent_1 += 1
+					else: break
+				
+				
+				indent = indent_1 - indent_0
+				print(indent)
+				tests = [
+						( indent <= 0 ),
+						( not flag_space and indent > 1 )
+						]
+				
+				if any(tests):
+					print('miss')
+					continue
+				
+				
+				# all is good, do nothing:
+				if not flag_space:
+					return True, 'tabbed'
+					
+				# Found one block with spaced indentation,
+				# assuming it is used in whole file.
+				else:
+					if indent != TAB_WIDTH:
+						return True, indent
+						#self.tabify(width=indent)
+					
+					else:
+						return True, 'normal'
+					
+				
+		if not pos:
+			return False
+
+		return False
+
+	
+	
 	def ensure_idx_visibility(self, index):
 		
 		start = self.contents.bbox('%s - 2lines' % index)
@@ -638,6 +745,7 @@ class Editor(tkinter.Toplevel):
 		
 	def viewsync(self, event=None):
 		'''	Triggered when event is <<WidgetViewSync>>
+			Used to update linenumbers and syntax highlight.
 		
 			This event itself is generated *after* when inserting, deleting or on screen geometry change, but
 			not when just scrolling (like yview). Almost all font-changes also generates this event.
@@ -1284,9 +1392,9 @@ class Editor(tkinter.Toplevel):
 			# This Error needs info about whole block, one line is not enough, so quite rare.
 			#print( e.args[0], '\nIndentation errline: ', self.contents.index(tkinter.INSERT) )
 			
-			#flag_err = True
-			#self.token_err = True
-			pass
+			flag_err = True
+			self.token_err = True
+
 			
 		except tokenize.TokenError as ee:
 			
@@ -1854,9 +1962,8 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', line)
 			
 			self.do_syntax()
-			
+			self.ensure_idx_visibility(line)
 		
-		self.ensure_idx_visibility(line)
 		return 'break'
 
 
@@ -1991,9 +2098,7 @@ class Editor(tkinter.Toplevel):
 	
 		# Cursor indexes when pressed return:
 		line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
-		# is same as:
-		# line = int(self.contents.index(tkinter.INSERT).split('.')[0])
-		# col = int(self.contents.index(tkinter.INSERT).split('.')[1])
+		
 		
 		# First an easy case:
 		if col == 0:
@@ -2001,12 +2106,12 @@ class Editor(tkinter.Toplevel):
 			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
 			return "break"
-				
+			
+		
 		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
 		
 		# Then one special case: check if cursor is inside indentation,
 		# and line is not empty.
-		
 		if tmp[:col].isspace() and not tmp[col:].isspace():
 			self.contents.insert(tkinter.INSERT, '\n')
 			self.contents.insert('%s.0' % str(line+1), tmp[:col])
@@ -2205,8 +2310,13 @@ class Editor(tkinter.Toplevel):
 			return "break"
 	
 	
-	def tabify(self, line):
+	def tabify(self, line, width=None):
 		
+		if width:
+			ind_width = width
+		else:
+			ind_width = TAB_WIDTH
+			
 		indent_stop_index = 0
 		
 		for char in line:
@@ -2234,7 +2344,7 @@ class Editor(tkinter.Toplevel):
 				count = 0
 				continue
 			if char == ' ': count += 1
-			if count == TAB_WIDTH:
+			if count == ind_width:
 				indent_string = indent_string.replace(TAB_WIDTH * ' ', '\t', True)
 				count = 0
 		

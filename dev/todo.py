@@ -8,17 +8,22 @@
 # from CHANGELOG.md to CHANGELOG			ok ?
 # get version number put to help			ok ?
 
-# no eof statement							ok ?
+# ?: no eof statement							ok ?
 
-# last name if char before ( tag lastname	ok ?
+# sh: last name if char before ( tag lastname	ok ?
 
 # paste			ok ?
-# comment range	ok?
-# tabify		ok?
+# comment range	ok ?
+# tabify		ok ?
 
 # check token update
 
 # return over
+# if space in line and return at one tab left, more tabs
+# ''.isspace() == False
+
+# indent check, start, loadfile, taglink
+# set
 
 
 
