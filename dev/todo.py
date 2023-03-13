@@ -18,7 +18,7 @@
 
 # change TABWIDTH ok ?
 # check indent depth ok ?
-# self tag leaves on
+
 
 
 
@@ -122,7 +122,7 @@ class Ed(tkinter.Toplevel):
 		self.__class__.editors.append(self)
 		
 		self.lineNumbers = ''
-	
+		
 		self.rowconfigure(1, weight=1)
 		self.columnconfigure(1, weight=1)
 		

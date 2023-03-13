@@ -417,7 +417,9 @@ class Editor(tkinter.Toplevel):
 			
 			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled')
 
-		#self.helptext = f'\t\tHenxel {self.version}\n\n'
+		
+		self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
+		
 		# set cursor pos:
 		line = self.tabs[self.tabindex].position
 		self.contents.focus_set()
@@ -511,7 +513,8 @@ class Editor(tkinter.Toplevel):
 				'strings',
 				'comments',
 				'breaks',
-				'calls'
+				'calls',
+				'selfs'
 				]
 		
 		self.boldfont = self.font.copy()
@@ -1265,6 +1268,7 @@ class Editor(tkinter.Toplevel):
 	
 		start_idx = start
 		end_idx = end
+		linecontents = None
 		
 		if not everything:
 			if line:
@@ -1281,6 +1285,7 @@ class Editor(tkinter.Toplevel):
 			if any(test1):
 				start_idx = '1.0'
 				end_idx = tkinter.END
+				linecontents = None
 				#print('err')
 		
 			# check if inside multiline string
@@ -1293,13 +1298,18 @@ class Editor(tkinter.Toplevel):
 				
 					if l0 != l1:
 						start_idx, end_idx = (s, e)
+						linecontents = None
 		
 				except ValueError:
 					pass
 			
 			
-			tmp = self.contents.get( start_idx, end_idx )
-		
+			if not linecontents:
+				tmp = self.contents.get( start_idx, end_idx )
+			
+			else:
+				tmp = linecontents
+				
 		else:
 			tmp = self.tabs[self.tabindex].contents
 			
@@ -1354,6 +1364,9 @@ class Editor(tkinter.Toplevel):
 						
 						# calls
 						elif token.type == tokenize.OP:
+							# Need to know if last char before ( was not empty.
+							# This check likely takes some time. Faster way would require
+							# info about position of ( in the string tmp.
 							if self.contents.get( '%s - 1c' % idx_start, idx_start ).strip():
 								self.contents.tag_add('calls', last_idx_start, last_idx_end)
 								
@@ -1366,7 +1379,7 @@ class Editor(tkinter.Toplevel):
 						# token.type == tokenize.NUMBER
 						else:
 							self.contents.tag_add('numbers', idx_start, idx_end)
-							
+					
 		
 		except IndentationError as e:
 ##			for attr in ['args', 'filename', 'lineno', 'msg', 'offset', 'text']:
@@ -2358,7 +2371,7 @@ class Editor(tkinter.Toplevel):
 		if width:
 			ind_width = width
 		else:
-			ind_width = TAB_WIDTH
+			ind_width = self.ind_depth
 			
 		indent_stop_index = 0
 		
@@ -2833,7 +2846,7 @@ class Editor(tkinter.Toplevel):
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		
-
+		self.token_can_update = True
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		
@@ -2875,7 +2888,9 @@ class Editor(tkinter.Toplevel):
 		tmp = self.contents.get('1.0', tkinter.END)
 		# [:-1]: remove unwanted extra newline
 		self.tabs[self.tabindex].contents = tmp[:-1]
-			
+		
+		self.token_can_update = False
+		
 		self.entry.delete(0, tkinter.END)
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.helptxt)
