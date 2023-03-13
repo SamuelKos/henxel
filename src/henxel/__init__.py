@@ -1417,6 +1417,8 @@ class Editor(tkinter.Toplevel):
 ########## Theme Related Begin
 
 	def change_indentation_width(self, width):
+		''' width is integer between 1-8
+		'''
 		
 		if type(width) != int: return
 		elif width == self.ind_depth: return

@@ -5,22 +5,6 @@
 # >>> e=todo.Ed()
 
 
-# from CHANGELOG.md to CHANGELOG			ok ?
-# get version number put to help			ok ?
-
-# ?: no eof statement							ok ?
-
-# sh: last name if char before ( tag lastname	ok ?
-
-# paste			ok ?
-# comment range	ok ?
-# tabify		ok ?
-
-# change TABWIDTH ok ?
-# check indent depth ok ?
-
-
-
 
 
 # remove printings before build
