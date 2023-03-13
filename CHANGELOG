@@ -1,6 +1,10 @@
 # Changelog
-* To version: 	0.1.5
+* To version: 	0.1.6
 * From version:	0.0.3
+
+
+# 0.1.6
+- Quick fix for check_indent_depth()
 
 
 # 0.1.5
