@@ -666,7 +666,7 @@ class Editor(tkinter.Toplevel):
 						# Found one block with spaced indentation,
 						# assuming it is used in whole file.
 						else:
-							if indent != self.tab_width:
+							if indent != self.ind_depth:
 								return True, indent
 							
 							else:
