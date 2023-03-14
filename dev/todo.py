@@ -9,8 +9,14 @@
 
 # replace all tag only changed		ok ?
 
+# tabify lines check indent			ok ?
+# help								ok ?
+
 # try autocomplete ?
 # how to get namespace?
+
+
+
 
 # remove printings before build
 
@@ -104,7 +110,7 @@ class Ed(tkinter.Toplevel):
 	# Self must be then added to this list in init with:
 	# self.__class__.editors.append(self)
 	editors = []
-	
+
 	def __init__(self):
 		self.root = tkinter.Tk().withdraw()
 		super().__init__(self.root)

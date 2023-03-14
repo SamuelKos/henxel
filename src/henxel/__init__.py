@@ -103,7 +103,6 @@ HELPPATH = 'help.txt'
 VERSION = importlib.metadata.version(__name__)
 
 
-
 TAB_WIDTH = 4
 TAB_WIDTH_CHAR = ' '
 
@@ -420,19 +419,6 @@ class Editor(tkinter.Toplevel):
 		
 		self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
 		
-		# set cursor pos:
-		line = self.tabs[self.tabindex].position
-		self.contents.focus_set()
-		
-		try:
-			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
-			
-		except tkinter.TclError:
-			self.contents.mark_set('insert', '1.0')
-			self.tabs[self.tabindex].position = '1.0'
-			self.contents.see('1.0')
-			
 		
 		# Widgets are configured
 		###############################
@@ -570,6 +556,20 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 		
 		
+		# set cursor pos:
+		line = self.tabs[self.tabindex].position
+		self.contents.focus_set()
+		
+		try:
+			self.contents.mark_set('insert', line)
+			self.ensure_idx_visibility(line)
+			
+		except tkinter.TclError:
+			self.contents.mark_set('insert', '1.0')
+			self.tabs[self.tabindex].position = '1.0'
+			self.contents.see('1.0')
+			
+			
 		self.update_idletasks()
 		self.viewsync()
 		self.__class__.alive = True
@@ -592,6 +592,20 @@ class Editor(tkinter.Toplevel):
 		return 'continue'
 		
 	
+	def print_namespace(self, module):
+		mod = importlib.import_module(module)
+		a = 1
+		#d = dir()
+		l = [1,2,3]
+		b = 2
+		#print(len(d))
+		#print(dir(mod))
+		for item in l:
+			d = dir()
+			#print(item)
+		print( d[d.index('item')] )
+			
+		
 	def check_indent_depth(self, contents):
 		'''Contents is contents of py-file as string.'''
 		
@@ -677,19 +691,21 @@ class Editor(tkinter.Toplevel):
 	
 	def ensure_idx_visibility(self, index):
 		
-		start = self.contents.bbox('%s - 2lines' % index)
-		end = self.contents.bbox('%s + 2lines' % index)
+		start = self.contents.index('%s - 2lines' % index)
+		end = self.contents.index('%s + 2lines' % index)
+		s = self.contents.bbox('%s - 2lines' % index)
+		e = self.contents.bbox('%s + 2lines' % index)
 		
 		tests = [
-				( not start ),
-				( not end ),
-				( start and start[1] < 0 )
+				( not s ),
+				( not e ),
+				( s and s[1] < 0 )
 				]
-		
+				
 		if any(tests):
-			self.contents.see('%s + 2lines' % index)
-			self.update_idletasks()
 			self.contents.see('%s - 2lines' % index)
+			self.update_idletasks()
+			self.contents.see('%s + 2lines' % index)
 			
 		
 	def quit_me(self):
@@ -1693,7 +1709,7 @@ class Editor(tkinter.Toplevel):
 						indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
 						
 						if indentation_is_alien:
-							# Assuming user wants TABWIDTH, change it without notice:
+							# Assuming user wants self.ind_depth, change it without notice:
 							tmp = self.tabs[self.tabindex].oldcontents.splitlines(True)
 							tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 							tmp = ''.join(tmp)
@@ -2239,7 +2255,7 @@ class Editor(tkinter.Toplevel):
 						indentation_is_alien, indent_depth = self.check_indent_depth(fcontents)
 						
 						if indentation_is_alien:
-							# Assuming user wants TABWIDTH, change it without notice:
+							# Assuming user wants self.ind_depth, change it without notice:
 							tmp = fcontents.splitlines(True)
 							tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 							tmp = ''.join(tmp)
@@ -2302,7 +2318,7 @@ class Editor(tkinter.Toplevel):
 				indentation_is_alien, indent_depth = self.check_indent_depth(t)
 				
 				if indentation_is_alien:
-					# Assuming user wants TABWIDTH, change it without notice:
+					# Assuming user wants self.ind_depth, change it without notice:
 					tmp = t.splitlines(True)
 					tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 					tmp = ''.join(tmp)
@@ -2353,13 +2369,22 @@ class Editor(tkinter.Toplevel):
 			
 			start = '%s.0' % startline
 			end = '%s.0 lineend' % endline
+			tmp = self.contents.get(start, end)
 			
-			# Check indent (tabify) and rstrip:
-			tmp = self.contents.get(start, end).splitlines()
-			tmp[:] = [self.tabify(line) for line in tmp]
+			indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
+			
+			tmp = tmp.splitlines()
+			
+			if indentation_is_alien:
+				# Assuming user wants self.ind_depth, change it without notice:
+				tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
+							
+			else:
+				tmp[:] = [self.tabify(line) for line in tmp]
+			
+						
 			tmp = ''.join(tmp)
-	
-
+			
 			self.contents.delete(start, end)
 			self.contents.insert(start, tmp)
 			
@@ -2371,7 +2396,7 @@ class Editor(tkinter.Toplevel):
 			return "break"
 		
 		except tkinter.TclError as e:
-			print(e)
+			#print(e)
 			return "break"
 	
 	
@@ -2487,7 +2512,7 @@ class Editor(tkinter.Toplevel):
 					indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
 					
 					if indentation_is_alien:
-						# Assuming user wants TABWIDTH, change it without notice:
+						# Assuming user wants self.ind_depth, change it without notice:
 						tmp = self.tabs[self.tabindex].oldcontents.splitlines(True)
 						tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 						tmp = ''.join(tmp)
