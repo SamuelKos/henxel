@@ -5,7 +5,12 @@
 # >>> e=todo.Ed()
 
 
+# try token.line					ok ?
 
+# replace all tag only changed		ok ?
+
+# try autocomplete ?
+# how to get namespace?
 
 # remove printings before build
 

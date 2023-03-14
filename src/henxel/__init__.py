@@ -59,7 +59,7 @@ import subprocess
 
 ############ Imports End
 ############ Class Tab Begin
-
+					
 class Tab:
 	'''	Represents a tab-page of an Editor-instance
 	'''
@@ -1318,6 +1318,7 @@ class Editor(tkinter.Toplevel):
 		flag_err = False
 		#print(self.token_err)
 		
+		
 		try:
 			with io.BytesIO( tmp.encode('utf-8') ) as fo:
 			
@@ -1330,6 +1331,9 @@ class Editor(tkinter.Toplevel):
 				# Retag:
 				for token in tokens:
 					#print(token)
+					
+					# token.line contains line as string which contains token.
+					
 					if token.type == tokenize.NAME or \
 						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
 						( token.type == tokenize.OP and token.string == '(' ):
@@ -1365,9 +1369,12 @@ class Editor(tkinter.Toplevel):
 						# calls
 						elif token.type == tokenize.OP:
 							# Need to know if last char before ( was not empty.
-							# This check likely takes some time. Faster way would require
-							# info about position of ( in the string tmp.
-							if self.contents.get( '%s - 1c' % idx_start, idx_start ).strip():
+							# Previously used test was:
+							#if self.contents.get( '%s - 1c' % idx_start, idx_start ).strip():
+							
+							# token.line contains line as string which contains token.
+							prev_char_idx = token.start[1]-1
+							if prev_char_idx > -1 and token.line[prev_char_idx].strip():
 								self.contents.tag_add('calls', last_idx_start, last_idx_end)
 								
 						elif token.type == tokenize.STRING:
@@ -3253,18 +3260,7 @@ class Editor(tkinter.Toplevel):
 			
 		# Leave tags on, if replace_all, Esc clears.
 		if self.state == 'replace_all':
-			self.contents.tag_remove('match', '1.0', tkinter.END)
-			wordlen = len(self.new_word)
-			pos = '1.0'
-
-			while True:
-				pos = self.contents.search(self.new_word, pos, stopindex=tkinter.END)
-				if not pos: break
-
-				lastpos = "%s + %dc" % (pos, wordlen)
-				self.contents.tag_add('match', pos, lastpos)
-				pos = "%s + %dc" % (pos, wordlen+1)
-
+		
 			self.bind("<Escape>", self.clear_search_tags)
 			
 		else:
@@ -3432,6 +3428,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.config(state='normal')
 		wordlen = len(self.old_word)
+		wordlen2 = len(self.new_word)
 		pos = '1.0'
 		
 		while True:
@@ -3439,10 +3436,11 @@ class Editor(tkinter.Toplevel):
 			if not pos: break
 			
 			lastpos = "%s + %dc" % ( pos, wordlen )
+			lastpos2 = "%s + %dc" % ( pos, wordlen2 )
 			
-			#self.contents.tag_add( 'match', pos, lastpos )
 			self.contents.delete( pos, lastpos )
 			self.contents.insert( pos, self.new_word )
+			self.contents.tag_add( 'match', pos, lastpos2 )
 				
 			pos = "%s + %dc" % (pos, wordlen+1)
 			
