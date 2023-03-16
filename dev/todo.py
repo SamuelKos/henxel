@@ -12,14 +12,36 @@
 # tabify lines check indent			ok ?
 # help								ok ?
 
-# try autocomplete ?
-# how to get namespace?
+# try autocomplete
+# get namespaces with tokenize
+
+# when scope changes:
+# 1: if line ends with ':'
+# 2: and if first word in line is in:
+# try except finally with for while if elif else def class async?
+# 3: if indentation gets deeper?
 
 
 
+# insert single # update sometime slow?
+
+
+# token.exact_type
 
 # remove printings before build
 
+# def print_namespace(self, module):
+
+
+
+# get line from python console:
+# readline.get_line_buffer()
+
+# insert line in console
+#readline.insert_text('dir()')
+
+# display it
+#readline.redisplay()
 
 
 #############
@@ -30,6 +52,9 @@ import tkinter
 import tkinter.font
 
 
+##readline.parse_and_bind
+##readline
+##readline
 
 
 ########################## Maybe interesting Begin:

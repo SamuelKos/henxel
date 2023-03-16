@@ -591,7 +591,7 @@ class Editor(tkinter.Toplevel):
 	def skip_bindlevel(self, event=None):
 		return 'continue'
 		
-	
+			
 	def print_namespace(self, module):
 		mod = importlib.import_module(module)
 		a = 1
@@ -1352,7 +1352,7 @@ class Editor(tkinter.Toplevel):
 					
 					if token.type == tokenize.NAME or \
 						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
-						( token.type == tokenize.OP and token.string == '(' ):
+						( token.exact_type == tokenize.LPAR ):
 						
 						# initiate indexes with correct linenum
 						s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
@@ -1383,14 +1383,14 @@ class Editor(tkinter.Toplevel):
 								
 						
 						# calls
-						elif token.type == tokenize.OP:
+						elif token.exact_type == tokenize.LPAR:
 							# Need to know if last char before ( was not empty.
 							# Previously used test was:
 							#if self.contents.get( '%s - 1c' % idx_start, idx_start ).strip():
 							
 							# token.line contains line as string which contains token.
 							prev_char_idx = token.start[1]-1
-							if prev_char_idx > -1 and token.line[prev_char_idx].strip():
+							if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
 								self.contents.tag_add('calls', last_idx_start, last_idx_end)
 								
 						elif token.type == tokenize.STRING:
@@ -2242,7 +2242,9 @@ class Editor(tkinter.Toplevel):
 			filepath = inspect.getsourcefile(mod)
 			
 			if not filepath:
+				# for example: readline
 				self.bell()
+				print('Could not inspect:', target, '\nimport and use help()')
 				return 'break'
 			
 			try:
