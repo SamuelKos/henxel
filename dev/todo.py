@@ -27,7 +27,6 @@
 # insert single # update sometime slow?
 
 
-# yellow as in not
 
 
 
