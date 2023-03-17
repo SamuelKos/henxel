@@ -12,6 +12,7 @@
 # tabify lines check indent			ok ?
 # help								ok ?
 
+
 # try autocomplete
 # get namespaces with tokenize
 
@@ -26,9 +27,19 @@
 # insert single # update sometime slow?
 
 
-# token.exact_type
+# yellow as in not
+
+
+
+
+
 
 # remove printings before build
+
+
+
+
+
 
 # def print_namespace(self, module):
 

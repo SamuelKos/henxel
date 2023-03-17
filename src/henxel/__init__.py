@@ -490,7 +490,6 @@ class Editor(tkinter.Toplevel):
 		green = r'#26a269'
 		orange = r'#e95b38'
 		gray = r'#508490'
-		#blue = r'#68c4e0'
 		
 		self.tagnames = [
 				'keywords',
@@ -500,13 +499,15 @@ class Editor(tkinter.Toplevel):
 				'comments',
 				'breaks',
 				'calls',
-				'selfs'
+				'selfs',
+				'tests'
 				]
 		
 		self.boldfont = self.font.copy()
 		self.boldfont.config(weight='bold')
 		
 		self.contents.tag_config('keywords', font=self.boldfont, foreground='deep sky blue')
+		self.contents.tag_config('tests', font=self.boldfont, foreground='khaki3')
 		self.contents.tag_config('numbers', font=self.boldfont, foreground=red)
 		self.contents.tag_config('comments', font=self.boldfont, foreground=gray)
 		self.contents.tag_config('breaks', font=self.boldfont, foreground=orange)
@@ -1375,9 +1376,12 @@ class Editor(tkinter.Toplevel):
 								elif token.string in self.bools:
 									self.contents.tag_add('bools', idx_start, idx_end)
 									
+								elif token.string in self.tests:
+									self.contents.tag_add('tests', idx_start, idx_end)
+								
 								elif token.string in self.breaks:
 									self.contents.tag_add('breaks', idx_start, idx_end)
-									
+								
 								else:
 									self.contents.tag_add('keywords', idx_start, idx_end)
 								
