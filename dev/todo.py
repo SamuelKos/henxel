@@ -5,28 +5,6 @@
 # >>> e=todo.Ed()
 
 
-# try token.line					ok ?
-
-# replace all tag only changed		ok ?
-
-# tabify lines check indent			ok ?
-# help								ok ?
-
-
-# try autocomplete
-# get namespaces with tokenize
-
-# when scope changes:
-# 1: if line ends with ':'
-# 2: and if first word in line is in:
-# try except finally with for while if elif else def class async?
-# 3: if indentation gets deeper?
-
-
-
-# insert single # update sometime slow?
-
-
 
 
 
@@ -35,12 +13,6 @@
 
 # remove printings before build
 
-
-
-
-
-
-# def print_namespace(self, module):
 
 
 
@@ -62,9 +34,6 @@ import tkinter
 import tkinter.font
 
 
-##readline.parse_and_bind
-##readline
-##readline
 
 
 ########################## Maybe interesting Begin:

@@ -152,17 +152,15 @@
 		than rest of the file:
 		(Note that you don't have to do anything if it is indented with normal
 		4 spaces and you have indent-depth the normal 4 )
+		1: Make sure you copied the block starting with one empty line.
+		2: Click cursor to start of empty line and paste.
 		
-		then after you have made paste, remove indentation from the first line
-		of the pasted text so that the line has no indentation,
-		it is right at the left side like this:
+  def myfunc(foo):
+	print(foo)
+	
+	return foo + 1
 
-def myfunc(foo):
-  print(foo)
-  
-  return foo + 1
-
-		Then select this code and press mouse-right and select tabify, and
+		Then select that code and press mouse-right and select tabify, and
 		it should then be indented as you wanted and you can then continue
 		indenting the pasted code to the right place. You can try all this
 		by copying the code example above and then trying to fix it.
