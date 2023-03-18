@@ -591,108 +591,15 @@ class Editor(tkinter.Toplevel):
 	def skip_bindlevel(self, event=None):
 		return 'continue'
 		
-			
-	def print_namespace(self, module):
-		mod = importlib.import_module(module)
-		a = 1
-		#d = dir()
-		l = [1,2,3]
-		b = 2
-		#print(len(d))
-		#print(dir(mod))
-		for item in l:
-			d = dir()
-			#print(item)
-		print( d[d.index('item')] )
-			
-		
-	def check_indent_depth(self, contents):
-		'''Contents is contents of py-file as string.'''
-		
-		words = [
-				'def ',
-				'if ',
-				'for ',
-				'while ',
-				'class '
-				]
-				
-		tmp = contents.splitlines()
-		
-		for word in words:
-			
-			for i in range(len(tmp)):
-				line = tmp[i]
-				if word in line:
-					
-					# Trying to check if at the beginning of new block:
-					if line.strip()[-1] == ':':
-						# Offset is num of empty lines between this line and next
-						# non empty line
-						nextline = None
-						
-						for offset in range(1, len(tmp)-i):
-							nextline = tmp[i+offset]
-							if nextline.strip() == '': continue
-							else: break
-							
-							
-						if not nextline:
-							continue
-						
-						
-						# Now should have next non empty line,
-						# so start parsing it:
-						flag_space = False
-						indent_0 = 0
-						indent_1 = 0
-		
-						for char in line:
-							if char in [' ', '\t']: indent_0 += 1
-							else: break
-		
-						for char in nextline:
-							# Check if indent done with spaces:
-							if char == ' ':
-								flag_space = True
-		
-							if char in [' ', '\t']: indent_1 += 1
-							else: break
-						
-						
-						indent = indent_1 - indent_0
-						#print(indent)
-						tests = [
-								( indent <= 0 ),
-								( not flag_space and indent > 1 )
-								]
-						
-						if any(tests):
-							#print('indent err')
-							#skipping
-							continue
-						
-						
-						# All is good, do nothing:
-						if not flag_space:
-							return False, 0
-							
-						# Found one block with spaced indentation,
-						# assuming it is used in whole file.
-						else:
-							if indent != self.ind_depth:
-								return True, indent
-							
-							else:
-								return False, 0
-					
-		return False, 0
-	
 	
 	def ensure_idx_visibility(self, index):
+		''' There seems to be inconsistency when contents of view of Text-widget is refreshed.
+			At least it is mystery to me. To test: search something common like: self.
+			Then start going backwards with ctrl-p until in place where multiple matches are
+			in same time visible in center of screen. Now try repeatedly multiple ctrl-n and ctrl-p
+			and notice the inconsistency yourself.
+		'''
 		
-		start = self.contents.index('%s - 2lines' % index)
-		end = self.contents.index('%s + 2lines' % index)
 		s = self.contents.bbox('%s - 2lines' % index)
 		e = self.contents.bbox('%s + 2lines' % index)
 		
@@ -2944,7 +2851,90 @@ class Editor(tkinter.Toplevel):
 			
 ########## Gotoline and Help End
 ########## Indent and Comment Begin
-
+	
+	def check_indent_depth(self, contents):
+		'''Contents is contents of py-file as string.'''
+		
+		words = [
+				'def ',
+				'if ',
+				'for ',
+				'while ',
+				'class '
+				]
+				
+		tmp = contents.splitlines()
+		
+		for word in words:
+			
+			for i in range(len(tmp)):
+				line = tmp[i]
+				if word in line:
+					
+					# Trying to check if at the beginning of new block:
+					if line.strip()[-1] == ':':
+						# Offset is num of empty lines between this line and next
+						# non empty line
+						nextline = None
+						
+						for offset in range(1, len(tmp)-i):
+							nextline = tmp[i+offset]
+							if nextline.strip() == '': continue
+							else: break
+							
+							
+						if not nextline:
+							continue
+						
+						
+						# Now should have next non empty line,
+						# so start parsing it:
+						flag_space = False
+						indent_0 = 0
+						indent_1 = 0
+		
+						for char in line:
+							if char in [' ', '\t']: indent_0 += 1
+							else: break
+		
+						for char in nextline:
+							# Check if indent done with spaces:
+							if char == ' ':
+								flag_space = True
+		
+							if char in [' ', '\t']: indent_1 += 1
+							else: break
+						
+						
+						indent = indent_1 - indent_0
+						#print(indent)
+						tests = [
+								( indent <= 0 ),
+								( not flag_space and indent > 1 )
+								]
+						
+						if any(tests):
+							#print('indent err')
+							#skipping
+							continue
+						
+						
+						# All is good, do nothing:
+						if not flag_space:
+							return False, 0
+							
+						# Found one block with spaced indentation,
+						# assuming it is used in whole file.
+						else:
+							if indent != self.ind_depth:
+								return True, indent
+							
+							else:
+								return False, 0
+					
+		return False, 0
+	
+	
 	def indent(self, event=None):
 		if self.state != 'normal':
 			self.bell()

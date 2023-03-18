@@ -1,0 +1,7 @@
+Files in this directory are taken from Python:idlelib -git-page:
+
+https://github.com/python/cpython/tree/3.11/Lib/idlelib/
+
+They are licenced as stated in file: LICENCE in this folder.
+
+They are here for the purpose of look for examples like autocomplete.

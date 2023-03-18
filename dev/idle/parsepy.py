@@ -27,6 +27,53 @@ import io
 # So start[1] == end[1] == current indentation depth when dedenting
 
 
+##words = [
+##		'def ',
+##		'if ',
+##		'for ',
+##		'while ',
+##		'class '
+##		]
+##
+### Check if start of a new block:
+##if token.type == tokenize.NAME and token.string in words:
+##
+##	if token.string in ['def', 'class']:
+##
+##		flag_add_next_name_to_scope = True
+##
+##	indent_lvl += 1
+
+
+
+# Check if scope changed:
+# if token.type == tokenize.DEDENT:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 testfile = '/home/samuel/pyyttoni/aa.py'
 
 
