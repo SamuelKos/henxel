@@ -5,7 +5,6 @@
 # >>> e=todo.Ed()
 
 
-# remove multiline string but leave ''' not working
 
 
 # set pos after ensure ctrl-n p					ok?
@@ -13,10 +12,11 @@
 # fix show_next 								ok?
 
 
-# unbind ctrl-n i fixes ctrl-n p not always responding immediately?
+# check ctrl-n always responds immediately?
 
-# sometimes pass no color
+# sometimes pass no color?
 
+# remove multiline string but leave ''' not working?
 
 
 
