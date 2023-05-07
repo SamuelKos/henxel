@@ -5,10 +5,26 @@
 # >>> e=todo.Ed()
 
 
+# remove multiline string but leave ''' not working
+
+
+# set pos after ensure ctrl-n p					ok?
+# ok but how to update pos if clicked 			ok?
+# fix show_next 								ok?
+
+
+# unbind ctrl-n i fixes ctrl-n p not always responding immediately?
+
+# sometimes pass no color
 
 
 
 
+
+
+# /dev/idle/colorizer.py
+# import builtins
+# help(builtins)
 
 
 # remove printings before build

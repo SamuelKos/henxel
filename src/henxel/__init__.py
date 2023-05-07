@@ -182,6 +182,10 @@ class Editor(tkinter.Toplevel):
 		
 		self.errlines = list()
 		
+		# When clicked with mouse button 1 while searhing
+		# to set cursor position to that position clicked.
+		self.save_pos = None
+		
 		# used in load()
 		self.tracevar_filename = tkinter.StringVar()
 		self.tracefunc_name = None
@@ -593,19 +597,14 @@ class Editor(tkinter.Toplevel):
 		
 	
 	def ensure_idx_visibility(self, index):
-		''' There seems to be inconsistency when contents of view of Text-widget is refreshed.
-			At least it is mystery to me. To test: search something common like: self.
-			Then start going backwards with ctrl-p until in place where multiple matches are
-			in same time visible in center of screen. Now try repeatedly multiple ctrl-n and ctrl-p
-			and notice the inconsistency yourself.
-		'''
 		
+		self.contents.mark_set('insert', index)
 		s = self.contents.bbox('%s - 2lines' % index)
 		e = self.contents.bbox('%s + 2lines' % index)
 		
 		tests = [
-				( not s ),
-				( not e ),
+				not s,
+				not e,
 				( s and s[1] < 0 )
 				]
 				
@@ -3107,7 +3106,7 @@ class Editor(tkinter.Toplevel):
 		
 		wordlen = len(self.old_word)
 		self.lastcursorpos = self.contents.index(tkinter.INSERT)
-		pos = self.contents.search(self.old_word, tkinter.INSERT, tkinter.END)
+		pos = self.contents.search(self.old_word, 'insert +1c', tkinter.END)
 		
 		# Try again from the beginning this time:
 		if not pos:
@@ -3116,6 +3115,7 @@ class Editor(tkinter.Toplevel):
 			# no oldword in file:
 			if not pos:
 				self.bell()
+				print('no')
 				return "break"
 		
 		# go back to last place with arrow left
@@ -3210,7 +3210,7 @@ class Editor(tkinter.Toplevel):
 			tmp = match_ranges[idx*2]
 			if self.contents.compare(ref, '==', tmp): break
 			
-			
+		
 		self.title( f'Search: {idx+1}/{self.search_matches}' )
 		
 		if self.search_matches == 1:
@@ -3261,7 +3261,12 @@ class Editor(tkinter.Toplevel):
 				
 		return 'break'
 		
-					
+		
+	def update_curpos(self, event=None):
+		self.save_pos = self.contents.index(tkinter.INSERT)
+		return "break"
+			
+			
 	def clear_search_tags(self, event=None):
 		if self.state != 'normal':
 			return "break"
@@ -3311,14 +3316,36 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Return>", self.do_nothing)
 		self.contents.unbind( "<Control-n>", funcid=self.bid1 )
 		self.contents.unbind( "<Control-p>", funcid=self.bid2 )
+		self.contents.unbind( "<ButtonRelease-1>", funcid=self.bid3 )
 		
-		self.contents.focus_set()
+		# set cursor pos
+		try:
+			if self.save_pos:
+				line = self.save_pos
+				self.tabs[self.tabindex].position = line
+				self.save_pos = None
+			else:
+				line = self.tabs[self.tabindex].position
+			
+			self.contents.focus_set()
+			self.contents.mark_set('insert', line)
+			self.ensure_idx_visibility(line)
+			
+		except tkinter.TclError:
+			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
 			
 	
 	def search(self, event=None):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
+		
+		# save cursor pos
+		try:
+			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
+		
+		except tkinter.TclError:
+			pass
 			
 		self.state = 'search'
 		self.btn_open.config(state='disabled')
@@ -3328,6 +3355,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
 		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
+		self.bid3 = self.contents.bind("<ButtonRelease-1>", func=self.update_curpos, add=True )
 		
 		self.title('Search:')
 		self.entry.delete(0, tkinter.END)
@@ -3377,6 +3405,7 @@ class Editor(tkinter.Toplevel):
 	
 		except tkinter.TclError:
 			pass
+			
 		
 		self.contents.config(state='disabled')
 		self.entry.focus_set()
