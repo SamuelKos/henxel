@@ -1742,26 +1742,45 @@ class Editor(tkinter.Toplevel):
 				
 				self.taglinks[tagname] = self.tag_link
 				
-				# parse filepath and linenums from errors
+				# Parse filepath and linenums from errors
 				if 'File ' in line and 'line ' in line:
+					self.contents.insert(tkinter.INSERT, '\n')
 					data = line.split(',')[:2]
 					linenum = data[1][6:]
-					filepath = data[0][8:-1]
-					filepath = pathlib.Path(filepath)
+					path = data[0][8:-1]
+					pathlen = len(path) + 2
+					filepath = pathlib.Path(path)
 					
+					self.errlines.append((filepath, linenum))
+					
+						
 					if filepath in openfiles:
 						self.contents.tag_config(tagname, foreground='brown1')
 						self.contents.tag_raise(tagname)
+							
+						self.contents.insert(tkinter.INSERT, tmp)
 						
-					self.errlines.append((filepath, linenum))
-					self.contents.insert(tkinter.INSERT, tmp +"\n", tagname)
+						s0 = tmp.index(path) - 1
+						s = self.contents.index('insert linestart +%sc' % s0 )
+						e = self.contents.index('%s +%sc' % (s, pathlen) )
+						
+						self.contents.tag_add(tagname, s, e)
+						self.contents.insert(tkinter.INSERT, '\n')
+					
+					else:
+						self.contents.insert(tkinter.INSERT, tmp +"\n", tagname)
+					
+					
 				else:
 					self.contents.insert(tkinter.INSERT, tmp +"\n")
-			
+					
+					# Make look bit nicer:
+					if self.syntax:
+						# -1 lines because we have added linebreak already.
+						start = self.contents.index('insert -1 lines linestart')
+						end = self.contents.index('insert -1 lines lineend')
 						
-			# Make look bit nicer:
-			if self.syntax:
-				self.update_tokens(start='1.0', end=tkinter.END)
+						self.update_tokens(start=start, end=end, line=line)
 			
 					
 		return 'break'
@@ -1786,28 +1805,57 @@ class Editor(tkinter.Toplevel):
 				pos = '1.0'
 				
 			self.tabs[self.tabindex].position = pos
-			
 			self.contents.delete('1.0', tkinter.END)
+			openfiles = [tab.filepath for tab in self.tabs]
+			
+			for tag in self.contents.tag_names():
+				if 'hyper' in tag:
+					self.contents.tag_config(tag, foreground=self.fgcolor)
 			
 			i = 0
 			for line in self.err:
 				tmp = line
+				tagname = 'hyper-%d' % i
 				
-				# parse filepath and linenums from errors
+				# Parse filepath and linenums from errors
 				if 'File ' in line and 'line ' in line:
+					self.contents.insert(tkinter.INSERT, '\n')
 					data = line.split(',')[:2]
 					linenum = data[1][6:]
-					filepath = data[0][8:-1]
-					self.errlines.append((filepath, linenum))
-					self.contents.insert(tkinter.INSERT, tmp +"\n", 'hyper-%d' % i)
+					path = data[0][8:-1]
+					pathlen = len(path) + 2
+					filepath = pathlib.Path(path)
+					
+					
+					if filepath in openfiles:
+						self.contents.tag_config(tagname, foreground='brown1')
+						self.contents.tag_raise(tagname)
+							
+						self.contents.insert(tkinter.INSERT, tmp)
+						
+						s0 = tmp.index(path) - 1
+						s = self.contents.index('insert linestart +%sc' % s0 )
+						e = self.contents.index('%s +%sc' % (s, pathlen) )
+						
+						self.contents.tag_add(tagname, s, e)
+						self.contents.insert(tkinter.INSERT, '\n')
+					
+					else:
+						self.contents.insert(tkinter.INSERT, tmp +"\n", tagname)
+					
 					i += 1
+					
 				else:
 					self.contents.insert(tkinter.INSERT, tmp +"\n")
-			
+					
+					# Make look bit nicer:
+					if self.syntax:
+						# -1 lines because we have added linebreak already.
+						start = self.contents.index('insert -1 lines linestart')
+						end = self.contents.index('insert -1 lines lineend')
 						
-			# Make look bit nicer:
-			if self.syntax:
-				self.update_tokens(start='1.0', end=tkinter.END)
+						self.update_tokens(start=start, end=end, line=line)
+			
 					
 									
 	def stop_show_errors(self, event=None):

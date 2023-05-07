@@ -5,6 +5,7 @@
 # >>> e=todo.Ed()
 
 
+# fix error syntax								ok?
 
 
 # set pos after ensure ctrl-n p					ok?
