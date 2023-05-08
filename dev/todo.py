@@ -5,9 +5,55 @@
 # >>> e=todo.Ed()
 
 
+
+# print current bindings for a class:
+# e.contents.bind_class('Text')
+
+
+# Unbinding default binding of Text-widget:
+# e.contents.unbind_class('Text', '<Button-1>')
+
+# So check what want to bind in self.contents, and unbind them from Text
+# and it should then work: binding straight to self. Also can unbind all other unneeded bindings.
+
+
+
+
+# remap keys?
+# unbind always?
+
+# self.is_binded_to_do_nothing = d = dict()
+# d['copy'] = False
+
+# self.is_binded_to_skip_bindlevel = d = dict()
+# d['show next'] = True
+
+# self.is_binded_to_normal = d = dict()
+# d['show next'] = False
+
+
+# self.bind_seqs = d = dict()
+# seq = d['decrease scrollbar width'] = "<Control-minus>"
+# bind_id = self.bind( seq, self.decrease_scrollbar_width)
+
+# self.bind_ids = q = dict()
+# q[seq] = bind_id
+
+
+# when unbinding:
+# seq = d['decrease scrollbar width']
+# id = q[seq]
+# self.contents.unbind(seq, funcid=id)
+# q.pop(seq)
+
+
+
+# ctrl-s to default ctrl-a
+
 # fix error syntax								ok?
 
 
+# update help									ok?
 # set pos after ensure ctrl-n p					ok?
 # ok but how to update pos if clicked 			ok?
 # fix show_next 								ok?

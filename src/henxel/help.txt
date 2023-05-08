@@ -1,5 +1,12 @@
 		Keyboard shortcuts:
-
+		
+		If key-sequence is like: Ctrl-c
+		It means: while holding ctrl-key down, press and release c-key.
+		
+		If key-sequence is like: Ctrl-c-f
+		It means: while holding ctrl-key down, press and release first
+		c-key then f-key.
+		 
 		Alt-Return		Open file
 		Ctrl-BackSpace  Show and select next occurence of last search.
 						If got too far, press arrowleft to go to last

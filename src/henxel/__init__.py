@@ -591,7 +591,11 @@ class Editor(tkinter.Toplevel):
 		self.bell()
 		return 'break'
 	
-		
+	
+	def test_bind(self, event=None):
+		print('jou')
+	
+	
 	def skip_bindlevel(self, event=None):
 		return 'continue'
 		
