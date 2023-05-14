@@ -1749,6 +1749,7 @@ class Editor(tkinter.Toplevel):
 				# Parse filepath and linenums from errors
 				if 'File ' in line and 'line ' in line:
 					self.contents.insert(tkinter.INSERT, '\n')
+					 
 					data = line.split(',')[:2]
 					linenum = data[1][6:]
 					path = data[0][8:-1]
@@ -1757,22 +1758,19 @@ class Editor(tkinter.Toplevel):
 					
 					self.errlines.append((filepath, linenum))
 					
+					self.contents.insert(tkinter.INSERT, tmp)
+					s0 = tmp.index(path) - 1
+					s = self.contents.index('insert linestart +%sc' % s0 )
+					e = self.contents.index('%s +%sc' % (s, pathlen) )
+					
+					self.contents.tag_add(tagname, s, e)
 						
 					if filepath in openfiles:
 						self.contents.tag_config(tagname, foreground='brown1')
 						self.contents.tag_raise(tagname)
 							
-						self.contents.insert(tkinter.INSERT, tmp)
 						
-						s0 = tmp.index(path) - 1
-						s = self.contents.index('insert linestart +%sc' % s0 )
-						e = self.contents.index('%s +%sc' % (s, pathlen) )
-						
-						self.contents.tag_add(tagname, s, e)
-						self.contents.insert(tkinter.INSERT, '\n')
-					
-					else:
-						self.contents.insert(tkinter.INSERT, tmp +"\n", tagname)
+					self.contents.insert(tkinter.INSERT, '\n')
 					
 					
 				else:
@@ -1830,22 +1828,19 @@ class Editor(tkinter.Toplevel):
 					pathlen = len(path) + 2
 					filepath = pathlib.Path(path)
 					
+					self.contents.insert(tkinter.INSERT, tmp)
+					s0 = tmp.index(path) - 1
+					s = self.contents.index('insert linestart +%sc' % s0 )
+					e = self.contents.index('%s +%sc' % (s, pathlen) )
+					
+					self.contents.tag_add(tagname, s, e)
 					
 					if filepath in openfiles:
 						self.contents.tag_config(tagname, foreground='brown1')
 						self.contents.tag_raise(tagname)
-							
-						self.contents.insert(tkinter.INSERT, tmp)
 						
-						s0 = tmp.index(path) - 1
-						s = self.contents.index('insert linestart +%sc' % s0 )
-						e = self.contents.index('%s +%sc' % (s, pathlen) )
 						
-						self.contents.tag_add(tagname, s, e)
-						self.contents.insert(tkinter.INSERT, '\n')
-					
-					else:
-						self.contents.insert(tkinter.INSERT, tmp +"\n", tagname)
+					self.contents.insert(tkinter.INSERT, '\n')
 					
 					i += 1
 					
