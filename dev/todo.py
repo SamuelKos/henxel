@@ -49,6 +49,11 @@
 
 
 
+# return 'break' when deleting selection
+# to not to delete extra character before selection		ok?
+
+
+
 
 
 # /dev/idle/colorizer.py

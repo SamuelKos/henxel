@@ -2087,6 +2087,8 @@ class Editor(tkinter.Toplevel):
 			
 			self.do_syntax()
 			
+			return 'break'
+			
 				
 		except tkinter.TclError:
 			# Deleting one letter
