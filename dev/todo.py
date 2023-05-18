@@ -5,7 +5,6 @@
 # >>> e=todo.Ed()
 
 
-
 # print current bindings for a class:
 # e.contents.bind_class('Text')
 
@@ -15,8 +14,6 @@
 
 # So check what want to bind in self.contents, and unbind them from Text
 # and it should then work: binding straight to self. Also can unbind all other unneeded bindings.
-
-
 
 
 # remap keys?
@@ -48,9 +45,17 @@
 
 
 
-# ctrl-s to default ctrl-a
+# ctrl-backspace should delete word?
+# have ctrl-left ctrl-right ctrl-shift-left ctrl-shift-right
+
+
+# paste single line and linebreak --> no syntax	ok?
 
 # fix error syntax								ok?
+# ctrl-s if not focus 							ok?
+
+# change day ref color
+# colorchooser always shows d9d9d9				ok?
 
 
 # update help									ok?
@@ -95,8 +100,6 @@
 
 import tkinter
 import tkinter.font
-
-
 
 
 ########################## Maybe interesting Begin:

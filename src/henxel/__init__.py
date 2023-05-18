@@ -1516,10 +1516,9 @@ class Editor(tkinter.Toplevel):
 			
 	def chcolor(self, args, event=None):
 	
-
 		if args[0] == 'bg':
 			
-			res = self.tk.call('tk_chooseColor')
+			res = self.tk.call('tk_chooseColor', '-initialcolor', self.bgcolor)
 			tmpcolorbg = str(res)
 			
 			if tmpcolorbg in [None, '']:
@@ -1532,8 +1531,8 @@ class Editor(tkinter.Toplevel):
 				self.bgnightcolor = tmpcolorbg
 				self.bgcolor = self.bgnightcolor
 		else:
-				
-			res = self.tk.call('tk_chooseColor')
+			
+			res = self.tk.call('tk_chooseColor', '-initialcolor', self.fgcolor)
 			tmpcolorfg = str(res)
 			
 			if tmpcolorfg in [None, '']:
@@ -1905,7 +1904,9 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-			
+		
+		self.ensure_idx_visibility('insert')
+		
 		# In case of wrapped lines
 		y_cursor = self.contents.bbox(tkinter.INSERT)[1]
 		pos = self.contents.index( '@0,%s' % y_cursor)
@@ -1962,16 +1963,22 @@ class Editor(tkinter.Toplevel):
 	
 		line = self.contents.index(tkinter.INSERT)
 		self.contents.event_generate('<<Paste>>')
-				
+						
 		if len(tmp) > 1:
-				
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			self.contents.tag_add('sel', line, tkinter.INSERT)
-			
 			self.contents.mark_set('insert', line)
-			
+	
 			self.do_syntax()
+		
 			self.ensure_idx_visibility(line)
+			
+		elif len(tmp) == 1 and tmp[-1][-1] == '\n':
+			s = self.contents.index( '%s linestart' % line)
+			e = self.contents.index( '%s lineend' % line)
+			t = self.contents.get( s, e )
+			self.update_tokens( start=s, end=e, line=t )
+				
 		
 		return 'break'
 
