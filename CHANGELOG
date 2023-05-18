@@ -1,7 +1,15 @@
 # Changelog
-* To version: 	0.1.7
+* To version: 	0.1.8
 * From version:	0.0.3
 
+
+# 0.1.8
+- Fix error-view syntax-highlighting.
+- Fix error when doing ctrl-s if cursor not visible.
+- Colorchooser now shows current color correctly.
+- Updated help-file.
+- Fixes for show_next, ensure_visibility, walk_tabs.
+- Fixes for paste() when dealing with multiline string markers.
 
 
 # 0.1.7

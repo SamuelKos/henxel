@@ -49,24 +49,6 @@
 
 
 
-# fix error syntax								ok?
-# ctrl-s if not focus 							ok?
-
-# change day ref color
-# colorchooser always shows d9d9d9				ok?
-
-
-# update help									ok?
-# set pos after ensure ctrl-n p					ok?
-# ok but how to update pos if clicked 			ok?
-# fix show_next 								ok?
-
-
-# remove multiline string but leave ''' not working?	ok?
-# paste multiline		ok?
-# paste single line and linebreak --> no syntax	ok?
-
-
 
 
 # /dev/idle/colorizer.py

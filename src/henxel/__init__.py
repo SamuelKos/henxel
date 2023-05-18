@@ -931,8 +931,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 	
-	
-		self.update_tokens(start='1.0', end=tkinter.END, everything=True)
+		if self.can_do_syntax():
+			self.update_tokens(start='1.0', end=tkinter.END, everything=True)
 
 		# set cursor pos
 		line = self.tabs[self.tabindex].position
@@ -953,14 +953,16 @@ class Editor(tkinter.Toplevel):
 		
 		# Until update_title: avoiding viewsync messing when cursor
 		# position is in line with multiline string marker.
-		pos = self.tabs[self.tabindex].position
-		lineend = '%s lineend' % pos
-		linestart = '%s linestart' % pos
-		tmp = self.contents.get( linestart, lineend )
-		self.oldline = tmp
-		self.oldlinenum = pos.split('.')[0]
+		if self.can_do_syntax():
+			pos = self.tabs[self.tabindex].position
+			lineend = '%s lineend' % pos
+			linestart = '%s linestart' % pos
+			tmp = self.contents.get( linestart, lineend )
+			self.oldline = tmp
+			self.oldlinenum = pos.split('.')[0]
+				
+			self.token_can_update = True
 			
-		self.token_can_update = True
 		
 		self.update_title()
 		
@@ -1980,8 +1982,9 @@ class Editor(tkinter.Toplevel):
 			s = self.contents.index( '%s linestart' % line)
 			e = self.contents.index( 'insert lineend')
 			t = self.contents.get( s, e )
-	
-			self.update_tokens( start=s, end=e, line=t )
+			
+			if self.can_do_syntax():
+				self.update_tokens( start=s, end=e, line=t )
 			
 			self.contents.tag_add('sel', line, tkinter.INSERT)
 			self.contents.mark_set('insert', line)
@@ -1993,7 +1996,8 @@ class Editor(tkinter.Toplevel):
 			e = self.contents.index( '%s lineend' % line)
 			t = self.contents.get( s, e )
 			
-			self.update_tokens( start=s, end=e, line=t )
+			if self.can_do_syntax():
+				self.update_tokens( start=s, end=e, line=t )
 				
 		
 		return 'break'
