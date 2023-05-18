@@ -51,6 +51,11 @@
 		Ctrl-s  Move cursor to linestart
 		Ctrl-k  Remove from cursor to lineend
 		
+		Ctrl-left  		Move cursor one word left
+		Ctrl-right 		Move cursor one word right
+		Ctrl-shift-left 	Select one more word to left
+		Ctrl-shift-right	Select one more word to right
+		
 		Ctrl-plus 	Increase scrollbar-width
 		Ctrl-minus	Decrease scrollbar-width
 

@@ -5,6 +5,8 @@
 # >>> e=todo.Ed()
 
 
+# Binding rewrite planning Begin:
+
 # print current bindings for a class:
 # e.contents.bind_class('Text')
 
@@ -43,13 +45,9 @@
 # self.contents.unbind(seq, funcid=id)
 # q.pop(seq)
 
+# Binding rewrite planning End
 
 
-# ctrl-backspace should delete word?
-# have ctrl-left ctrl-right ctrl-shift-left ctrl-shift-right
-
-
-# paste single line and linebreak --> no syntax	ok?
 
 # fix error syntax								ok?
 # ctrl-s if not focus 							ok?
@@ -64,12 +62,9 @@
 # fix show_next 								ok?
 
 
-# check ctrl-n always responds immediately?
-
-# sometimes pass no color?
-
-# remove multiline string but leave ''' not working?
-
+# remove multiline string but leave ''' not working?	ok?
+# paste multiline		ok?
+# paste single line and linebreak --> no syntax	ok?
 
 
 
@@ -96,6 +91,9 @@
 
 #############
 ''' asd
+	import tkinter
+	import tkinter.font
+	
 '''
 
 import tkinter

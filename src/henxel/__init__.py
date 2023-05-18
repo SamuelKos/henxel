@@ -927,12 +927,12 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			
 		
+		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-
 	
-		self.do_syntax(everything=True)
-
+	
+		self.update_tokens(start='1.0', end=tkinter.END, everything=True)
 
 		# set cursor pos
 		line = self.tabs[self.tabindex].position
@@ -947,9 +947,20 @@ class Editor(tkinter.Toplevel):
 			self.tabs[self.tabindex].position = '1.0'
 			self.contents.see('1.0')
 
-			
+		
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
+		
+		# Until update_title: avoiding viewsync messing when cursor
+		# position is in line with multiline string marker.
+		pos = self.tabs[self.tabindex].position
+		lineend = '%s lineend' % pos
+		linestart = '%s linestart' % pos
+		tmp = self.contents.get( linestart, lineend )
+		self.oldline = tmp
+		self.oldlinenum = pos.split('.')[0]
+			
+		self.token_can_update = True
 		
 		self.update_title()
 		
@@ -1951,7 +1962,6 @@ class Editor(tkinter.Toplevel):
 			starting copying of a block at the empty line before first line of
 			the block.
 		'''
-			
 		
 		try:
 			tmp = self.clipboard_get()
@@ -1966,17 +1976,23 @@ class Editor(tkinter.Toplevel):
 						
 		if len(tmp) > 1:
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			
+			s = self.contents.index( '%s linestart' % line)
+			e = self.contents.index( 'insert lineend')
+			t = self.contents.get( s, e )
+	
+			self.update_tokens( start=s, end=e, line=t )
+			
 			self.contents.tag_add('sel', line, tkinter.INSERT)
 			self.contents.mark_set('insert', line)
 	
-			self.do_syntax()
-		
 			self.ensure_idx_visibility(line)
 			
 		elif len(tmp) == 1 and tmp[-1][-1] == '\n':
 			s = self.contents.index( '%s linestart' % line)
 			e = self.contents.index( '%s lineend' % line)
 			t = self.contents.get( s, e )
+			
 			self.update_tokens( start=s, end=e, line=t )
 				
 		
@@ -2062,13 +2078,14 @@ class Editor(tkinter.Toplevel):
 			return
 			
 		try:
-			_ = self.contents.index(tkinter.SEL_FIRST)
-			
+			# Is there a selection?
+			self.contents.delete( tkinter.SEL_FIRST, tkinter.SEL_LAST )
 			
 			self.do_syntax()
 			
 				
 		except tkinter.TclError:
+			# Deleting one letter
 		
 			# Rest is multiline string check
 			chars = self.contents.get( '%s - 3c' % tkinter.INSERT, '%s + 2c' % tkinter.INSERT )
@@ -3169,7 +3186,7 @@ class Editor(tkinter.Toplevel):
 			# no oldword in file:
 			if not pos:
 				self.bell()
-				print('no')
+				#print('no')
 				return "break"
 		
 		# go back to last place with arrow left
