@@ -1,13 +1,26 @@
 # this is todo, and stub-editor for testing, might not work
 
-# Run in python console:
+# Run in python console
 # >>> import todo
 # >>> e=todo.Ed()
 
 
-# Binding rewrite planning Begin:
 
-# print current bindings for a class:
+
+# search ensure vis shows 4 next lines instead of 2		ok?
+
+# return 'break' when deleting selection
+# to not to delete extra character before selection		ok?
+
+
+
+
+
+
+
+# Binding rewrite planning Begin
+
+# print current bindings for a class
 # e.contents.bind_class('Text')
 
 
@@ -46,13 +59,6 @@
 # q.pop(seq)
 
 # Binding rewrite planning End
-
-
-
-# return 'break' when deleting selection
-# to not to delete extra character before selection		ok?
-
-
 
 
 
@@ -352,7 +358,7 @@ class Ed(tkinter.Toplevel):
 			cls.UPDATE_PERIOD,
 			cls.updateAllLineNumbers)
 		
-		# about double cpu compared to after(100ms), but is smoother:
+		# about double cpu compared to after(100ms), but is smoother
 ##		cls.updateId = ed.contents.after_idle(
 ##			cls.updateAllLineNumbers)
 

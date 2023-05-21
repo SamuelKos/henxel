@@ -604,7 +604,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.mark_set('insert', index)
 		s = self.contents.bbox('%s - 2lines' % index)
-		e = self.contents.bbox('%s + 2lines' % index)
+		e = self.contents.bbox('%s + 4lines' % index)
 		
 		tests = [
 				not s,
@@ -615,7 +615,7 @@ class Editor(tkinter.Toplevel):
 		if any(tests):
 			self.contents.see('%s - 2lines' % index)
 			self.update_idletasks()
-			self.contents.see('%s + 2lines' % index)
+			self.contents.see('%s + 4lines' % index)
 			
 		
 	def quit_me(self):
