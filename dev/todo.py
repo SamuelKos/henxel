@@ -7,6 +7,13 @@
 
 
 
+# newtab in center err when walk to it: can do syntax, no filepath
+# now fixed also in paste, need to chek
+
+
+# filediag stop long scrolling
+
+
 # search ensure vis shows 4 next lines instead of 2		ok?
 
 # return 'break' when deleting selection
