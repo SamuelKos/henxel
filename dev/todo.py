@@ -6,10 +6,12 @@
 
 
 
+# select lines no last if empty?
+# fix only in indent()
 
 # newtab in center err when walk to it: can do syntax, no filepath
 # now fixed also in paste, need to chek
-
+	
 
 # filediag stop long scrolling
 

@@ -2074,7 +2074,7 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 			
 		except tkinter.TclError:
-			# No selection, continue to next bindtag
+			# No selection
 			return
 
 	
@@ -3022,6 +3022,18 @@ class Editor(tkinter.Toplevel):
 		try:
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
+			
+			start_idx = self.contents.index(tkinter.SEL_FIRST)
+			end_idx = self.contents.index(tkinter.SEL_LAST)
+			
+			# Leave that last line out when indent level is zero for clarity
+			if int( end_idx.split(sep='.')[1] ) == 0:
+				endline -= 1
+				end_idx = self.contents.index( '%s -1l lineend' % end_idx )
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
+				self.contents.tag_add('sel', start_idx, end_idx)
+				
+			
 			for linenum in range(startline, endline+1):
 				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 				self.contents.insert(tkinter.INSERT, '\t')
