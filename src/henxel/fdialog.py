@@ -80,6 +80,7 @@ class FDialog:
 		self.dirsbar.configure(width=30, elementborderwidth=4)
 		self.filesbar.configure(width=30, elementborderwidth=4)
 		
+		
 		self.dirs.bind('<Double-ButtonRelease-1>', self.chdir)
 		self.dirs.bind('<Return>', self.chdir)
 		self.dirs.bind('<Tab>', self.nogoto_emptylist)
@@ -88,7 +89,7 @@ class FDialog:
 		self.dirs.bind('<Down>', self.carousel)
 		self.files.bind('<Up>', self.carousel)
 		self.files.bind('<Down>', self.carousel)
-
+		
 		self.files.bind('<Return>', self.selectfile)
 		self.files.bind('<Double-ButtonRelease-1>', self.selectfile)
 		
@@ -104,15 +105,15 @@ class FDialog:
 		self.files.grid_configure(row=1, column = 2, sticky='nsew')
 		self.filesbar.grid_configure(row=1, column = 3, sticky='nse')
 		
+			
 		self.update_view()
 		
 		#################### init end ################
-		
+	
 	
 	def carousel(self, event=None):
-		
 		if event.widget.size() > 1:
-		
+			
 			idx = event.widget.index('active')
 			idx_last_file = event.widget.size() - 1
 			
@@ -125,7 +126,7 @@ class FDialog:
 			elif event.keysym == 'Down' and idx == idx_last_file:
 				event.widget.activate(0)
 				event.widget.see(0)
-				
+					
 				return 'break'
 				
 	
