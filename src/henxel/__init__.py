@@ -664,27 +664,29 @@ class Editor(tkinter.Toplevel):
 		
 		self.update_linenums()
 		
-		if self.token_can_update:
-		
-			#  tag alter triggers this event if font changes, like from normal to bold.
-			# --> need to check if line is changed to prevent self-trigger
-			line_idx = self.contents.index( tkinter.INSERT )
-			linenum = line_idx.split('.')[0]
-			#prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT )
-			
-			
-			lineend = '%s lineend' % line_idx
-			linestart = '%s linestart' % line_idx
-			
-			tmp = self.contents.get( linestart, lineend )
-			
-			if self.oldline != tmp or self.oldlinenum != linenum:
-			
-				#print('sync')
-				#print('sync')
-				self.oldline = tmp
-				self.oldlinenum = linenum
-				self.update_tokens(start=linestart, end=lineend, line=tmp)
+		if self.tabs[self.tabindex].filepath:
+			if self.can_do_syntax():
+				if self.token_can_update:
+				
+					#  tag alter triggers this event if font changes, like from normal to bold.
+					# --> need to check if line is changed to prevent self-trigger
+					line_idx = self.contents.index( tkinter.INSERT )
+					linenum = line_idx.split('.')[0]
+					#prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT )
+					
+					
+					lineend = '%s lineend' % line_idx
+					linestart = '%s linestart' % line_idx
+					
+					tmp = self.contents.get( linestart, lineend )
+					
+					if self.oldline != tmp or self.oldlinenum != linenum:
+					
+						#print('sync')
+						#print('sync')
+						self.oldline = tmp
+						self.oldlinenum = linenum
+						self.update_tokens(start=linestart, end=lineend, line=tmp)
 				
 
 ############## Linenumbers Begin
@@ -1988,11 +1990,13 @@ class Editor(tkinter.Toplevel):
 			if self.tabs[self.tabindex].filepath:
 				if self.can_do_syntax():
 					self.update_tokens( start=s, end=e, line=t )
+					
 			
 			self.contents.tag_add('sel', line, tkinter.INSERT)
 			self.contents.mark_set('insert', line)
-	
+				
 			self.ensure_idx_visibility(line)
+			
 			
 		elif len(tmp) == 1 and tmp[-1][-1] == '\n':
 			s = self.contents.index( '%s linestart' % line)
@@ -2716,6 +2720,21 @@ class Editor(tkinter.Toplevel):
 					
 					
 					self.do_syntax()
+			
+				
+				# set cursor pos
+				try:
+					line = self.tabs[self.tabindex].position
+					self.contents.focus_set()
+					self.contents.mark_set('insert', line)
+					self.ensure_idx_visibility(line)
+					
+				except tkinter.TclError:
+					self.tabs[self.tabindex].position = '1.0'
+				
+				self.contents.edit_reset()
+				self.contents.edit_modified(0)
+				
 					
 				
 			# want to create new file with same contents:
@@ -3026,12 +3045,32 @@ class Editor(tkinter.Toplevel):
 			start_idx = self.contents.index(tkinter.SEL_FIRST)
 			end_idx = self.contents.index(tkinter.SEL_LAST)
 			
-			# Leave that last line out when indent level is zero for clarity
-			if int( end_idx.split(sep='.')[1] ) == 0:
+			# Selection made from top to bottom:
+			# Leave that last line out, if it was empty, for clarity
+			
+			# Are we at zero indent:
+			test1 = int( end_idx.split(sep='.')[1] ) == 0
+			# Is it empty:
+			test2 = self.contents.get('%i.0' % endline, '%s.end ' % endline).isspace()
+
+			if test1 or test2:
 				endline -= 1
 				end_idx = self.contents.index( '%s -1l lineend' % end_idx )
-				self.contents.tag_remove('sel', '1.0', tkinter.END)
-				self.contents.tag_add('sel', start_idx, end_idx)
+				
+			
+			# Selection made from bottom to top:
+			# Leave that first line out, if it was empty, for clarity
+			
+			# Is it empty:
+			test = self.contents.get('%i.0' % startline, '%s.end ' % startline).isspace()
+
+			if test:
+				startline += 1
+				start_idx = self.contents.index( '%s +1l linestart' % start_idx )
+					
+			
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.contents.tag_add('sel', start_idx, end_idx)
 				
 			
 			for linenum in range(startline, endline+1):

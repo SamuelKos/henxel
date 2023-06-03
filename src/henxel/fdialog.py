@@ -88,7 +88,7 @@ class FDialog:
 		self.dirs.bind('<Down>', self.carousel)
 		self.files.bind('<Up>', self.carousel)
 		self.files.bind('<Down>', self.carousel)
-		
+
 		self.files.bind('<Return>', self.selectfile)
 		self.files.bind('<Double-ButtonRelease-1>', self.selectfile)
 		

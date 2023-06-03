@@ -5,12 +5,22 @@
 # >>> e=todo.Ed()
 
 
+# after save (give filename) focus on text				ok?
 
-# select lines no last if empty?
+# pasting to tab with no filename should not do syntax 	ok?
+# fixed in wievsync()
+
+
+# check ctrl up down
+	
+
+# select lines no last if empty?						ok?
 # fix only in indent()
 
-# newtab in center err when walk to it: can do syntax, no filepath
-# now fixed also in paste, need to chek
+	
+# newtab in center err when walk to it:
+# can do syntax, no filepath
+# now fixed also in paste, need to chek					ok?
 	
 
 # filediag stop long scrolling

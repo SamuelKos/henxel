@@ -151,7 +151,13 @@
 		to other lines. But editor moves cursor at the start of block so
 		you can start fixing indenting that function definition line or
 		similar.
+	
 		
+	How to: hide blinking cursor
+	  - Sometimes one wants to focus on the code and blinking cursor is
+		not helping with that. Since there is no timer to turn it off one
+		have to click on linenumber-widget to hide the cursor.
+	
 	
 	How to: change indent-depth
 		For all files:
