@@ -1,6 +1,17 @@
 # Changelog
-* To version: 	0.1.8
+* To version: 	0.1.9
 * From version:	0.0.3
+
+
+# 0.1.9
+- After save (give filename), put focus on text.
+- Pasting to tab with no filename does no longer trigger syntax highlighting.
+- Unindenting single line works now as it should.
+- Updated help-text.
+- Added initial checking for parenthesis mismatch.
+- Fix error raised in v.0.1.8, when walking to newtab.
+- When searching, ensure_visibility shows now 4 next lines instead of just 2.
+- When deleting selection, an extra character before selection was also deleted. This is now fixed.
 
 
 # 0.1.8

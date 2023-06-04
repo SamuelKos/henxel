@@ -5,47 +5,6 @@
 # >>> e=todo.Ed()
 
 
-# after save (give filename) focus on text				ok?
-
-# pasting to tab with no filename should not do syntax 	ok?
-# fixed in wievsync()
-
-
-# unindent one line no sel								ok?
-# check ctrl up down
-
-
-
-
-
-# parenmatch continue									ok?
-
-
-
-
-
-
-
-# select lines no last if empty?						ok?
-# fix only in indent()
-# cancel	ok?
-	
-# newtab in center err when walk to it:
-# can do syntax, no filepath
-# now fixed also in paste, need to chek					ok?
-	
-
-# filediag stop long scrolling
-
-
-# search ensure vis shows 4 next lines instead of 2		ok?
-
-# return 'break' when deleting selection
-# to not to delete extra character before selection		ok?
-
-
-
-
 
 
 

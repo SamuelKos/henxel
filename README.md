@@ -16,6 +16,7 @@ GUI-editor for Python development. Tested to work with Debian Bullseye
 * Comment - Uncomment
 * Syntax highlighting
 * Click to open errors
+* Parenthesis checking
 * Persistent configuration
 * Near persistent contents
 
