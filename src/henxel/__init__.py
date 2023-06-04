@@ -311,9 +311,6 @@ class Editor(tkinter.Toplevel):
 				
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 		
-		self.contents.tag_config('match', background='lightyellow', foreground='black')
-		self.contents.tag_config('focus', background='lightgreen', foreground='black')
-		
 		self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
 		
 		self.contents.bind( "<Alt-l>", self.toggle_ln)
@@ -503,7 +500,8 @@ class Editor(tkinter.Toplevel):
 				'comments',
 				'breaks',
 				'calls',
-				'selfs'
+				'selfs',
+				'mismatch'
 				]
 		
 		self.boldfont = self.font.copy()
@@ -519,8 +517,11 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('bools', foreground=magenta)
 		self.contents.tag_config('strings', foreground=green)
 		self.contents.tag_config('selfs', foreground=gray)
+		self.contents.tag_config('mismatch', background='brown1', foreground='white')
 		
 		# search tags have highest priority
+		self.contents.tag_config('match', background='lightyellow', foreground='black')
+		self.contents.tag_config('focus', background='lightgreen', foreground='black')
 		self.contents.tag_raise('match')
 		self.contents.tag_raise('focus')
 		
@@ -1263,6 +1264,8 @@ class Editor(tkinter.Toplevel):
 		
 		
 		try:
+			par_err = None
+			
 			with io.BytesIO( tmp.encode('utf-8') ) as fo:
 			
 				tokens = tokenize.tokenize( fo.readline )
@@ -1345,18 +1348,74 @@ class Editor(tkinter.Toplevel):
 			flag_err = True
 			self.token_err = True
 
-			
+		
 		except tokenize.TokenError as ee:
+		
+			self.contents.tag_remove('mismatch', '%s linestart' % start_idx, '%s lineend' % start_idx )
+				
+			if 'EOF in multi-line statement' in ee.args[0]:
+				# Check for parenthes mismatch only in the scope of
+				# the current token update call. And not whole file
+				# all the time. When the first mismatch is corrected
+				# all mismatch-tags are removed later below.
+				par_err = ee
 			
-			# This could be used with something
-			#print( ee.args[0], '\nerrline: ', self.contents.index(tkinter.INSERT) )
-			#print(ee.args)
-			
+				# count pars
+				# if more lpar: show first lpar
+				# if more rpar: show last rpar
+				lpar = list()
+				rpar = list()
+				bra = list()
+				ket = list()
+				
+				for i in range(len(token.line)):
+					if token.line[i] == '(':
+						lpar.append(i)
+					elif token.line[i] == ')':
+						rpar.append(i)
+					elif token.line[i] == '[':
+						bra.append(i)
+					elif token.line[i] == ']':
+						ket.append(i)
+				
+				if len(lpar) > len(rpar):
+					ln = idx_start.split('.')[0]
+					col = token.line.index('(')
+					err_idx = '%s.%i' % (ln, col)
+					
+					self.contents.tag_add('mismatch', err_idx, '%s +1c' % err_idx)
+				
+					
+				elif len(lpar) < len(rpar):
+					ln = idx_start.split('.')[0]
+					col = token.line.rindex(')')
+					err_idx = '%s.%i' % (ln, col)
+					
+					self.contents.tag_add('mismatch', err_idx, '%s +1c' % err_idx)
+				
+				elif len(bra) > len(ket):
+					ln = idx_start.split('.')[0]
+					col = token.line.index('[')
+					err_idx = '%s.%i' % (ln, col)
+					
+					self.contents.tag_add('mismatch', err_idx, '%s +1c' % err_idx)
+				
+				elif len(bra) < len(ket):
+					ln = idx_start.split('.')[0]
+					col = token.line.rindex(']')
+					err_idx = '%s.%i' % (ln, col)
+					
+					self.contents.tag_add('mismatch', err_idx, '%s +1c' % err_idx)
+				
+				
 			if 'multi-line string' in ee.args[0]:
 				flag_err = True
 				self.token_err = True
 			
-																				
+		if not par_err:
+			# not always checking whole file for par mismatches, so clear
+			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
+																					
 ##		if flag_err:
 ##			print('err')
 			
@@ -1525,6 +1584,7 @@ class Editor(tkinter.Toplevel):
 				self.fgcolor = self.fgnightcolor
 				self.bgcolor = self.bgnightcolor
 			
+			
 			self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
 			insertbackground=self.fgcolor)
 			
@@ -1563,6 +1623,7 @@ class Editor(tkinter.Toplevel):
 				self.fgcolor = self.fgnightcolor
 		
 		try:
+		
 			self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
 				insertbackground=self.fgcolor)
 				
@@ -3044,38 +3105,15 @@ class Editor(tkinter.Toplevel):
 			
 			start_idx = self.contents.index(tkinter.SEL_FIRST)
 			end_idx = self.contents.index(tkinter.SEL_LAST)
-			
-			# Selection made from top to bottom:
-			# Leave that last line out, if it was empty, for clarity
-			
-			# Are we at zero indent:
-			test1 = int( end_idx.split(sep='.')[1] ) == 0
-			# Is it empty:
-			test2 = self.contents.get('%i.0' % endline, '%s.end ' % endline).isspace()
-
-			if test1 or test2:
-				endline -= 1
-				end_idx = self.contents.index( '%s -1l lineend' % end_idx )
-				
-			
-			# Selection made from bottom to top:
-			# Leave that first line out, if it was empty, for clarity
-			
-			# Is it empty:
-			test = self.contents.get('%i.0' % startline, '%s.end ' % startline).isspace()
-
-			if test:
-				startline += 1
-				start_idx = self.contents.index( '%s +1l linestart' % start_idx )
 					
-			
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			self.contents.tag_add('sel', start_idx, end_idx)
-				
+			
 			
 			for linenum in range(startline, endline+1):
 				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 				self.contents.insert(tkinter.INSERT, '\t')
+			
 			
 			self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
 			self.contents.edit_separator()
@@ -3090,8 +3128,15 @@ class Editor(tkinter.Toplevel):
 			return "break"
 			
 		try:
-			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
-			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
+			# unindenting curline only:
+			if len(self.contents.tag_ranges('sel')) == 0:
+				startline = int( self.contents.index(tkinter.INSERT).split(sep='.')[0] )
+				endline = startline
+
+			else:
+				startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
+				endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
+				
 			# Check there is enough space in every line:
 			flag_continue = True
 			
@@ -3107,10 +3152,16 @@ class Editor(tkinter.Toplevel):
 					tmp = self.contents.get('%s.0' % linenum, '%s.0 lineend' % linenum)
 				
 					if len(tmp) != 0:
-						self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
-						self.contents.delete(tkinter.INSERT, '%s+%dc' % (tkinter.INSERT, 1))
+						if len(self.contents.tag_ranges('sel')) != 0:
+							self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
+							self.contents.delete(tkinter.INSERT, '%s+%dc' % (tkinter.INSERT, 1))
 						
-				self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
+						else:
+							self.contents.delete( '%s.0' % linenum, '%s.0 +1c' % linenum)
+						
+				if len(self.contents.tag_ranges('sel')) != 0:
+					self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
+				
 				self.contents.edit_separator()
 		
 		except tkinter.TclError as e:

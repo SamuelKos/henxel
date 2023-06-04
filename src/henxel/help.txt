@@ -51,6 +51,9 @@
 		Ctrl-s  Move cursor to linestart
 		Ctrl-k  Remove from cursor to lineend
 		
+		Ctrl-up		Move cursor one paragraph up
+		Ctrl-down	Move cursor one paragraph down
+		
 		Ctrl-left  		Move cursor one word left
 		Ctrl-right 		Move cursor one word right
 		Ctrl-shift-left 	Select one more word to left

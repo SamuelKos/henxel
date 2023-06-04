@@ -11,12 +11,24 @@
 # fixed in wievsync()
 
 
+# unindent one line no sel								ok?
 # check ctrl up down
-	
+
+
+
+
+
+# parenmatch continue									ok?
+
+
+
+
+
+
 
 # select lines no last if empty?						ok?
 # fix only in indent()
-
+# cancel	ok?
 	
 # newtab in center err when walk to it:
 # can do syntax, no filepath
