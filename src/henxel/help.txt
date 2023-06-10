@@ -32,7 +32,7 @@
 		Ctrl-Z  Redo
 		
 		Alt-f   Font setting
-		Alt-s   Color setting
+		Alt-c   Color setting
 		Alt-t   Toggle color setting
 		Alt-l   Toggle linenumbers
 		Alt-x   Toggle syntax highlight

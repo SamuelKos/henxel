@@ -6,6 +6,23 @@
 
 
 
+# testing: dev/idle/autoexpand.py
+# added class and binded to alt-s
+# it iterates over possible word expansions found already in the contents.
+
+
+
+# par check surrounding lines or whole block?
+# res = func(
+# 	asd=asd,
+#	ads=das)
+
+
+
+# change colorchoose from alt-s to alt-c
+# updated helptext
+
+
 
 
 # Binding rewrite planning Begin
@@ -81,6 +98,8 @@
 
 import tkinter
 import tkinter.font
+
+
 
 
 ########################## Maybe interesting Begin:
@@ -182,6 +201,7 @@ class Ed(tkinter.Toplevel):
 		self.btn_save=tkinter.Button(self, text='Save')
 		self.btn_open.grid(row=0, column = 2)
 		self.btn_save.grid(row=0, column = 3, sticky='e')
+		
 		
 		self.lb = tkinter.Text(self, width=5, padx=10)
 		self.lb.grid(row=1, column = 0, sticky='nsw')
