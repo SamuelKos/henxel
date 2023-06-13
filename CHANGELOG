@@ -1,6 +1,15 @@
 # Changelog
-* To version: 	0.1.9
+* To version: 	0.2.0
 * From version:	0.0.3
+
+
+# 0.2.0
+- It is now possible to close tab without saving it with: ctrl-q
+- Added missing unbind for buttonrelease-1 when replacing.
+- Added initial word-expander from idle/autoexpand.py, renamed it wordexpand.py,
+	binded to Alt-e and updated help-text.
+- Also removed overlap-index stuff from replace and use now 'replaced'-tag instead
+	to mark already replaced areas.
 
 
 # 0.1.9

@@ -37,9 +37,10 @@
 		Alt-l   Toggle linenumbers
 		Alt-x   Toggle syntax highlight
 		Alt-e   expand word
-		
 		Alt-n   Open new tab			Try this: Alt-n-Return
-		Ctrl-d  Close current tab
+		
+		Ctrl-d  Close current tab and save it
+		Ctrl-q  Close current tab without saving it
 		Alt-w   Walk tabs forward
 		Alt-q   Walk tabs backwards
 		

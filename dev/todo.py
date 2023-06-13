@@ -4,30 +4,6 @@
 # >>> import todo
 # >>> e=todo.Ed()
 
-# close without saving del tab ctrl-q				ok?
-
-# added unbind for buttonrelease 1 to replace		ok?
-
-# renamed autoexpand.py wordexpand.py				ok?
-# updated help-text									ok?
-
-# replace elf. -> self.
-# so that it would be sself.
-# no work
-# tag done replace already							ok?
-# remove overlap-index stuff						ok?
-
-
-# testing: dev/idle/autoexpand.py
-# added class and binded to alt-e
-# it iterates over possible word expansions found already in the contents.
-
-# close tab no save
-
-
-
-
-
 
 
 # Binding rewrite planning Begin
