@@ -4,7 +4,7 @@
 # >>> import todo
 # >>> e=todo.Ed()
 
-
+# close without saving del tab ctrl-q				ok?
 
 # added unbind for buttonrelease 1 to replace		ok?
 
@@ -22,17 +22,10 @@
 # added class and binded to alt-e
 # it iterates over possible word expansions found already in the contents.
 
-
-
-# par check surrounding lines or whole block?
-# res = func(
-# 	asd=asd,
-#	ads=das)
+# close tab no save
 
 
 
-# change colorchoose from alt-s to alt-c
-# updated helptext
 
 
 

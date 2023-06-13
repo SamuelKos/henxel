@@ -158,12 +158,19 @@
 	
 	
 	How to: expand word
-	  - When starting to write object-name that has been used earlier near current
-		position, like: var = self.functionabc()
-		then when continuing: var2 = self.func
-		and pressing Alt-e it should expand to functionabc. Pressing again searches
-		backwards next word with func in its name and when no matches are found it
-		starts to search onwards to the file-end and then another round.
+	  - When starting to write object-name that has been used earlier near
+		current position, like if previous line was:
+		
+			var = self.functionabc()
+		
+		then when continuing at the next line:
+			
+			var2 = self.func
+			
+		and pressing Alt-e it should expand to functionabc. Pressing again
+		searches backwards next word with func in its name, and when no
+		matches are found, it starts to search onwards to the file-end and
+		after that another round starts.
 	
 	
 	How to: hide blinking cursor

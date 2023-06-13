@@ -326,6 +326,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Return>", self.return_override)
 		
 		self.contents.bind( "<Control-d>", self.del_tab)
+		self.contents.bind( "<Control-q>", lambda event: self.del_tab(event, **{'save':False}) )
+		
+		
 		self.contents.bind( "<Shift-Return>", self.comment)
 		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
 		self.contents.bind( "<Tab>", self.tab_override)
@@ -687,7 +690,6 @@ class Editor(tkinter.Toplevel):
 					if self.oldline != tmp or self.oldlinenum != linenum:
 					
 						#print('sync')
-						#print('sync')
 						self.oldline = tmp
 						self.oldlinenum = linenum
 						self.update_tokens(start=linestart, end=lineend, line=tmp)
@@ -840,13 +842,13 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 		
 		
-	def del_tab(self, event=None):
+	def del_tab(self, event=None, save=True):
 
 		if ((len(self.tabs) == 1) and self.tabs[self.tabindex].type == 'newtab') or (self.state != 'normal'):
 			self.bell()
 			return 'break'
 
-		if self.tabs[self.tabindex].type == 'normal':
+		if self.tabs[self.tabindex].type == 'normal' and save:
 			self.save(activetab=True)
 			
 		self.tabs.pop(self.tabindex)
