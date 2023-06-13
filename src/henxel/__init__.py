@@ -50,6 +50,7 @@ import tokenize
 import io
 
 # from current directory
+from . import wordexpand
 from . import changefont
 from . import fdialog
 
@@ -59,86 +60,6 @@ import subprocess
 
 ############ Imports End
 ############ Class Tab Begin
-
-import re
-import string
-
-
-class AutoExpand:
-	wordchars = string.ascii_letters + string.digits + "_"
-
-	def __init__(self, editwin):
-		self.text = editwin.contents
-		self.bell = self.text.bell
-		self.state = None
-
-	def expand_word_event(self, event):
-		"Replace the current word with the next expansion."
-		curinsert = self.text.index("insert")
-		curline = self.text.get("insert linestart", "insert lineend")
-		if not self.state:
-			words = self.getwords()
-			index = 0
-		else:
-			words, index, insert, line = self.state
-			if insert != curinsert or line != curline:
-				words = self.getwords()
-				index = 0
-		if not words:
-			self.bell()
-			return "break"
-		word = self.getprevword()
-		self.text.delete("insert - %d chars" % len(word), "insert")
-		newword = words[index]
-		index = (index + 1) % len(words)
-		if index == 0:
-			self.bell()            # Warn we cycled around
-		self.text.insert("insert", newword)
-		curinsert = self.text.index("insert")
-		curline = self.text.get("insert linestart", "insert lineend")
-		self.state = words, index, curinsert, curline
-		return "break"
-
-	def getwords(self):
-		"Return a list of words that match the prefix before the cursor."
-		word = self.getprevword()
-		if not word:
-			return []
-		before = self.text.get("1.0", "insert wordstart")
-		wbefore = re.findall(r"\b" + word + r"\w+\b", before)
-		del before
-		after = self.text.get("insert wordend", "end")
-		wafter = re.findall(r"\b" + word + r"\w+\b", after)
-		del after
-		if not wbefore and not wafter:
-			return []
-		words = []
-		dict = {}
-		# search backwards through words before
-		wbefore.reverse()
-		for w in wbefore:
-			if dict.get(w):
-				continue
-			words.append(w)
-			dict[w] = w
-		# search onwards through words after
-		for w in wafter:
-			if dict.get(w):
-				continue
-			words.append(w)
-			dict[w] = w
-		words.append(word)
-		return words
-
-	def getprevword(self):
-		"Return the word prefix before the cursor."
-		line = self.text.get("insert linestart", "insert")
-		i = len(line)
-		while i > 0 and line[i-1] in self.wordchars:
-			i = i-1
-		return line[i:]
-
-
 					
 class Tab:
 	'''	Represents a tab-page of an Editor-instance
@@ -254,7 +175,6 @@ class Editor(tkinter.Toplevel):
 		except Exception as e:
 			pass
 		
-		self.replace_overlap_index = None
 		self.search_idx = ('1.0', '1.0')
 		self.search_matches = 0
 		self.old_word = ''
@@ -288,7 +208,7 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Button-3>", self.raise_popup)
 		self.bind( "<Control-g>", self.gotoline)
 		self.bind( "<Control-r>", self.replace)
-		self.bind( "<Alt-c>", self.color_choose)
+		self.bind( "<Alt-s>", self.color_choose)
 		self.bind( "<Alt-t>", self.toggle_color)
 		self.bind( "<Alt-n>", self.new_tab)
 		self.bind( "<Alt-w>", self.walk_tabs)
@@ -378,8 +298,9 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0,
 					bd=0, command = self.contents.yview)
 
-		self.expand = AutoExpand(self)
-		self.contents.bind( "<Alt-s>", self.expand.expand_word_event)
+		self.expander = wordexpand.ExpandWord(self.contents)
+		self.contents.bind( "<Alt-e>", self.expander.expand_word_event)
+		
 		# Widgets are initiated, now more configuration
 		################################################
 		# Needed in update_linenums(), there is more info.
@@ -601,6 +522,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('mismatch', background='brown1', foreground='white')
 		
 		# search tags have highest priority
+		self.contents.tag_config('replaced', background='yellow', foreground='black')
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('focus', background='lightgreen', foreground='black')
 		self.contents.tag_raise('match')
@@ -1617,9 +1539,9 @@ class Editor(tkinter.Toplevel):
 		colortop.title('Choose Color')
 		
 		colortop.protocol("WM_DELETE_WINDOW", lambda: ( colortop.destroy(),
-				self.bind( "<Alt-c>", self.color_choose)) )
+				self.bind( "<Alt-s>", self.color_choose)) )
 				
-		self.bind( "<Alt-c>", self.do_nothing)
+		self.bind( "<Alt-s>", self.do_nothing)
 		
 		colortop.btnfg = tkinter.Button(colortop, text='Text color', font=('TkDefaultFont', 16),
 				command = lambda args=['fg']: self.chcolor(args) )
@@ -3546,6 +3468,7 @@ class Editor(tkinter.Toplevel):
 		self.btn_save.config(state='normal')
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
+		self.contents.tag_remove('replaced', '1.0', tkinter.END)
 			
 		# Leave tags on, if replace_all, Esc clears.
 		if self.state == 'replace_all':
@@ -3565,7 +3488,6 @@ class Editor(tkinter.Toplevel):
 	
 		self.new_word = ''
 		self.search_matches = 0
-		self.replace_overlap_index = None
 		self.update_title()
 		
 		if self.state in [ 'replace_all', 'replace' ]:
@@ -3656,6 +3578,8 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Escape>", self.stop_search)
 		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
 		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
+		self.bid3 = self.contents.bind("<ButtonRelease-1>", func=self.update_curpos, add=True )
+		
 		self.title('Replace this:')
 		self.entry.delete(0, tkinter.END)
 		
@@ -3692,43 +3616,31 @@ class Editor(tkinter.Toplevel):
 		pos = '1.0'
 		self.contents.tag_remove('match', '1.0', tkinter.END)
 		
-		# Next while-loop tags matches again, this is the main reason why
-		# there is a problem if new_word contains old_word:it will be rematched.
-		# This is why when there is a match, we move
-		# replace_overlap_index characters back and check if there already is
-		# new_word. If so, it means there have already happened a replacement
-		# and therefore search pos must be recalculated over new_word.
-		
 		while True:
 			pos = self.contents.search(self.old_word, pos, tkinter.END)
 			if not pos: break
 			
-			if self.replace_overlap_index != None:
-				# find the startpos (pos2) and lastpos of new_word:
-				tmp = int(pos.split('.')[1]) - self.replace_overlap_index
-				pos2 = pos.split('.')[0] +'.'+ str(tmp)
-				lastpos = "%s + %dc" % (pos2, wordlen2)
+			if 'replaced' in self.contents.tag_names(pos):
+				# replaced already, skip
+				pos = "%s + %dc" % ( self.contents.tag_prevrange('replaced', pos)[1], wordlen2+1 )
 				
-				if self.contents.get(pos2, lastpos) == self.new_word:
-					# skip this match
-					pos = "%s + %dc" % (pos2, wordlen2+1)
-				else:
-					lastpos = "%s + %dc" % (pos, wordlen)
-					self.contents.tag_add('match', pos, lastpos)
-					pos = "%s + %dc" % (pos, wordlen+1)
-					self.search_matches += 1
-			
-			# this is the normal case:
 			else:
 				lastpos = "%s + %dc" % (pos, wordlen)
 				self.contents.tag_add('match', pos, lastpos)
 				pos = "%s + %dc" % (pos, wordlen+1)
 				self.search_matches += 1
-
+			
+			
 		self.contents.tag_remove('focus', self.search_idx[0], self.search_idx[1])
 		self.contents.tag_remove('match', self.search_idx[0], self.search_idx[1])
 		self.contents.delete(self.search_idx[0], self.search_idx[1])
 		self.contents.insert(self.search_idx[0], self.new_word)
+		
+		# tag replacement to avoid rematching same place
+		p = "%s + %dc" % (self.search_idx[0], wordlen2)
+		self.contents.tag_add('replaced', self.search_idx[0], p)
+		
+		
 		self.contents.config(state='disabled')
 		
 		self.search_matches -= 1
@@ -3772,7 +3684,6 @@ class Editor(tkinter.Toplevel):
 			return
 		else:
 		
-			self.replace_overlap_index = None
 			self.bind("<Control-n>", self.show_next)
 			self.bind("<Control-p>", self.show_prev)
 			
@@ -3780,12 +3691,6 @@ class Editor(tkinter.Toplevel):
 			self.entry.bind("<Return>", self.do_nothing)
 			self.entry.config(state='disabled')
 			self.focus_set()
-			
-			# Check if new_word contains old_word, if so:
-			# record its overlap-index, which we need in do_single_replace()
-			# (explanation for why this is needed is given there)
-			if self.old_word in self.new_word:
-				self.replace_overlap_index = self.new_word.index(self.old_word)
 				
 			if self.state == 'replace':
 				self.bind( "<Return>", self.do_single_replace)
