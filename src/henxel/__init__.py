@@ -77,13 +77,14 @@ class Tab:
 		
 		
 	def __str__(self):
-	
+		
 		return	'\nfilepath: %s\nactive: %s\ntype: %s\nposition: %s' % (
 				str(self.filepath),
 				str(self.active),
 				self.type,
 				self.position
 				)
+				
 				
 ############ Class Tab End
 ############ Class Editor Begin
@@ -190,6 +191,9 @@ class Editor(tkinter.Toplevel):
 		self.tracevar_filename = tkinter.StringVar()
 		self.tracefunc_name = None
 		self.lastdir = None
+
+		self.check_pars = False
+		self.par_err = False
 		
 		self.state = 'normal'
 		
@@ -528,7 +532,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('replaced', background='yellow', foreground='black')
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('focus', background='lightgreen', foreground='black')
+		
 		self.contents.tag_raise('match')
+		self.contents.tag_raise('replaced')
 		self.contents.tag_raise('focus')
 		
 		
@@ -1262,7 +1268,15 @@ class Editor(tkinter.Toplevel):
 		else:
 			tmp = self.tabs[self.tabindex].contents
 			
+		
+		
+		prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
+		if self.par_err or prev_char in [ '(', ')', '[', ']' ]:
+			self.check_pars = True
 			
+		pars_checked = False
+		
+		
 		linenum = int(start_idx.split('.')[0])
 		flag_err = False
 		#print(self.token_err)
@@ -1280,6 +1294,7 @@ class Editor(tkinter.Toplevel):
 					self.contents.tag_remove( tag, start_idx, end_idx )
 					
 				# Retag:
+				idx_start = None
 				for token in tokens:
 					#print(token)
 					
@@ -1349,77 +1364,38 @@ class Editor(tkinter.Toplevel):
 
 			# This Error needs info about whole block, one line is not enough, so quite rare.
 			#print( e.args[0], '\nIndentation errline: ', self.contents.index(tkinter.INSERT) )
-			
+			#print(e)
 			flag_err = True
 			self.token_err = True
 
 		
 		except tokenize.TokenError as ee:
-		
-			self.contents.tag_remove('mismatch', '%s linestart' % start_idx, '%s lineend' % start_idx )
-				
-			if 'EOF in multi-line statement' in ee.args[0]:
-				# Check for parenthes mismatch only in the scope of
-				# the current token update call. And not whole file
-				# all the time. When the first mismatch is corrected
-				# all mismatch-tags are removed later below.
-				par_err = ee
 			
-				# count pars
-				# if more lpar: show first lpar
-				# if more rpar: show last rpar
-				lpar = list()
-				rpar = list()
-				bra = list()
-				ket = list()
-				
-				for i in range(len(token.line)):
-					if token.line[i] == '(':
-						lpar.append(i)
-					elif token.line[i] == ')':
-						rpar.append(i)
-					elif token.line[i] == '[':
-						bra.append(i)
-					elif token.line[i] == ']':
-						ket.append(i)
-				
-				if len(lpar) > len(rpar):
-					ln = idx_start.split('.')[0]
-					col = token.line.index('(')
-					err_idx = '%s.%i' % (ln, col)
-					
-					self.contents.tag_add('mismatch', err_idx, '%s +1c' % err_idx)
-				
-					
-				elif len(lpar) < len(rpar):
-					ln = idx_start.split('.')[0]
-					col = token.line.rindex(')')
-					err_idx = '%s.%i' % (ln, col)
-					
-					self.contents.tag_add('mismatch', err_idx, '%s +1c' % err_idx)
-				
-				elif len(bra) > len(ket):
-					ln = idx_start.split('.')[0]
-					col = token.line.index('[')
-					err_idx = '%s.%i' % (ln, col)
-					
-					self.contents.tag_add('mismatch', err_idx, '%s +1c' % err_idx)
-				
-				elif len(bra) < len(ket):
-					ln = idx_start.split('.')[0]
-					col = token.line.rindex(']')
-					err_idx = '%s.%i' % (ln, col)
-					
-					self.contents.tag_add('mismatch', err_idx, '%s +1c' % err_idx)
+			if 'EOF in multi-line statement' in ee.args[0]:
+				self.check_pars = False
+				par_err = self.checkpars(idx_start)
+				pars_checked = True
 				
 				
-			if 'multi-line string' in ee.args[0]:
+			elif 'multi-line string' in ee.args[0]:
 				flag_err = True
 				self.token_err = True
 			
+		prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
+			
+		# from backspace_override:
+		if (self.check_pars and not pars_checked) or self.par_err:
+			self.check_pars = False
+			par_err = self.checkpars(False)
+			pars_checked = True
+			
+		self.par_err = par_err
 		if not par_err:
 			# not always checking whole file for par mismatches, so clear
 			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
+			
+
+			
 																					
 ##		if flag_err:
 ##			print('err')
@@ -1429,7 +1405,212 @@ class Editor(tkinter.Toplevel):
 			#print('ok')
 			self.token_err = False
 			
+			
+	def checkpars(self, idx_start):
+		# possible par mismatch may be caused from another line,
+		# so find current block: find first empty line before and after curline
+		# then count pars in it.
+		
+		if not idx_start:
+			# line had nothing but brace in it and it were deleted
+			idx_start = self.contents.index(tkinter.INSERT)
+			
+		curline = int( idx_start.split('.')[0] )
+		startline, endline, lines = self.find_empty_lines(curline)
+		
+		err_indexes = self.count_pars(startline, lines)
+		err = False
+		
+		if err_indexes:
+			err = True
+			err_line = startline + err_indexes[0]
+			err_col = err_indexes[1]
+			err_idx = '%i.%i' % (err_line, err_col)
+			
+			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
+			self.contents.tag_add('mismatch', err_idx, '%s +1c' % err_idx)
+		
+		#print(err)
+		return err
+	
+	
+	def count_pars(self, startline, lines):
+		
+		lpar = list()
+		rpar = list()
+		bra = list()
+		ket = list()
+		
+		opening  = [ '(', '[' ]
+		closing  = [ ')', ']' ]
+		
+		first_lpar = None
+		last_rpar = None
+		first_bra = None
+		last_ket = None
+		
+		
+		# populate lists and return at first extra closer:
+		for i in range(len(lines)):
+			
+			for j in range(len(lines[i])):
+				c = lines[i][j]
+				patt = '%i.%i +%il' % (startline, j, i)
+		
+				# skip if string or comment:
+				if 'strings' in self.contents.tag_names(
+					self.contents.index(patt)) or \
+					'comments' in self.contents.tag_names(self.contents.index(patt)):
+					continue
 				
+				if c in closing:
+					if c == ')':
+						if len(lpar) > 0:
+							# check it is before curidx
+							lidx =  lpar[-1]
+							if lidx[0] < j:
+								lpar.pop(-1)
+							elif lidx[1] < i:
+								lpar.pop(-1)
+							else:
+								return (i,j)
+						else:
+							return (i,j)
+							
+					# c == ']'
+					else:
+						if len(bra) > 0:
+							# check it is before curidx
+							bidx =  bra[-1]
+							if bidx[0] < j:
+								bra.pop(-1)
+							elif bidx[1] < i:
+								bra.pop(-1)
+							else:
+								return (i,j)
+						else:
+							return (i,j)
+							
+				elif c in opening:
+					if c == '(':
+						lpar.append((i,j))
+						
+					# c == '['
+					else:
+						bra.append((i,j))
+				
+		
+		# no extra closer in block.
+		# return first extra opener:
+		if len(lpar) > 0:
+			if len(bra) > 0:
+				# find which is first
+				lidx =  lpar.pop(0)
+				bidx =  bra.pop(0)
+				if lidx[0] < bidx[0]:
+					return lidx
+				elif bidx[0] < lidx[0]:
+					return bidx
+				
+				# same line
+				else:
+					if lidx[1] < bidx[1]:
+						return lidx
+					elif bidx[1] < lidx[1]:
+						return bidx
+					else:
+						return lidx
+				
+			else:
+				# first lpar
+				return lpar.pop(0)
+				
+		elif len(bra) > 0:
+			# first bra
+			return bra.pop(0)
+		
+		
+		return False
+				
+		
+		
+	
+	def find_empty_lines(self, lnstart):
+		'''	Finds first empty lines before and after current line
+			
+			returns
+				linenumber of start and end of the block
+				and list of lines.
+
+			called from update_tokens
+		'''
+
+		lines = list()
+
+		# first empty line before curline:
+		endln = 1
+		ln = lnstart
+
+		if ln > endln:
+			ln -= 1
+			t = self.contents.get('%i.0' % ln, '%i.end' % ln)
+			
+			while t != '' and not t.isspace():
+				lines.append(t)
+				ln -= 1
+				
+				if ln < endln:
+					break
+				
+				t = self.contents.get('%i.0' % ln, '%i.end' % ln)
+			
+			ln += 1
+
+		else:
+			pass
+			# curline is firstline
+
+
+		# ln is now first empty linenum above curline or firstline
+		startline = ln
+
+
+		# add curline to list
+		ln = lnstart
+		lines.reverse()
+		t = self.contents.get('%i.0' % ln, '%i.end' % ln)
+		lines.append(t)
+
+
+		# first empty line after curline:
+		endln = int( self.contents.index(tkinter.END).split('.')[0] )
+		ln += 1
+		
+		if ln < endln:
+			
+			t = self.contents.get('%i.0' % ln, '%i.end' % ln)
+
+			while  t != '' and not t.isspace():
+				lines.append(t)
+				ln += 1
+
+				if ln > endln:
+					break
+
+				t = self.contents.get('%i.0' % ln, '%i.end' % ln)
+				
+			ln -= 1
+			
+		else:
+			# curline is lastline
+			pass
+
+		# ln is now first empty linenum after curline or lastline
+		endline = ln
+
+		return startline, endline, lines
+							
+
 ########## Syntax highlight End
 ########## Theme Related Begin
 
@@ -2151,12 +2332,20 @@ class Editor(tkinter.Toplevel):
 	def backspace_override(self, event):
 		""" for syntax highlight
 		"""
+		pars = [ '(', ')', '[', ']' ]
 		
 		if self.state != 'normal' or event.state != 0:
 			return
 			
 		try:
+			
 			# Is there a selection?
+			if len(self.contents.tag_ranges('sel')) > 0:
+				tmp = self.contents.selection_get()
+				l = [ x for x in tmp if x in pars ]
+				if len(l) > 0:
+					self.check_pars = True
+				
 			self.contents.delete( tkinter.SEL_FIRST, tkinter.SEL_LAST )
 			
 			self.do_syntax()
@@ -2166,7 +2355,8 @@ class Editor(tkinter.Toplevel):
 				
 		except tkinter.TclError:
 			# Deleting one letter
-		
+			
+			
 			# Rest is multiline string check
 			chars = self.contents.get( '%s - 3c' % tkinter.INSERT, '%s + 2c' % tkinter.INSERT )
 			
@@ -2191,6 +2381,11 @@ class Editor(tkinter.Toplevel):
 			if any(quote_tests):
 				#print('#')
 				self.token_err = True
+				
+				
+			# To trigger parcheck if only one of these was in line and it was deleted:
+			if prev_char in pars:
+				self.check_pars = True
 				
 				
 		#print('deleting')
@@ -3459,7 +3654,7 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal':
 			return "break"
 			
-		self.contents.tag_remove('match', '1.0', tkinter.END)
+		self.contents.tag_remove('replaced', '1.0', tkinter.END)
 		self.bind("<Escape>", self.do_nothing)
 		
 	
@@ -3468,17 +3663,15 @@ class Editor(tkinter.Toplevel):
 		self.entry.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
+		self.replace_overlap_index = None
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
-		self.contents.tag_remove('replaced', '1.0', tkinter.END)
+		self.contents.tag_remove('match', '1.0', tkinter.END)
 			
-		# Leave tags on, if replace_all, Esc clears.
-		if self.state == 'replace_all':
-		
+		# Leave marks on replaced areas, Esc clears.
+		if len(self.contents.tag_ranges('replaced')) > 0:
 			self.bind("<Escape>", self.clear_search_tags)
-			
 		else:
-			self.contents.tag_remove('match', '1.0', tkinter.END)
 			self.bind("<Escape>", self.do_nothing)
 			
 		
@@ -3613,6 +3806,17 @@ class Editor(tkinter.Toplevel):
 	def do_single_replace(self, event=None):
 		self.contents.config(state='normal')
 		self.search_matches = 0
+		
+		if self.replace_overlap_index != None:
+			
+			if self.replace_overlap_index == 0:
+				range_func = self.contents.tag_nextrange
+			
+			else:
+				range_func = self.contents.tag_prevrange
+		else:
+			range_func = self.contents.tag_prevrange
+			
 		wordlen = len(self.old_word)
 		wordlen2 = len(self.new_word)
 		pos = '1.0'
@@ -3623,8 +3827,11 @@ class Editor(tkinter.Toplevel):
 			if not pos: break
 			
 			if 'replaced' in self.contents.tag_names(pos):
+				x = range_func('replaced', pos)
+				if len(x) == 0:
+					x = range_func('replaced', pos)
 				# replaced already, skip
-				pos = "%s + %dc" % ( self.contents.tag_prevrange('replaced', pos)[1], wordlen2+1 )
+				pos = "%s + %dc" % ( x[1], wordlen2+1 )
 				
 			else:
 				lastpos = "%s + %dc" % (pos, wordlen)
@@ -3667,7 +3874,7 @@ class Editor(tkinter.Toplevel):
 			
 			self.contents.delete( pos, lastpos )
 			self.contents.insert( pos, self.new_word )
-			self.contents.tag_add( 'match', pos, lastpos2 )
+			self.contents.tag_add( 'replaced', pos, lastpos2 )
 				
 			pos = "%s + %dc" % (pos, wordlen+1)
 			
@@ -3685,7 +3892,6 @@ class Editor(tkinter.Toplevel):
 		if self.old_word == self.new_word:
 			return
 		else:
-		
 			self.bind("<Control-n>", self.show_next)
 			self.bind("<Control-p>", self.show_prev)
 			
@@ -3695,6 +3901,12 @@ class Editor(tkinter.Toplevel):
 			self.focus_set()
 				
 			if self.state == 'replace':
+			
+				self.replace_overlap_index = None
+				
+				if self.old_word in self.new_word:
+					self.replace_overlap_index = self.new_word.index(self.old_word)
+									
 				self.bind( "<Return>", self.do_single_replace)
 				self.title('Replacing %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )
 			elif self.state == 'replace_all':

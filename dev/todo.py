@@ -1,8 +1,33 @@
+
+
+# docs wordexp						ok?
+# fixed replace, self.replace_overlap_index is still needed		ok?
+# replaced now showed until esc, showed also if doing search again.
+
+# multiline pars												ok?
+# in string in comment no count pars							ok?
+
+
+
 # this is todo, and stub-editor for testing, might not work
 
 # Run in python console
 # >>> import todo
 # >>> e=todo.Ed()
+
+
+
+# goto linestart strip empty space
+
+
+# indenting long show first line
+
+# check syntax at save?
+
+
+# check open file with cursor on start of multiline string
+
+
 
 
 
