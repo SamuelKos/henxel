@@ -195,6 +195,9 @@ class Editor(tkinter.Toplevel):
 		self.check_pars = False
 		self.par_err = False
 		
+		self.waitvar = tkinter.IntVar()
+		
+		
 		self.state = 'normal'
 		
 		
@@ -322,7 +325,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Alt-l>", self.toggle_ln)
 		self.contents.bind( "<Control-f>", self.search)
 		
-		self.contents.bind( "<Control-s>", self.goto_linestart)
+		self.contents.bind( "<Control-a>", self.goto_linestart)
 		self.contents.bind( "<Control-i>", self.move_right)
 		
 		self.contents.bind( "<Alt-f>", self.font_choose)
@@ -337,12 +340,16 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
 		self.contents.bind( "<Tab>", self.tab_override)
 		self.contents.bind( "<ISO_Left_Tab>", self.unindent)
-		self.contents.bind( "<Control-a>", self.select_all)
+		self.contents.bind( "<Control-t>", self.tabify_lines)
 		self.contents.bind( "<Control-z>", self.undo_override)
 		self.contents.bind( "<Control-Z>", self.redo_override)
 		self.contents.bind( "<Control-v>", self.paste)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
 		self.contents.bind( "<BackSpace>", self.backspace_override)
+		self.contents.bind("<Left>", self.move_line_left )
+		self.contents.bind("<Right>", self.move_line_right )
+		
+			
 		
 		
 		# Needed in leave() taglink in: Run file Related
@@ -355,7 +362,7 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="       paste", command=self.paste)
 		self.popup.add_command(label="##   comment", command=self.comment)
 		self.popup.add_command(label="   uncomment", command=self.uncomment)
-		self.popup.add_command(label="      tabify", command=self.tabify_lines)
+		self.popup.add_command(label="  select all", command=self.select_all)
 		self.popup.add_command(label="     inspect", command=self.insert_inspected)
 		self.popup.add_command(label="      errors", command=self.show_errors)
 		self.popup.add_command(label="        help", command=self.help)
@@ -599,7 +606,21 @@ class Editor(tkinter.Toplevel):
 		tail = len(self.tabs) - self.tabindex - 1
 		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
 		
-				
+	
+	def do_nothing_without_bell(self, event=None):
+		return 'break'
+	
+	
+	def wait_for(self, ms):
+		self.waitvar.set(False)
+		self.after(ms, self.waiter)
+		self.wait_variable(self.waitvar)
+		
+	
+	def waiter(self):
+		self.waitvar.set(True)
+		
+	
 	def do_nothing(self, event=None):
 		self.bell()
 		return 'break'
@@ -613,10 +634,13 @@ class Editor(tkinter.Toplevel):
 		return 'continue'
 		
 	
-	def ensure_idx_visibility(self, index):
-		
+	def ensure_idx_visibility(self, index, back=None):
+		b=2
+		if back:
+			b=back
+			
 		self.contents.mark_set('insert', index)
-		s = self.contents.bbox('%s - 2lines' % index)
+		s = self.contents.bbox('%s - %ilines' % (index,b))
 		e = self.contents.bbox('%s + 4lines' % index)
 		
 		tests = [
@@ -626,7 +650,7 @@ class Editor(tkinter.Toplevel):
 				]
 				
 		if any(tests):
-			self.contents.see('%s - 2lines' % index)
+			self.contents.see('%s - %ilines' % (index,b))
 			self.update_idletasks()
 			self.contents.see('%s + 4lines' % index)
 			
@@ -850,7 +874,12 @@ class Editor(tkinter.Toplevel):
 		
 	def del_tab(self, event=None, save=True):
 
-		if ((len(self.tabs) == 1) and self.tabs[self.tabindex].type == 'newtab') or (self.state != 'normal'):
+		if self.state != 'normal':
+			self.bell()
+			return 'break'
+			
+		if ((len(self.tabs) == 1) and self.tabs[self.tabindex].type == 'newtab'):
+			self.contents.delete('1.0', tkinter.END)
 			self.bell()
 			return 'break'
 
@@ -1388,6 +1417,7 @@ class Editor(tkinter.Toplevel):
 			self.check_pars = False
 			par_err = self.checkpars(False)
 			pars_checked = True
+			
 			
 		self.par_err = par_err
 		if not par_err:
@@ -2173,7 +2203,26 @@ class Editor(tkinter.Toplevel):
 		
 		# In case of wrapped lines
 		y_cursor = self.contents.bbox(tkinter.INSERT)[1]
-		pos = self.contents.index( '@0,%s' % y_cursor)
+		p = self.contents.index( '@0,%s' % y_cursor )
+		p2 = self.contents.index( '%s linestart' % p )
+		
+		# is wrapped?
+		c1 = int(p.split('.')[1])
+		l2 = int(p2.split('.')[0])
+		
+		# yes, put cursor start of line not the whole line:
+		if c1 != 0:
+			pos = p
+			
+		# no, so put cursor after indentation:
+		else:
+			tmp = self.contents.get( '%s linestart' % p2, '%s lineend' % p2 )
+			if len(tmp) > 0:
+				if not tmp.isspace():
+					tmp2 = tmp.lstrip()
+					indent = tmp.index(tmp2)
+					pos = self.contents.index( '%i.%i' % (l2, indent) )
+		
 		
 		self.contents.see(pos)
 		self.contents.mark_set('insert', pos)
@@ -2205,7 +2254,60 @@ class Editor(tkinter.Toplevel):
 			# is empty
 			return 'break'
 		
+
+	def move_line_left(self, event=None):
+		if self.state != 'normal':
+			return 'continue'
 		
+		
+		if len(self.contents.tag_ranges('sel')) > 0:
+			s = self.contents.index(tkinter.SEL_FIRST)
+			e = self.contents.index(tkinter.SEL_LAST)
+			i = self.contents.index(tkinter.INSERT)
+			
+			line_s = s.split('.')[0]
+			line_e = e.split('.')[0]
+			
+			if line_s == line_e: return 'continue'
+			
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.contents.tag_add('sel', '%s linestart' % i, '%s lineend' % i)
+			self.unindent()
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.contents.tag_add('sel', s, e)
+			return 'break'
+			
+			
+		return 'continue'
+	
+	
+	def move_line_right(self, event=None):
+		if self.state != 'normal':
+			return 'continue'
+		
+
+		if len(self.contents.tag_ranges('sel')) > 0:
+			s = self.contents.index(tkinter.SEL_FIRST)
+			e = self.contents.index(tkinter.SEL_LAST)
+			i = self.contents.index(tkinter.INSERT)
+			
+			line_s = s.split('.')[0]
+			line_e = e.split('.')[0]
+			
+			if line_s == line_e: return 'continue'
+			
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.contents.tag_add('sel', '%s linestart' % i, '%s lineend' % i)
+			self.indent()
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.contents.tag_add('sel', s, e)
+			return 'break'
+			
+			
+		return 'continue'
+	
+
+	
 	def paste(self, event=None):
 		'''	Keeping original behaviour, in which indentation is preserved
 			but first line usually is in wrong place after paste
@@ -2242,6 +2344,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.tag_add('sel', line, tkinter.INSERT)
 			self.contents.mark_set('insert', line)
 				
+			self.wait_for(100)
 			self.ensure_idx_visibility(line)
 			
 			
@@ -2256,7 +2359,7 @@ class Editor(tkinter.Toplevel):
 				
 		
 		return 'break'
-
+	
 
 	def undo_override(self, event=None):
 		if self.state != 'normal':
@@ -2294,7 +2397,7 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 		
 		
-	def select_all(self, event):
+	def select_all(self, event=None):
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		self.contents.tag_add('sel', 1.0, tkinter.END)
 		return "break"
@@ -2618,7 +2721,7 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 	
 	
-	def tabify_lines(self):
+	def tabify_lines(self, event=None):
 	
 		try:
 			startline = self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0]
@@ -3302,6 +3405,7 @@ class Editor(tkinter.Toplevel):
 		try:
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
+			i = self.contents.index(tkinter.INSERT)
 			
 			start_idx = self.contents.index(tkinter.SEL_FIRST)
 			end_idx = self.contents.index(tkinter.SEL_LAST)
@@ -3309,13 +3413,29 @@ class Editor(tkinter.Toplevel):
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			self.contents.tag_add('sel', start_idx, end_idx)
 			
+		
+			if len(self.contents.tag_ranges('sel')) != 0:
+					
+				# is start of selection viewable?
+				if not self.contents.bbox(tkinter.SEL_FIRST):
+					
+					self.wait_for(150)
+					self.ensure_idx_visibility(tkinter.SEL_FIRST, back=4)
+					self.wait_for(100)
+						
 			
 			for linenum in range(startline, endline+1):
 				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 				self.contents.insert(tkinter.INSERT, '\t')
 			
 			
-			self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
+			if startline == endline:
+				self.contents.mark_set(tkinter.INSERT, '%s +1c' %i)
+			
+			elif self.contents.compare(tkinter.SEL_FIRST, '<', tkinter.INSERT):
+				self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
+				
+			self.ensure_idx_visibility('insert', back=4)
 			self.contents.edit_separator()
 			
 		except tkinter.TclError:
@@ -3332,11 +3452,13 @@ class Editor(tkinter.Toplevel):
 			if len(self.contents.tag_ranges('sel')) == 0:
 				startline = int( self.contents.index(tkinter.INSERT).split(sep='.')[0] )
 				endline = startline
-
+	
 			else:
 				startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 				endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
-				
+			
+			i = self.contents.index(tkinter.INSERT)
+			
 			# Check there is enough space in every line:
 			flag_continue = True
 			
@@ -3348,6 +3470,17 @@ class Editor(tkinter.Toplevel):
 					break
 				
 			if flag_continue:
+				
+				if len(self.contents.tag_ranges('sel')) != 0:
+					
+					# is start of selection viewable?
+					if not self.contents.bbox(tkinter.SEL_FIRST):
+						
+						self.wait_for(150)
+						self.ensure_idx_visibility('insert', back=4)
+						self.wait_for(100)
+						
+						
 				for linenum in range(startline, endline+1):
 					tmp = self.contents.get('%s.0' % linenum, '%s.0 lineend' % linenum)
 				
@@ -3358,17 +3491,28 @@ class Editor(tkinter.Toplevel):
 						
 						else:
 							self.contents.delete( '%s.0' % linenum, '%s.0 +1c' % linenum)
-						
-				if len(self.contents.tag_ranges('sel')) != 0:
-					self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
 				
+		
+				# is selection made from down to top or from right to left?
+				if len(self.contents.tag_ranges('sel')) != 0:
+				
+					if startline == endline:
+						self.contents.mark_set(tkinter.INSERT, '%s -1c' %i)
+					
+					elif self.contents.compare(tkinter.SEL_FIRST, '<', tkinter.INSERT):
+						self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
+						
+					# is start of selection viewable?
+					if not self.contents.bbox(tkinter.SEL_FIRST):
+						self.ensure_idx_visibility('insert', back=4)
+					
 				self.contents.edit_separator()
 		
 		except tkinter.TclError as e:
 			pass
 			
 		return "break"
-
+	
 	
 	def comment(self, event=None):
 		if self.state != 'normal':
@@ -3536,12 +3680,17 @@ class Editor(tkinter.Toplevel):
 		
 		
 		self.search_idx = self.contents.tag_nextrange('match', self.search_idx[1])
-		# change color
-		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
-		
 		line = self.search_idx[0]
+		
+		# is start of selection viewable?
+		if not self.contents.bbox(line):
+			self.wait_for(100)
+		
 		self.ensure_idx_visibility(line)
 		
+		
+		# change color
+		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
 		# compare found to match
 		ref = self.contents.tag_ranges('focus')[0]
@@ -3579,12 +3728,15 @@ class Editor(tkinter.Toplevel):
 		
 		self.search_idx = self.contents.tag_prevrange('match', self.search_idx[0])
 		
-		# change color
-		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
-		
 		line = self.search_idx[0]
+		# is start of selection viewable?
+		if not self.contents.bbox(line):
+			self.wait_for(100)
+		
 		self.ensure_idx_visibility(line)
 		
+		# change color
+		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
 		# compare found to match
 		ref = self.contents.tag_ranges('focus')[0]

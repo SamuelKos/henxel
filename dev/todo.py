@@ -1,11 +1,31 @@
 
+# ctrl-d should clear last new-tab		ok?
 
-# docs wordexp						ok?
+# indenting long show first line		ok?
+
+# docs wordexp							ok?
+
+# goto linestart strip empty space		ok?
+
+# ctrl-a								ok?
+
+# paste move first line arrow			ok?
+
+# un,indent single line no move cursor		ok?
+
+
 # fixed replace, self.replace_overlap_index is still needed		ok?
 # replaced now showed until esc, showed also if doing search again.
 
-# multiline pars												ok?
+
+# multiline pars not ok two splits if
 # in string in comment no count pars							ok?
+
+
+
+
+# waiter do nothing bell unindent if visible no wait			ok?
+# made waiter func
 
 
 
@@ -17,10 +37,6 @@
 
 
 
-# goto linestart strip empty space
-
-
-# indenting long show first line
 
 # check syntax at save?
 
