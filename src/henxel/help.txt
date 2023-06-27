@@ -76,6 +76,9 @@
 				cursor will remain where you left it.
 				Press arrow-key to refresh view back to cursor.
 		
+		While replacing:
+			Return does what is expected.
+		
 		Default bindings: https://tcl.tk/man/tcl8.6/TkCmd/text.htm#M192
 	
 	

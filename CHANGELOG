@@ -1,6 +1,30 @@
 # Changelog
-* To version: 	0.2.0
+* To version: 	0.2.1
 * From version:	0.0.3
+
+
+# 0.2.1
+- Fixed multiline parentheses check.
+- Fixed replace, self.replace_overlap_index is still needed.
+	Replaced are now showed until esc, showed also if doing search again.
+	You can now replace by pressing Return only.
+	
+- Ctrl-d in last tab, which has no filepath, clears contents.
+- Ctrl-a is now: goto linestart as is the default. Select all, if needed,
+	can be found from mouse-menu.
+	
+- Removed tabify from mouse-menu as not needed, and binded Control-t to it.
+- Goto linestart now skips indentation.
+- When Un-,Indenting or pasting many lines, first line is shown.
+	Also you can now fix that first line indentation with arrow left and right
+	while indenting many lines.
+	
+- Made waiter-func to add delay while doing things which involve view-changes like
+	unindent many lines or searching.
+	
+- Fix for: view-change to a file with cursor on start of multiline string.
+- Added missing docstring to wordexpand.py
+- Updated help.
 
 
 # 0.2.0

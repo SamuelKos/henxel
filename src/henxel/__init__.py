@@ -606,25 +606,6 @@ class Editor(tkinter.Toplevel):
 		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
 		
 	
-	def do_nothing_without_bell(self, event=None):
-		return 'break'
-	
-	
-	def avoid_viewsync_mess(self, event=None):
-		# Avoid viewsync messing when cursor
-		# position is in line with multiline string marker:
-		
-		if self.tabs[self.tabindex].filepath:
-			if self.can_do_syntax():
-				pos = self.tabs[self.tabindex].position
-				lineend = '%s lineend' % pos
-				linestart = '%s linestart' % pos
-				tmp = self.contents.get( linestart, lineend )
-				self.oldline = tmp
-				self.oldlinenum = pos.split('.')[0]
-				self.token_can_update = True
-	
-	
 	def wait_for(self, ms):
 		self.waitvar.set(False)
 		self.after(ms, self.waiter)
@@ -637,6 +618,10 @@ class Editor(tkinter.Toplevel):
 	
 	def do_nothing(self, event=None):
 		self.bell()
+		return 'break'
+		
+	
+	def do_nothing_without_bell(self, event=None):
 		return 'break'
 	
 	
@@ -700,7 +685,22 @@ class Editor(tkinter.Toplevel):
 				
 		self.__class__.alive = False
 		
+	
+	def avoid_viewsync_mess(self, event=None):
+		# Avoid viewsync messing when cursor
+		# position is in line with multiline string marker:
 		
+		if self.tabs[self.tabindex].filepath:
+			if self.can_do_syntax():
+				pos = self.tabs[self.tabindex].position
+				lineend = '%s lineend' % pos
+				linestart = '%s linestart' % pos
+				tmp = self.contents.get( linestart, lineend )
+				self.oldline = tmp
+				self.oldlinenum = pos.split('.')[0]
+				self.token_can_update = True
+
+
 	def viewsync(self, event=None):
 		'''	Triggered when event is <<WidgetViewSync>>
 			Used to update linenumbers and syntax highlight.
