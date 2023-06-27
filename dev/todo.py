@@ -1,8 +1,4 @@
-
-# in move_line:
-# paste or write string indent() to empty line before if dir line
-# par error
-
+# count_pars no check string comment	ok?
 
 # replace enter show next				ok?
 
@@ -18,6 +14,7 @@
 # Control-t>", self.tabify_lines)
 
 # paste move first line arrow			ok?
+# help txt
 
 # un,indent single line no move cursor		ok?
 
@@ -31,10 +28,11 @@
 
 
 
-
 # waiter do nothing bell unindent if visible no wait			ok?
 # made waiter func
 
+
+# check open file with cursor on start of multiline string		ok?
 
 
 # this is todo, and stub-editor for testing, might not work
@@ -46,10 +44,7 @@
 
 
 
-# check syntax at save?
 
-
-# check open file with cursor on start of multiline string
 
 
 

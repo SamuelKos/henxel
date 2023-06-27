@@ -1,4 +1,4 @@
-		Keyboard shortcuts:
+		Keyboard shortcuts (* marks often needed):
 		
 		If key-sequence is like: Ctrl-c
 		It means: while holding ctrl-key down, press and release c-key.
@@ -7,28 +7,28 @@
 		It means: while holding ctrl-key down, press and release first
 		c-key then f-key.
 		 
-		Alt-Return		Open file
+*		Alt-Return		Open file
 		Ctrl-BackSpace  Show and select next occurence of last search.
 						If got too far, press arrowleft to go to last
 						cursor position.
-		Ctrl-f  Search
+*		Ctrl-f  Search
 		Ctrl-r  Replace
 		Ctrl-R  Replace all
-		Ctrl-g  Gotoline:	-1 and empty goes to file-end
+*		Ctrl-g  Gotoline:	-1 and empty goes to file-end
 				
-		Shift-Tab  Unindent
-		Tab        Indent
+*		Shift-Tab  Unindent
+*		Tab        Indent
 		
-		Shift-Return	Comment
-		Shift-BackSpace	Uncomment
+*		Shift-Return	Comment
+*		Shift-BackSpace	Uncomment
 				
 		# Super means search-key.
-		Ctrl-Super-Return	run file
+(*)		Ctrl-Super-Return	run file
 		
-		Ctrl-a  Select all
-		Ctrl-c  Copy		Try this: Ctrl-c-f
-		Ctrl-v  Paste
-		Ctrl-z  Undo
+*		Ctrl-c  Copy		Try this: Ctrl-c-f
+*		Ctrl-v  Paste
+*		Ctrl-x  Cut
+*		Ctrl-z  Undo
 		Ctrl-Z  Redo
 		
 		Alt-f   Font setting
@@ -37,32 +37,35 @@
 		Alt-l   Toggle linenumbers
 		Alt-x   Toggle syntax highlight
 		Alt-e   expand word
-		Alt-n   Open new tab			Try this: Alt-n-Return
+*		Alt-n   Open new tab			Try this: Alt-n-Return
 		
-		Ctrl-d  Close current tab and save it
+*		Ctrl-d  Close current tab and save it
 		Ctrl-q  Close current tab without saving it
-		Alt-w   Walk tabs forward
-		Alt-q   Walk tabs backwards
+*		Alt-w   Walk tabs forward
+*		Alt-q   Walk tabs backwards
 		
 		Ctrl-o  Insert linebreak at cursor
 		Ctrl-i  Move cursor right
 		Ctrl-b  Move cursor left
 		Ctrl-n  Move cursor down
 		Ctrl-p  Move cursor up
-		Ctrl-e  Move cursor to lineend
-		Ctrl-s  Move cursor to linestart
+*		Ctrl-e  Move cursor to lineend
+*		Ctrl-a  Move cursor to linestart
 		Ctrl-k  Remove from cursor to lineend
 		
 		Ctrl-up		Move cursor one paragraph up
 		Ctrl-down	Move cursor one paragraph down
 		
-		Ctrl-left  		Move cursor one word left
-		Ctrl-right 		Move cursor one word right
-		Ctrl-shift-left 	Select one more word to left
-		Ctrl-shift-right	Select one more word to right
+*		Ctrl-left  		Move cursor one word left
+*		Ctrl-right 		Move cursor one word right
+*		Ctrl-shift-left 	Select one more word to left
+*		Ctrl-shift-right	Select one more word to right
 		
 		Ctrl-plus 	Increase scrollbar-width
 		Ctrl-minus	Decrease scrollbar-width
+		
+		Ctrl-t  	Change indentation of selected lines to current setting
+
 
 		While searching:
 			Ctrl-n  Next match
@@ -154,19 +157,19 @@
 		and select for example from 'def' - word, which has indentation,
 		then indentation of this first line is wrong when pasted, compared
 		to other lines. But editor moves cursor at the start of block so
-		you can start fixing indenting that function definition line or
-		similar.
+		you can start fixing indentation of that line with arrow left and
+		right. You can do this whenever you have selection more than one line.
 	
 	
 	How to: expand word
 	  - When starting to write object-name that has been used earlier near
 		current position, like if previous line was:
 		
-			var = self.functionabc()
+			var = functionabc()
 		
 		then when continuing at the next line:
 			
-			var2 = self.func
+			var2 = func
 			
 		and pressing Alt-e it should expand to functionabc. Pressing again
 		searches backwards next word with func in its name, and when no

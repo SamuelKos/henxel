@@ -590,8 +590,9 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', '1.0')
 			self.tabs[self.tabindex].position = '1.0'
 			self.contents.see('1.0')
-			
-			
+		
+		
+		self.avoid_viewsync_mess()
 		self.update_idletasks()
 		self.viewsync()
 		self.__class__.alive = True
@@ -607,6 +608,21 @@ class Editor(tkinter.Toplevel):
 	
 	def do_nothing_without_bell(self, event=None):
 		return 'break'
+	
+	
+	def avoid_viewsync_mess(self, event=None):
+		# Avoid viewsync messing when cursor
+		# position is in line with multiline string marker:
+		
+		if self.tabs[self.tabindex].filepath:
+			if self.can_do_syntax():
+				pos = self.tabs[self.tabindex].position
+				lineend = '%s lineend' % pos
+				linestart = '%s linestart' % pos
+				tmp = self.contents.get( linestart, lineend )
+				self.oldline = tmp
+				self.oldlinenum = pos.split('.')[0]
+				self.token_can_update = True
 	
 	
 	def wait_for(self, ms):
@@ -923,6 +939,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		
+		self.avoid_viewsync_mess()
 		self.update_title()
 		
 		return 'break'
@@ -993,20 +1010,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		
-		# Until update_title: avoiding viewsync messing when cursor
-		# position is in line with multiline string marker.
-		if self.tabs[self.tabindex].filepath:
-			if self.can_do_syntax():
-				pos = self.tabs[self.tabindex].position
-				lineend = '%s lineend' % pos
-				linestart = '%s linestart' % pos
-				tmp = self.contents.get( linestart, lineend )
-				self.oldline = tmp
-				self.oldlinenum = pos.split('.')[0]
-					
-				self.token_can_update = True
-			
-		
+		self.avoid_viewsync_mess()
 		self.update_title()
 		
 		return 'break'
@@ -1299,10 +1303,7 @@ class Editor(tkinter.Toplevel):
 		
 		prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
 		if self.par_err or prev_char in [ '(', ')', '[', ']' ]:
-			self.check_pars = True
-
-		pars_checked = False
-		
+			self.par_err = True
 		
 		linenum = int(start_idx.split('.')[0])
 		flag_err = False
@@ -1399,10 +1400,7 @@ class Editor(tkinter.Toplevel):
 		except tokenize.TokenError as ee:
 			
 			if 'EOF in multi-line statement' in ee.args[0]:
-				self.check_pars = False
-				par_err = self.checkpars(idx_start)
-				pars_checked = True
-				
+				self.check_pars = idx_start
 				
 			elif 'multi-line string' in ee.args[0]:
 				flag_err = True
@@ -1410,13 +1408,17 @@ class Editor(tkinter.Toplevel):
 			
 			
 		# from backspace_override:
-		if (self.check_pars and not pars_checked) or self.par_err:
-			self.check_pars = False
-			par_err = self.checkpars(False)
-			pars_checked = True
+		if self.check_pars:
+			startl = self.check_pars
+			par_err = self.checkpars(startl)
+			
+		elif self.par_err:
+			startl = False
+			par_err = self.checkpars(startl)
 
-
+		self.check_pars = False
 		self.par_err = par_err
+
 		if not par_err:
 			# not always checking whole file for par mismatches, so clear
 			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
@@ -1471,19 +1473,21 @@ class Editor(tkinter.Toplevel):
 		first_bra = None
 		last_ket = None
 		
+		tags = None
 		
 		# populate lists and return at first extra closer:
 		for i in range(len(lines)):
 			
 			for j in range(len(lines[i])):
 				c = lines[i][j]
-				patt = '%i.%i +%il' % (startline, j, i)
-		
+				patt = '%i.%i' % (startline+i, j)
+				tags = self.contents.tag_names(patt)
+
 				# skip if string or comment:
-				if 'strings' in self.contents.tag_names(
-					self.contents.index(patt)) or \
-					'comments' in self.contents.tag_names(self.contents.index(patt)):
-					continue
+				if tags:
+					if 'strings' in tags or 'comments' in tags:
+						tags = None
+						continue
 				
 				if c in closing:
 					if c == ')':
@@ -1523,33 +1527,33 @@ class Editor(tkinter.Toplevel):
 				
 		
 		# no extra closer in block.
-		# return first extra opener:
+		# return last extra opener:
 		if len(lpar) > 0:
 			if len(bra) > 0:
-				# find which is first
-				lidx =  lpar.pop(0)
-				bidx =  bra.pop(0)
-				if lidx[0] < bidx[0]:
+				# find which is last
+				lidx =  lpar.pop(-1)
+				bidx =  bra.pop(-1)
+				if lidx[0] > bidx[0]:
 					return lidx
-				elif bidx[0] < lidx[0]:
+				elif bidx[0] > lidx[0]:
 					return bidx
 				
 				# same line
 				else:
-					if lidx[1] < bidx[1]:
+					if lidx[1] > bidx[1]:
 						return lidx
-					elif bidx[1] < lidx[1]:
+					elif bidx[1] > lidx[1]:
 						return bidx
 					else:
 						return lidx
 				
 			else:
-				# first lpar
-				return lpar.pop(0)
+				# last lpar
+				return lpar.pop(-1)
 				
 		elif len(bra) > 0:
-			# first bra
-			return bra.pop(0)
+			# last bra
+			return bra.pop(-1)
 		
 		
 		return False
@@ -2246,7 +2250,9 @@ class Editor(tkinter.Toplevel):
 		
 
 	def move_line(self, event=None, direction=None):
-		if self.state != 'normal':
+		
+		# Enable continue adjusting selection area
+		if self.state != 'normal' or event.state != 0:
 			return 'continue'
 		
 		
@@ -2254,11 +2260,14 @@ class Editor(tkinter.Toplevel):
 			s = self.contents.index(tkinter.SEL_FIRST)
 			e = self.contents.index(tkinter.SEL_LAST)
 			i = self.contents.index(tkinter.INSERT)
+			t = self.contents.get('%s linestart' % i, '%s lineend' % i)
 			
 			line_s = s.split('.')[0]
 			line_e = e.split('.')[0]
 			
-			if line_s == line_e: return 'continue'
+			if line_s == line_e: 	return 'continue'
+			if len(t.strip()) == 0: return 'continue'
+			
 			
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			self.contents.tag_add('sel', '%s linestart' % i, '%s lineend' % i)
@@ -2407,7 +2416,9 @@ class Editor(tkinter.Toplevel):
 		
 		if self.state != 'normal' or event.state != 0:
 			return
-			
+		
+		pars = [ '(', ')', '[', ']' ]
+		
 		try:
 			
 			# Is there a selection?
@@ -2415,7 +2426,7 @@ class Editor(tkinter.Toplevel):
 				tmp = self.contents.selection_get()
 				l = [ x for x in tmp if x in pars ]
 				if len(l) > 0:
-					self.check_pars = True
+					self.par_err = True
 				
 			self.contents.delete( tkinter.SEL_FIRST, tkinter.SEL_LAST )
 			
@@ -2455,9 +2466,8 @@ class Editor(tkinter.Toplevel):
 				
 				
 			# To trigger parcheck if only one of these was in line and it was deleted:
-			pars = [ '(', ')', '[', ']' ]
 			if prev_char in pars:
-				self.check_pars = True
+				self.par_err = True
 				
 				
 		#print('deleting')
@@ -2874,6 +2884,7 @@ class Editor(tkinter.Toplevel):
 				
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
+				self.avoid_viewsync_mess()
 				
 		except (EnvironmentError, UnicodeDecodeError) as e:
 			print(e.__str__())
@@ -3245,6 +3256,7 @@ class Editor(tkinter.Toplevel):
 			
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
+		self.avoid_viewsync_mess()
 		
 		self.bind("<Escape>", self.do_nothing)
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
