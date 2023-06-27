@@ -346,10 +346,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-v>", self.paste)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
 		self.contents.bind( "<BackSpace>", self.backspace_override)
-		self.contents.bind("<Left>", self.move_line_left )
-		self.contents.bind("<Right>", self.move_line_right )
-		
-			
+		self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
+		self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
 		
 		
 		# Needed in leave() taglink in: Run file Related
@@ -1302,7 +1300,7 @@ class Editor(tkinter.Toplevel):
 		prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
 		if self.par_err or prev_char in [ '(', ')', '[', ']' ]:
 			self.check_pars = True
-			
+
 		pars_checked = False
 		
 		
@@ -1410,26 +1408,20 @@ class Editor(tkinter.Toplevel):
 				flag_err = True
 				self.token_err = True
 			
-		prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
 			
 		# from backspace_override:
 		if (self.check_pars and not pars_checked) or self.par_err:
 			self.check_pars = False
 			par_err = self.checkpars(False)
 			pars_checked = True
-			
-			
+
+
 		self.par_err = par_err
 		if not par_err:
 			# not always checking whole file for par mismatches, so clear
 			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
 			
 
-			
-																					
-##		if flag_err:
-##			print('err')
-			
 
 		if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
 			#print('ok')
@@ -1447,8 +1439,8 @@ class Editor(tkinter.Toplevel):
 			
 		curline = int( idx_start.split('.')[0] )
 		startline, endline, lines = self.find_empty_lines(curline)
-		
 		err_indexes = self.count_pars(startline, lines)
+		
 		err = False
 		
 		if err_indexes:
@@ -1561,8 +1553,6 @@ class Editor(tkinter.Toplevel):
 		
 		
 		return False
-				
-		
 		
 	
 	def find_empty_lines(self, lnstart):
@@ -2255,7 +2245,7 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 		
 
-	def move_line_left(self, event=None):
+	def move_line(self, event=None, direction=None):
 		if self.state != 'normal':
 			return 'continue'
 		
@@ -2272,41 +2262,20 @@ class Editor(tkinter.Toplevel):
 			
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			self.contents.tag_add('sel', '%s linestart' % i, '%s lineend' % i)
-			self.unindent()
+			
+			if direction == 'left':
+				self.unindent()
+			else:
+				self.indent()
+				
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			self.contents.tag_add('sel', s, e)
+			
 			return 'break'
 			
 			
 		return 'continue'
 	
-	
-	def move_line_right(self, event=None):
-		if self.state != 'normal':
-			return 'continue'
-		
-
-		if len(self.contents.tag_ranges('sel')) > 0:
-			s = self.contents.index(tkinter.SEL_FIRST)
-			e = self.contents.index(tkinter.SEL_LAST)
-			i = self.contents.index(tkinter.INSERT)
-			
-			line_s = s.split('.')[0]
-			line_e = e.split('.')[0]
-			
-			if line_s == line_e: return 'continue'
-			
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			self.contents.tag_add('sel', '%s linestart' % i, '%s lineend' % i)
-			self.indent()
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			self.contents.tag_add('sel', s, e)
-			return 'break'
-			
-			
-		return 'continue'
-	
-
 	
 	def paste(self, event=None):
 		'''	Keeping original behaviour, in which indentation is preserved
@@ -2435,7 +2404,6 @@ class Editor(tkinter.Toplevel):
 	def backspace_override(self, event):
 		""" for syntax highlight
 		"""
-		pars = [ '(', ')', '[', ']' ]
 		
 		if self.state != 'normal' or event.state != 0:
 			return
@@ -2487,6 +2455,7 @@ class Editor(tkinter.Toplevel):
 				
 				
 			# To trigger parcheck if only one of these was in line and it was deleted:
+			pars = [ '(', ')', '[', ']' ]
 			if prev_char in pars:
 				self.check_pars = True
 				
@@ -3956,6 +3925,17 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def do_single_replace(self, event=None):
+	
+		
+		# Apply normal 'Replace and proceed to next by pressing Return' -behaviour
+		c = self.contents.tag_nextrange('focus', 1.0)
+	
+		if not len(c) > 0:
+			self.show_next()
+			return 'break'
+			
+			
+		# Start of actual replacing
 		self.contents.config(state='normal')
 		self.search_matches = 0
 		

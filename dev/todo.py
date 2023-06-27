@@ -1,4 +1,11 @@
 
+# in move_line:
+# paste or write string indent() to empty line before if dir line
+# par error
+
+
+# replace enter show next				ok?
+
 # ctrl-d should clear last new-tab		ok?
 
 # indenting long show first line		ok?
@@ -8,6 +15,7 @@
 # goto linestart strip empty space		ok?
 
 # ctrl-a								ok?
+# Control-t>", self.tabify_lines)
 
 # paste move first line arrow			ok?
 
