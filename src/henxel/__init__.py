@@ -1302,7 +1302,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 		prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
-		if self.par_err or prev_char in [ '(', ')', '[', ']' ]:
+		if self.par_err or prev_char in [ '(', ')', '[', ']' , '{', '}' ]:
 			self.par_err = True
 		
 		linenum = int(start_idx.split('.')[0])
@@ -1460,18 +1460,12 @@ class Editor(tkinter.Toplevel):
 	
 	def count_pars(self, startline, lines):
 		
-		lpar = list()
-		rpar = list()
-		bra = list()
-		ket = list()
+		pars = list()
+		bras = list()
+		curls = list()
 		
-		opening  = [ '(', '[' ]
-		closing  = [ ')', ']' ]
-		
-		first_lpar = None
-		last_rpar = None
-		first_bra = None
-		last_ket = None
+		opening  = [ '(', '[', '{' ]
+		closing  = [ ')', ']', '}' ]
 		
 		tags = None
 		
@@ -1491,74 +1485,61 @@ class Editor(tkinter.Toplevel):
 				
 				if c in closing:
 					if c == ')':
-						if len(lpar) > 0:
-							# check it is before curidx
-							lidx =  lpar[-1]
-							if lidx[0] < j:
-								lpar.pop(-1)
-							elif lidx[1] < i:
-								lpar.pop(-1)
-							else:
-								return (i,j)
+						if len(pars) > 0:
+							pars.pop(-1)
 						else:
 							return (i,j)
-							
-					# c == ']'
+					
+					elif c == ']':
+						if len(bras) > 0:
+							bras.pop(-1)
+						else:
+							return (i,j)
+					
+					# c == '}'
 					else:
-						if len(bra) > 0:
-							# check it is before curidx
-							bidx =  bra[-1]
-							if bidx[0] < j:
-								bra.pop(-1)
-							elif bidx[1] < i:
-								bra.pop(-1)
-							else:
-								return (i,j)
+						if len(curls) > 0:
+							curls.pop(-1)
 						else:
 							return (i,j)
+						
 							
 				elif c in opening:
 					if c == '(':
-						lpar.append((i,j))
+						pars.append((i,j))
 						
-					# c == '['
+					elif c == '[':
+						bras.append((i,j))
+					
+					# c == '{':
 					else:
-						bra.append((i,j))
+						curls.append((i,j))
 				
 		
 		# no extra closer in block.
-		# return last extra opener:
-		if len(lpar) > 0:
-			if len(bra) > 0:
-				# find which is last
-				lidx =  lpar.pop(-1)
-				bidx =  bra.pop(-1)
-				if lidx[0] > bidx[0]:
-					return lidx
-				elif bidx[0] > lidx[0]:
-					return bidx
-				
-				# same line
-				else:
-					if lidx[1] > bidx[1]:
-						return lidx
-					elif bidx[1] > lidx[1]:
-						return bidx
-					else:
-						return lidx
-				
-			else:
-				# last lpar
-				return lpar.pop(-1)
-				
-		elif len(bra) > 0:
-			# last bra
-			return bra.pop(-1)
+		# Return last extra opener:
+		idxlist = list()
 		
-		
-		return False
-		
+		for item in [ pars, bras, curls ]:
+			if len(item) > 0:
+				idx =  item.pop(-1)
+				idxlist.append(idx)
 	
+	
+		if len(idxlist) > 0:
+			if len(idxlist) > 1:
+			
+				maxidx = max(idxlist)
+				
+				return idxlist[idxlist.index(maxidx)]
+					
+			else:
+				return idxlist[0]
+			
+		else:
+			return False
+
+		
 	def find_empty_lines(self, lnstart):
 		'''	Finds first empty lines before and after current line
 			
@@ -2177,6 +2158,9 @@ class Editor(tkinter.Toplevel):
 ########## Overrides Begin
 
 	def move_right(self, event=None):
+		''' move cursor right
+		'''
+		
 		if self.state not in  [ 'normal', 'error' ]:
 			self.bell()
 			return "break"
@@ -2222,7 +2206,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.mark_set('insert', pos)
 		
 		return "break"
-		
 	
 	
 	def raise_popup(self, event=None):
@@ -2250,6 +2233,9 @@ class Editor(tkinter.Toplevel):
 		
 
 	def move_line(self, event=None, direction=None):
+		''' Adjust cursor line indentation, with arrow left and right,
+			when pasting more than one line etc.
+		'''
 		
 		# Enable continue adjusting selection area
 		if self.state != 'normal' or event.state != 0:
@@ -2287,13 +2273,13 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def paste(self, event=None):
-		'''	Keeping original behaviour, in which indentation is preserved
-			but first line usually is in wrong place after paste
+		'''	First line usually is in wrong place after paste
 			because of selection has not started at the beginning of the line.
 			So we put cursor at the beginning of insertion after pasting it
 			so we can start indenting it. This problem can be avoided by
 			starting copying of a block at the empty line before first line of
-			the block.
+			the block. But you can adjust the first line with arrow left and right.
+			(move_line)
 		'''
 		
 		try:
@@ -2417,7 +2403,7 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal' or event.state != 0:
 			return
 		
-		pars = [ '(', ')', '[', ']' ]
+		pars = [ '(', ')', '[', ']' , '{', '}' ]
 		
 		try:
 			
@@ -3681,7 +3667,11 @@ class Editor(tkinter.Toplevel):
 			if self.contents.compare(ref, '==', tmp): break
 		
 		
-		self.title( f'Search: {idx+1}/{self.search_matches}' )
+		if self.state == 'replace':
+			self.title( f'Replace: {idx+1}/{self.search_matches}' )
+		else:
+			self.title( f'Search: {idx+1}/{self.search_matches}' )
+		
 		
 		if self.search_matches == 1:
 			self.bind("<Control-n>", self.do_nothing)
@@ -3754,9 +3744,10 @@ class Editor(tkinter.Toplevel):
 				self.search_matches += 1
 				lastpos = "%s + %dc" % (pos, wordlen)
 				self.contents.tag_add('match', pos, lastpos)
-				if flag_start:
+				if flag_start and self.state == 'search':
 					flag_start = False
 					self.contents.focus_set()
+					self.wait_for(100)
 					self.show_next()
 				pos = "%s + %dc" % (pos, wordlen+1)
 				
@@ -4043,7 +4034,11 @@ class Editor(tkinter.Toplevel):
 			self.entry.bind("<Return>", self.do_nothing)
 			self.entry.config(state='disabled')
 			self.focus_set()
-				
+			
+			self.wait_for(100)
+			self.show_next()
+	
+			
 			if self.state == 'replace':
 			
 				self.replace_overlap_index = None
@@ -4052,7 +4047,7 @@ class Editor(tkinter.Toplevel):
 					self.replace_overlap_index = self.new_word.index(self.old_word)
 									
 				self.bind( "<Return>", self.do_single_replace)
-				self.title('Replacing %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )
+				
 			elif self.state == 'replace_all':
 				self.bind( "<Return>", self.do_replace_all)
 				self.title('Replacing ALL %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )

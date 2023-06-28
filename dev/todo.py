@@ -1,16 +1,27 @@
+# indentation error (white from ) should be more informational
+
+
+
+
+
+
+# replace no replacing x matches with but straight info		ok?
+# that we are on the first match, delay after new word
+# countpars with curls							ok?
+
+
+# find empty lines check first last 	checked ok
+# search next left						checked ok
+
+
+
+
+
 # this is todo, and stub-editor for testing, might not work
 
 # Run in python console
 # >>> import todo
 # >>> e=todo.Ed()
-
-
-
-
-
-
-
-
 
 
 # Binding rewrite planning Begin
@@ -290,7 +301,7 @@ class Ed(tkinter.Toplevel):
 		for i in range(0, self.contents.winfo_height(), step):
 
 			ll, cc = self.contents.index( indexMask % i).split('.')
-
+			
 			if line == ll:
 				if col != cc:
 					col = cc
