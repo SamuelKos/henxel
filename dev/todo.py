@@ -1,18 +1,14 @@
-# indentation error (white from ) should be more informational
-
-
 
 
 
 
 # replace no replacing x matches with but straight info		ok?
 # that we are on the first match, delay after new word
-# countpars with curls							ok?
+# countpars with curls										ok?
 
 
-# find empty lines check first last 	checked ok
-# search next left						checked ok
-
+# move_line left insert one left
+# right move insert											ok?
 
 
 
@@ -20,8 +16,8 @@
 # this is todo, and stub-editor for testing, might not work
 
 # Run in python console
-# >>> import todo
-# >>> e=todo.Ed()
+						# >>> import todo
+						# >>> e=todo.Ed()
 
 
 # Binding rewrite planning Begin

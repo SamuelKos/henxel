@@ -383,7 +383,7 @@ class Editor(tkinter.Toplevel):
 			
 			black = r'#000000'
 			white = r'#D3D7CF'
-
+			
 			self.bgdaycolor = white
 			self.fgdaycolor = black
 			
@@ -514,8 +514,7 @@ class Editor(tkinter.Toplevel):
 				'comments',
 				'breaks',
 				'calls',
-				'selfs',
-				'mismatch'
+				'selfs'
 				]
 		
 		self.boldfont = self.font.copy()
@@ -1683,6 +1682,7 @@ class Editor(tkinter.Toplevel):
 			
 		self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
 		
+		
 		return 'break'
 
 		
@@ -2243,28 +2243,58 @@ class Editor(tkinter.Toplevel):
 		
 		
 		if len(self.contents.tag_ranges('sel')) > 0:
+			insert_at_selstart = False
+			
 			s = self.contents.index(tkinter.SEL_FIRST)
 			e = self.contents.index(tkinter.SEL_LAST)
 			i = self.contents.index(tkinter.INSERT)
 			t = self.contents.get('%s linestart' % i, '%s lineend' % i)
 			
+			if i == s:
+				insert_at_selstart = True
+
+			# else: insert at selend
+			
 			line_s = s.split('.')[0]
 			line_e = e.split('.')[0]
 			
+			# One line only:
 			if line_s == line_e: 	return 'continue'
+
+			# Empty line:
 			if len(t.strip()) == 0: return 'continue'
 			
 			
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			self.contents.tag_add('sel', '%s linestart' % i, '%s lineend' % i)
 			
+			
 			if direction == 'left':
+				
+				# Cursor at the start of the line, or there is no indentation left:
+				if i.split('.')[1] == 0 or not t[0].isspace():
+					self.contents.tag_remove('sel', '1.0', tkinter.END)
+					self.contents.tag_add('sel', s, e)
+					return 'break'
+				
 				self.unindent()
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
+				
+				if insert_at_selstart:
+					self.contents.tag_add('sel',  '%s -1c' % s, e)
+				else:
+					self.contents.tag_add('sel', s, '%s -1c' % e)
+			
+			# right
 			else:
 				self.indent()
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
 				
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			self.contents.tag_add('sel', s, e)
+				if insert_at_selstart:
+					self.contents.tag_add('sel',  '%s +1c' % s, e)
+				else:
+					self.contents.tag_add('sel', s, '%s +1c' % e)
+			
 			
 			return 'break'
 			
