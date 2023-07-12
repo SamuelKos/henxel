@@ -1,6 +1,58 @@
 
 
+##	ScrolledText with tags taglink etc from error
+##
+##	remember to set ln-widget colors after.
+##
+##
+##	Before closing, load setting from: Start
+##	if there were made unwanted changes.
+##
+##	Changing color for:
+##	Day		Text
+##	Night	Background
+##
+##	Select tag you want to modify
+##	'normal text'
+##
+##	Syntax highlight tags
+##	'keywords',
+##	'numbers',
+##	'bools',
+##	'strings',
+##	'comments',
+##	'breaks',
+##	'calls',
+##	'selfs'
+##
+##	Search tags
+##	'match'
+##	'focus'
+##	'replaced'
+##
+##	Parentheses
+##	'mismatch'
+##
+##	Selection
+##	'sel'
+##
+##
+##	Save current setting to template,
+##	to which you can revert to later:
+##	Save TMP
+##
+##	Load setting from:
+##	TMP
+##	Start
+##	Defaults
+##
 
+# color tags
+
+# day night
+# on select set down disable, load colors of:
+# fore, back, tags:
+# on select choose color
 
 # replace no replacing x matches with but straight info		ok?
 # that we are on the first match, delay after new word
@@ -16,8 +68,8 @@
 # this is todo, and stub-editor for testing, might not work
 
 # Run in python console
-						# >>> import todo
-						# >>> e=todo.Ed()
+# >>> import todo
+# >>> e=todo.Ed()
 
 
 # Binding rewrite planning Begin
@@ -93,6 +145,8 @@
 
 import tkinter
 import tkinter.font
+
+
 
 
 
@@ -177,6 +231,7 @@ class Ed(tkinter.Toplevel):
 	editors = []
 
 	def __init__(self):
+	
 		self.root = tkinter.Tk().withdraw()
 		super().__init__(self.root)
 		self.__class__.editors.append(self)

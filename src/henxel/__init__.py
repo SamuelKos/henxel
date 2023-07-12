@@ -1291,7 +1291,7 @@ class Editor(tkinter.Toplevel):
 			
 			if not linecontents:
 				tmp = self.contents.get( start_idx, end_idx )
-			
+				
 			else:
 				tmp = linecontents
 				
@@ -1730,31 +1730,190 @@ class Editor(tkinter.Toplevel):
 				self.bind( "<Alt-s>", self.color_choose)) )
 				
 		self.bind( "<Alt-s>", self.do_nothing)
+	
+		colortop.textfont = tkinter.font.Font(family='TkDefaulFont', size=10)
+		colortop.titlefont = tkinter.font.Font(family='TkDefaulFont', size=12)
 		
-		colortop.btnfg = tkinter.Button(colortop, text='Text color', font=('TkDefaultFont', 16),
-				command = lambda args=['fg']: self.chcolor(args) )
+		colortop.textwid = tkinter.Text(colortop, blockcursor=True, highlightthickness=0,
+							bd=4, pady=4, padx=10, tabstyle='wordprocessor', font=colortop.textfont)
+		
+		colortop.scrollbar = tkinter.Scrollbar(colortop, orient=tkinter.VERTICAL, highlightthickness=0,
+							bd=0, command = colortop.textwid.yview)
+
+		
+		colortop.textwid['yscrollcommand'] = colortop.scrollbar.set
+		colortop.scrollbar.config(width=self.scrollbar_width)
+		colortop.scrollbar.config(elementborderwidth=self.elementborderwidth)
+
+
+		colortop.textwid.tag_config('title', font=colortop.titlefont)
+		colortop.textwid.tag_config('text', font=colortop.textfont)
+		
 				
-		colortop.btnfg.pack(padx=10, pady=10)
+		colortop.rowconfigure(1, weight=1)
+		colortop.columnconfigure(1, weight=1)
 		
-		colortop.btnbg = tkinter.Button(colortop, text='Ref. color', font=('TkDefaultFont', 16),
-				command = lambda args=['bg']: self.chcolor(args) )
-				
-		colortop.btnbg.pack(padx=10, pady=10)
+		colortop.textwid.grid_configure(row=0, column = 0)
+		colortop.scrollbar.grid_configure(row=0, column = 1, sticky='ns')
 		
-		colortop.lb = tkinter.Listbox(colortop, font=('TkDefaultFont', 12), selectmode=tkinter.SINGLE)
-		colortop.lb.pack(pady=10)
-		colortop.choiseslist = ['day', 'night']
+		colortop.textwid.insert(tkinter.INSERT, 'Before closing, load setting from: Start\n', 'title')
+		colortop.textwid.insert(tkinter.INSERT, 'if there were made unwanted changes.\n', 'title')
+	
+		colortop.textwid.insert(tkinter.INSERT, '\nChanging color for:\n', 'title')
+		colortop.textwid.insert(tkinter.INSERT, '[ ] Day-mode	[ ] Text color\n')
+		colortop.textwid.insert(tkinter.INSERT, '[ ] Night-mode	[ ] Background color\n')
+	
+		colortop.textwid.insert(tkinter.INSERT, '\nSelect tag you want to modify\n', 'title')
+		colortop.textwid.insert(tkinter.INSERT, 'normal text\n')
+	
+		colortop.textwid.insert(tkinter.INSERT, '\nSyntax highlight tags\n', 'title')
+		colortop.textwid.insert(tkinter.INSERT, 'keywords\n')
+		colortop.textwid.insert(tkinter.INSERT, 'numbers\n')
+		colortop.textwid.insert(tkinter.INSERT, 'bools\n')
+		colortop.textwid.insert(tkinter.INSERT, 'strings\n')
+		colortop.textwid.insert(tkinter.INSERT, 'comments\n')
+		colortop.textwid.insert(tkinter.INSERT, 'breaks\n')
+		colortop.textwid.insert(tkinter.INSERT, 'calls\n')
+		colortop.textwid.insert(tkinter.INSERT, 'selfs\n')
+	
+		colortop.textwid.insert(tkinter.INSERT, '\nSearch tags\n', 'title')
+		colortop.textwid.insert(tkinter.INSERT, 'match\n')
+		colortop.textwid.insert(tkinter.INSERT, 'focus\n')
+		colortop.textwid.insert(tkinter.INSERT, 'replaced\n')
+	
+		colortop.textwid.insert(tkinter.INSERT, '\nParentheses\n', 'title')
+		colortop.textwid.insert(tkinter.INSERT, 'mismatch\n')
+	
+		colortop.textwid.insert(tkinter.INSERT, '\nSelection\n', 'title')
+		colortop.textwid.insert(tkinter.INSERT, 'sel\n')
+	
+	
+		colortop.textwid.insert(tkinter.INSERT, '\nSave current setting to template,\n', 'title')
+		colortop.textwid.insert(tkinter.INSERT, 'to which you can revert later:\n', 'title')
+		colortop.textwid.insert(tkinter.INSERT, 'Save TMP\n')
+	
+		colortop.textwid.insert(tkinter.INSERT, '\nLoad setting from:\n', 'title')
+		colortop.textwid.insert(tkinter.INSERT, 'TMP\n')
+		colortop.textwid.insert(tkinter.INSERT, 'Start\n')
+		colortop.textwid.insert(tkinter.INSERT, 'Defaults\n')
+
 		
-		for item in colortop.choiseslist:
-			colortop.lb.insert('end', item)
+
+
+
+
+
 		
-		idx = colortop.choiseslist.index(self.curcolor)
-		colortop.lb.select_set(idx)
-		colortop.lb.see(idx)
-		colortop.lb.bind('<ButtonRelease-1>', lambda event, args=[colortop]: self.choose_daynight(args, event))
+##		colortop.btnday = tkinter.Button(colortop, text='Day', font=('TkDefaultFont', 12),
+##						bd=4, highlightthickness=0)
+##		#colortop.btnday.config(command = lambda args=['fg', colortop.btnday]: self.chcolor(args) )
+##		colortop.btnnight = tkinter.Button(colortop, text='Night', font=('TkDefaultFont', 12),
+##						bd=4, highlightthickness=0)
+##		#colortop.btnnight.config(command = lambda args=['fg', colortop.btnnight]: self.chcolor(args) )
+##
+##		colortop.btnfg = tkinter.Button(colortop, text='Text color', font=('TkDefaultFont', 12),
+##						bd=4, highlightthickness=0)
+##		#colortop.btnfg.config(command = lambda args=['fg', colortop.btnfg]: self.chcolor(args) )
+##
+##		#colortop.btnfg.pack(padx=10, pady=10)
+##
+##		colortop.btnbg = tkinter.Button(colortop, text='Background', font=('TkDefaultFont', 12),
+##						bd=4, highlightthickness=0)
+##		#colortop.btnbg.config(command = lambda args=['bg', colortop.btnbg]: self.chcolor(args) )
+##
+##		#colortop.btnbg.pack(padx=10, pady=10)
+##
+##
+##
+##		colortop.label1 = tkinter.Label(colortop, text='Changing color for:', font=('TkDefaultFont', 16))
+##		colortop.label2 = tkinter.Label(colortop, text='\nSelect tag you want to modify',
+##						font=('TkDefaultFont', 16))
+##		colortop.label3 = tkinter.Label(colortop, text='\nSearch tags:', font=('TkDefaultFont', 16))
+##		colortop.label4 = tkinter.Label(colortop, text='\nParentheses:', font=('TkDefaultFont', 16))
+##		colortop.label5 = tkinter.Label(colortop, text='\nSelection:', font=('TkDefaultFont', 16))
+##
+##
+##		colortop.button1 = tkinter.Button(colortop, text='Normal text', font=('TkDefaultFont', 12),
+##						bd=4, highlightthickness=0)
+##		colortop.button2 = tkinter.Button(colortop, text='Match', font=('TkDefaultFont', 12),
+##						bd=4, highlightthickness=0)
+##		colortop.button3 = tkinter.Button(colortop, text='Focus', font=('TkDefaultFont', 12),
+##						bd=4, highlightthickness=0)
+##		colortop.button4 = tkinter.Button(colortop, text='Replaced', font=('TkDefaultFont', 12),
+##						bd=4, highlightthickness=0)
+##		colortop.button5 = tkinter.Button(colortop, text='Mismatch', font=('TkDefaultFont', 12),
+##						bd=4, highlightthickness=0)
+##		colortop.button6 = tkinter.Button(colortop, text='Selected', font=('TkDefaultFont', 12),
+##						bd=4, highlightthickness=0)
+##
+##
+##		if self.curcolor == 'day':
+##			colortop.btnday.config(state='disabled', disabledforeground=self.fgdaycolor)
+##			colortop.btnnight.config(foreground='#a3a3a3')
+##
+##		else:
+##			colortop.btnnight.config(state='disabled', disabledforeground=self.fgdaycolor)
+##			colortop.btnday.config(foreground='#a3a3a3')
+##
+##
+##		colortop.btnfg.config(state='disabled', disabledforeground=self.fgdaycolor)
+##		colortop.btnbg.config(foreground='#a3a3a3')
+##
+##
+##		colortop.btnday.config(state='disabled')
+##		colortop.btnfg.config(state='disabled')
+##		colortop.btnbg.config(state='disabled')
+##
+##		colortop.button1.config(state='disabled')
+##		colortop.button2.config(state='disabled')
+##		colortop.button3.config(state='disabled')
+##		colortop.button4.config(state='disabled')
+##		colortop.button5.config(state='disabled')
+##		colortop.button6.config(state='disabled')
+##
+##
+##		colortop.rowconfigure(1, weight=1)
+##		colortop.columnconfigure(1, weight=1)
+##
+##		# It seems that widget is shown on screen when doing grid_configure
+##		colortop.label1.grid_configure(row=0, column = 0, sticky='se')
+##		colortop.btnday.grid_configure(row=1, column = 0, sticky='nse')
+##		colortop.btnfg.grid_configure(row=1, column = 1, sticky='nsw')
+##		colortop.btnnight.grid_configure(row=2, column = 0, sticky='nse')
+##		colortop.btnbg.grid_configure(row=2, column = 1, sticky='nsw')
+##
+##		colortop.label2.grid_configure(row=3, column = 0, sticky='nsw')
+##		colortop.button1.grid_configure(row=4, column = 0, sticky='nsw')
+##
+##
+##		colortop.label3.grid_configure(row=5, column = 0, sticky='nsw')
+##		colortop.button2.grid_configure(row=6, column = 0, sticky='nsw')
+##		colortop.button3.grid_configure(row=7, column = 0, sticky='nsw')
+##		colortop.button4.grid_configure(row=8, column = 0, sticky='nsw')
+##
+##
+##		colortop.label4.grid_configure(row=9, column = 0, sticky='nsw')
+##		colortop.button5.grid_configure(row=10, column = 0, sticky='nsw')
+##
+##		colortop.label5.grid_configure(row=11, column = 0, sticky='nsw')
+##		colortop.button6.grid_configure(row=12, column = 0, sticky='nw')
 		
-		self.to_be_closed.append(colortop)
 		
+##
+##		colortop.lb = tkinter.Listbox(colortop, font=('TkDefaultFont', 12), selectmode=tkinter.SINGLE)
+##		colortop.lb.pack(pady=10)
+##		colortop.choiseslist = ['day', 'night']
+##
+##		for item in colortop.choiseslist:
+##			colortop.lb.insert('end', item)
+##
+##		idx = colortop.choiseslist.index(self.curcolor)
+##		colortop.lb.select_set(idx)
+##		colortop.lb.see(idx)
+##		colortop.lb.bind('<ButtonRelease-1>', lambda event, args=[colortop]: self.choose_daynight(args, event))
+##
+##		self.to_be_closed.append(colortop)
+##
 		return 'break'
 		
 		
@@ -1763,6 +1922,7 @@ class Editor(tkinter.Toplevel):
 		parent = args[0]
 		oldcolor = self.curcolor
 		self.curcolor = parent.lb.get(parent.lb.curselection())
+		
 		
 		if self.curcolor != oldcolor:
 		
@@ -1786,8 +1946,13 @@ class Editor(tkinter.Toplevel):
 	
 		if args[0] == 'bg':
 			
+			wid = args[1]
+			wid.config(relief='sunken')
+		
 			res = self.tk.call('tk_chooseColor', '-initialcolor', self.bgcolor)
 			tmpcolorbg = str(res)
+			
+			wid.config(relief='raised')
 			
 			if tmpcolorbg in [None, '']:
 				return 'break'
@@ -1800,8 +1965,13 @@ class Editor(tkinter.Toplevel):
 				self.bgcolor = self.bgnightcolor
 		else:
 			
+			wid = args[1]
+			wid.config(relief='sunken')
+		
 			res = self.tk.call('tk_chooseColor', '-initialcolor', self.fgcolor)
 			tmpcolorfg = str(res)
+			
+			wid.config(relief='raised')
 			
 			if tmpcolorfg in [None, '']:
 				return 'break'
@@ -2248,6 +2418,7 @@ class Editor(tkinter.Toplevel):
 			s = self.contents.index(tkinter.SEL_FIRST)
 			e = self.contents.index(tkinter.SEL_LAST)
 			i = self.contents.index(tkinter.INSERT)
+			# contents of line with cursor:
 			t = self.contents.get('%s linestart' % i, '%s lineend' % i)
 			
 			if i == s:
@@ -2261,7 +2432,7 @@ class Editor(tkinter.Toplevel):
 			# One line only:
 			if line_s == line_e: 	return 'continue'
 
-			# Empty line:
+			# cursor line is empty:
 			if len(t.strip()) == 0: return 'continue'
 			
 			
