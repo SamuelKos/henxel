@@ -1744,8 +1744,91 @@ class Editor(tkinter.Toplevel):
 		wid = args[0]
 		tagname = args[1]
 		
-		print(tagname)
-
+		syntags = [
+		'normal_text',
+		'keywords',
+		'numbers',
+		'bools',
+		'strings',
+		'comments',
+		'breaks',
+		'calls',
+		'selfs',
+		'match',
+		'focus',
+		'replaced',
+		'mismatch',
+		'selected'
+		]
+		
+		modetags = [
+		'Day',
+		'Night',
+		'Text',
+		'Background',
+		]
+		
+		savetags = [
+		'Save_TMP',
+		'TMP',
+		'Start',
+		'Defaults'
+		]
+		
+		if tagname in syntags:
+			
+			if wid.frontback_mode == 'foreground':
+				initcolor = self.contents.tag_cget(tagname, 'foreground')
+			else:
+				initcolor = self.contents.tag_cget(tagname, 'background')
+			
+			res = self.tk.call('tk_chooseColor', '-initialcolor', initcolor)
+			tmpcolor = str(res)
+			
+##			if wid.frontback_mode == 'foreground':
+##				self.contents.tag_config(tagname, foreground=tmpcolor)
+##			else:
+##				self.contents.tag_config(tagname, background=tmpcolor)
+		
+			print(tagname, tmpcolor)
+			
+			
+		elif tagname in modetags:
+		
+			if tagname == 'Day':
+				#if self.curcolor != 'day':
+				r1 = wid.textwid.tag_nextrange('Day', 1.0)
+				r2 = wid.textwid.tag_nextrange('Night', 1.0)
+				
+				wid.textwid.delete(r1[0], r1[1])
+				wid.textwid.insert(r1[0], '[X] Day-mode	', 'Day')
+				wid.textwid.delete(r2[0], r2[1])
+				wid.textwid.insert(r2[0], '[ ] Night-mode	', 'Night')
+			
+			
+			elif tagname == 'Night':
+				#if self.curcolor != 'night':
+				r1 = wid.textwid.tag_nextrange('Day', 1.0)
+				r2 = wid.textwid.tag_nextrange('Night', 1.0)
+				
+				wid.textwid.delete(r1[0], r1[1])
+				wid.textwid.insert(r1[0], '[ ] Day-mode	', 'Day')
+				wid.textwid.delete(r2[0], r2[1])
+				wid.textwid.insert(r2[0], '[X] Night-mode	', 'Night')
+				
+			elif tagname == 'Text':
+				if wid.frontback_mode != 'foreground':
+					r = wid.textwid.tag_nextrange(tagname, 1.0)
+					print('ch back to text', r)
+								
+			elif tagname == 'Background':
+				if wid.frontback_mode != 'background':
+					r = wid.textwid.tag_nextrange(tagname, 1.0)
+					print('ch text to back', r)
+					
+				
+		elif tagname in savetags:
+			print(tagname, 'save')
 	
 	
 	def color_choose(self, event=None):
@@ -1829,6 +1912,9 @@ class Editor(tkinter.Toplevel):
 	
 		colortop.textwid.insert(tkinter.INSERT, '\nChanging color for:\n', 'title')
 		
+		colortop.daynight_mode = None
+		colortop.frontback_mode = None
+		
 		if self.curcolor == 'day':
 		
 			colortop.textwid.insert(tkinter.INSERT, '[X] Day-mode	', 'Day')
@@ -1837,12 +1923,20 @@ class Editor(tkinter.Toplevel):
 			colortop.textwid.insert(tkinter.INSERT, '[ ] Night-mode	', 'Night')
 			colortop.textwid.insert(tkinter.INSERT, '[ ] Background color\n', 'Background')
 			
+			colortop.daynight_mode = 'day'
+			colortop.frontback_mode = 'foreground'
+			
+			
 		else:
 			colortop.textwid.insert(tkinter.INSERT, '[ ] Day-mode	', 'Day')
 			colortop.textwid.insert(tkinter.INSERT, '[X] Text color\n', 'Text')
 		
 			colortop.textwid.insert(tkinter.INSERT, '[X] Night-mode	', 'Night')
 			colortop.textwid.insert(tkinter.INSERT, '[ ] Background color\n', 'Background')
+			
+			colortop.daynight_mode = 'night'
+			colortop.frontback_mode = 'foreground'
+			
 		
 	
 		colortop.textwid.insert(tkinter.INSERT, '\nSelect tag you want to modify\n', 'title')
@@ -1879,7 +1973,8 @@ class Editor(tkinter.Toplevel):
 		colortop.textwid.insert(tkinter.INSERT, 'Start\n', 'Start')
 		colortop.textwid.insert(tkinter.INSERT, 'Defaults\n', 'Defaults')
 
-		
+		colortop.textwid.state = 'disabled'
+		colortop.textwid.config(insertontime=0)
 
 
 
