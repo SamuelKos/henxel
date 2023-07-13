@@ -8,44 +8,44 @@
 ##	Before closing, load setting from: Start
 ##	if there were made unwanted changes.
 ##
-##	Changing color for:
-##	Day		Text
-##	Night	Background
-##
-##	Select tag you want to modify
-##	'normal text'
-##
-##	Syntax highlight tags
-##	'keywords',
-##	'numbers',
-##	'bools',
-##	'strings',
-##	'comments',
-##	'breaks',
-##	'calls',
-##	'selfs'
-##
-##	Search tags
-##	'match'
-##	'focus'
-##	'replaced'
-##
-##	Parentheses
-##	'mismatch'
-##
-##	Selection
-##	'sel'
-##
-##
-##	Save current setting to template,
-##	to which you can revert to later:
-##	Save TMP
-##
-##	Load setting from:
-##	TMP
-##	Start
-##	Defaults
-##
+	Changing color for:
+	Day		Text
+	Night	Background
+
+	Select tag you want to modify
+	'normal text'
+
+	Syntax highlight tags
+	'keywords',
+	'numbers',
+	'bools',
+	'strings',
+	'comments',
+	'breaks',
+	'calls',
+	'selfs'
+
+	Search tags
+	'match'
+	'focus'
+	'replaced'
+
+	Parentheses
+	'mismatch'
+
+	Selection
+	'sel'
+
+
+	Save current setting to template,
+	to which you can revert to later:
+	Save TMP
+
+	Load setting from:
+	TMP
+	Start
+	Defaults
+
 
 # color tags
 

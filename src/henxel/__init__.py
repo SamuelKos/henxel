@@ -1717,7 +1717,37 @@ class Editor(tkinter.Toplevel):
 	
 		return 'break'
 		
-			
+		
+	def enter2(self, args, event=None):
+		''' when mousecursor enters hyperlink tagname.
+		'''
+		wid = args[0]
+		tagname = args[1]
+		
+		wid.textwid.config(cursor="hand2")
+		wid.textwid.tag_config(tagname, underline=1)
+
+
+	def leave2(self, args, event=None):
+		''' when mousecursor leaves hyperlink tagname.
+		'''
+		wid = args[0]
+		tagname = args[1]
+		
+		wid.textwid.config(cursor=self.name_of_cursor_in_text_widget)
+		wid.textwid.tag_config(tagname, underline=0)
+
+
+	def lclick2(self, args, event=None):
+		'''	ads
+		'''
+		wid = args[0]
+		tagname = args[1]
+		
+		print(tagname)
+
+	
+	
 	def color_choose(self, event=None):
 		if self.state != 'normal':
 			self.bell()
@@ -1747,7 +1777,43 @@ class Editor(tkinter.Toplevel):
 
 
 		colortop.textwid.tag_config('title', font=colortop.titlefont)
-		colortop.textwid.tag_config('text', font=colortop.textfont)
+		
+		tags = [
+		'Day',
+		'Night',
+		'Text',
+		'Background',
+		'normal_text',
+		'keywords',
+		'numbers',
+		'bools',
+		'strings',
+		'comments',
+		'breaks',
+		'calls',
+		'selfs',
+		'match',
+		'focus',
+		'replaced',
+		'mismatch',
+		'selected',
+		'Save_TMP',
+		'TMP',
+		'Start',
+		'Defaults'
+		]
+		
+		
+		for tag in tags:
+			colortop.textwid.tag_config(tag, font=colortop.textfont)
+			colortop.textwid.tag_bind(tag, "<Enter>",
+				lambda event, arg=[colortop, tag]: self.enter2(arg, event))
+			colortop.textwid.tag_bind(tag, "<Leave>",
+				lambda event, arg=[colortop, tag]: self.leave2(arg, event))
+			colortop.textwid.tag_bind(tag, "<ButtonRelease-1>",
+					lambda event, arg=[colortop, tag]: self.lclick2(arg, event))
+						
+		
 		
 				
 		colortop.rowconfigure(1, weight=1)
@@ -1756,46 +1822,62 @@ class Editor(tkinter.Toplevel):
 		colortop.textwid.grid_configure(row=0, column = 0)
 		colortop.scrollbar.grid_configure(row=0, column = 1, sticky='ns')
 		
+		
+		
 		colortop.textwid.insert(tkinter.INSERT, 'Before closing, load setting from: Start\n', 'title')
 		colortop.textwid.insert(tkinter.INSERT, 'if there were made unwanted changes.\n', 'title')
 	
 		colortop.textwid.insert(tkinter.INSERT, '\nChanging color for:\n', 'title')
-		colortop.textwid.insert(tkinter.INSERT, '[ ] Day-mode	[ ] Text color\n')
-		colortop.textwid.insert(tkinter.INSERT, '[ ] Night-mode	[ ] Background color\n')
+		
+		if self.curcolor == 'day':
+		
+			colortop.textwid.insert(tkinter.INSERT, '[X] Day-mode	', 'Day')
+			colortop.textwid.insert(tkinter.INSERT, '[X] Text color\n', 'Text')
+		
+			colortop.textwid.insert(tkinter.INSERT, '[ ] Night-mode	', 'Night')
+			colortop.textwid.insert(tkinter.INSERT, '[ ] Background color\n', 'Background')
+			
+		else:
+			colortop.textwid.insert(tkinter.INSERT, '[ ] Day-mode	', 'Day')
+			colortop.textwid.insert(tkinter.INSERT, '[X] Text color\n', 'Text')
+		
+			colortop.textwid.insert(tkinter.INSERT, '[X] Night-mode	', 'Night')
+			colortop.textwid.insert(tkinter.INSERT, '[ ] Background color\n', 'Background')
+		
 	
 		colortop.textwid.insert(tkinter.INSERT, '\nSelect tag you want to modify\n', 'title')
-		colortop.textwid.insert(tkinter.INSERT, 'normal text\n')
+		colortop.textwid.insert(tkinter.INSERT, 'normal text\n', 'normal_text')
 	
 		colortop.textwid.insert(tkinter.INSERT, '\nSyntax highlight tags\n', 'title')
-		colortop.textwid.insert(tkinter.INSERT, 'keywords\n')
-		colortop.textwid.insert(tkinter.INSERT, 'numbers\n')
-		colortop.textwid.insert(tkinter.INSERT, 'bools\n')
-		colortop.textwid.insert(tkinter.INSERT, 'strings\n')
-		colortop.textwid.insert(tkinter.INSERT, 'comments\n')
-		colortop.textwid.insert(tkinter.INSERT, 'breaks\n')
-		colortop.textwid.insert(tkinter.INSERT, 'calls\n')
-		colortop.textwid.insert(tkinter.INSERT, 'selfs\n')
+		colortop.textwid.insert(tkinter.INSERT, 'keywords\n', 'keywords')
+		colortop.textwid.insert(tkinter.INSERT, 'numbers\n', 'numbers')
+		colortop.textwid.insert(tkinter.INSERT, 'bools\n', 'bools')
+		colortop.textwid.insert(tkinter.INSERT, 'strings\n', 'strings')
+		colortop.textwid.insert(tkinter.INSERT, 'comments\n', 'comments')
+		colortop.textwid.insert(tkinter.INSERT, 'breaks\n', 'breaks')
+		colortop.textwid.insert(tkinter.INSERT, 'calls\n', 'calls')
+		colortop.textwid.insert(tkinter.INSERT, 'selfs\n', 'selfs')
 	
 		colortop.textwid.insert(tkinter.INSERT, '\nSearch tags\n', 'title')
-		colortop.textwid.insert(tkinter.INSERT, 'match\n')
-		colortop.textwid.insert(tkinter.INSERT, 'focus\n')
-		colortop.textwid.insert(tkinter.INSERT, 'replaced\n')
+		colortop.textwid.insert(tkinter.INSERT, 'match\n', 'match')
+		colortop.textwid.insert(tkinter.INSERT, 'focus\n', 'focus')
+		colortop.textwid.insert(tkinter.INSERT, 'replaced\n', 'replaced')
 	
 		colortop.textwid.insert(tkinter.INSERT, '\nParentheses\n', 'title')
-		colortop.textwid.insert(tkinter.INSERT, 'mismatch\n')
+		colortop.textwid.insert(tkinter.INSERT, 'mismatch\n', 'mismatch')
 	
 		colortop.textwid.insert(tkinter.INSERT, '\nSelection\n', 'title')
-		colortop.textwid.insert(tkinter.INSERT, 'sel\n')
+		colortop.textwid.insert(tkinter.INSERT, 'selected\n', 'selected')
 	
 	
 		colortop.textwid.insert(tkinter.INSERT, '\nSave current setting to template,\n', 'title')
 		colortop.textwid.insert(tkinter.INSERT, 'to which you can revert later:\n', 'title')
-		colortop.textwid.insert(tkinter.INSERT, 'Save TMP\n')
+		colortop.textwid.insert(tkinter.INSERT, 'Save TMP\n', 'Save_TMP')
 	
 		colortop.textwid.insert(tkinter.INSERT, '\nLoad setting from:\n', 'title')
-		colortop.textwid.insert(tkinter.INSERT, 'TMP\n')
-		colortop.textwid.insert(tkinter.INSERT, 'Start\n')
-		colortop.textwid.insert(tkinter.INSERT, 'Defaults\n')
+		colortop.textwid.insert(tkinter.INSERT, 'TMP\n', 'TMP')
+		colortop.textwid.insert(tkinter.INSERT, 'Start\n', 'Start')
+		colortop.textwid.insert(tkinter.INSERT, 'Defaults\n', 'Defaults')
 
 		
 
