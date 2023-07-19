@@ -1,4 +1,31 @@
+toggle clipboard, remove first, show curr in title normal?
 
+
+# class Color
+# bg = dict
+# fg = dict
+# themes = dict
+# themes['day'] = bg, fg
+
+if settings:
+	self.colors = Colors(theme)
+	
+else:
+	theme = dict()
+	
+	for themename in self.themes:
+		t = self.themes[themename]
+		bg = dict()
+		fg = dict()
+		
+		for tag in t.tags:
+			bg[tag] = self.contents.cget('background')
+			fg[tag] = self.contents.cget('foreground')
+		
+		theme[themename] = bg, fg
+	
+	
+	self.colors = Colors(theme)
 
 ##	ScrolledText with tags taglink etc from error
 ##
@@ -54,13 +81,26 @@
 # fore, back, tags:
 # on select choose color
 
+
+# replace if click after replacing errorfocus update_curpos	ok?
+# pos after replace
+# before replace clear replaced
+
 # replace no replacing x matches with but straight info		ok?
 # that we are on the first match, delay after new word
+
+
+
 # countpars with curls										ok?
 
+# no moveline												ok?
 
-# move_line left insert one left
-# right move insert											ok?
+# disable ctrl-arrow para etc								ok?
+
+
+
+
+
 
 
 
@@ -113,8 +153,6 @@
 # q.pop(seq)
 
 # Binding rewrite planning End
-
-
 
 # /dev/idle/colorizer.py
 # import builtins
@@ -308,7 +346,7 @@ class Ed(tkinter.Toplevel):
 		
 		if self.__class__.updateId is None:
 			self.updateAllLineNumbers()
-		
+
 		
 	def modified(self, event=None):
 		
