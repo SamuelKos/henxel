@@ -1,5 +1,12 @@
-toggle clipboard, remove first, show curr in title normal?
 
+disable alt-t color choose
+down up expand indentation
+
+toggle clipboard, remove first, show curr in title normal?
+ctrl up down move to start of block?
+
+
+setting have now colors
 
 # class Color
 # bg = dict

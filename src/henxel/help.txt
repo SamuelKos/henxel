@@ -53,8 +53,8 @@
 *		Ctrl-a  Move cursor to linestart
 		Ctrl-k  Remove from cursor to lineend
 		
-		Ctrl-up		Move cursor one paragraph up
-		Ctrl-down	Move cursor one paragraph down
+*		Shift-up	Select one more line up
+*		Shift-down	Select one more line down
 		
 *		Ctrl-left  		Move cursor one word left
 *		Ctrl-right 		Move cursor one word right
@@ -205,7 +205,7 @@
 	
 	return foo + 1
 
-		Then select that code and press mouse-right and select tabify, and
+		Then select that code and press Control-t, and
 		it should then be indented as you wanted and you can then continue
 		indenting the pasted code to the right place. You can try all this
 		by copying the code example above and then trying to fix it.

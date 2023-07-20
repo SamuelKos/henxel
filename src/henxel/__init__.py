@@ -39,6 +39,7 @@ import tkinter.font
 import tkinter
 import pathlib
 import json
+import copy
 
 # used in init
 import importlib.resources
@@ -434,16 +435,72 @@ class Editor(tkinter.Toplevel):
 			self.ln_widget.config( selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
 			
 		
+		# Colors Begin #######################
+			
+		red = r'#c01c28'
+		cyan = r'#2aa1b3'
+		magenta = r'#a347ba'
+		green = r'#26a269'
+		orange = r'#e95b38'
+		gray = r'#508490'
+		black = r'#000000'
+		white = r'#d3d7cf'
+		
+		
+		self.default_themes = dict()
+		self.default_themes['day'] = d = dict()
+		self.default_themes['night'] = n = dict()
+		
+		# self.default_themes[self.curtheme][tagname] = [backgroundcolor, foregroundcolor]
+		d['normal_text'] = [white, black]
+		n['normal_text'] = [black, white]
+		
+		# if background is same as sel background, change
+		
+		d['keywords'] = ['', orange]
+		n['keywords'] = ['', 'deep sky blue']
+		d['numbers'] = ['', red]
+		n['numbers'] = ['', red]
+		d['bools'] = ['', magenta]
+		n['bools'] = ['', magenta]
+		d['strings'] = ['', green]
+		n['strings'] = ['', green]
+		d['comments'] = ['', gray]
+		n['comments'] = ['', gray]
+		d['calls'] = ['', cyan]
+		n['calls'] = ['', cyan]
+		d['breaks'] = ['', orange]
+		n['breaks'] = ['', orange]
+		d['selfs'] = ['', gray]
+		n['selfs'] = ['', gray]
+		
+		d['match'] = ['lightyellow', 'black']
+		n['match'] = ['lightyellow', 'black']
+		d['focus'] = ['lightgreen', 'black']
+		n['focus'] = ['lightgreen', 'black']
+		d['replaced'] = ['yellow', 'black']
+		n['replaced'] = ['yellow', 'black']
+		
+		d['mismatch'] = ['brown1', 'white']
+		n['mismatch'] = ['brown1', 'white']
+		
+		d['sel'] = ['#c3c3c3', black]
+		n['sel'] = ['#c3c3c3', black]
+		
+		
 		# if no conf:
 		if self.tabindex == None:
 		
 			self.tabindex = -1
 			self.new_tab()
 			
-			# Colors Begin #######################
 			
-			black = r'#000000'
-			white = r'#D3D7CF'
+			self.themes = copy.deepcopy(self.default_themes)
+			
+			for tagname in self.themes['night']:
+				bg, fg = self.themes['night'][tagname][:]
+				self.contents.tag_config(tagname, background=bg, foreground=fg)
+			
 			
 			self.bgdaycolor = white
 			self.fgdaycolor = black
@@ -452,7 +509,7 @@ class Editor(tkinter.Toplevel):
 			self.fgnightcolor = white
 			self.fgcolor = self.fgnightcolor
 			self.bgcolor = self.bgnightcolor
-			self.curcolor = 'night'
+			self.curtheme = 'night'
 			
 			# Set Font Begin ##################################################
 			fontname = None
@@ -494,7 +551,6 @@ class Editor(tkinter.Toplevel):
 
 		
 		self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
-		
 		
 		# Widgets are configured
 		###############################
@@ -571,75 +627,6 @@ class Editor(tkinter.Toplevel):
 				'selfs'
 				]
 		
-		tags = [
-		'normal_text',
-		'keywords',
-		'numbers',
-		'bools',
-		'strings',
-		'comments',
-		'breaks',
-		'calls',
-		'selfs',
-		'match',
-		'focus',
-		'replaced',
-		'mismatch',
-		'sel'
-		]
-		
-		
-		red = r'#c01c28'
-		cyan = r'#2aa1b3'
-		magenta = r'#a347ba'
-		green = r'#26a269'
-		orange = r'#e95b38'
-		gray = r'#508490'
-		black = r'#000000'
-		white = r'#D3D7CF'
-		
-		
-		self.themes = dict()
-		self.themes['day'] = d = dict()
-		self.themes['night'] = n = dict()
-		
-		
-		d['normal_text'] = white, black
-		n['normal_text'] = black, white
-		
-		# if background is same as sel background, change
-		
-		d['keywords'] = '', 'deep sky blue'
-		n['keywords'] = '', 'deep sky blue'
-		d['numbers'] = '', red
-		n['numbers'] = '', red
-		d['bools'] = '', magenta
-		n['bools'] = '', magenta
-		d['strings'] = '', green
-		n['strings'] = '', green
-		d['comments'] = '', gray
-		n['comments'] = '', gray
-		d['calls'] = '', cyan
-		n['calls'] = '', cyan
-		d['breaks'] = '', orange
-		n['breaks'] = '', orange
-		d['selfs'] = '', gray
-		n['selfs'] = '', gray
-		
-		d['match'] = 'lightyellow', 'black'
-		n['match'] = 'lightyellow', 'black'
-		d['focus'] = 'lightgreen', 'black'
-		n['focus'] = 'lightgreen', 'black'
-		d['replaced'] = 'yellow', 'black'
-		n['replaced'] = 'yellow', 'black'
-		
-		d['mismatch'] = 'brown1', 'white'
-		n['mismatch'] = 'brown1', 'white'
-		
-		d['sel'] = '#c3c3c3', black
-		n['sel'] = '#c3c3c3', black
-		
-		
 		
 		self.boldfont = self.font.copy()
 		self.boldfont.config(weight='bold')
@@ -649,29 +636,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('comments', font=self.boldfont)
 		self.contents.tag_config('breaks', font=self.boldfont)
 		self.contents.tag_config('calls', font=self.boldfont)
-
-##		self.contents.tag_config('keywords', font=self.boldfont, foreground='deep sky blue')
-##		self.contents.tag_config('numbers', font=self.boldfont, foreground=red)
-##		self.contents.tag_config('comments', font=self.boldfont, foreground=gray)
-##		self.contents.tag_config('breaks', font=self.boldfont, foreground=orange)
-##		self.contents.tag_config('calls', font=self.boldfont, foreground=cyan)
-##
-##		self.contents.tag_config('bools', foreground=magenta)
-##		self.contents.tag_config('strings', foreground=green)
-##		self.contents.tag_config('selfs', foreground=gray)
-##		self.contents.tag_config('mismatch', background='brown1', foreground='white')
-##
-##		# search tags have highest priority
-##		self.contents.tag_config('replaced', background='yellow', foreground='black')
-##		self.contents.tag_config('match', background='lightyellow', foreground='black')
-##		self.contents.tag_config('focus', background='lightgreen', foreground='black')
-		
-		
-		
-		for tagname in self.themes['night']:
-			bg, fg = self.themes['night'][tagname]
-			self.contents.tag_config(tagname, background=bg, foreground=fg)
-		
 
 		# search tags have highest priority
 		self.contents.tag_raise('match')
@@ -1209,7 +1173,7 @@ class Editor(tkinter.Toplevel):
 		dictionary['bgdaycolor'] = self.bgdaycolor
 		dictionary['fgnightcolor'] = self.fgnightcolor
 		dictionary['bgnightcolor'] = self.bgnightcolor
-		dictionary['curcolor'] = self.curcolor
+		dictionary['curtheme'] = self.curtheme
 		dictionary['lastdir'] = self.lastdir.__str__()
 		
 		dictionary['font'] = self.font.config()
@@ -1219,6 +1183,7 @@ class Editor(tkinter.Toplevel):
 		dictionary['want_ln'] = self.want_ln
 		dictionary['syntax'] = self.syntax
 		dictionary['ind_depth'] = self.ind_depth
+		dictionary['themes'] = self.themes
 		
 		for tab in self.tabs:
 			tab.contents = ''
@@ -1241,7 +1206,7 @@ class Editor(tkinter.Toplevel):
 		self.bgdaycolor = dictionary['bgdaycolor']
 		self.fgcolor = dictionary['fgcolor']
 		self.bgcolor = dictionary['bgcolor']
-		self.curcolor = dictionary['curcolor']
+		self.curtheme = dictionary['curtheme']
 		
 		# Set Font Begin ##############################
 		if not fonts_exists:
@@ -1267,6 +1232,7 @@ class Editor(tkinter.Toplevel):
 		self.want_ln = dictionary['want_ln']
 		self.syntax = dictionary['syntax']
 		self.ind_depth = dictionary['ind_depth']
+		self.themes = dictionary['themes']
 		
 		self.lastdir = dictionary['lastdir']
 		
@@ -1319,6 +1285,13 @@ class Editor(tkinter.Toplevel):
 		
 	
 		self.tab_width = self.font.measure(self.ind_depth * TAB_WIDTH_CHAR)
+		
+
+		for tagname in self.themes[self.curtheme]:
+			bg, fg = self.themes[self.curtheme][tagname][:]
+			self.contents.tag_config(tagname, background=bg, foreground=fg)
+		
+		
 		self.contents.config(font=self.font, foreground=self.fgcolor,
 			background=self.bgcolor, insertbackground=self.fgcolor,
 			tabs=(self.tab_width, ))
@@ -1801,24 +1774,30 @@ class Editor(tkinter.Toplevel):
 		
 
 	def toggle_color(self, event=None):
-		if self.curcolor == 'day':
+	
+		if self.curtheme == 'day':
 			self.fgcolor = self.fgnightcolor
 			self.bgcolor = self.bgnightcolor
 		else:
 			self.fgcolor = self.fgdaycolor
 			self.bgcolor = self.bgdaycolor
 			
-		if self.curcolor == 'day':
-			self.curcolor = 'night'
+		if self.curtheme == 'day':
+			self.curtheme = 'night'
 		else:
-			self.curcolor = 'day'
-			
+			self.curtheme = 'day'
+		
+	
+		for tagname in self.themes[self.curtheme]:
+			bg, fg = self.themes[self.curtheme][tagname][:]
+			self.contents.tag_config(tagname, background=bg, foreground=fg)
+	
+		
 		self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
 			insertbackground=self.fgcolor)
 			
 		self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
-		
-		
+	
 		return 'break'
 
 		
@@ -1950,22 +1929,43 @@ class Editor(tkinter.Toplevel):
 				return 'break'
 			
 			
-			#if tagname == 'normal_text':
+			try:
+				if wid.frontback_mode == 'foreground':
+					self.themes[self.curtheme][tagname][1] = tmpcolor
+					self.contents.tag_config(tagname, foreground=tmpcolor)
+				else:
+					self.themes[self.curtheme][tagname][0] = tmpcolor
+					self.contents.tag_config(tagname, background=tmpcolor)
 			
 			
+				if tagname == 'normal_text':
+					self.bgcolor, self.fgcolor = self.themes[self.curtheme][tagname][:]
+					
+					if self.curtheme == 'day':
+						self.fgdaycolor = self.fgcolor
+						self.bgdaycolor = self.bgcolor
+									
+					else:
+						self.fgnightcolor = self.fgcolor
+						self.bgnightcolor = self.bgcolor
 			
-			if wid.frontback_mode == 'foreground':
-				self.contents.tag_config(tagname, foreground=tmpcolor)
-			else:
-				self.contents.tag_config(tagname, background=tmpcolor)
-		
-			print(tagname, tmpcolor)
+			
+					self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
+					insertbackground=self.fgcolor)
+						
+					self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
+				
+				
+				print(tagname, tmpcolor)
+			
+			except tkinter.TclError as e:
+				# because if closed editor, this survives
+				pass
 			
 			
 		elif tagname in modetags:
 		
-			if tagname == 'Day':
-				#if self.curcolor != 'day':
+			if tagname == 'Day' and self.curtheme != 'day':
 				r1 = t.tag_nextrange('Day', 1.0)
 				r2 = t.tag_nextrange('Night', 1.0)
 				
@@ -1973,10 +1973,11 @@ class Editor(tkinter.Toplevel):
 				t.insert(r1[0], '[X] Day-mode	', 'Day')
 				t.delete(r2[0], r2[1])
 				t.insert(r2[0], '[ ] Night-mode	', 'Night')
-			
-			
-			elif tagname == 'Night':
-				#if self.curcolor != 'night':
+				
+				self.toggle_color()
+				
+				
+			elif tagname == 'Night' and self.curtheme != 'night':
 				r1 = t.tag_nextrange('Day', 1.0)
 				r2 = t.tag_nextrange('Night', 1.0)
 				
@@ -1984,6 +1985,8 @@ class Editor(tkinter.Toplevel):
 				t.insert(r1[0], '[ ] Day-mode	', 'Day')
 				t.delete(r2[0], r2[1])
 				t.insert(r2[0], '[X] Night-mode	', 'Night')
+				
+				self.toggle_color()
 				
 				
 			elif tagname == 'Text':
@@ -2025,7 +2028,62 @@ class Editor(tkinter.Toplevel):
 						
 				
 		elif tagname in savetags:
-			print(tagname, 'save')
+			#print(tagname, 'save')
+			
+			if tagname == 'Save_TMP':
+				wid.tmp_theme = copy.deepcopy(self.themes)
+				print('tmp',wid.tmp_theme['night']['normal_text'])
+				print('self',self.themes['night']['normal_text'])
+				print('start',wid.start_theme['night']['normal_text'])
+				
+				wid.flag_tmp = True
+				
+			elif tagname == 'TMP' and wid.flag_tmp:
+				self.themes = copy.deepcopy(wid.tmp_theme)
+				print('tmp',wid.tmp_theme['night']['normal_text'])
+				print('self',self.themes['night']['normal_text'])
+				print('start',wid.start_theme['night']['normal_text'])
+				
+				
+			elif tagname == 'Start':
+				self.themes = copy.deepcopy(wid.start_theme)
+				print('tmp',wid.tmp_theme['night']['normal_text'])
+				print('self',self.themes['night']['normal_text'])
+				print('start',wid.start_theme['night']['normal_text'])
+				
+				
+			elif tagname == 'Defaults':
+				self.themes = copy.deepcopy(self.default_themes)
+				print('self',self.themes['night']['normal_text'])
+				print('def',self.default_themes['night']['normal_text'])
+				
+			
+			if (tagname in ['Defaults', 'Start']) or (tagname == 'TMP' and wid.flag_tmp):
+			
+				for tag in self.themes[self.curtheme]:
+					bg, fg = self.themes[self.curtheme][tag][:]
+					self.contents.tag_config(tag, background=bg, foreground=fg)
+	
+
+				self.bgdaycolor, self.fgdaycolor = self.themes['day']['normal_text'][:]
+				self.bgnightcolor, self.fgnightcolor = self.themes['night']['normal_text'][:]
+				
+				if self.curtheme == 'day':
+					self.fgcolor = self.fgdaycolor
+					self.bgcolor = self.bgdaycolor
+								
+				else:
+					self.fgcolor = self.fgnightcolor
+					self.bgcolor = self.bgnightcolor
+		
+		
+				self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
+				insertbackground=self.fgcolor)
+					
+				self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
+				
+				
+				
 	
 	
 	def color_choose(self, event=None):
@@ -2036,12 +2094,17 @@ class Editor(tkinter.Toplevel):
 		colortop = tkinter.Toplevel()
 		c = colortop
 		c.title('Choose Color')
+		c.start_theme = copy.deepcopy(self.themes)
+		c.tmp_theme = copy.deepcopy(self.themes)
+		c.flag_tmp = False
 		
 		c.protocol("WM_DELETE_WINDOW", lambda: ( c.destroy(),
-				self.bind( "<Alt-s>", self.color_choose)) )
+				self.bind( "<Alt-s>", self.color_choose),
+				self.bind( "<Alt-t>", self.toggle_color)) )
 				
 		self.bind( "<Alt-s>", self.do_nothing)
-	
+		self.bind( "<Alt-t>", self.do_nothing)
+		
 		c.textfont = tkinter.font.Font(family='TkDefaulFont', size=10)
 		c.titlefont = tkinter.font.Font(family='TkDefaulFont', size=12)
 		
@@ -2112,11 +2175,11 @@ class Editor(tkinter.Toplevel):
 		t.insert(i, 'if there were made unwanted changes.\n', 'title')
 		t.insert(i, '\nChanging color for:\n', 'title')
 		
-		c.daynight_mode = None
+		
 		c.frontback_mode = None
 		c.tag_idx = dict()
 		
-		if self.curcolor == 'day':
+		if self.curtheme == 'day':
 		
 			t.insert(i, '[X] Day-mode	', 'Day')
 			t.insert(i, '[X] Text color\n', 'Text')
@@ -2124,7 +2187,6 @@ class Editor(tkinter.Toplevel):
 			t.insert(i, '[ ] Night-mode	', 'Night')
 			t.insert(i, '[ ] Background color\n', 'Background')
 			
-			c.daynight_mode = 'day'
 			c.frontback_mode = 'foreground'
 			
 			
@@ -2135,7 +2197,6 @@ class Editor(tkinter.Toplevel):
 			t.insert(i, '[X] Night-mode	', 'Night')
 			t.insert(i, '[ ] Background color\n', 'Background')
 			
-			c.daynight_mode = 'night'
 			c.frontback_mode = 'foreground'
 			
 		
@@ -2191,13 +2252,13 @@ class Editor(tkinter.Toplevel):
 		
 	def choose_daynight(self, args, event=None):
 		parent = args[0]
-		oldcolor = self.curcolor
-		self.curcolor = parent.lb.get(parent.lb.curselection())
+		oldcolor = self.curtheme
+		self.curtheme = parent.lb.get(parent.lb.curselection())
 		
 		
-		if self.curcolor != oldcolor:
+		if self.curtheme != oldcolor:
 		
-			if self.curcolor == 'day':
+			if self.curtheme == 'day':
 			
 				self.fgcolor = self.fgdaycolor
 				self.bgcolor = self.bgdaycolor
@@ -2228,7 +2289,7 @@ class Editor(tkinter.Toplevel):
 			if tmpcolorbg in [None, '']:
 				return 'break'
 			
-			if self.curcolor == 'day':
+			if self.curtheme == 'day':
 				self.bgdaycolor = tmpcolorbg
 				self.bgcolor = self.bgdaycolor
 			else:
@@ -2247,7 +2308,7 @@ class Editor(tkinter.Toplevel):
 			if tmpcolorfg in [None, '']:
 				return 'break'
 			
-			if self.curcolor == 'day':
+			if self.curtheme == 'day':
 				self.fgdaycolor = tmpcolorfg
 				self.fgcolor = self.fgdaycolor
 			else:
@@ -4220,7 +4281,7 @@ class Editor(tkinter.Toplevel):
 				self.search_matches += 1
 				lastpos = "%s + %dc" % (pos, wordlen)
 				self.contents.tag_add('match', pos, lastpos)
-				if flag_start: # and self.state == 'search':
+				if flag_start:
 					flag_start = False
 					self.contents.focus_set()
 					self.wait_for(100)
