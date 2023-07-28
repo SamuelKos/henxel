@@ -88,18 +88,6 @@ class Tab:
 				
 				
 ############ Class Tab End
-############ Class Colors Begin
-
-class Colors:
-	'''	Manage colors of Editor
-	'''
-	
-	def __init__(self, **entries):
-		self.themes = dict()
-		self.__dict__.update(entries)
-
-
-############ Class Colors End
 ############ Class Editor Begin
 
 ###############################################################################
@@ -382,6 +370,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.bind( "<Control-a>", self.goto_linestart)
 		self.contents.bind( "<Control-i>", self.move_right)
+		self.contents.bind( "<Control-j>", self.center_view)
 		
 		self.contents.bind( "<Alt-f>", self.font_choose)
 		self.contents.bind( "<Alt-x>", self.toggle_syntax)
@@ -402,8 +391,8 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
 		self.contents.bind( "<BackSpace>", self.backspace_override)
-##		self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
-##		self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
+		self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
+		self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
 		
 		# Unbind some default bindings
 		self.contents.unbind_class('Text', '<<NextPara>>')
@@ -494,22 +483,16 @@ class Editor(tkinter.Toplevel):
 			self.tabindex = -1
 			self.new_tab()
 			
-			
+			self.curtheme = 'night'
 			self.themes = copy.deepcopy(self.default_themes)
 			
-			for tagname in self.themes['night']:
-				bg, fg = self.themes['night'][tagname][:]
+			for tagname in self.themes[self.curtheme]:
+				bg, fg = self.themes[self.curtheme][tagname][:]
 				self.contents.tag_config(tagname, background=bg, foreground=fg)
 			
 			
-			self.bgdaycolor = white
-			self.fgdaycolor = black
+			self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
 			
-			self.bgnightcolor = black
-			self.fgnightcolor = white
-			self.fgcolor = self.fgnightcolor
-			self.bgcolor = self.bgnightcolor
-			self.curtheme = 'night'
 			
 			# Set Font Begin ##################################################
 			fontname = None
@@ -1166,16 +1149,8 @@ class Editor(tkinter.Toplevel):
 		
 	def get_config(self):
 		dictionary = dict()
-		
-		dictionary['fgcolor'] = self.contents.cget('foreground')
-		dictionary['bgcolor'] = self.contents.cget('background')
-		dictionary['fgdaycolor'] = self.fgdaycolor
-		dictionary['bgdaycolor'] = self.bgdaycolor
-		dictionary['fgnightcolor'] = self.fgnightcolor
-		dictionary['bgnightcolor'] = self.bgnightcolor
 		dictionary['curtheme'] = self.curtheme
 		dictionary['lastdir'] = self.lastdir.__str__()
-		
 		dictionary['font'] = self.font.config()
 		dictionary['menufont'] = self.menufont.config()
 		dictionary['scrollbar_width'] = self.scrollbar_width
@@ -1200,13 +1175,6 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def set_config(self, dictionary, fonts_exists=True):
-		self.fgnightcolor = dictionary['fgnightcolor']
-		self.bgnightcolor = dictionary['bgnightcolor']
-		self.fgdaycolor = dictionary['fgdaycolor']
-		self.bgdaycolor = dictionary['bgdaycolor']
-		self.fgcolor = dictionary['fgcolor']
-		self.bgcolor = dictionary['bgcolor']
-		self.curtheme = dictionary['curtheme']
 		
 		# Set Font Begin ##############################
 		if not fonts_exists:
@@ -1233,7 +1201,10 @@ class Editor(tkinter.Toplevel):
 		self.syntax = dictionary['syntax']
 		self.ind_depth = dictionary['ind_depth']
 		self.themes = dictionary['themes']
+		self.curtheme = dictionary['curtheme']
 		
+		self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
+			
 		self.lastdir = dictionary['lastdir']
 		
 		if self.lastdir != None:
@@ -1774,19 +1745,21 @@ class Editor(tkinter.Toplevel):
 		
 
 	def toggle_color(self, event=None):
-	
-		if self.curtheme == 'day':
-			self.fgcolor = self.fgnightcolor
-			self.bgcolor = self.bgnightcolor
-		else:
-			self.fgcolor = self.fgdaycolor
-			self.bgcolor = self.bgdaycolor
-			
+		
 		if self.curtheme == 'day':
 			self.curtheme = 'night'
 		else:
 			self.curtheme = 'day'
 		
+		self.update_normal_text()
+		
+		return 'break'
+
+
+	def update_normal_text(self):
+	
+		self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
+			
 	
 		for tagname in self.themes[self.curtheme]:
 			bg, fg = self.themes[self.curtheme][tagname][:]
@@ -1798,9 +1771,7 @@ class Editor(tkinter.Toplevel):
 			
 		self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
 	
-		return 'break'
-
-		
+	
 	def update_fonts(self):
 		self.boldfont = self.font.copy()
 		self.boldfont.config(weight='bold')
@@ -1834,29 +1805,82 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def enter2(self, args, event=None):
-		''' when mousecursor enters hyperlink tagname.
+		''' When mousecursor enters hyperlink tagname in colorchooser.
 		'''
 		wid = args[0]
 		tagname = args[1]
 		
-		wid.textwid.config(cursor="hand2")
-		wid.textwid.tag_config(tagname, underline=1)
-
-
+		syntags = [
+		'normal_text',
+		'keywords',
+		'numbers',
+		'bools',
+		'strings',
+		'comments',
+		'breaks',
+		'calls',
+		'selfs',
+		'match',
+		'focus',
+		'replaced',
+		'mismatch',
+		'selected'
+		]
+		
+		
+		t = wid.textwid
+	
+		if tagname in syntags:
+			r = t.tag_nextrange(tagname, 1.0)
+			
+			t.delete(r[0], r[1])
+			t.insert(r[0], '%s\n' % tagname, tagname)
+		
+		
+		t.config(cursor="hand2")
+		t.tag_config(tagname, underline=1, font=self.boldfont)
+		
+		
 	def leave2(self, args, event=None):
-		''' when mousecursor leaves hyperlink tagname.
+		''' When mousecursor leaves hyperlink tagname in colorchooser.
 		'''
 		wid = args[0]
 		tagname = args[1]
 		
-		wid.textwid.config(cursor=self.name_of_cursor_in_text_widget)
-		wid.textwid.tag_config(tagname, underline=0)
+		syntags = [
+		'normal_text',
+		'keywords',
+		'numbers',
+		'bools',
+		'strings',
+		'comments',
+		'breaks',
+		'calls',
+		'selfs',
+		'match',
+		'focus',
+		'replaced',
+		'mismatch',
+		'selected'
+		]
+		
+		
+		t = wid.textwid
+	
+		if tagname in syntags:
+			r = t.tag_nextrange(tagname, 1.0)
+			
+			t.delete(r[0], r[1])
+			t.insert(r[0], '%s\n' % tagname, tagname)
+		
+		
+		t.config(cursor=self.name_of_cursor_in_text_widget)
+		t.tag_config(tagname, underline=0, font=self.menufont)
 		
 		
 	def lclick2(self, args, event=None):
-		'''	when clicked hyperlink
+		'''	When clicked hyperlink in colorchooser.
 		'''
-		
 		wid = args[0]
 		tagname = args[1]
 		
@@ -1902,15 +1926,6 @@ class Editor(tkinter.Toplevel):
 		'selfs'
 		]
 
-##		self.contents.tag_raise('match')
-##		self.contents.tag_raise('replaced')
-##		self.contents.tag_raise('focus')
-		
-		
-		
-		
-		t = wid.textwid
-
 		
 		if tagname in syntags:
 			
@@ -1919,10 +1934,14 @@ class Editor(tkinter.Toplevel):
 			
 			if wid.frontback_mode == 'foreground':
 				initcolor = self.contents.tag_cget(tagname, 'foreground')
+				patt = 'Choose fgcolor for: %s' % tagname
+				
 			else:
 				initcolor = self.contents.tag_cget(tagname, 'background')
+				patt = 'Choose bgcolor for: %s' % tagname
 			
-			res = self.tk.call('tk_chooseColor', '-initialcolor', initcolor)
+			res = self.tk.call('tk_chooseColor', '-initialcolor', initcolor, '-title', patt)
+				
 			tmpcolor = str(res)
 			
 			if tmpcolor in [None, '']:
@@ -1939,31 +1958,17 @@ class Editor(tkinter.Toplevel):
 			
 			
 				if tagname == 'normal_text':
-					self.bgcolor, self.fgcolor = self.themes[self.curtheme][tagname][:]
-					
-					if self.curtheme == 'day':
-						self.fgdaycolor = self.fgcolor
-						self.bgdaycolor = self.bgcolor
-									
-					else:
-						self.fgnightcolor = self.fgcolor
-						self.bgnightcolor = self.bgcolor
-			
-			
-					self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
-					insertbackground=self.fgcolor)
-						
-					self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
+					self.update_normal_text()
 				
-				
-				print(tagname, tmpcolor)
-			
-			except tkinter.TclError as e:
+			# if closed editor and still pressing ok in colorchooser:
+			except (tkinter.TclError, AttributeError) as e:
 				# because if closed editor, this survives
 				pass
 			
 			
 		elif tagname in modetags:
+		
+			t = wid.textwid
 		
 			if tagname == 'Day' and self.curtheme != 'day':
 				r1 = t.tag_nextrange('Day', 1.0)
@@ -2028,63 +2033,45 @@ class Editor(tkinter.Toplevel):
 						
 				
 		elif tagname in savetags:
-			#print(tagname, 'save')
 			
 			if tagname == 'Save_TMP':
 				wid.tmp_theme = copy.deepcopy(self.themes)
-				print('tmp',wid.tmp_theme['night']['normal_text'])
-				print('self',self.themes['night']['normal_text'])
-				print('start',wid.start_theme['night']['normal_text'])
-				
 				wid.flag_tmp = True
+				self.flash_tag(wid, tagname)
 				
-			elif tagname == 'TMP' and wid.flag_tmp:
+			elif tagname == 'TMP' and flag_tmp:
 				self.themes = copy.deepcopy(wid.tmp_theme)
-				print('tmp',wid.tmp_theme['night']['normal_text'])
-				print('self',self.themes['night']['normal_text'])
-				print('start',wid.start_theme['night']['normal_text'])
-				
+				self.flash_tag(wid, tagname)
 				
 			elif tagname == 'Start':
 				self.themes = copy.deepcopy(wid.start_theme)
-				print('tmp',wid.tmp_theme['night']['normal_text'])
-				print('self',self.themes['night']['normal_text'])
-				print('start',wid.start_theme['night']['normal_text'])
-				
+				self.flash_tag(wid, tagname)
 				
 			elif tagname == 'Defaults':
 				self.themes = copy.deepcopy(self.default_themes)
-				print('self',self.themes['night']['normal_text'])
-				print('def',self.default_themes['night']['normal_text'])
+				self.flash_tag(wid, tagname)
 				
-			
+				
 			if (tagname in ['Defaults', 'Start']) or (tagname == 'TMP' and wid.flag_tmp):
 			
 				for tag in self.themes[self.curtheme]:
 					bg, fg = self.themes[self.curtheme][tag][:]
 					self.contents.tag_config(tag, background=bg, foreground=fg)
 	
-
-				self.bgdaycolor, self.fgdaycolor = self.themes['day']['normal_text'][:]
-				self.bgnightcolor, self.fgnightcolor = self.themes['night']['normal_text'][:]
+				self.update_normal_text()
 				
-				if self.curtheme == 'day':
-					self.fgcolor = self.fgdaycolor
-					self.bgcolor = self.bgdaycolor
-								
-				else:
-					self.fgcolor = self.fgnightcolor
-					self.bgcolor = self.bgnightcolor
+				
+	def flash_tag(self, wid, tagname):
+		''' Flash save_tag when clicked in colorchooser.
+		'''
+		t = wid.textwid
 		
-		
-				self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
-				insertbackground=self.fgcolor)
+		wid.after(100, lambda args=[tagname],
+				kwargs={'background':'green'}: t.tag_config(*args, **kwargs) )
 					
-				self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
-				
-				
-				
-	
+		wid.after(600, lambda args=[tagname],
+				kwargs={'background':t.cget('background')}: t.tag_config(*args, **kwargs) )
+					
 	
 	def color_choose(self, event=None):
 		if self.state != 'normal':
@@ -2105,11 +2092,11 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Alt-s>", self.do_nothing)
 		self.bind( "<Alt-t>", self.do_nothing)
 		
-		c.textfont = tkinter.font.Font(family='TkDefaulFont', size=10)
+		#c.textfont = tkinter.font.Font(family='TkDefaulFont', size=10)
 		c.titlefont = tkinter.font.Font(family='TkDefaulFont', size=12)
 		
 		c.textwid = tkinter.Text(c, blockcursor=True, highlightthickness=0,
-							bd=4, pady=4, padx=10, tabstyle='wordprocessor', font=c.textfont)
+							bd=4, pady=4, padx=10, tabstyle='wordprocessor', font=self.menufont)
 		
 		c.scrollbar = tkinter.Scrollbar(c, orient=tkinter.VERTICAL, highlightthickness=0,
 							bd=0, command = c.textwid.yview)
@@ -2151,7 +2138,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 		for tag in tags:
-			t.tag_config(tag, font=c.textfont)
+			t.tag_config(tag, font=self.menufont)
 			t.tag_bind(tag, "<Enter>",
 				lambda event, arg=[c, tag]: self.enter2(arg, event))
 			t.tag_bind(tag, "<Leave>",
@@ -2159,7 +2146,6 @@ class Editor(tkinter.Toplevel):
 			t.tag_bind(tag, "<ButtonRelease-1>",
 					lambda event, arg=[c, tag]: self.lclick2(arg, event))
 						
-		
 		
 				
 		c.rowconfigure(1, weight=1)
@@ -2200,10 +2186,11 @@ class Editor(tkinter.Toplevel):
 			c.frontback_mode = 'foreground'
 			
 		
-	
+		
 		t.insert(i, '\nSelect tag you want to modify\n', 'title')
-		t.insert(i, 'normal text\n', 'normal_text')
-	
+		t.insert(i, 'normal_text\n', 'normal_text')
+		
+		
 		t.insert(i, '\nSyntax highlight tags\n', 'title')
 		t.insert(i, 'keywords\n', 'keywords')
 		t.insert(i, 'numbers\n', 'numbers')
@@ -2214,22 +2201,24 @@ class Editor(tkinter.Toplevel):
 		t.insert(i, 'calls\n', 'calls')
 		t.insert(i, 'selfs\n', 'selfs')
 	
+
 		t.insert(i, '\nSearch tags\n', 'title')
 		t.insert(i, 'match\n', 'match')
 		t.insert(i, 'focus\n', 'focus')
 		t.insert(i, 'replaced\n', 'replaced')
 	
+
 		t.insert(i, '\nParentheses\n', 'title')
 		t.insert(i, 'mismatch\n', 'mismatch')
-	
+		
 		t.insert(i, '\nSelection\n', 'title')
 		t.insert(i, 'selected\n', 'selected')
 	
-	
+
 		t.insert(i, '\nSave current setting to template,\n', 'title')
 		t.insert(i, 'to which you can revert later:\n', 'title')
 		t.insert(i, 'Save TMP\n', 'Save_TMP')
-	
+		
 		t.insert(i, '\nLoad setting from:\n', 'title')
 		t.insert(i, 'TMP\n', 'TMP')
 		t.insert(i, 'Start\n', 'Start')
@@ -2240,93 +2229,10 @@ class Editor(tkinter.Toplevel):
 		t.config(insertontime=0)
 
 
-
 		self.to_be_closed.append(c)
 
 		return 'break'
 
-
-
-
-		
-		
-	def choose_daynight(self, args, event=None):
-		parent = args[0]
-		oldcolor = self.curtheme
-		self.curtheme = parent.lb.get(parent.lb.curselection())
-		
-		
-		if self.curtheme != oldcolor:
-		
-			if self.curtheme == 'day':
-			
-				self.fgcolor = self.fgdaycolor
-				self.bgcolor = self.bgdaycolor
-			
-			else:
-				self.fgcolor = self.fgnightcolor
-				self.bgcolor = self.bgnightcolor
-			
-			
-			self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
-			insertbackground=self.fgcolor)
-			
-			self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
-			
-			
-	def chcolor(self, args, event=None):
-	
-		if args[0] == 'bg':
-			
-			wid = args[1]
-			wid.config(relief='sunken')
-		
-			res = self.tk.call('tk_chooseColor', '-initialcolor', self.bgcolor)
-			tmpcolorbg = str(res)
-			
-			wid.config(relief='raised')
-			
-			if tmpcolorbg in [None, '']:
-				return 'break'
-			
-			if self.curtheme == 'day':
-				self.bgdaycolor = tmpcolorbg
-				self.bgcolor = self.bgdaycolor
-			else:
-				self.bgnightcolor = tmpcolorbg
-				self.bgcolor = self.bgnightcolor
-		else:
-			
-			wid = args[1]
-			wid.config(relief='sunken')
-		
-			res = self.tk.call('tk_chooseColor', '-initialcolor', self.fgcolor)
-			tmpcolorfg = str(res)
-			
-			wid.config(relief='raised')
-			
-			if tmpcolorfg in [None, '']:
-				return 'break'
-			
-			if self.curtheme == 'day':
-				self.fgdaycolor = tmpcolorfg
-				self.fgcolor = self.fgdaycolor
-			else:
-				self.fgnightcolor = tmpcolorfg
-				self.fgcolor = self.fgnightcolor
-		
-		try:
-		
-			self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
-				insertbackground=self.fgcolor)
-				
-			self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
-		
-		except tkinter.TclError as e:
-			# because if closed editor, this survives
-			pass
-			
-		return 'break'
 		
 ########## Theme Related End
 ########## Run file Related Begin
@@ -2675,6 +2581,18 @@ class Editor(tkinter.Toplevel):
 		return "break"
 		
 	
+	def center_view(self, event=None):
+		''' Raise insertion-line
+		'''
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
+			
+		self.contents.yview_scroll(12, 'units')
+		return "break"
+		
+		
 	def goto_linestart(self, event=None):
 		if self.state != 'normal':
 			self.bell()
@@ -2735,78 +2653,76 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 		
 
-##	def move_line(self, event=None, direction=None):
-##		''' Adjust cursor line indentation, with arrow left and right,
-##			when pasting more than one line etc.
-##		'''
-##
-##		# Enable continue adjusting selection area
-##		if self.state != 'normal' or event.state != 0:
-##			return 'continue'
-##
-##
-##		if len(self.contents.tag_ranges('sel')) > 0:
-##			insert_at_selstart = False
-##
-##			s = self.contents.index(tkinter.SEL_FIRST)
-##			e = self.contents.index(tkinter.SEL_LAST)
-##			i = self.contents.index(tkinter.INSERT)
-##			# contents of line with cursor:
-##			t = self.contents.get('%s linestart' % i, '%s lineend' % i)
-##
-##			if i == s:
-##				insert_at_selstart = True
-##
-##			# else: insert at selend
-##
-##			line_s = s.split('.')[0]
-##			line_e = e.split('.')[0]
-##
-##			# One line only:
-##			if line_s == line_e: 	return 'continue'
-##
-##			# cursor line is empty:
-##			if len(t.strip()) == 0: return 'continue'
-##
-##
-##			self.contents.tag_remove('sel', '1.0', tkinter.END)
-##			self.contents.tag_add('sel', '%s linestart' % i, '%s lineend' % i)
-##
-##
-##			if direction == 'left':
-##
-##				# Cursor at the start of the line, or there is no indentation left:
-##				if i.split('.')[1] == 0 or not t[0].isspace():
-##					self.contents.tag_remove('sel', '1.0', tkinter.END)
-##					self.contents.tag_add('sel', s, e)
-##					return 'break'
-##
-##				self.unindent()
-##				self.contents.tag_remove('sel', '1.0', tkinter.END)
-##
-##				if insert_at_selstart:
-##					self.contents.tag_add('sel',  '%s -1c' % s, e)
-##				else:
-##					self.contents.tag_add('sel', s, '%s -1c' % e)
-##
-##			# right
-##			else:
-##				self.indent()
-##				self.contents.tag_remove('sel', '1.0', tkinter.END)
-##
-##				if insert_at_selstart:
-##					self.contents.tag_add('sel',  '%s +1c' % s, e)
-##				else:
-##					self.contents.tag_add('sel', s, '%s +1c' % e)
-##
-##
-##			return 'break'
-##
-##
-##		return 'continue'
+	def move_line(self, event=None, direction=None):
+		''' Adjust cursor line indentation, with arrow left and right,
+			when pasting more than one line etc.
+		'''
+
+		# Enable continue adjusting selection area
+		if self.state != 'normal' or event.state != 0:
+			return 'continue'
+
+
+		if len(self.contents.tag_ranges('sel')) > 0:
+			insert_at_selstart = False
+
+			s = self.contents.index(tkinter.SEL_FIRST)
+			e = self.contents.index(tkinter.SEL_LAST)
+			i = self.contents.index(tkinter.INSERT)
+			# contents of line with cursor:
+			t = self.contents.get('%s linestart' % i, '%s lineend' % i)
+
+			if i == s:
+				insert_at_selstart = True
+
+			# else: insert at selend
+
+			line_s = s.split('.')[0]
+			line_e = e.split('.')[0]
+
+			# One line only:
+			if line_s == line_e: 	return 'continue'
+
+			# cursor line is empty:
+			if len(t.strip()) == 0: return 'continue'
+
+
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.contents.tag_add('sel', '%s linestart' % i, '%s lineend' % i)
+
+
+			if direction == 'left':
+
+				# Cursor at the start of the line, or there is no indentation left:
+				if i.split('.')[1] == 0 or not t[0].isspace():
+					self.contents.tag_remove('sel', '1.0', tkinter.END)
+					self.contents.tag_add('sel', s, e)
+					return 'break'
+
+				self.unindent()
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
+
+				if insert_at_selstart:
+					self.contents.tag_add('sel',  '%s -1c' % s, e)
+				else:
+					self.contents.tag_add('sel', s, '%s -1c' % e)
+
+			# right
+			else:
+				self.indent()
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
+
+				if insert_at_selstart:
+					self.contents.tag_add('sel',  '%s +1c' % s, e)
+				else:
+					self.contents.tag_add('sel', s, '%s +1c' % e)
+					
+
+			return 'break'
+
+		return 'continue'
 	
 
-			
 	def paste(self, event=None):
 		'''	First line usually is in wrong place after paste
 			because of selection has not started at the beginning of the line.
@@ -4182,7 +4098,7 @@ class Editor(tkinter.Toplevel):
 		self.search_idx = self.contents.tag_nextrange('match', self.search_idx[1])
 		line = self.search_idx[0]
 		
-		# is start of selection viewable?
+		# is it viewable?
 		if not self.contents.bbox(line):
 			self.wait_for(100)
 		
@@ -4233,7 +4149,7 @@ class Editor(tkinter.Toplevel):
 		self.search_idx = self.contents.tag_prevrange('match', self.search_idx[0])
 		
 		line = self.search_idx[0]
-		# is start of selection viewable?
+		# is it viewable?
 		if not self.contents.bbox(line):
 			self.wait_for(100)
 		
@@ -4333,6 +4249,8 @@ class Editor(tkinter.Toplevel):
 		self.btn_save.config(state='normal')
 		self.replace_overlap_index = None
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
+		
+		#self.wait_for(200)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.contents.tag_remove('match', '1.0', tkinter.END)
 			
@@ -4352,11 +4270,12 @@ class Editor(tkinter.Toplevel):
 		self.new_word = ''
 		self.search_matches = 0
 		self.update_title()
+		flag_all = False
+		if self.state == 'replace_all': flag_all = True
 		
 		if self.state in [ 'replace_all', 'replace' ]:
-		
+			
 				self.state = 'normal'
-				
 				
 				self.do_syntax()
 				
@@ -4366,6 +4285,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.unbind( "<Control-n>", funcid=self.bid1 )
 		self.contents.unbind( "<Control-p>", funcid=self.bid2 )
 		self.contents.unbind( "<ButtonRelease-1>", funcid=self.bid3 )
+		
+		#self.wait_for(200)
 		
 		# set cursor pos
 		try:
@@ -4378,7 +4299,9 @@ class Editor(tkinter.Toplevel):
 			
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
+	
+			if not flag_all:
+				self.ensure_idx_visibility(line)
 			
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
@@ -4541,6 +4464,7 @@ class Editor(tkinter.Toplevel):
 		self.search_matches -= 1
 		
 		if self.search_matches == 0:
+			self.wait_for(100)
 			self.stop_search()
 
 	
@@ -4566,6 +4490,7 @@ class Editor(tkinter.Toplevel):
 			
 		# show lastpos but dont put cursor on it
 		line = lastpos
+		self.wait_for(100)
 		self.ensure_idx_visibility(line)
 
 

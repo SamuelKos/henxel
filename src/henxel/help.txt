@@ -51,6 +51,7 @@
 		Ctrl-p  Move cursor up
 *		Ctrl-e  Move cursor to lineend
 *		Ctrl-a  Move cursor to linestart
+		Ctrl-j  Scroll down 12 lines without moving cursor (center view)
 		Ctrl-k  Remove from cursor to lineend
 		
 *		Shift-up	Select one more line up

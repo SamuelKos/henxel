@@ -1,92 +1,19 @@
 
-disable alt-t color choose
-down up expand indentation
 
-toggle clipboard, remove first, show curr in title normal?
+
+
+
+scrollbar to scale?
+
+down up arrow expand indentation on empty line to same as old line?
+
+toggle clipboard (10 newest items) dropdown in git_btn, on click put to first?
+
 ctrl up down move to start of block?
 
 
-setting have now colors
-
-# class Color
-# bg = dict
-# fg = dict
-# themes = dict
-# themes['day'] = bg, fg
-
-if settings:
-	self.colors = Colors(theme)
-	
-else:
-	theme = dict()
-	
-	for themename in self.themes:
-		t = self.themes[themename]
-		bg = dict()
-		fg = dict()
-		
-		for tag in t.tags:
-			bg[tag] = self.contents.cget('background')
-			fg[tag] = self.contents.cget('foreground')
-		
-		theme[themename] = bg, fg
-	
-	
-	self.colors = Colors(theme)
-
-##	ScrolledText with tags taglink etc from error
-##
-##	remember to set ln-widget colors after.
-##
-##
-##	Before closing, load setting from: Start
-##	if there were made unwanted changes.
-##
-	Changing color for:
-	Day		Text
-	Night	Background
-
-	Select tag you want to modify
-	'normal text'
-
-	Syntax highlight tags
-	'keywords',
-	'numbers',
-	'bools',
-	'strings',
-	'comments',
-	'breaks',
-	'calls',
-	'selfs'
-
-	Search tags
-	'match'
-	'focus'
-	'replaced'
-
-	Parentheses
-	'mismatch'
-
-	Selection
-	'sel'
 
 
-	Save current setting to template,
-	to which you can revert to later:
-	Save TMP
-
-	Load setting from:
-	TMP
-	Start
-	Defaults
-
-
-# color tags
-
-# day night
-# on select set down disable, load colors of:
-# fore, back, tags:
-# on select choose color
 
 
 # replace if click after replacing errorfocus update_curpos	ok?
@@ -96,13 +23,19 @@ else:
 # replace no replacing x matches with but straight info		ok?
 # that we are on the first match, delay after new word
 
+# center view ctrl-j										ok?
 
 
 # countpars with curls										ok?
 
-# no moveline												ok?
-
 # disable ctrl-arrow para etc								ok?
+
+
+# disable alt-t color choose 								ok?
+# setting have now colors 									ok?
+
+
+
 
 
 
