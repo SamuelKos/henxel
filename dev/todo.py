@@ -13,38 +13,6 @@ ctrl up down move to start of block?
 
 
 
-
-
-
-# replace if click after replacing errorfocus update_curpos	ok?
-# pos after replace
-# before replace clear replaced
-
-# replace no replacing x matches with but straight info		ok?
-# that we are on the first match, delay after new word
-
-# center view ctrl-j										ok?
-
-
-# countpars with curls										ok?
-
-# disable ctrl-arrow para etc								ok?
-
-
-# disable alt-t color choose 								ok?
-# setting have now colors 									ok?
-
-
-
-
-
-
-
-
-
-
-
-
 # this is todo, and stub-editor for testing, might not work
 
 # Run in python console

@@ -1,6 +1,16 @@
 # Changelog
-* To version: 	0.2.1
+* To version: 	0.2.2
 * From version:	0.0.3
+
+
+# 0.2.2
+- Much improved colorchooser, settings have now colors and is not compatible with older conf-files.
+	Had to import copy-module for that which is to be removed in the future, when have colors-class.
+- Again many fixes in replace.
+- You can now center view with Ctrl-j.
+- Improved checkpars alot. Curls are also counted.
+- Disabled some default Text-widget-class-bindings like Ctrl-arrow: move 'one paragraph'
+	to somewhere etc.
 
 
 # 0.2.1
