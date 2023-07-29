@@ -1810,32 +1810,7 @@ class Editor(tkinter.Toplevel):
 		wid = args[0]
 		tagname = args[1]
 		
-		syntags = [
-		'normal_text',
-		'keywords',
-		'numbers',
-		'bools',
-		'strings',
-		'comments',
-		'breaks',
-		'calls',
-		'selfs',
-		'match',
-		'focus',
-		'replaced',
-		'mismatch',
-		'selected'
-		]
-		
-		
 		t = wid.textwid
-	
-		if tagname in syntags:
-			r = t.tag_nextrange(tagname, 1.0)
-			
-			t.delete(r[0], r[1])
-			t.insert(r[0], '%s\n' % tagname, tagname)
-		
 		
 		t.config(cursor="hand2")
 		t.tag_config(tagname, underline=1, font=self.boldfont)
@@ -1847,32 +1822,7 @@ class Editor(tkinter.Toplevel):
 		wid = args[0]
 		tagname = args[1]
 		
-		syntags = [
-		'normal_text',
-		'keywords',
-		'numbers',
-		'bools',
-		'strings',
-		'comments',
-		'breaks',
-		'calls',
-		'selfs',
-		'match',
-		'focus',
-		'replaced',
-		'mismatch',
-		'selected'
-		]
-		
-		
 		t = wid.textwid
-	
-		if tagname in syntags:
-			r = t.tag_nextrange(tagname, 1.0)
-			
-			t.delete(r[0], r[1])
-			t.insert(r[0], '%s\n' % tagname, tagname)
-		
 		
 		t.config(cursor=self.name_of_cursor_in_text_widget)
 		t.tag_config(tagname, underline=0, font=self.menufont)
@@ -2039,7 +1989,7 @@ class Editor(tkinter.Toplevel):
 				wid.flag_tmp = True
 				self.flash_tag(wid, tagname)
 				
-			elif tagname == 'TMP' and flag_tmp:
+			elif tagname == 'TMP' and wid.flag_tmp:
 				self.themes = copy.deepcopy(wid.tmp_theme)
 				self.flash_tag(wid, tagname)
 				
@@ -2188,7 +2138,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 		t.insert(i, '\nSelect tag you want to modify\n', 'title')
-		t.insert(i, 'normal_text\n', 'normal_text')
+		t.insert(i, 'normal text\n', 'normal_text')
 		
 		
 		t.insert(i, '\nSyntax highlight tags\n', 'title')
