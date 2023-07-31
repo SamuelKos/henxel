@@ -2,14 +2,13 @@
 
 
 
+toggle clipboard (10 newest items) dropdown in git_btn,
+on click put to first?
 
 scrollbar to scale?
 
-down up arrow expand indentation on empty line to same as old line?
+# down up arrow expand indentation on empty line to same as old line		ok?
 
-toggle clipboard (10 newest items) dropdown in git_btn, on click put to first?
-
-ctrl up down move to start of block?
 
 
 
@@ -205,8 +204,8 @@ class Ed(tkinter.Toplevel):
 		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor')
 		
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL)
-
-
+		
+		
 		self.contents.grid(row=1, column=1, columnspan=3, sticky='nswe')
 		self.scrollbar.grid(row=1,column=3, sticky='nse')
 		

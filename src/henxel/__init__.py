@@ -394,6 +394,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
 		self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
 		
+		self.contents.bind("<Up>", lambda event: self.updown_override(event, **{'direction':'up'} ))
+		self.contents.bind("<Down>", lambda event: self.updown_override(event, **{'direction':'down'} ))
+		
 		# Unbind some default bindings
 		self.contents.unbind_class('Text', '<<NextPara>>')
 		self.contents.unbind_class('Text', '<<PrevPara>>')
@@ -2530,7 +2533,56 @@ class Editor(tkinter.Toplevel):
 		
 		return "break"
 		
-	
+		
+	def updown_override(self, event=None, direction=None):
+		''' up-down override, to expand possibly incorrect indentation
+		'''
+		
+		if self.state != 'normal':
+			return "continue"
+			
+		oldpos = self.contents.index(tkinter.INSERT)
+		
+		
+		if direction == 'down':
+			newpos = self.contents.index( '%s + 1lines' % tkinter.INSERT)
+			
+		# direction == 'up'
+		else:
+			newpos = self.contents.index( '%s - 1lines' % tkinter.INSERT)
+			
+		
+		oldline = self.contents.get( '%s linestart' % oldpos, '%s lineend' % oldpos)
+		newline = self.contents.get( '%s linestart' % newpos, '%s lineend' % newpos)
+		
+		
+		if newline.isspace() or newline == '':
+			
+			if oldline == '':
+				return 'continue'
+			
+			if not oldline.isspace():
+			
+				tmp = oldline.lstrip()
+				oldindent = oldline.index(tmp)
+				
+				if oldindent == 0:
+					return 'continue'
+			
+				self.contents.delete('%s linestart' % newpos,'%s lineend' % newpos)
+				self.contents.insert('%s linestart' % newpos, oldindent * '\t')
+				return 'continue'
+			
+			# coming from empty line:
+			else:
+				self.contents.delete('%s linestart' % newpos,'%s lineend' % newpos)
+				self.contents.insert('%s linestart' % newpos, len(oldline) * '\t')
+				return 'continue'
+			
+		else:
+			return 'continue'
+		
+		
 	def center_view(self, event=None):
 		''' Raise insertion-line
 		'''
@@ -2629,7 +2681,7 @@ class Editor(tkinter.Toplevel):
 
 			line_s = s.split('.')[0]
 			line_e = e.split('.')[0]
-
+			
 			# One line only:
 			if line_s == line_e: 	return 'continue'
 
