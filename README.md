@@ -18,7 +18,6 @@ GUI-editor for Python development. Tested to work with Debian Bullseye
 * Click to open errors
 * Parenthesis checking
 * Persistent configuration
-* Near persistent contents
 
 # Lacking
 * Auto-completion
@@ -44,12 +43,17 @@ Consider creating virtual environment for your python-projects and installing py
 foo@bar:~$ sudo apt install python3-venv
 ```
 
-There is a script named 'mkvenv' in /util. Copy it to some place nice like bin-directory in your home-directory and make it executable if it is not already:
+There is a script named 'mkvenv' in /util. Copy it to some place nice like bin-directory in your home-directory and make it executable if it is not already: 
+
 ```console
 foo@bar:~/bin$ chmod u+x mkvenv
 ```
 
-Then make folder for your new project and install venv there and activate it, and show currently installed python-packages in your new virtual environment, and lastly deactivate (quit) environment:
+Or you can use just the venv module instead, like when there is line: mkvenv env 
+you can use then: python3 -m venv env 
+
+Then make folder for your new project and install venv there and activate it, and show currently installed python-packages in your new virtual environment, and lastly deactivate (quit) environment: 
+
 ```console
 foo@bar:~$ mkdir myproject
 foo@bar:~$ cd myproject
@@ -106,35 +110,85 @@ Files are in src/henxel/
 
 
 # More on virtual environments:
-For you who are packaging Python-project and you need side-by-side live-comparison of two different versions,
-most propably version you are currently developing and some earlier version. Or for anyone who is interested doing so, not many I think.
+This is now bit more complex, because we are not anymore expecting that we have many older versions of the project 
+left (as packages). But with this lenghty method we can compare to any commit, not just released packages. 
+So this is for you who are packaging Python-project and might want things like side-by-side live-comparison of two 
+different versions, most propably version you are currently developing and some earlier version. I Assume you are the 
+owner of the project so you have the git-history, or else you have done git clone. I use henxel as the project example. 
 
-When creating development-venv for the project, make another one with same deps for comparison:
-
-```console
-foo@bar:~/myproject/$ mkvenv env
-foo@bar:~/myproject/$ mkvenv ref_env
-```
-
-Then install your package in env, in editable mode of course, activate it and make some change to your project.
-Then in other shell-window, activate ref_env and install your earlier version of the project to it from your
-archive; when you build your package, they are put to /dist. So assuming your earlier version of myproject
-was 0.0.3 and that you have not deleted it from your dist-folder:
+First make build-env if you do not have it. It likely can be the same for many of your projects:
 
 ```console
-(ref_env) foo@bar:~/myproject/$ pip install dist/myproject-0.0.3.tar.gz
+foo@bar:~/$ mkvenv env
+foo@bar:~/$ . env/bin/activate
+(env) foo@bar:~/$ pip install --upgrade build
+(env) foo@bar:~/$ deactivate
 ```
 
-
-Or if you have saved your earlier version in the repository:
+Then create development-venv for the project, if you haven't already and install current version to it:
 
 ```console
-(ref_env) foo@bar:~/myproject/$ pip install 'myproject==0.0.3'
+foo@bar:~/myproject/henxel$ mkvenv env
+foo@bar:~/myproject/henxel$ . env/bin/activate
+(env) foo@bar:~/myproject/henxel$ pip install -e .
 ```
 
+Then select the git-commit for the reference version. I have interesting commits with message like: version 0.2.0 
+so to list all such commits:
 
-Now you are ready to launch both versions of your project and do side-by-side comparison. If you
-are doing something with GUI this is what you want.
+```console
+foo@bar:~/myproject/henxel$ git log --grep=version
+```
+
+For example to make new branch from version 0.2.0, copy the first letters from the commit-id and:
+
+```console
+foo@bar:~/myproject/henxel$ git branch version020 e4f1f4ab3f
+foo@bar:~/myproject/henxel$ git switch version020
+```
+
+Then 1:activate your build-env, 2: build that ref-version of your project, 3: install it with pip 
+There are some extra lines to help ensure you are in the correct env (that is build-env) and branch 
+(branch you made from older commit). 
+For example, if your build-env is in the root of your home-directory:
+
+```console
+foo@bar:~/$ . env/bin/activate
+(env) foo@bar:~/$ cd myproject/henxel
+(env) foo@bar:~/myproject/henxel$ pip list
+(env) foo@bar:~/myproject/henxel$ git branch
+(env) foo@bar:~/myproject/henxel$ git log
+(env) foo@bar:~/myproject/henxel$ python -m build
+```
+
+And it will create the ref-package: dist/henxel-0.2.0.tar.gz 
+Then create ref-env to some place that is not version-controlled like the parent-folder and install your ref-package 
+to it: First deactivate build-env if it still active:
+
+```console
+(env) foo@bar:~/myproject/henxel$ deactivate
+foo@bar:~/myproject/henxel$ cd ..
+foo@bar:~/myproject$ mkvenv v020
+foo@bar:~/myproject$ . v020/bin/activate
+(v020) foo@bar:~/myproject$ cd henxel
+(v020) foo@bar:~/myproject/henxel$ pip list
+(v020) foo@bar:~/myproject/henxel$ pip install dist/henxel-0.2.0.tar.gz
+(v020) foo@bar:~/myproject/henxel$ deactivate
+```
+
+Now you are ready to launch both versions of your project and do side-by-side comparison if that is what you want:
+
+```console
+foo@bar:~/myproject/henxel$ . env/bin/activate
+(env) foo@bar:~/myproject/henxel$ pip list
+```
+
+From other shell-window:
+
+```console
+foo@bar:~/myproject$ . v020/bin/activate
+(v020) foo@bar:~/myproject$ pip list
+```
 
 
 # More resources

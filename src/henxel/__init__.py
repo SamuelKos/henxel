@@ -127,9 +127,62 @@ class Editor(tkinter.Toplevel):
 
 	alive = False
 	
+	pkg_contents = None
+	no_icon = True
+	pic = None
+	helptxt = None
+	
+	root = None
 	
 	def __new__(cls):
 	
+		if not cls.root:
+			# Was earlier v.0.2.2 in init:
+			
+			# self.root = tkinter.Tk().withdraw()
+			
+			# wich worked in Debian 11, but not in Windows and not in Debian 12,
+			# resulted error msg like: class str has no some attribute etc.
+			# After changing this line in init to:
+			
+			# self.root = tkinter.Tk()
+			# self.root.withdraw()
+			
+			# Editor would launch, but after closing and reopening in the same python-console-instance,
+			# there would be same kind of messages but about icon, and also fonts would change.
+			# This is why that stuff is now here to keep those references.
+			cls.root = tkinter.Tk()
+			cls.root.withdraw()
+		
+		if not cls.pkg_contents:
+			cls.pkg_contents = importlib.resources.files(__name__)
+		
+		if cls.pkg_contents:
+			
+			if cls.no_icon:
+				for item in cls.pkg_contents.iterdir():
+					
+					if item.name == ICONPATH:
+						try:
+							cls.pic = tkinter.Image("photo", file=item)
+							cls.no_icon = False
+							break
+						except tkinter.TclError as e:
+							print(e)
+			
+			if not cls.helptxt:
+				for item in cls.pkg_contents.iterdir():
+				
+					if item.name == HELPPATH:
+						try:
+							cls.helptxt = item.read_text()
+							break
+						except Exception as e:
+							print(e.__str__())
+						
+		if cls.no_icon: print('Could not load icon-file.')
+		
+		
 		if not cls.alive:
 			return super(Editor, cls).__new__(cls)
 			
@@ -142,10 +195,11 @@ class Editor(tkinter.Toplevel):
 			
 
 	def __init__(self):
-	
-		self.root = tkinter.Tk().withdraw()
+		
+		self.root = self.__class__.root
 		super().__init__(self.root, class_='Henxel', bd=4)
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
+		
 		
 		# other widgets
 		self.to_be_closed = list()
@@ -202,7 +256,7 @@ class Editor(tkinter.Toplevel):
 		
 		# IMPORTANT:
 		# 1: Event is triggered in the widget that has focus but it has no binding for that event.
-		# 2: Widget is subclassed from such widget-class that has default bindging for this event.
+		# 2: Widget is from such widget-class that has default bindging for this event.
 		# 3: The desired binding is in the nearest parent-widget.
 		
 		# https://stackoverflow.com/questions/54185434/python-tkinter-override-default-ctrl-h-binding
@@ -266,28 +320,16 @@ class Editor(tkinter.Toplevel):
 		
 		self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
 		
-		pkg_contents = importlib.resources.files(__name__)
-		
 		self.helptxt = 'Could not load help-file. Press ESC to return.'
-		no_icon = True
 		
-		for item in pkg_contents.iterdir():
-			if item.name == HELPPATH:
-				try:
-					self.helptxt = item.read_text()
-				except Exception as e:
-					print(e.__str__())
-			
-			elif item.name == ICONPATH:
-				try:
-					self.pic = tkinter.Image("photo", file=item)
-					self.tk.call('wm','iconphoto', self._w, self.pic)
-					no_icon = False
-				except tkinter.TclError as e:
-					print(e)
+		if self.__class__.helptxt:
+			self.helptxt = self.__class__.helptxt
 					
-		if no_icon: print('Could not load icon-file.')
-			
+		try:
+			self.tk.call('wm','iconphoto', self._w, self.__class__.pic)
+		except tkinter.TclError as e:
+			print(e)
+		
 		
 		# Initiate widgets
 		####################################

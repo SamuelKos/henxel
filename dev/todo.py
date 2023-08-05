@@ -1,11 +1,18 @@
+test colorpic
 
 
-
-
+ctrl c override
+if selstart line not empty:
+	if nextline below selstart not empty:
+		if indent of nextline is bigger:
+			count indent diff
+when paste:
+	ensure indent diff
+	
+	
 toggle clipboard (10 newest items) dropdown in git_btn,
 on click put to first?
 
-scrollbar to scale?
 
 # down up arrow expand indentation on empty line to same as old line		ok?
 
