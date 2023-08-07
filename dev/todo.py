@@ -1,4 +1,9 @@
 
+
+
+
+
+
 ctrl c override:
 self.indent_selstart = 0
 self.indent_nextline = 0
@@ -44,6 +49,8 @@ if self.flag_fix_indent:
 toggle clipboard (10 newest items) dropdown in git_btn,
 on click put to first?
 
+# fix tab_override when in Windows											ok?
+# fix bell after gotoline													ok?
 
 # down up arrow expand indentation on empty line to same as old line		ok?
 

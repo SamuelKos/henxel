@@ -428,7 +428,16 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Shift-Return>", self.comment)
 		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
 		self.contents.bind( "<Tab>", self.tab_override)
-		self.contents.bind( "<ISO_Left_Tab>", self.unindent)
+		
+		
+		# If started from Windows, is handled in tab_override
+		self.windows = False
+		try:
+			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
+		except tkinter.TclError:
+			self.windows = True
+				
+		
 		self.contents.bind( "<Control-t>", self.tabify_lines)
 		self.contents.bind( "<Control-z>", self.undo_override)
 		self.contents.bind( "<Control-Z>", self.redo_override)
@@ -2872,11 +2881,24 @@ class Editor(tkinter.Toplevel):
 		
 		if self.state in [ 'search', 'replace', 'replace_all' ]:
 			return 'break'
-				
-		# dont know if this is needed
-		if hasattr(event, 'state') and event.state != 0:
-			return
 		
+		# In Windows, Tab-key-event has state 8 and shift+Tab has state 9,
+		# so because shift-tab is unbinded if in Windows, we check that here
+		# and unindent if it is the state.
+		if hasattr(event, 'state'):
+			
+			if self.windows:
+				
+				if event.state == 9:
+					self.unindent()
+					return 'break'
+					
+				if event.state not in [8, 0]:
+					return
+			
+			elif event.state != 0:
+				return
+				
 		# Fix for tab-key not working sometimes.
 		# This happens because os-clipboard content is (automatically)
 		# added to selection content of a Text widget, and since there is no
@@ -3639,16 +3661,16 @@ class Editor(tkinter.Toplevel):
 	
 ########## Save and Load End
 ########## Gotoline and Help Begin
-
+	
 	def do_gotoline(self, event=None):
 		try:
 			tmp = self.entry.get().strip()
-	
+			
 			if tmp in ['-1', '']:
 				line = tkinter.END
 			else:
 				line = tmp + '.0'
-			
+				
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
 			self.ensure_idx_visibility(line)
@@ -3658,14 +3680,16 @@ class Editor(tkinter.Toplevel):
 				pos = self.contents.index(tkinter.INSERT)
 			except tkinter.TclError:
 				pos = '1.0'
-		
+				
 			self.tabs[self.tabindex].position = pos
 			self.stop_gotoline()
-		
+			
 		except tkinter.TclError as e:
 			print(e)
 			self.stop_gotoline()
-	
+			
+		return "break"
+		
 	
 	def stop_gotoline(self, event=None):
 		self.bind("<Escape>", self.do_nothing)
@@ -3681,9 +3705,11 @@ class Editor(tkinter.Toplevel):
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
 			self.ensure_idx_visibility(line)
-			
+		
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'
+		
+		return "break"
 		
 	
 	def gotoline(self, event=None):
