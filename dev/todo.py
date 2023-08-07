@@ -1,20 +1,55 @@
-test colorpic
 
-
-ctrl c override
+ctrl c override:
+self.indent_selstart = 0
+self.indent_nextline = 0
+self.indent_diff = 0
+self.flag_fix_indent = False
+			
 if selstart line not empty:
-	if nextline below selstart not empty:
-		if indent of nextline is bigger:
-			count indent diff
+	
+	if line in two nextlines below selstart not empty:
+		
+		self.indent_selstart = x
+		self.indent_nextline = y
+		self.indent_diff = y-x
+		
+		if self.indent_diff > 0:
+			self.flag_fix_indent = True
+			
+			
 when paste:
-	ensure indent diff
+
+if self.flag_fix_indent:
 	
+	indent_cursor = x
+	indent_diff_cursor = indent_cursor - self.indent_selstart
 	
+	paste firstline from clipboard
+	
+	for line in clipboard[1:]:
+		
+		if indent_diff_cursor > 0:
+			line.indent += indent_diff_cursor
+			
+		elif indent_diff_cursor < 0:
+			line.indent -= indent_diff_cursor
+			
+		paste line
+			
+
+
+
+
+
 toggle clipboard (10 newest items) dropdown in git_btn,
 on click put to first?
 
 
 # down up arrow expand indentation on empty line to same as old line		ok?
+
+
+## fix Font TKDEFAULFONT does not exist.
+## in get config															ok?
 
 
 
@@ -181,9 +216,9 @@ class Ed(tkinter.Toplevel):
 	# Self must be then added to this list in init with:
 	# self.__class__.editors.append(self)
 	editors = []
-
+			
 	def __init__(self):
-	
+		
 		self.root = tkinter.Tk().withdraw()
 		super().__init__(self.root)
 		self.__class__.editors.append(self)

@@ -141,7 +141,7 @@ class Editor(tkinter.Toplevel):
 			
 			# self.root = tkinter.Tk().withdraw()
 			
-			# wich worked in Debian 11, but not in Windows and not in Debian 12,
+			# wich worked in Debian 11, but not in Debian 12,
 			# resulted error msg like: class str has no some attribute etc.
 			# After changing this line in init to:
 			
@@ -151,6 +151,7 @@ class Editor(tkinter.Toplevel):
 			# Editor would launch, but after closing and reopening in the same python-console-instance,
 			# there would be same kind of messages but about icon, and also fonts would change.
 			# This is why that stuff is now here to keep those references.
+			
 			cls.root = tkinter.Tk()
 			cls.root.withdraw()
 		
@@ -167,6 +168,7 @@ class Editor(tkinter.Toplevel):
 							cls.pic = tkinter.Image("photo", file=item)
 							cls.no_icon = False
 							break
+							
 						except tkinter.TclError as e:
 							print(e)
 			
@@ -177,6 +179,7 @@ class Editor(tkinter.Toplevel):
 						try:
 							cls.helptxt = item.read_text()
 							break
+							
 						except Exception as e:
 							print(e.__str__())
 						
@@ -1196,8 +1199,11 @@ class Editor(tkinter.Toplevel):
 		dictionary = dict()
 		dictionary['curtheme'] = self.curtheme
 		dictionary['lastdir'] = self.lastdir.__str__()
-		dictionary['font'] = self.font.config()
-		dictionary['menufont'] = self.menufont.config()
+		
+		# replace possible Tkdefaulfont as family with real name
+		dictionary['font'] = self.font.actual()
+		dictionary['menufont'] = self.menufont.actual()
+		
 		dictionary['scrollbar_width'] = self.scrollbar_width
 		dictionary['elementborderwidth'] = self.elementborderwidth
 		dictionary['want_ln'] = self.want_ln
