@@ -1,4 +1,4 @@
-		Keyboard shortcuts (* marks often needed):
+		Keyboard shortcuts:
 		
 		If key-sequence is like: Ctrl-c
 		It means: while holding ctrl-key down, press and release c-key.
@@ -7,28 +7,28 @@
 		It means: while holding ctrl-key down, press and release first
 		c-key then f-key.
 		 
-*		Alt-Return		Open file
+		Alt-Return		Open file
 		Ctrl-BackSpace  Show and select next occurence of last search.
 						If got too far, press arrowleft to go to last
 						cursor position.
-*		Ctrl-f  Search
+		Ctrl-f  Search
 		Ctrl-r  Replace
 		Ctrl-R  Replace all
-*		Ctrl-g  Gotoline:	-1 and empty goes to file-end
-				
-*		Shift-Tab  Unindent
-*		Tab        Indent
+		Ctrl-g  Gotoline:	-1 and empty goes to file-end
 		
-*		Shift-Return	Comment
-*		Shift-BackSpace	Uncomment
-				
+		Shift-Tab  Unindent
+		Tab        Indent
+		
+		Shift-Return	Comment
+		Shift-BackSpace	Uncomment
+		
 		# Super means search-key.
-(*)		Ctrl-Super-Return	run file
+		Ctrl-Super-Return	run file
 		
-*		Ctrl-c  Copy		Try this: Ctrl-c-f
-*		Ctrl-v  Paste
-*		Ctrl-x  Cut
-*		Ctrl-z  Undo
+		Ctrl-c  Copy		Try this: Ctrl-c-f
+		Ctrl-v  Paste
+		Ctrl-x  Cut
+		Ctrl-z  Undo
 		Ctrl-Z  Redo
 		
 		Alt-f   Font setting
@@ -37,30 +37,30 @@
 		Alt-l   Toggle linenumbers
 		Alt-x   Toggle syntax highlight
 		Alt-e   expand word
-*		Alt-n   Open new tab			Try this: Alt-n-Return
+		Alt-n   Open new tab			Try this: Alt-n-Return
 		
-*		Ctrl-d  Close current tab and save it
+		Ctrl-d  Close current tab and save it
 		Ctrl-q  Close current tab without saving it
-*		Alt-w   Walk tabs forward
-*		Alt-q   Walk tabs backwards
+		Alt-w   Walk tabs forward
+		Alt-q   Walk tabs backwards
 		
-		Ctrl-o  Insert linebreak at cursor
 		Ctrl-i  Move cursor right
 		Ctrl-b  Move cursor left
 		Ctrl-n  Move cursor down
 		Ctrl-p  Move cursor up
-*		Ctrl-e  Move cursor to lineend
-*		Ctrl-a  Move cursor to linestart
+		Ctrl-e  Move cursor to lineend
+		Ctrl-a  Move cursor to linestart
 		Ctrl-j  Scroll down 12 lines without moving cursor (center view)
 		Ctrl-k  Remove from cursor to lineend
+		Ctrl-o  Insert linebreak at cursor
 		
-*		Shift-up	Select one more line up
-*		Shift-down	Select one more line down
+		Shift-up	Select one more line up
+		Shift-down	Select one more line down
 		
-*		Ctrl-left  		Move cursor one word left
-*		Ctrl-right 		Move cursor one word right
-*		Ctrl-shift-left 	Select one more word to left
-*		Ctrl-shift-right	Select one more word to right
+		Ctrl-left  		Move cursor one word left
+		Ctrl-right 		Move cursor one word right
+		Ctrl-shift-left 	Select one more word to left
+		Ctrl-shift-right	Select one more word to right
 		
 		Ctrl-plus 	Increase scrollbar-width
 		Ctrl-minus	Decrease scrollbar-width
@@ -201,15 +201,9 @@
 		1: Make sure you copied the block starting with one empty line.
 		2: Click cursor to start of empty line and paste.
 		
-  def myfunc(foo):
-	print(foo)
-	
-	return foo + 1
-
 		Then select that code and press Control-t, and
 		it should then be indented as you wanted and you can then continue
-		indenting the pasted code to the right place. You can try all this
-		by copying the code example above and then trying to fix it.
+		indenting the pasted code to the right place.
 		
 		(Note that you don't have to do anything if you open a file that has
 		different indentation than your setting, it is changed automatically

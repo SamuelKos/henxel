@@ -118,7 +118,8 @@ GOODFONTS = [
 			'Liberation Mono',
 			'DejaVu Sans Mono',
 			'Inconsolata',
-			'Courier 10 Pitch'
+			'Courier 10 Pitch',
+			'Courier'
 			]
 			
 ############ Constants End
@@ -414,20 +415,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-f>", self.search)
 		
 		self.contents.bind( "<Control-a>", self.goto_linestart)
-		self.contents.bind( "<Control-i>", self.move_right)
-		self.contents.bind( "<Control-j>", self.center_view)
-		
-		self.contents.bind( "<Alt-f>", self.font_choose)
-		self.contents.bind( "<Alt-x>", self.toggle_syntax)
-		self.contents.bind( "<Return>", self.return_override)
-		
-		self.contents.bind( "<Control-d>", self.del_tab)
-		self.contents.bind( "<Control-q>", lambda event: self.del_tab(event, **{'save':False}) )
-		
-		
-		self.contents.bind( "<Shift-Return>", self.comment)
-		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
-		self.contents.bind( "<Tab>", self.tab_override)
+		self.contents.bind( "<Control-e>", self.goto_lineend)
 		
 		
 		# If started from Windows, is handled in tab_override
@@ -436,15 +424,32 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
 		except tkinter.TclError:
 			self.windows = True
-				
+		
+		
+		self.contents.bind( "<Control-i>", self.move_right)
+		self.contents.bind( "<Control-b>", self.move_left)
+		self.contents.bind( "<Control-n>", self.move_down)
+		self.contents.bind( "<Control-p>", self.move_up)
+		
+		self.contents.bind( "<Control-j>", self.center_view)
+		self.contents.bind( "<Alt-f>", self.font_choose)
+		self.contents.bind( "<Alt-x>", self.toggle_syntax)
+		self.contents.bind( "<Return>", self.return_override)
+		
+		self.contents.bind( "<Control-d>", self.del_tab)
+		self.contents.bind( "<Control-q>", lambda event: self.del_tab(event, **{'save':False}) )
+		
+		self.contents.bind( "<Shift-Return>", self.comment)
+		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
+		self.contents.bind( "<Tab>", self.tab_override)
 		
 		self.contents.bind( "<Control-t>", self.tabify_lines)
 		self.contents.bind( "<Control-z>", self.undo_override)
 		self.contents.bind( "<Control-Z>", self.redo_override)
 		self.contents.bind( "<Control-v>", self.paste)
-		
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
 		self.contents.bind( "<BackSpace>", self.backspace_override)
+		
 		self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
 		self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
 		
@@ -456,7 +461,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.unbind_class('Text', '<<PrevPara>>')
 		self.contents.unbind_class('Text', '<<SelectNextPara>>')
 		self.contents.unbind_class('Text', '<<SelectPrevPara>>')
-		
+			
 	
 		# Needed in leave() taglink in: Run file Related
 		self.name_of_cursor_in_text_widget = self.contents['cursor']
@@ -2583,14 +2588,54 @@ class Editor(tkinter.Toplevel):
 		if self.state not in  [ 'normal', 'error' ]:
 			self.bell()
 			return "break"
-		
-		pos = self.contents.index( '%s + 1c' % tkinter.INSERT)
-		self.contents.see(pos)
-		self.contents.mark_set('insert', pos)
+			
+		self.contents.event_generate('<<NextChar>>')
 		
 		return "break"
 		
 		
+	def move_left(self, event=None):
+		''' move cursor right with
+			ctrl-b
+		'''
+		
+		if self.state not in  [ 'normal', 'error' ]:
+			self.bell()
+			return "break"
+			
+		self.contents.event_generate('<<PrevChar>>')
+		
+		return "break"
+		
+		
+	def move_up(self, event=None):
+		''' move cursor right with
+			ctrl-p
+		'''
+		
+		if self.state not in  [ 'normal', 'error' ]:
+			self.bell()
+			return "break"
+			
+		self.contents.event_generate('<<PrevLine>>')
+		
+		return "break"
+		
+		
+	def move_down(self, event=None):
+		''' move cursor right with
+			ctrl-n
+		'''
+		
+		if self.state not in  [ 'normal', 'error' ]:
+			self.bell()
+			return "break"
+			
+		self.contents.event_generate('<<NextLine>>')
+		
+		return "break"
+		
+	
 	def updown_override(self, event=None, direction=None):
 		''' up-down override, to expand possibly incorrect indentation
 		'''
@@ -2650,6 +2695,15 @@ class Editor(tkinter.Toplevel):
 			
 		self.contents.yview_scroll(12, 'units')
 		return "break"
+	
+	
+	def goto_lineend(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
+		self.contents.event_generate('<<LineEnd>>')
+		return "break"
 		
 		
 	def goto_linestart(self, event=None):
@@ -2686,8 +2740,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.mark_set('insert', pos)
 		
 		return "break"
-	
-	
+		
+		
 	def raise_popup(self, event=None):
 		if self.state != 'normal':
 			self.bell()
@@ -4577,34 +4631,36 @@ class Editor(tkinter.Toplevel):
 		self.new_word = self.entry.get()
 		
 		if self.old_word == self.new_word:
-			return
-		else:
-			self.bind("<Control-n>", self.show_next)
-			self.bind("<Control-p>", self.show_prev)
-			
-			# prevent focus messing
-			self.entry.bind("<Return>", self.do_nothing)
-			self.entry.config(state='disabled')
-			self.focus_set()
-			
-			self.contents.tag_remove('replaced', '1.0', tkinter.END)
-	
-			
-			if self.state == 'replace':
-			
-				self.replace_overlap_index = None
+			return 'break'
 				
-				if self.old_word in self.new_word:
-					self.replace_overlap_index = self.new_word.index(self.old_word)
+		self.bind("<Control-n>", self.show_next)
+		self.bind("<Control-p>", self.show_prev)
+		
+		# prevent focus messing
+		self.entry.bind("<Return>", self.do_nothing)
+		self.entry.config(state='disabled')
+		self.focus_set()
+		
+		self.contents.tag_remove('replaced', '1.0', tkinter.END)
+		
+		
+		if self.state == 'replace':
+		
+			self.replace_overlap_index = None
+			
+			if self.old_word in self.new_word:
+				self.replace_overlap_index = self.new_word.index(self.old_word)
 				
-				self.title( f'Replace: 1/{self.search_matches}' )
-				self.bind( "<Return>", self.do_single_replace)
-				
-			elif self.state == 'replace_all':
-				self.bind( "<Return>", self.do_replace_all)
-				self.title('Replacing ALL %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )
-
-
+			self.title( f'Replace: 1/{self.search_matches}' )
+			self.bind( "<Return>", self.do_single_replace)
+			
+		elif self.state == 'replace_all':
+			self.bind( "<Return>", self.do_replace_all)
+			self.title('Replacing ALL %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )
+			
+		return 'break'
+		
+		
 ################ Replace End
 ########### Class Editor End
 
