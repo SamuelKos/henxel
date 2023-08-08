@@ -43,16 +43,13 @@ Consider creating virtual environment for your python-projects and installing py
 foo@bar:~$ sudo apt install python3-venv
 ```
 
-There is a script named 'mkvenv' in /util. Copy it to some place nice like bin-directory in your home-directory and make it executable if it is not already: 
+There is a script named 'mkvenv' in /util. Copy it to some place nice like bin-directory in your home-directory and make it executable if it is not already:
 
 ```console
 foo@bar:~/bin$ chmod u+x mkvenv
 ```
 
-Or you can use just the venv module instead, like when there is line: mkvenv env 
-you can use then: python3 -m venv env 
-
-Then make folder for your new project and install venv there and activate it, and show currently installed python-packages in your new virtual environment, and lastly deactivate (quit) environment: 
+Then make folder for your new project and install venv there and activate it, and show currently installed python-packages in your new virtual environment, and lastly deactivate (quit) environment:
 
 ```console
 foo@bar:~$ mkdir myproject
@@ -110,11 +107,11 @@ Files are in src/henxel/
 
 
 # More on virtual environments:
-This is now bit more complex, because we are not anymore expecting that we have many older versions of the project 
-left (as packages). But with this lenghty method we can compare to any commit, not just released packages. 
-So this is for you who are packaging Python-project and might want things like side-by-side live-comparison of two 
-different versions, most propably version you are currently developing and some earlier version. I Assume you are the 
-owner of the project so you have the git-history, or else you have done git clone. I use henxel as the project example. 
+This is now bit more complex, because we are not anymore expecting that we have many older versions of the project
+left (as packages). But with this lenghty method we can compare to any commit, not just released packages.
+So this is for you who are packaging Python-project and might want things like side-by-side live-comparison of two
+different versions, most propably version you are currently developing and some earlier version. I Assume you are the
+owner of the project so you have the git-history, or else you have done git clone. I use henxel as the project example.
 
 First make build-env if you do not have it. It likely can be the same for many of your projects:
 
@@ -133,7 +130,7 @@ foo@bar:~/myproject/henxel$ . env/bin/activate
 (env) foo@bar:~/myproject/henxel$ pip install -e .
 ```
 
-Then select the git-commit for the reference version. I have interesting commits with message like: version 0.2.0 
+Then select the git-commit for the reference version. I have interesting commits with message like: version 0.2.0
 so to list all such commits:
 
 ```console
@@ -147,9 +144,10 @@ foo@bar:~/myproject/henxel$ git branch version020 e4f1f4ab3f
 foo@bar:~/myproject/henxel$ git switch version020
 ```
 
-Then 1:activate your build-env, 2: build that ref-version of your project, 3: install it with pip 
-There are some extra lines to help ensure you are in the correct env (that is build-env) and branch 
-(branch you made from older commit). 
+Then 1: activate your build-env, 2: build that ref-version of your project.
+
+There are some extra lines to help ensure you are in the correct env (that is build-env) and branch
+(branch you made from older commit).
 For example, if your build-env is in the root of your home-directory:
 
 ```console
@@ -161,9 +159,11 @@ foo@bar:~/$ . env/bin/activate
 (env) foo@bar:~/myproject/henxel$ python -m build
 ```
 
-And it will create the ref-package: dist/henxel-0.2.0.tar.gz 
-Then create ref-env to some place that is not version-controlled like the parent-folder and install your ref-package 
-to it: First deactivate build-env if it still active:
+And it will create the ref-package: dist/henxel-0.2.0.tar.gz
+
+3: install it with pip
+
+Create ref-env to some place that is not version-controlled like the parent-folder and install your ref-package to it. First deactivate build-env if it still active:
 
 ```console
 (env) foo@bar:~/myproject/henxel$ deactivate

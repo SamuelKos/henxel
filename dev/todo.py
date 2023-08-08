@@ -1,6 +1,5 @@
 paste to console in windows freezes editor
-
-		
+	
 		
 keys not working in windows
 run file shortcut in windows?
@@ -48,28 +47,6 @@ if self.flag_fix_indent:
 
 toggle clipboard (10 newest items) dropdown in git_btn,
 on click put to first?
-
-these are ok?
-ctrl+
-e
-i
-b
-n
-p
-
-
-# do no when gotoline, replace, replace all	ok?
-
-# fix tab_override when in Windows											ok?
-# fix bell after gotoline													ok?
-
-# down up arrow expand indentation on empty line to same as old line		ok?
-
-
-## fix Font TKDEFAULFONT does not exist.
-## in get config															ok?
-
-
 
 
 

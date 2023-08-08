@@ -1,6 +1,15 @@
 # Changelog
-* To version: 	0.2.2
+* To version: 	0.2.3
 * From version:	0.0.3
+
+
+# 0.2.3
+- Fix for: Editor not launching in Debian 12.
+- Editor now launches in Windows, but freezes if trying paste to Python-console while editor is open and have to be closed, also move_line is not yet working.
+- Indenting now works in Windows so do all shortcuts except for running file.
+- Fix for:  bell after gotoline, replace, replace_all.
+- Arrow-up and -down now expands indentation on empty line to same as in old line.
+- No more saving TKDEFAULFONT as font-family in get_config.
 
 
 # 0.2.2
