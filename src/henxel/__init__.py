@@ -59,6 +59,9 @@ from . import fdialog
 # It means you have your installed dependencies available. By self.run()
 import subprocess
 
+# for making paste to work in Windows
+import threading
+		
 ############ Imports End
 ############ Class Tab Begin
 					
@@ -422,8 +425,11 @@ class Editor(tkinter.Toplevel):
 		self.windows = False
 		try:
 			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
+			
 		except tkinter.TclError:
 			self.windows = True
+			# Also, fix copying to clipboard in Windows
+			self.bind( "<Control-c>", self.copy_windows)
 		
 		
 		self.contents.bind( "<Control-i>", self.move_right)
@@ -749,6 +755,39 @@ class Editor(tkinter.Toplevel):
 	def update_title(self, event=None):
 		tail = len(self.tabs) - self.tabindex - 1
 		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
+		
+	
+	def copy_windows(self, event=None):
+		
+		
+		try:
+			#self.clipboard_clear()
+			tmp = self.selection_get()
+			
+			
+			# https://stackoverflow.com/questions/51921386
+			# pyperclip approach works in windows fine
+			# import clipboard as cb
+			# cb.copy(tmp)
+			
+			# os.system approach also works but freezes editor for a little time
+			
+			
+			d = dict()
+			d['input'] = tmp.encode('ascii')
+			
+			t = threading.Thread( target=subprocess.run, args=('clip',), kwargs=d )
+			t.setDeamon(True)
+			t.start()
+			
+			#self.clipboard_append(tmp)
+		except tkinter.TclError:
+			# is empty
+			return 'break'
+			
+			
+		#print(#self.clipboard_get())
+		return 'break'
 		
 	
 	def wait_for(self, ms):
@@ -2630,11 +2669,11 @@ class Editor(tkinter.Toplevel):
 		if self.state not in  [ 'normal', 'error' ]:
 			self.bell()
 			return "break"
-			
+	
 		self.contents.event_generate('<<NextLine>>')
 		
 		return "break"
-		
+	
 	
 	def updown_override(self, event=None, direction=None):
 		''' up-down override, to expand possibly incorrect indentation
@@ -2698,7 +2737,7 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def goto_lineend(self, event=None):
-		if self.state != 'normal':
+		if self.state not in  [ 'normal', 'error' ]:
 			self.bell()
 			return "break"
 			
@@ -2707,10 +2746,10 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def goto_linestart(self, event=None):
-		if self.state != 'normal':
+		if self.state not in  [ 'normal', 'error' ]:
 			self.bell()
 			return "break"
-		
+			
 		self.ensure_idx_visibility('insert')
 		
 		# In case of wrapped lines
@@ -2754,16 +2793,20 @@ class Editor(tkinter.Toplevel):
 	def popup_focusOut(self, event=None):
 		self.popup.unpost()
 	
-
+	
 	def copy(self):
 		''' When copy is selected from popup-menu
 		'''
-		try:
-			self.clipboard_clear()
-			self.clipboard_append(self.selection_get())
-		except tkinter.TclError:
-			# is empty
-			return 'break'
+		if self.windows:
+			self.copy_windows()
+		
+		else:
+			try:
+				self.clipboard_clear()
+				self.clipboard_append(self.selection_get())
+			except tkinter.TclError:
+				# is empty
+				return 'break'
 		
 
 	def move_line(self, event=None, direction=None):
@@ -2778,7 +2821,7 @@ class Editor(tkinter.Toplevel):
 
 		if len(self.contents.tag_ranges('sel')) > 0:
 			insert_at_selstart = False
-
+			
 			s = self.contents.index(tkinter.SEL_FIRST)
 			e = self.contents.index(tkinter.SEL_LAST)
 			i = self.contents.index(tkinter.INSERT)

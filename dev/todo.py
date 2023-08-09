@@ -1,7 +1,17 @@
-paste to console in windows freezes editor
-	
-		
-keys not working in windows
+
+
+move_line no work in windows
+
+ctrl_n p to same as arrow updown?
+
+select one line in the middle of block, copy and paste inplace, no work in Windows
+
+
+check if change sel background
+
+
+
+keys not working in windows:
 run file shortcut in windows?
 
 
@@ -47,6 +57,14 @@ if self.flag_fix_indent:
 
 toggle clipboard (10 newest items) dropdown in git_btn,
 on click put to first?
+
+
+
+# goto linestartend in err-view 					ok?
+
+# paste to console in windows freezes editor		ok?
+# added module threading, copy_windows()
+
 
 
 
