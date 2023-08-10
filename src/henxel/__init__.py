@@ -776,10 +776,11 @@ class Editor(tkinter.Toplevel):
 			d = dict()
 			d['input'] = tmp.encode('ascii')
 			
-			t = threading.Thread( target=subprocess.run, args=('clip',), kwargs=d )
-			t.setDeamon(True)
+			t = threading.Thread( target=subprocess.run, args=('clip',), kwargs=d, daemon=True )
+			#t.setDeamon(True)
 			t.start()
 			
+				
 			#self.clipboard_append(tmp)
 		except tkinter.TclError:
 			# is empty
