@@ -1,10 +1,12 @@
 
+ctrl (shift) left right in windows is horrible
 
-move_line no work in windows
+ctrl shift ae should select line
+
+ctrl-backspace  no work in windows
+
 
 ctrl_n p to same as arrow updown?
-
-select one line in the middle of block, copy and paste inplace, no work in Windows
 
 
 check if change sel background
@@ -59,13 +61,18 @@ toggle clipboard (10 newest items) dropdown in git_btn,
 on click put to first?
 
 
+# focus in windows, focus_force						ok?
 
 # goto linestartend in err-view 					ok?
 
 # paste to console in windows freezes editor		ok?
 # added module threading, copy_windows()
 
+# move_line no work in windows						ok?
+# backspace_overr									ok?
 
+# select one line in the middle of block,			ok?
+# copy and paste inplace, no work in Windows
 
 
 

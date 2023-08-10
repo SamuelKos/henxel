@@ -731,7 +731,7 @@ class Editor(tkinter.Toplevel):
 		
 		# set cursor pos:
 		line = self.tabs[self.tabindex].position
-		self.contents.focus_set()
+		self.contents.focus_force()
 		
 		try:
 			self.contents.mark_set('insert', line)
@@ -741,8 +741,8 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', '1.0')
 			self.tabs[self.tabindex].position = '1.0'
 			self.contents.see('1.0')
-		
-		
+			
+			
 		self.avoid_viewsync_mess()
 		self.update_idletasks()
 		self.viewsync()
@@ -2635,7 +2635,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def move_left(self, event=None):
-		''' move cursor right with
+		''' move cursor left with
 			ctrl-b
 		'''
 		
@@ -2649,7 +2649,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def move_up(self, event=None):
-		''' move cursor right with
+		''' move cursor up with
 			ctrl-p
 		'''
 		
@@ -2663,7 +2663,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def move_down(self, event=None):
-		''' move cursor right with
+		''' move cursor down with
 			ctrl-n
 		'''
 		
@@ -2814,12 +2814,13 @@ class Editor(tkinter.Toplevel):
 		''' Adjust cursor line indentation, with arrow left and right,
 			when pasting more than one line etc.
 		'''
-
-		# Enable continue adjusting selection area
-		if self.state != 'normal' or event.state != 0:
+		
+		# Enable continue adjusting selection area.
+		# 262152 is state when pressing arrow left-right in Windows
+		if self.state != 'normal' or event.state not in [0, 262152]:
 			return 'continue'
-
-
+			
+			
 		if len(self.contents.tag_ranges('sel')) > 0:
 			insert_at_selstart = False
 			
@@ -2828,12 +2829,12 @@ class Editor(tkinter.Toplevel):
 			i = self.contents.index(tkinter.INSERT)
 			# contents of line with cursor:
 			t = self.contents.get('%s linestart' % i, '%s lineend' % i)
-
+			
 			if i == s:
 				insert_at_selstart = True
-
+			
 			# else: insert at selend
-
+			
 			line_s = s.split('.')[0]
 			line_e = e.split('.')[0]
 			
@@ -2889,18 +2890,30 @@ class Editor(tkinter.Toplevel):
 		
 		try:
 			tmp = self.clipboard_get()
-			tmp = tmp.splitlines(True)
-		
+			tmp = tmp.splitlines(keepends=True)
+			
+			
 		except tkinter.TclError:
 			# is empty
 			return 'break'
-	
+			
+		have_selection = False
+		
+		if len( self.contents.tag_ranges('sel') ) > 0:
+			selstart = self.contents.index( '%s' % tkinter.SEL_FIRST)
+			selend = self.contents.index( '%s' % tkinter.SEL_LAST)
+			
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			have_selection = True
+			
+			
 		line = self.contents.index(tkinter.INSERT)
 		self.contents.event_generate('<<Paste>>')
 		
-								
+		
+		# Selected many lines or
+		# one line and cursor is not at the start of next line:
 		if len(tmp) > 1:
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			
 			s = self.contents.index( '%s linestart' % line)
 			e = self.contents.index( 'insert lineend')
@@ -2911,13 +2924,20 @@ class Editor(tkinter.Toplevel):
 					self.update_tokens( start=s, end=e, line=t )
 					
 			
-			self.contents.tag_add('sel', line, tkinter.INSERT)
-			self.contents.mark_set('insert', line)
+			if have_selection:
+				self.contents.tag_add('sel', selstart, selend)
 				
+			else:
+				self.contents.tag_add('sel', line, tkinter.INSERT)
+				
+			self.contents.mark_set('insert', line)
+			
+			
 			self.wait_for(100)
 			self.ensure_idx_visibility(line)
 			
 			
+		# Selected one line and cursor is at the start of next line:
 		elif len(tmp) == 1 and tmp[-1][-1] == '\n':
 			s = self.contents.index( '%s linestart' % line)
 			e = self.contents.index( '%s lineend' % line)
@@ -2926,8 +2946,8 @@ class Editor(tkinter.Toplevel):
 			if self.tabs[self.tabindex].filepath:
 				if self.can_do_syntax():
 					self.update_tokens( start=s, end=e, line=t )
-				
-		
+					
+					
 		return 'break'
 	
 
@@ -3018,8 +3038,8 @@ class Editor(tkinter.Toplevel):
 	def backspace_override(self, event):
 		""" for syntax highlight
 		"""
-		
-		if self.state != 'normal' or event.state != 0:
+		# State is 8 in windows when no other keys are pressed
+		if self.state != 'normal' or event.state not in [0, 8]:
 			return
 		
 		pars = [ '(', ')', '[', ']' , '{', '}' ]
@@ -4191,6 +4211,8 @@ class Editor(tkinter.Toplevel):
 		
 			return 'break'
 		else:
+				
+			print('AAA')
 			self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
 			self.contents.unbind("<Any-Button>", funcid=self.anybutid)
 			return
@@ -4455,10 +4477,13 @@ class Editor(tkinter.Toplevel):
 				
 				
 		self.state = 'normal'
-		self.bind( "<Return>", self.do_nothing)
 		self.contents.unbind( "<Control-n>", funcid=self.bid1 )
 		self.contents.unbind( "<Control-p>", funcid=self.bid2 )
 		self.contents.unbind( "<ButtonRelease-1>", funcid=self.bid3 )
+		self.contents.bind( "<Control-n>", self.move_down)
+		self.contents.bind( "<Control-p>", self.move_up)
+		self.bind( "<Return>", self.do_nothing)
+		
 		
 		#self.wait_for(200)
 		
