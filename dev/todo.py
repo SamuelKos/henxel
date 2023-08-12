@@ -1,11 +1,12 @@
 
-update help for windows
-
 
 test ctrl left behaviour in github
 ctrl (shift) left right
+test this in windows, seems to work in linux now
+maybe move_line was interfering with that also
 
-center_view should move 1/3 per event
+
+center_view should move 1/3 per event?
 
 
 ctrl shift ae should select line?
@@ -65,27 +66,6 @@ if self.flag_fix_indent:
 
 toggle clipboard (10 newest items) dropdown in git_btn,
 on click put to first?
-
-
-
-# ctrl-backspace  no work in windows				ok?
-# canceled move_line binded with  arrow left right
-
-
-# cancel up down expand indenation					ok?
-
-# focus in windows, focus_force						ok?
-
-# goto linestartend in err-view 					ok?
-
-# paste to console in windows freezes editor		ok?
-# added module threading, copy_windows()
-
-# move_line no work in windows						ok?
-# backspace_overr									ok?
-
-# select one line in the middle of block,			ok?
-# copy and paste inplace, no work in Windows
 
 
 

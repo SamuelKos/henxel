@@ -346,14 +346,14 @@ class Editor(tkinter.Toplevel):
 			branch = self.branch[:5]
 			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0,
 						padx=0, text=branch, state='disabled')
-			
+
 			if 'main' in self.branch or 'master' in self.branch:
 				self.btn_git.config(disabledforeground='brown1')
-				
+
 		else:
 			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0,
 						padx=0, bitmap='info', state='disabled')
-		
+
 		
 		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, bg='#d9d9d9')
 		self.entry.bind("<Return>", self.load)
@@ -735,7 +735,12 @@ class Editor(tkinter.Toplevel):
 		
 		# set cursor pos:
 		line = self.tabs[self.tabindex].position
-		self.contents.focus_force()
+		
+		if self.windows:
+			self.contents.focus_force()
+		else:
+			self.contents.focus_set()
+		
 		
 		try:
 			self.contents.mark_set('insert', line)
@@ -4411,7 +4416,8 @@ class Editor(tkinter.Toplevel):
 			self.bind("<Button-3>", self.do_nothing)
 			
 			if self.state == 'search':
-				self.title('Found: %s matches' % str(self.search_matches))
+				self.title( f'Search: 1/{self.search_matches}' )
+				
 				self.bind("<Control-n>", self.show_next)
 				self.bind("<Control-p>", self.show_prev)
 			

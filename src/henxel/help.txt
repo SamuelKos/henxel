@@ -161,8 +161,7 @@
 		and select for example from 'def' - word, which has indentation,
 		then indentation of this first line is wrong when pasted, compared
 		to other lines. But editor moves cursor at the start of block so
-		you can start fixing indentation of that line with arrow left and
-		right. You can do this whenever you have selection more than one line.
+		you can start fixing indentation of that line.
 	
 	
 	How to: expand word

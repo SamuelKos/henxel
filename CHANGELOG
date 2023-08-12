@@ -1,6 +1,15 @@
 # Changelog
-* To version: 	0.2.3
+* To version: 	0.2.4
 * From version:	0.0.3
+
+
+# 0.2.4
+- Canceled move_line binded with arrow left-right as it interfered with search_next.
+- Canceled updown_override which expanded indenation on empty lines as confusing.
+- Fixed editor not getting focus at launch in Windows.
+- Fixed goto-linestart_end to work in error-view.
+- Paste to Python-console works now also in Windows. This is why module threading is now imported and used in copy_windows(). Earlier paste freezed editor so it had to be fixed.
+- Fixed copy-pasteing lines in place to work in windows as intented.
 
 
 # 0.2.3
