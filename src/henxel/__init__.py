@@ -453,14 +453,18 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-z>", self.undo_override)
 		self.contents.bind( "<Control-Z>", self.redo_override)
 		self.contents.bind( "<Control-v>", self.paste)
-		self.contents.bind( "<Control-BackSpace>", self.search_next)
+		
+		#self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
+		#self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
+		
+		#self.contents.bind("<Up>", lambda event: self.updown_override(event, **{'direction':'up'} ))
+		#self.contents.bind("<Down>", lambda event: self.updown_override(event, **{'direction':'down'} ))
+		
+		
 		self.contents.bind( "<BackSpace>", self.backspace_override)
+		self.contents.bind( "<Control-BackSpace>", self.search_next)
 		
-		self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
-		self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
 		
-		self.contents.bind("<Up>", lambda event: self.updown_override(event, **{'direction':'up'} ))
-		self.contents.bind("<Down>", lambda event: self.updown_override(event, **{'direction':'down'} ))
 		
 		# Unbind some default bindings
 		self.contents.unbind_class('Text', '<<NextPara>>')
@@ -2676,55 +2680,55 @@ class Editor(tkinter.Toplevel):
 		return "break"
 	
 	
-	def updown_override(self, event=None, direction=None):
-		''' up-down override, to expand possibly incorrect indentation
-		'''
-		
-		if self.state != 'normal':
-			return "continue"
-			
-		oldpos = self.contents.index(tkinter.INSERT)
-		
-		
-		if direction == 'down':
-			newpos = self.contents.index( '%s + 1lines' % tkinter.INSERT)
-			
-		# direction == 'up'
-		else:
-			newpos = self.contents.index( '%s - 1lines' % tkinter.INSERT)
-			
-		
-		oldline = self.contents.get( '%s linestart' % oldpos, '%s lineend' % oldpos)
-		newline = self.contents.get( '%s linestart' % newpos, '%s lineend' % newpos)
-		
-		
-		if newline.isspace() or newline == '':
-			
-			if oldline == '':
-				return 'continue'
-			
-			if not oldline.isspace():
-			
-				tmp = oldline.lstrip()
-				oldindent = oldline.index(tmp)
-				
-				if oldindent == 0:
-					return 'continue'
-			
-				self.contents.delete('%s linestart' % newpos,'%s lineend' % newpos)
-				self.contents.insert('%s linestart' % newpos, oldindent * '\t')
-				return 'continue'
-			
-			# coming from empty line:
-			else:
-				self.contents.delete('%s linestart' % newpos,'%s lineend' % newpos)
-				self.contents.insert('%s linestart' % newpos, len(oldline) * '\t')
-				return 'continue'
-			
-		else:
-			return 'continue'
-		
-		
+##	def updown_override(self, event=None, direction=None):
+##		''' up-down override, to expand possibly incorrect indentation
+##		'''
+##
+##		if self.state != 'normal':
+##			return "continue"
+##
+##		oldpos = self.contents.index(tkinter.INSERT)
+##
+##
+##		if direction == 'down':
+##			newpos = self.contents.index( '%s + 1lines' % tkinter.INSERT)
+##
+##		# direction == 'up'
+##		else:
+##			newpos = self.contents.index( '%s - 1lines' % tkinter.INSERT)
+##
+##
+##		oldline = self.contents.get( '%s linestart' % oldpos, '%s lineend' % oldpos)
+##		newline = self.contents.get( '%s linestart' % newpos, '%s lineend' % newpos)
+##
+##
+##		if newline.isspace() or newline == '':
+##
+##			if oldline == '':
+##				return 'continue'
+##
+##			if not oldline.isspace():
+##
+##				tmp = oldline.lstrip()
+##				oldindent = oldline.index(tmp)
+##
+##				if oldindent == 0:
+##					return 'continue'
+##
+##				self.contents.delete('%s linestart' % newpos,'%s lineend' % newpos)
+##				self.contents.insert('%s linestart' % newpos, oldindent * '\t')
+##				return 'continue'
+##
+##			# coming from empty line:
+##			else:
+##				self.contents.delete('%s linestart' % newpos,'%s lineend' % newpos)
+##				self.contents.insert('%s linestart' % newpos, len(oldline) * '\t')
+##				return 'continue'
+##
+##		else:
+##			return 'continue'
+	
+	
 	def center_view(self, event=None):
 		''' Raise insertion-line
 		'''
@@ -2814,6 +2818,8 @@ class Editor(tkinter.Toplevel):
 		''' Adjust cursor line indentation, with arrow left and right,
 			when pasting more than one line etc.
 		'''
+		
+		# currently this interferes with backspace_override
 		
 		# Enable continue adjusting selection area.
 		# 262152 is state when pressing arrow left-right in Windows
@@ -2914,7 +2920,7 @@ class Editor(tkinter.Toplevel):
 		# Selected many lines or
 		# one line and cursor is not at the start of next line:
 		if len(tmp) > 1:
-			
+		
 			s = self.contents.index( '%s linestart' % line)
 			e = self.contents.index( 'insert lineend')
 			t = self.contents.get( s, e )
@@ -3038,6 +3044,7 @@ class Editor(tkinter.Toplevel):
 	def backspace_override(self, event):
 		""" for syntax highlight
 		"""
+		
 		# State is 8 in windows when no other keys are pressed
 		if self.state != 'normal' or event.state not in [0, 8]:
 			return
@@ -4212,7 +4219,7 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 		else:
 				
-			print('AAA')
+			
 			self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
 			self.contents.unbind("<Any-Button>", funcid=self.anybutid)
 			return

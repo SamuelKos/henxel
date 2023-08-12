@@ -1,21 +1,27 @@
 
-ctrl (shift) left right in windows is horrible
-
-ctrl shift ae should select line
-
-ctrl-backspace  no work in windows
+update help for windows
 
 
-ctrl_n p to same as arrow updown?
+test ctrl left behaviour in github
+ctrl (shift) left right
+
+center_view should move 1/3 per event
 
 
-check if change sel background
+ctrl shift ae should select line?
 
 
+ctrl n p to same as arrow updown?
+cancel ctrl npib as move cursor?
 
-keys not working in windows:
+
+check if change sel colors, tagraise sel > normal
+
+
 run file shortcut in windows?
+cancel shortcut for run file?
 
+makevenv.bat
 
 
 
@@ -28,7 +34,7 @@ self.flag_fix_indent = False
 if selstart line not empty:
 	
 	if line in two nextlines below selstart not empty:
-		
+
 		self.indent_selstart = x
 		self.indent_nextline = y
 		self.indent_diff = y-x
@@ -60,6 +66,13 @@ if self.flag_fix_indent:
 toggle clipboard (10 newest items) dropdown in git_btn,
 on click put to first?
 
+
+
+# ctrl-backspace  no work in windows				ok?
+# canceled move_line binded with  arrow left right
+
+
+# cancel up down expand indenation					ok?
 
 # focus in windows, focus_force						ok?
 
