@@ -1,9 +1,34 @@
+e.tk.eval('tk::TextSetCursor .!editor.!text2 [tk::TextNextWord .!editor.!text2 insert]' )
+
+
+e.tk.eval('tk::TextSetCursor .!editor.!text2 [tk::TextNextPos .!editor.!text2 insert tcl_endOfWord]' )
+
+
+win11
+e.info_patchlevel()
+_VersionInfoType(major=8, minor=6, micro=12, releaselevel='final', serial=0)
+
+e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBreakRE($index)}' )
+\s*(\S+)\s*$
+\S\s|\s\S
+\S*\s+\S
+\s*\S+\s
+^.*(\S\s|\s\S)
+
+
+e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts ::tcl::WordBreakRE($index)}' )
+::tcl::WordBreakRE(previous)
+::tcl::WordBreakRE(after)
+::tcl::WordBreakRE(next)
+::tcl::WordBreakRE(end)
+::tcl::WordBreakRE(before)
+
+
 
 
 test ctrl left behaviour in github
 ctrl (shift) left right
-test this in windows, seems to work in linux now
-maybe move_line was interfering with that also
+no work in windows, seems to work in linux
 
 
 center_view should move 1/3 per event?
