@@ -1,5 +1,30 @@
 
 
+
+
+
+
+# Debian 12
+e.info_patchlevel()
+_VersionInfoType(major=8, minor=6, micro=13, releaselevel='final', serial=0)
+
+e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts ::tcl::WordBreakRE($index)}')
+::tcl::WordBreakRE(previous)
+::tcl::WordBreakRE(after)
+::tcl::WordBreakRE(next)
+::tcl::WordBreakRE(end)
+::tcl::WordBreakRE(before)
+
+e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBreakRE($index)}')
+\W*(\w+)\W*$
+\w\W|\W\w
+\w*\W+\w
+\W*\w+\W
+^.*(\w\W|\W\w)
+
+
+
+
 test ctrl left behaviour in github
 ctrl (shift) left right
 test this in windows, seems to work in linux now
