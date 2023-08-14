@@ -1,27 +1,23 @@
-e.tk.eval('tk::TextSetCursor .!editor.!text2 [tk::TextNextWord .!editor.!text2 insert]' )
-
-
-e.tk.eval('tk::TextSetCursor .!editor.!text2 [tk::TextNextPos .!editor.!text2 insert tcl_endOfWord]' )
-
 
 win11 ctrl-leftright no work
 e.info_patchlevel()
 _VersionInfoType(major=8, minor=6, micro=12, releaselevel='final', serial=0)
 
-e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBreakRE($index)}' )
+array values:
+e.tk.eval('foreach key [array names ::tcl::WordBreakRE] {puts $::tcl::WordBreakRE($key)}' )
 \s*(\S+)\s*$
 \S\s|\s\S
 \S*\s+\S
 \s*\S+\s
 ^.*(\S\s|\s\S)
 
-
-e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts ::tcl::WordBreakRE($index)}' )
-::tcl::WordBreakRE(previous)
-::tcl::WordBreakRE(after)
-::tcl::WordBreakRE(next)
-::tcl::WordBreakRE(end)
-::tcl::WordBreakRE(before)
+array keys:
+e.tk.eval('foreach key [array names ::tcl::WordBreakRE] {puts $key}' )
+previous
+after
+next
+end
+before
 
 
 #################
@@ -46,13 +42,7 @@ e.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord}
 e.info_patchlevel()
 _VersionInfoType(major=8, minor=6, micro=13, releaselevel='final', serial=0)
 
-e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts ::tcl::WordBreakRE($index)}')
-::tcl::WordBreakRE(previous)
-::tcl::WordBreakRE(after)
-::tcl::WordBreakRE(next)
-::tcl::WordBreakRE(end)
-::tcl::WordBreakRE(before)
-
+array values:
 e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBreakRE($index)}')
 \W*(\w+)\W*$
 \w\W|\W\w
@@ -63,22 +53,29 @@ e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBrea
 
 
 
-test ctrl left behaviour in github
-ctrl (shift) left right
-no work in windows, seems to work in linux
+
+# ctrl (shift) left right							ok?
+# no work in windows, seems to work in linux
+
+# center_view should move 1/3 per event?			ok?
 
 
-center_view should move 1/3 per event?
+# check if change sel colors, tagraise sel > normal?
+# checked, nothing  done 	ok?
 
 
-ctrl shift ae should select line?
+win11 Courier:
+e.contents.dlineinfo('insert') diff height when bold font on line
+compared when not.
+affects getlinenums
 
 
-ctrl n p to same as arrow updown?
+ctrl shift ae should select-from line?
+
+
 cancel ctrl npib as move cursor?
 
 
-check if change sel colors, tagraise sel > normal
 
 
 run file shortcut in windows?

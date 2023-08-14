@@ -261,6 +261,8 @@ class Editor(tkinter.Toplevel):
 		self.state = 'normal'
 		
 		
+		
+		# move this to some new info file:
 		# IMPORTANT:
 		# 1: Event is triggered in the widget that has focus but it has no binding for that event.
 		# 2: Widget is from such widget-class that has default bindging for this event.
@@ -454,9 +456,11 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-Z>", self.redo_override)
 		self.contents.bind( "<Control-v>", self.paste)
 		
+		# this move_line interferes with search_next,check_nextevent, so not in use
 		#self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
 		#self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
 		
+		# updown_override not in use
 		#self.contents.bind("<Up>", lambda event: self.updown_override(event, **{'direction':'up'} ))
 		#self.contents.bind("<Down>", lambda event: self.updown_override(event, **{'direction':'down'} ))
 		
@@ -487,6 +491,26 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="     inspect", command=self.insert_inspected)
 		self.popup.add_command(label="      errors", command=self.show_errors)
 		self.popup.add_command(label="        help", command=self.help)
+		
+		
+				
+		# Win11 ctrl-leftright no work (as intended) in tcl 8.6.12 but does in 8.6.13, so:
+		self.tcl_version = self.info_patchlevel()
+		if self.tcl_version.major == 8 and self.tcl_version.minor == 6 and self.tcl_version.micro < 13:
+		
+			# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
+			# replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
+			# Need for some reason generate ctrl-leftright before, because array ::tcl::WordBreakRE does not exist yet,
+			# but after this event it does:
+			
+			self.contents.insert(1.0, 'asd')
+			self.contents.event_generate('<<NextWord>>')
+			self.contents.delete('1.0', tkinter.END)
+			
+			self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+			self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+			self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
+		
 		
 		
 		if data:
@@ -731,23 +755,7 @@ class Editor(tkinter.Toplevel):
 			self.ln_widget.grid_remove()
 			
 		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
-		
-				
-		# Win11 ctrl-leftright no work (as intended) in tcl 8.6.12 but does in 8.6.13, so:
-		self.tcl_version = self.info_patchlevel()
-		if self.tcl_version.major <= 8:
-			if self.tcl_version.minor <= 6:
-				if self.tcl_version.micro < 13:
-##					To fix: replace array ::tcl::WordBreakRE contents with newer version, and
-##					replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
-##					Need for some reason generate ctrl-leftright before this eval works:
-		
-					self.contents.event_generate('<<NextWord>>')
-				
-					self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
-					self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
-					self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
-		
+
 		
 		# set cursor pos:
 		line = self.tabs[self.tabindex].position
@@ -2757,8 +2765,12 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return "break"
 			
-			
-		self.contents.yview_scroll(12, 'units')
+		
+		num_lines = self.text_widget_height // self.bbox_height
+		num_scroll = num_lines // 3
+		
+		self.contents.yview_scroll(num_scroll, 'units')
+		# No ensure_view, enable return to cursor by arrow keys
 		return "break"
 	
 	
