@@ -732,6 +732,22 @@ class Editor(tkinter.Toplevel):
 			
 		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 		
+				
+		# Win11 ctrl-leftright no work (as intended) in tcl 8.6.12 but does in 8.6.13, so:
+		self.tcl_version = self.info_patchlevel()
+		if self.tcl_version.major <= 8:
+			if self.tcl_version.minor <= 6:
+				if self.tcl_version.micro < 13:
+##					To fix: replace array ::tcl::WordBreakRE contents with newer version, and
+##					replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
+##					Need for some reason generate ctrl-leftright before this eval works:
+		
+					self.contents.event_generate('<<NextWord>>')
+				
+					self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+					self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+					self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
+		
 		
 		# set cursor pos:
 		line = self.tabs[self.tabindex].position
@@ -750,8 +766,8 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', '1.0')
 			self.tabs[self.tabindex].position = '1.0'
 			self.contents.see('1.0')
-			
-			
+				
+		
 		self.avoid_viewsync_mess()
 		self.update_idletasks()
 		self.viewsync()

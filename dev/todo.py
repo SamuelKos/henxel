@@ -4,7 +4,7 @@ e.tk.eval('tk::TextSetCursor .!editor.!text2 [tk::TextNextWord .!editor.!text2 i
 e.tk.eval('tk::TextSetCursor .!editor.!text2 [tk::TextNextPos .!editor.!text2 insert tcl_endOfWord]' )
 
 
-win11
+win11 ctrl-leftright no work
 e.info_patchlevel()
 _VersionInfoType(major=8, minor=6, micro=12, releaselevel='final', serial=0)
 
@@ -24,13 +24,25 @@ e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts ::tcl::WordBreak
 ::tcl::WordBreakRE(before)
 
 
+#################
+To fix: replace array ::tcl::WordBreakRE contents with newer version, and
+replace proc tk::TextNextWord with newer version which was looked in Debian 12 below.
+Needs to generate ctrl-leftright before this eval works?:
+
+e.contents.event_generate('<<NextWord>>')
+e.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}]; puts $l3 ')
+e.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+e.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
+
+
+#################
 
 
 
 
 
 
-# Debian 12
+# Debian 12, ctrl-leftright works
 e.info_patchlevel()
 _VersionInfoType(major=8, minor=6, micro=13, releaselevel='final', serial=0)
 
