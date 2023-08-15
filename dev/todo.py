@@ -1,4 +1,25 @@
 
+import tkinter
+import tkinter.font
+
+
+fontnames = [f for f in tkinter.font.families()]
+font1 = tkinter.font.Font(family='TkDefaultFont', size=12)
+boldfont = tkinter.font.Font(family='TkDefaultFont', size=12, weight='bold')
+
+for name in fontnames:
+	font1.config(family=name)
+	boldfont.config(family=name)
+	f=font1.metrics()['linespace']
+	f2=boldfont.metrics()['linespace']
+	if f == f2:
+		print(name, f, f2)
+
+
+
+
+
+
 win11 ctrl-leftright no work
 e.info_patchlevel()
 _VersionInfoType(major=8, minor=6, micro=12, releaselevel='final', serial=0)
