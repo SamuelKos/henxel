@@ -71,10 +71,6 @@ e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBrea
 # center_view should move 1/3 per event?			ok?
 
 
-# check if change sel colors, tagraise sel > normal?
-# checked, nothing  done 	ok?
-
-
 
 
 
@@ -83,12 +79,22 @@ at the end of file, center view?
 
 linespacing2 to reduce empty lines?
 
+
 changefont.py:
 mono filter chfont
 @ fonts are vertical chinese etc 	removed ok?
 disable when loading fonts  not done	ok?
-popup info on filters, grid?
 
+
+test change font, deselect cb5 cb6
+checkbutton_command
+if self.tracefunc:
+	self.tracefunc()
+
+
+
+
+changefont info on filters, grid?
 
 
 ctrl shift ae should select-from line?

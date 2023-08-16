@@ -1,0 +1,50 @@
+
+Note on binding in tkinter:
+1: Event is triggered in the widget that has focus but it has no binding for that event.
+2: Widget is from such widget-class that has default bindging for this event.
+3: The desired binding is in the nearest parent-widget.
+
+https://stackoverflow.com/questions/54185434/python-tkinter-override-default-ctrl-h-binding
+https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/binding-levels.html
+
+Example, print bindtag-order of two widgets in python-console,
+first widget is Text-widget and then Editor-widget
+>>> e=henxel.Editor()
+>>> e.contents.bindtags()
+('.!editor.!text2', 'Text', '.!editor', 'all')
+
+>>> e.bindtags()
+('.!editor', 'Henxel', 'all')
+
+Bindings are executed from left to right.
+
+Example: in class Editor there is:
+self.bind( "<Return>", self.do_nothing)
+
+Then if focus is in Editor.contents (pressing newline in editor),
+first to catch the event (after OS) is: '.!editor.!text2'
+That is the Text-class-instance, if there is a binding for that event,
+
+And there is:
+self.contents.bind( "<Return>", self.return_override)
+
+It is executed and if there is no 'break' returned, this Return-event will continue
+to the next bindtag: 'Text' which has all the default bindings for a Text-class.
+After that the event would be going to the parent widget, Editor-widget etc.
+
+
+What is this for? Say we have a widget: Text-widget and binding to its parent Editor-widget like:
+	self.bind( "<Return>", self.return_override_editor)
+And there would not be binding like:
+	self.contents.bind( "<Return>", self.return_override_text)
+But then if Text-widget has focus and pressed Return: 'Text' class-bindings are executed before
+Editor-widget and this might not be what we wanted:
+('.!editor.!text2', 'Text', '.!editor', 'all')
+
+But that event can be unbinded, Example: Print current bindings for a class:
+>>> e.contents.bind_class('Text')
+
+Unbinding default binding of Text-widget:
+e.contents.unbind_class('Text', '<Return>')
+And then it works.
+

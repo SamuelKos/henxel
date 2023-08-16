@@ -221,6 +221,9 @@ class FontChooser:
 		
 		self.font[key] = var.get()
 		
+		if self.tracefunc:
+			self.tracefunc()
+		
 		
 	def optionmenu_command(self, event=None):
 		'''	When font(instance) is selected from optionmenu.
