@@ -122,7 +122,7 @@ GOODFONTS = [
 			'DejaVu Sans Mono',
 			'Inconsolata',
 			'Courier 10 Pitch',
-			'Courier'
+			'Consolas'
 			]
 			
 ############ Constants End

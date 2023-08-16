@@ -21,7 +21,7 @@ class FontChooser:
 		else:
 			self.tracefunc = None
 		
-		self.badfonts = frozenset([
+		self.badfonts = [
 					'Standard Symbols PS',
 					'OpenSymbol',
 					'Noto Color Emoji',
@@ -29,14 +29,9 @@ class FontChooser:
 					'Dingbats',
 					'Droid Sans Fallback',
 					'D050000L'
-					])
-					
-		self.fontnames = [f for f in tkinter.font.families() if f not in self.badfonts]
+					]
 		
-		# Remove duplicates then sort
-		s = set(self.fontnames)
-		self.fontnames = [f for f in s]
-		self.fontnames.sort()
+		
 		self.max = 42
 		self.min = 8
 		
@@ -74,7 +69,7 @@ class FontChooser:
 		self.sb = tkinter.Spinbox(self.top, font=('TkDefaultFont', 10), from_=self.min, to=self.max, increment=2, width=3, command=self.change_font)
 		self.sb.pack(pady=10)
 		
-		# Make four checkboxes for other font configurations
+		# Make checkboxes for other font configurations
 		self.bold = tkinter.StringVar()
 		self.cb1 = tkinter.Checkbutton(self.top, font=('TkDefaultFont', 10), offvalue='normal', onvalue='bold', text='Bold', variable=self.bold)
 		self.cb1.pack(pady=10, anchor='w')
@@ -95,26 +90,32 @@ class FontChooser:
 		self.cb4.pack(pady=10, anchor='w')
 		self.cb4.config(command=lambda args=[self.overstrike, 'overstrike']: self.checkbutton_command(args))
 		
+		
+		
+		self.filter_mono = tkinter.IntVar()
+		self.cb5 = tkinter.Checkbutton(self.top, font=('TkDefaultFont', 10), offvalue=0, onvalue=1, text='Mono', variable=self.filter_mono)
+		self.cb5.pack(pady=10, anchor='w')
+		self.cb5.config(command=self.filter_fonts)
+		
+		self.filter_const_height = tkinter.IntVar()
+		self.cb6 = tkinter.Checkbutton(self.top, font=('TkDefaultFont', 10), offvalue=0, onvalue=1, text='Const height', variable=self.filter_const_height)
+		self.cb6.pack(pady=10, anchor='w')
+		self.cb6.config(command=self.filter_fonts)
+		
+		
 		# Get current fontsize and show it in spinbox
 		self.sb.delete(0, 'end')
 		fontsize = self.font['size']
 		self.sb.insert(0, fontsize)
-		
-		# Populate listbox
-		for fontname in self.fontnames:
-			self.lb.insert('end', fontname)
-		
-		# Show current fontname in listbox
-		fontname = self.font.actual("family")
-		fontindex = self.fontnames.index(fontname)
-		self.lb.select_set(fontindex)
-		self.lb.see(fontindex)
-		
+
+
 		# Check rest font configurations:
 		self.cb1.deselect()
 		self.cb2.deselect()
 		self.cb3.deselect()
 		self.cb4.deselect()
+		self.cb5.deselect()
+		self.cb6.deselect()
 		
 		if self.font['weight'] == 'bold': self.cb1.select()
 		if self.font['slant'] == 'italic': self.cb2.select()
@@ -123,6 +124,14 @@ class FontChooser:
 
 		self.lb.bind('<ButtonRelease-1>', self.change_font)
 			
+		
+		self.fontnames = list()
+		self.fontnames_mono = list()
+		self.fontnames_const_line = list()
+		self.fontnames_const_line_mono = list()
+		
+		self.top.after(100, self.get_fonts)
+		
 		
 	def button_command(self, event=None):
 		'''	In case there is not font-scaling in use by OS and
@@ -135,7 +144,9 @@ class FontChooser:
 					self.cb1,
 					self.cb2,
 					self.cb3,
-					self.cb4
+					self.cb4,
+					self.cb5,
+					self.cb6
 					]
 					
 		if self.button['text'] == 'BIG':
@@ -151,7 +162,56 @@ class FontChooser:
 		else:
 			self.button['text'] = 'BIG'
 			
+	
+	
+	
+	def filter_fonts(self, event=None):
+		'''	Show all fonts, mono-spaced, constant line height, or
+			mono-spaced and constant line height depending on cb5 and cb6
+			settings.
+		'''
+	
+		filter_mono = self.filter_mono.get()
+		filter_const_height = self.filter_const_height.get()
+
+		fonts = None
+		
+		if filter_mono and filter_const_height:
+			fonts = self.fontnames_const_line_mono
+					
+		elif filter_const_height or filter_mono:
 			
+			if filter_mono:
+				fonts = self.fontnames_mono
+			
+			else:
+				fonts = self.fontnames_const_line
+		
+		else:
+			fonts = self.fontnames
+		
+		
+		
+		self.top.selection_clear()
+		self.lb.delete(0, 'end')
+		
+		
+		for name in fonts:
+			self.lb.insert('end', name)
+		
+		
+		# Show current fontname in listbox if found
+		try:
+			fontname = self.font.actual("family")
+			fontindex = fonts.index(fontname)
+			self.top.after(100, lambda args=[fontindex]: self.lb.select_set(args))
+			self.top.after(300, lambda args=[fontindex]: self.lb.see(args))
+			
+		except ValueError:
+			# not in list
+			pass
+	
+	
 	def checkbutton_command(self, args, event=None):
 		'''	args[0] is tkinter.StringVar instance
 			args[1] is string
@@ -201,9 +261,72 @@ class FontChooser:
 		except tkinter.TclError as e:
 			print(e)
 			
+	
+	
+	def get_fonts(self):
+		'''	Return list of fonts, that have: same lineheight between normal
+			lines and lines with bold font.
+		'''
+		
+		font1 = tkinter.font.Font(family='TkDefaultFont', size=12)
+		boldfont = tkinter.font.Font(family='TkDefaultFont', size=12, weight='bold')
+		
+		# second test: filter out vertical fonts.
+		def test_font(f):
+			return f in self.badfonts or f[0] == '@'
+			
+		
+		fontnames = [f for f in tkinter.font.families() if not test_font(f)]
+		
+		# Remove duplicates then sort
+		s = set(fontnames)
+		fontnames = [f for f in s]
+		fontnames.sort()
+		
+		
+		for name in fontnames:
+			font1.config(family=name)
+			boldfont.config(family=name)
+			
+			l1=font1.metrics()['linespace']
+			l2=boldfont.metrics()['linespace']
+			
+			a1=font1.metrics()['ascent']
+			a2=boldfont.metrics()['ascent']
+			
+			d1=font1.metrics()['descent']
+			d2=boldfont.metrics()['descent']
+			
+			f1=font1.metrics()['fixed']
+			f2=boldfont.metrics()['fixed']
 			
 			
+			# Give info that something is happening
+			self.fontnames.append(name)
+			self.lb.insert('end', name)
+			self.lb.see('end')
+			self.top.update_idletasks()
 			
 			
+			# This guarantees same lineheight between
+			# normal and bold lines. Consolas for example.
+			if l1 == l2 and a1 == a2 and d1 == d2:
+				self.fontnames_const_line.append(name)
+			
+				if f1 == True and f1 == f2:
+					self.fontnames_const_line_mono.append(name)
 			
 			
+			# Being monospaced does not guarantee same lineheight between
+			# normal and bold lines. Courier for example.
+			if f1 == True and f1 == f2:
+				self.fontnames_mono.append(name)
+					
+			
+
+		# Show current fontname in listbox
+		fontname = self.font.actual("family")
+		fontindex = self.fontnames.index(fontname)
+		self.top.after(100, lambda args=[fontindex]: self.lb.select_set(args))
+		self.top.after(300, lambda args=[fontindex]: self.lb.see(args))
+		

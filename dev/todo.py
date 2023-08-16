@@ -1,26 +1,5 @@
 
-import tkinter
-import tkinter.font
-
-
-fontnames = [f for f in tkinter.font.families()]
-font1 = tkinter.font.Font(family='TkDefaultFont', size=12)
-boldfont = tkinter.font.Font(family='TkDefaultFont', size=12, weight='bold')
-
-for name in fontnames:
-	font1.config(family=name)
-	boldfont.config(family=name)
-	f=font1.metrics()['linespace']
-	f2=boldfont.metrics()['linespace']
-	if f == f2:
-		print(name, f, f2)
-
-
-
-
-
-
-win11 ctrl-leftright no work
+win11 ctrl-right no work
 e.info_patchlevel()
 _VersionInfoType(major=8, minor=6, micro=12, releaselevel='final', serial=0)
 
@@ -51,15 +30,11 @@ e.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w
 e.tk.eval('array set ::tcl::WordBreakRE $l3 ')
 e.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
 
-
 #################
 
 
 
-
-
-
-# Debian 12, ctrl-leftright works
+# Debian 12, ctrl-right works
 e.info_patchlevel()
 _VersionInfoType(major=8, minor=6, micro=13, releaselevel='final', serial=0)
 
@@ -75,6 +50,21 @@ e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBrea
 
 
 
+
+# win11 Courier:
+# e.contents.dlineinfo('insert') diff height when bold font on line
+# compared when not. affects getlinenums
+
+# Courier -> Consolas
+# fix changefont:
+# Being monospaced does not guarantee same lineheight between			ok?
+# normal and bold lines. Courier for example.
+
+# This guarantees same lineheight between
+# normal and bold lines. Consolas for example.
+
+
+
 # ctrl (shift) left right							ok?
 # no work in windows, seems to work in linux
 
@@ -85,10 +75,20 @@ e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBrea
 # checked, nothing  done 	ok?
 
 
-win11 Courier:
-e.contents.dlineinfo('insert') diff height when bold font on line
-compared when not.
-affects getlinenums
+
+
+
+
+at the end of file, center view?
+
+linespacing2 to reduce empty lines?
+
+changefont.py:
+mono filter chfont
+@ fonts are vertical chinese etc 	removed ok?
+disable when loading fonts  not done	ok?
+popup info on filters, grid?
+
 
 
 ctrl shift ae should select-from line?
