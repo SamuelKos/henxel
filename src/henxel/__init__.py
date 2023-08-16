@@ -679,6 +679,9 @@ class Editor(tkinter.Toplevel):
 		self.do_syntax(everything=True)
 			
 		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
+		# Viewsync-event does not trigger when window size changes,
+		# so to get linenumbers right, need to bind to this:
+		self.contents.bind("<Configure>", self.handle_configure)
 		
 		####  Syntax-highlight End  ######################################
 		
@@ -737,6 +740,14 @@ class Editor(tkinter.Toplevel):
 	def update_title(self, event=None):
 		tail = len(self.tabs) - self.tabindex - 1
 		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
+		
+	
+	def handle_configure(self, event=None):
+		'''	In case of size change, like maximize etc. viewsync-event is not
+			generated in such situation so need to bind to <Configure>-event.
+		'''
+		self.text_widget_height = self.scrollbar.winfo_height()
+		self.update_linenums()
 		
 	
 	def copy_windows(self, event=None):
@@ -879,7 +890,6 @@ class Editor(tkinter.Toplevel):
 		# More info in update_linenums()
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
-		
 		self.update_linenums()
 		
 		if self.tabs[self.tabindex].filepath:

@@ -71,6 +71,9 @@ e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBrea
 # center_view should move 1/3 per event?			ok?
 
 
+# Viewsync-event does not trigger when window size changes,		ok?
+# so to get linenumbers right, need to bind to this:
+# self.contents.bind("<Configure>", self.handle_configure)
 
 
 
@@ -83,8 +86,8 @@ linespacing2 to reduce empty lines?
 changefont.py:
 mono filter chfont
 @ fonts are vertical chinese etc 	removed ok?
-disable when loading fonts  not done	ok?
-
+disable when loading fonts  not done		ok?
+changefont info on filters done				ok?
 
 test change font, deselect cb5 cb6
 checkbutton_command
@@ -94,7 +97,6 @@ if self.tracefunc:
 
 
 
-changefont info on filters, grid?
 
 
 ctrl shift ae should select-from line?
