@@ -50,7 +50,7 @@
 		Ctrl-p  Move cursor up
 		Ctrl-e  Move cursor to lineend
 		Ctrl-a  Move cursor to linestart
-		Ctrl-j  Scroll down 12 lines without moving cursor (center view)
+		Ctrl-j  Scroll down without moving cursor (center view)
 		Ctrl-k  Remove from cursor to lineend
 		Ctrl-o  Insert linebreak at cursor
 		
@@ -163,6 +163,13 @@
 		to other lines. But editor moves cursor at the start of block so
 		you can start fixing indentation of that line.
 	
+	
+	How to: Execute part of the code from editor in Python-console
+	  - Remember to put import-lines before the desired code-blocks. Then
+		just select whole thing, copy and paste to console. You may have
+		to press Return before last block executes. This is very useful,
+		compared to writing all that in console is much more difficult.
+		
 	
 	How to: expand word
 	  - When starting to write object-name that has been used earlier near
