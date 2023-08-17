@@ -151,7 +151,7 @@ can have little offset. If this does not bother, then select any monospaced for 
 		self.fontnames_const_line = list()
 		self.fontnames_const_line_mono = list()
 		
-		self.top.after(300, self.get_fonts)
+		self.top.after(200, self.get_fonts)
 		
 		
 	def button_command(self, event=None):
@@ -201,13 +201,11 @@ can have little offset. If this does not bother, then select any monospaced for 
 		if filter_mono and filter_const_height:
 			fonts = self.fontnames_const_line_mono
 					
-		elif filter_const_height or filter_mono:
+		elif filter_mono:
+			fonts = self.fontnames_mono
 			
-			if filter_mono:
-				fonts = self.fontnames_mono
-			
-			else:
-				fonts = self.fontnames_const_line
+		elif filter_const_height:
+			fonts = self.fontnames_const_line
 		
 		else:
 			fonts = self.fontnames

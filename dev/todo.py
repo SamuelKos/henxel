@@ -1,79 +1,7 @@
 
-win11 ctrl-right no work
-e.info_patchlevel()
-_VersionInfoType(major=8, minor=6, micro=12, releaselevel='final', serial=0)
-
-array values:
-e.tk.eval('foreach key [array names ::tcl::WordBreakRE] {puts $::tcl::WordBreakRE($key)}' )
-\s*(\S+)\s*$
-\S\s|\s\S
-\S*\s+\S
-\s*\S+\s
-^.*(\S\s|\s\S)
-
-array keys:
-e.tk.eval('foreach key [array names ::tcl::WordBreakRE] {puts $key}' )
-previous
-after
-next
-end
-before
-
-
-#################
-To fix: replace array ::tcl::WordBreakRE contents with newer version, and
-replace proc tk::TextNextWord with newer version which was looked in Debian 12 below.
-Needs to generate ctrl-leftright before this eval works?:
-
-e.contents.event_generate('<<NextWord>>')
-e.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}]; puts $l3 ')
-e.tk.eval('array set ::tcl::WordBreakRE $l3 ')
-e.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
-
-#################
 
 
 
-# Debian 12, ctrl-right works
-e.info_patchlevel()
-_VersionInfoType(major=8, minor=6, micro=13, releaselevel='final', serial=0)
-
-array values:
-e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBreakRE($index)}')
-\W*(\w+)\W*$
-\w\W|\W\w
-\w*\W+\w
-\W*\w+\W
-^.*(\w\W|\W\w)
-
-
-
-
-
-
-# win11 Courier:
-# e.contents.dlineinfo('insert') diff height when bold font on line
-# compared when not. affects getlinenums
-
-# Courier -> Consolas
-# fix changefont:
-# Being monospaced does not guarantee same lineheight between			ok?
-# normal and bold lines. Courier for example.
-
-# This guarantees same lineheight between
-# normal and bold lines. Consolas for example.
-
-
-
-# ctrl (shift) left right							ok?
-# no work in windows, seems to work in linux
-
-# center_view should move 1/3 per event?			ok?
-
-
-# Viewsync-event does not trigger when window size changes,		ok?
-# so to get linenumbers right, need to bind to this:
-# self.contents.bind("<Configure>", self.handle_configure)
 
 
 
@@ -82,29 +10,9 @@ at the end of file, center view?
 
 linespacing2 to reduce empty lines?
 
-
-changefont.py:
-mono filter chfont
-@ fonts are vertical chinese etc 	removed ok?
-disable when loading fonts  not done		ok?
-changefont info on filters done				ok?
-
-test change font, deselect cb5 cb6
-checkbutton_command
-if self.tracefunc:
-	self.tracefunc()
-
-
-
-
-
-
 ctrl shift ae should select-from line?
 
-
 cancel ctrl npib as move cursor?
-
-
 
 
 run file shortcut in windows?
@@ -155,6 +63,57 @@ if self.flag_fix_indent:
 toggle clipboard (10 newest items) dropdown in git_btn,
 on click put to first?
 
+
+
+
+
+
+win11 ctrl-right no work
+e.info_patchlevel()
+_VersionInfoType(major=8, minor=6, micro=12, releaselevel='final', serial=0)
+
+array values:
+e.tk.eval('foreach key [array names ::tcl::WordBreakRE] {puts $::tcl::WordBreakRE($key)}' )
+\s*(\S+)\s*$
+\S\s|\s\S
+\S*\s+\S
+\s*\S+\s
+^.*(\S\s|\s\S)
+
+array keys:
+e.tk.eval('foreach key [array names ::tcl::WordBreakRE] {puts $key}' )
+previous
+after
+next
+end
+before
+
+
+#################
+To fix: replace array ::tcl::WordBreakRE contents with newer version, and
+replace proc tk::TextNextWord with newer version which was looked in Debian 12 below.
+Needs to generate ctrl-leftright before this eval works?:
+
+e.contents.event_generate('<<NextWord>>')
+e.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}]; puts $l3 ')
+e.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+e.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
+
+#################
+
+
+
+# Debian 12, ctrl-right works
+e.info_patchlevel()
+_VersionInfoType(major=8, minor=6, micro=13, releaselevel='final', serial=0)
+
+array values:
+e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBreakRE($index)}')
+\W*(\w+)\W*$
+\w\W|\W\w
+\w*\W+\w
+\W*\w+\W
+^.*(\w\W|\W\w)
 
 
 

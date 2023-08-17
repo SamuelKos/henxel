@@ -1,6 +1,24 @@
 # Changelog
-* To version: 	0.2.4
+* To version: 	0.2.5
 * From version:	0.0.3
+
+
+# 0.2.5
+- Added small Tcl-script in init to fix ctrl-(shift)-right-left no work in Windows11 with Tcl 8.6.12.
+Changed it to the same as in Tcl 8.6.13 in Debian 12. 8.6.13-version uses word-chars in wordbreak regular
+expressions where 8.6.12 uses space-chars. It explains some of the difference. Space chars RE were greedier
+compared to word-char based ones, and thus they matched more. In normal text editing one would definitely
+want to use space chars RE but this editor is for code editing.
+- Center_view now shifts 1/3 screen height up per event.
+- Because Viewsync-event does not trigger when window size changes, to get linenumbers updated,
+added handle_configure() that is binded to <Configure>-event, which is generetad when window size changes.
+-Being monospaced font does not guarantee same lineheight between lines not containing bold-text
+and lines that do contain bold-text, like keywords. Courier for example is monospaced but does not have
+this kind of constant lineheight. If choosing other than constant lineheight font, linenumbers
+can have little offset. So Consolas is now before Courier in GOODFONTS. Because of this, made changes to
+changefont.py: Added filters for mono- and constant height -fonts, also removed unnecessary options. Also
+added missing call for tracefunc in checkbutton_command. Vertical fonts (those starting with @) are removed
+from the list. Added info about filters.
 
 
 # 0.2.4
