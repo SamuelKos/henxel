@@ -114,15 +114,49 @@ TAB_WIDTH_CHAR = ' '
 
 SLIDER_MINSIZE = 66
 
+# macos, not working:
+# ctrl -updown
+# ctrl -leftright
+# copy paste in place
+
+
+# macos, working:
+# ctrl-f, then ctrl-np and esc
+# ctrl-r, then ctrl-np and esc
+# ctrl-zZ
+# ctrl-ae
+# ctrl-npib
+# mouse-2 right popup
+# ctrl-qd
+
+
+
+
+
+
+
+# night colors macos:
+# btn_git
+# filedialog
+# entry
+
+
+# fontchoose, optionmenu choises bigger
+
+
+#'.AppleSystemUIFont' is not in list
 
 GOODFONTS = [
-			'Noto Mono',
 			'Bitstream Vera Sans Mono',
 			'Liberation Mono',
 			'DejaVu Sans Mono',
 			'Inconsolata',
 			'Courier 10 Pitch',
 			'Consolas',
+			'Andale Mono',
+			'Courier New',
+			'Noto Mono',
+			'Noto Sans Mono',
 			'Courier'
 			]
 			
@@ -267,7 +301,6 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
 		self.bind( "<Control-plus>", self.increase_scrollbar_width)
 		self.bind( "<Control-R>", self.replace_all)
-		self.bind( "<Button-3>", self.raise_popup)
 		self.bind( "<Control-g>", self.gotoline)
 		self.bind( "<Control-r>", self.replace)
 		self.bind( "<Alt-s>", self.color_choose)
@@ -372,15 +405,52 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-e>", self.goto_lineend)
 		
 		
+		# fullscreen
+		#self.tk.eval('wm attributes .!editor -fullscreen 0')
+		
+		# get tcl name of widget
+		#str(self.nametowidget(self.contents))
+		#self.contents.winfo_name()
+		
+		self.os = None
+		s = self.winfo_server()
+		t = self.tk.eval('tk windowingsystem')
+	
+		if 'aqua' in t:
+			self.os == 'macos'
+			
+		elif 'win32' in t:
+			self.os == 'windows'
+			
+		elif 'x11' in t:
+			self.os = 'linux'
+			
+		self.mac_os = False
+		if 'Apple' in s:
+			self.mac_os = True
+		
 		# If started from Windows, is handled in tab_override
 		self.windows = False
-		try:
-			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
-			
-		except tkinter.TclError:
-			self.windows = True
-			# Also, fix copying to clipboard in Windows
-			self.bind( "<Control-c>", self.copy_windows)
+		
+		if not self.mac_os:
+			try:
+				self.contents.bind( "<ISO_Left_Tab>", self.unindent)
+				
+			except tkinter.TclError:
+				self.windows = True
+				# Also, fix copying to clipboard in Windows
+				self.bind( "<Control-c>", self.copy_windows)
+		
+		
+		
+		self.right_mousebutton_num = 3
+		
+		if self.mac_os:
+			self.right_mousebutton_num = 2
+		
+		self.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
+		
+		
 		
 		
 		self.contents.bind( "<Control-i>", self.move_right)
@@ -389,7 +459,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-p>", self.move_up)
 		
 		self.contents.bind( "<Control-j>", self.center_view)
-		self.contents.bind( "<Alt-f>", self.font_choose)
+		self.contents.bind( "<Control-g>", self.font_choose)
 		self.contents.bind( "<Alt-x>", self.toggle_syntax)
 		self.contents.bind( "<Return>", self.return_override)
 		
@@ -551,10 +621,17 @@ class Editor(tkinter.Toplevel):
 					
 			if not fontname:
 				fontname = 'TkDefaulFont'
-
+				
+			if self.mac_os:
+				s0 = 22
+				s1 = 16
+			else:
+				s0 = 12
+				s1 = 10
+				
 			# Initialize rest of configurables
-			self.font.config(family=fontname, size=12)
-			self.menufont.config(family=fontname, size=10)
+			self.font.config(family=fontname, size=s0)
+			self.menufont.config(family=fontname, size=s1)
 		
 			self.scrollbar_width = 30
 			self.elementborderwidth = 4
@@ -2397,7 +2474,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		
-		self.bind("<Button-3>", lambda event: self.raise_popup(event))
+		self.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
 		self.state = 'normal'
 		self.update_title()
 		
@@ -2434,7 +2511,7 @@ class Editor(tkinter.Toplevel):
 		
 		if len(err) != 0:
 			self.bind("<Escape>", self.stop_show_errors)
-			self.bind("<Button-3>", self.do_nothing)
+			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.state = 'error'
 			
 			self.taglinks = dict()
@@ -2517,7 +2594,7 @@ class Editor(tkinter.Toplevel):
 		
 		if len(self.errlines) != 0:
 			self.bind("<Escape>", self.stop_show_errors)
-			self.bind("<Button-3>", self.do_nothing)
+			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.state = 'error'
 			
 			tmp = self.contents.get('1.0', tkinter.END)
@@ -2583,7 +2660,7 @@ class Editor(tkinter.Toplevel):
 	def stop_show_errors(self, event=None):
 		self.state = 'normal'
 		self.bind("<Escape>", self.do_nothing)
-		self.bind("<Button-3>", lambda event: self.raise_popup(event))
+		self.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
 		
 		self.entry.delete(0, tkinter.END)
 		
@@ -3887,7 +3964,7 @@ class Editor(tkinter.Toplevel):
 		self.avoid_viewsync_mess()
 		
 		self.bind("<Escape>", self.do_nothing)
-		self.bind("<Button-3>", lambda event: self.raise_popup(event))
+		self.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
 		
 		
 	def help(self, event=None):
@@ -3918,7 +3995,7 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 		
-		self.bind("<Button-3>", self.do_nothing)
+		self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 		self.bind("<Escape>", self.stop_help)
 			
 ########## Gotoline and Help End
@@ -4400,7 +4477,7 @@ class Editor(tkinter.Toplevel):
 				pos = "%s + %dc" % (pos, wordlen+1)
 				
 		if self.search_matches > 0:
-			self.bind("<Button-3>", self.do_nothing)
+			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			
 			if self.state == 'search':
 				self.title( f'Search: 1/{self.search_matches}' )
@@ -4444,7 +4521,7 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 		self.replace_overlap_index = None
-		self.bind("<Button-3>", lambda event: self.raise_popup(event))
+		self.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
 		
 		#self.wait_for(200)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
