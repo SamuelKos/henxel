@@ -326,12 +326,6 @@ class Editor(tkinter.Toplevel):
 			self.bind( "<Alt-w>", self.walk_tabs)
 			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
 		
-		
-		
-		if self.os_type == 'mac_os':
-			self.bind( "<n>", self.n_override)
-		
-		f
 		#######################################################
 		
 		
@@ -432,6 +426,13 @@ class Editor(tkinter.Toplevel):
 		
 		if self.os_type == 'linux':
 			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
+		
+		
+		if self.os_type == 'mac_os':
+			self.contents.bind( "<n>", self.mac_cmd_overrides) # newtab
+			self.contents.bind( "<s>", self.mac_cmd_overrides) # walk_tab
+			self.contents.bind( "<a>", self.mac_cmd_overrides) # walk_back
+			
 		
 		self.contents.bind( "<Control-g>", self.font_choose)
 		
@@ -910,6 +911,14 @@ class Editor(tkinter.Toplevel):
 		self.quit()
 		self.destroy()
 		
+		if self.os_type == 'mac_os':
+			# This osascript-language is funny
+			# https://ss64.com/osx/osascript.html
+			s = ['osascript', '-e', 'tell app "Terminal" to activate']
+			t = threading.Thread( target=subprocess.run, args=(s,), daemon=True )
+			t.start()
+			
+		
 		if self.tracefunc_name:
 			self.tracevar_filename.trace_remove('write', self.tracefunc_name)
 		
@@ -1087,17 +1096,28 @@ class Editor(tkinter.Toplevel):
 ############## Tab Related Begin
 
 	
-	def n_override(self, event=None, error=False):
+	def mac_cmd_overrides(self, event=None):
 	
-		# event == None when clicked hyper-link in tag_link()
-		if self.state != 'normal' and event != None:
+		if self.state != 'normal':
 			self.bell()
 			return 'break'
 			
+		
 		if event.state == 8:
-			self.new_tab(event, error)
-			return 'break'
 			
+			if event.keysym == 'n':
+				self.new_tab(event=event)
+				
+			if event.keysym == 's':
+				self.walk_tabs(event=event)
+			
+			if event.keysym == 'a':
+				self.walk_tabs(event=event, **{'back':True})
+				
+			else:
+				return
+				
+			return 'break'
 			
 	
 	def new_tab(self, event=None, error=False):
@@ -3190,6 +3210,12 @@ class Editor(tkinter.Toplevel):
 		if event.state == 68:
 			self.run()
 			return "break"
+		
+		# cmd-return:
+		if self.os_type == 'mac_os' and event.state == 8:
+			self.btn_open.invoke()
+			return 'break'
+		
 		
 	
 		# Cursor indexes when pressed return:

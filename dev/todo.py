@@ -1,3 +1,12 @@
+
+macos give focus back to terminal at quit with osascript
+assumes Terminal
+
+# padx font measure
+
+
+# macos after close editor give focus to console
+
 # mac_os, not working:
 # ctrl -updown
 # ctrl -leftright
@@ -32,12 +41,18 @@
 # ctrl +-
 # ctrl-t
 
+fixes
+cdm-n	newtab
+cmd-s	walk	cmd-right?
+cmd-a	back	cmd-left?
+cmd-ret	open
+
 
 # alt left right next prev word work without tcl fix
 # check in windows
 
-# cmd shift left right select from line
-# fn f fullscreen
+# cmd shift left right select from line 		but not good selection
+# fn f fullscreen	but inserts f
 # cmd w  quit_me
 
 
@@ -65,7 +80,7 @@
 
 
 
-
+search proceed with return?
 
 at the end of file, center view?
 
