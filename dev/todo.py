@@ -1,3 +1,64 @@
+# mac_os, not working:
+# ctrl -updown
+# ctrl -leftright
+# copy paste in place
+# ctrl-v cmd v
+# ctrl-x, cmd x
+# shift tab
+# all alt shortcuts makes some special char
+# alt return cmd -return?
+
+# alt -n cmd -n?
+
+
+# mac_os keys
+# fn Super
+# cmd Meta
+
+
+# mac_os, working:
+# ctrl-f, then ctrl-np and esc
+# ctrl-r, then ctrl-np and esc
+# ctrl-zZ
+# ctrl-ae
+# ctrl-npib
+# mouse-2 right popup
+# ctrl-qd   change ctrl d -> cmd d?
+# ctrl-c cmd c
+# ctrl-j center view
+# tab
+# shift return backspace comment uncomment
+# ctrl -backspace show next, left go back
+# ctrl +-
+# ctrl-t
+
+
+# alt left right next prev word work without tcl fix
+# check in windows
+
+# cmd shift left right select from line
+# fn f fullscreen
+# cmd w  quit_me
+
+
+# night colors mac_os:
+# btn_git
+# filedialog
+# entry
+
+
+# mac_os helptext
+
+# fontchoose, optionmenu choises bigger
+
+
+#'.AppleSystemUIFont' is not in list
+
+
+
+
+
+
 
 
 

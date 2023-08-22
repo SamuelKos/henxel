@@ -114,50 +114,6 @@ TAB_WIDTH_CHAR = ' '
 
 SLIDER_MINSIZE = 66
 
-# macos, not working:
-# ctrl -updown
-# ctrl -leftright
-# copy paste in place
-# ctrl-v cmd v
-# ctrl-x, cmd x
-# shift tab
-# all alt shortcuts makes some special char
-# alt return
-
-
-
-
-
-# macos, working:
-# ctrl-f, then ctrl-np and esc
-# ctrl-r, then ctrl-np and esc
-# ctrl-zZ
-# ctrl-ae
-# ctrl-npib
-# mouse-2 right popup
-# ctrl-qd
-# ctrl-c cmd c
-# ctrl-j center view
-# tab
-# shift return backspace comment uncomment
-# ctrl -backspace show next, left go back
-# ctrl +-
-# ctrl-t
-
-# cmd w  quit_me
-
-
-# night colors macos:
-# btn_git
-# filedialog
-# entry
-
-
-
-# fontchoose, optionmenu choises bigger
-
-
-#'.AppleSystemUIFont' is not in list
 
 GOODFONTS = [
 			'Bitstream Vera Sans Mono',
@@ -312,44 +268,43 @@ class Editor(tkinter.Toplevel):
 		
 		
 		# fullscreen
+		# fn f
 		#self.tk.eval('wm attributes .!editor -fullscreen 0')
 		
 		# get tcl name of widget
 		#str(self.nametowidget(self.contents))
 		#self.contents.winfo_name()
 		
-		self.os = None
+		self.os_type = None
 		#s = self.winfo_server()
 		t = self.tk.eval('tk windowingsystem')
+		
 	
 		if 'aqua' in t:
-			self.os == 'macos'
+			self.os_type = 'mac_os'
 			
 		elif 'win32' in t:
-			self.os == 'windows'
+			self.os_type = 'windows'
 			
 		elif 'x11' in t:
-			self.os = 'linux'
-			
+			self.os_type = 'linux'
+		
 		# after contents
-##		if self.os = 'linux':
+##		if self.os_type = 'linux':
 ##			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
 ##
 				
-		if self.os == 'windows':
+		if self.os_type == 'windows':
 			# fix copying to clipboard in Windows.
 			self.bind( "<Control-c>", self.copy_windows)
 		
 		
 		self.right_mousebutton_num = 3
 		
-		if self.os == 'macos':
+		if self.os_type == 'mac_os':
 			self.right_mousebutton_num = 2
 		
 		self.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
-		
-		
-		
 		
 		
 		
@@ -361,13 +316,25 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Control-R>", self.replace_all)
 		self.bind( "<Control-g>", self.gotoline)
 		self.bind( "<Control-r>", self.replace)
-		self.bind( "<Alt-s>", self.color_choose)
-		self.bind( "<Alt-t>", self.toggle_color)
-		self.bind( "<Alt-n>", self.new_tab)
-		self.bind( "<Alt-w>", self.walk_tabs)
 		
 		
-		self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
+		#######################################################
+		if not self.os_type == 'mac_os':
+			self.bind( "<Alt-n>", self.new_tab)
+			self.bind( "<Alt-s>", self.color_choose)
+			self.bind( "<Alt-t>", self.toggle_color)
+			self.bind( "<Alt-w>", self.walk_tabs)
+			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
+		
+		
+		
+		if self.os_type == 'mac_os':
+			self.bind( "<n>", self.n_override)
+		
+		f
+		#######################################################
+		
+		
 		
 		self.helptxt = 'Could not load help-file. Press ESC to return.'
 		
@@ -454,18 +421,28 @@ class Editor(tkinter.Toplevel):
 				
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 		
-		self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
 		
-		self.contents.bind( "<Alt-l>", self.toggle_ln)
+		
+		#######################################################
+		if self.os_type != 'mac_os':
+			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
+			self.contents.bind( "<Alt-l>", self.toggle_ln)
+			self.contents.bind( "<Alt-x>", self.toggle_syntax)
+		
+		
+		if self.os_type == 'linux':
+			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
+		
+		self.contents.bind( "<Control-g>", self.font_choose)
+		
+		#######################################################
+		
+		
+		
 		self.contents.bind( "<Control-f>", self.search)
 		
 		self.contents.bind( "<Control-a>", self.goto_linestart)
 		self.contents.bind( "<Control-e>", self.goto_lineend)
-		
-		
-		if self.os == 'linux':
-			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
-		
 		
 		self.contents.bind( "<Control-i>", self.move_right)
 		self.contents.bind( "<Control-b>", self.move_left)
@@ -473,8 +450,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-p>", self.move_up)
 		
 		self.contents.bind( "<Control-j>", self.center_view)
-		self.contents.bind( "<Control-g>", self.font_choose)
-		self.contents.bind( "<Alt-x>", self.toggle_syntax)
 		self.contents.bind( "<Return>", self.return_override)
 		
 		self.contents.bind( "<Control-d>", self.del_tab)
@@ -526,24 +501,24 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="        help", command=self.help)
 		
 		
-				
-		# Win11 ctrl-leftright no work (as intended) in tcl 8.6.12 but does in 8.6.13, so:
-		self.tcl_version = self.info_patchlevel()
-		if self.tcl_version.major == 8 and self.tcl_version.minor == 6 and self.tcl_version.micro < 13:
-		
-			# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
-			# replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
-			# Need for some reason generate ctrl-leftright before, because array ::tcl::WordBreakRE does not exist yet,
-			# but after this event it does:
-			
-			self.contents.insert(1.0, 'asd')
-			self.contents.event_generate('<<NextWord>>')
-			self.contents.delete('1.0', tkinter.END)
-			
-			self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
-			self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
-			self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
-		
+##
+##		# Win11 ctrl-leftright no work (as intended) in tcl 8.6.12 but does in 8.6.13, so:
+##		self.tcl_version = self.info_patchlevel()
+##		if self.tcl_version.major == 8 and self.tcl_version.minor == 6 and self.tcl_version.micro < 13:
+##
+##			# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
+##			# replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
+##			# Need for some reason generate ctrl-leftright before, because array ::tcl::WordBreakRE does not exist yet,
+##			# but after this event it does:
+##
+##			self.contents.insert(1.0, 'asd')
+##			self.contents.event_generate('<<NextWord>>')
+##			self.contents.delete('1.0', tkinter.END)
+##
+##			self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+##			self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+##			self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
+##
 		
 		
 		if data:
@@ -636,7 +611,7 @@ class Editor(tkinter.Toplevel):
 			if not fontname:
 				fontname = 'TkDefaulFont'
 				
-			if self.os == 'macos':
+			if self.os_type == 'mac_os':
 				s0 = 22
 				s1 = 16
 			else:
@@ -803,7 +778,7 @@ class Editor(tkinter.Toplevel):
 		# set cursor pos:
 		line = self.tabs[self.tabindex].position
 		
-		if self.os == 'windows':
+		if self.os_type == 'windows':
 			self.contents.focus_force()
 		else:
 			self.contents.focus_set()
@@ -1111,13 +1086,29 @@ class Editor(tkinter.Toplevel):
 ############## Linenumbers End
 ############## Tab Related Begin
 
-	def new_tab(self, event=None, error=False):
-
+	
+	def n_override(self, event=None, error=False):
+	
 		# event == None when clicked hyper-link in tag_link()
 		if self.state != 'normal' and event != None:
 			self.bell()
 			return 'break'
+			
+		if event.state == 8:
+			self.new_tab(event, error)
+			return 'break'
+			
+			
 	
+	def new_tab(self, event=None, error=False):
+	
+		# event == None when clicked hyper-link in tag_link()
+		if self.state != 'normal' and event != None:
+			self.bell()
+			return 'break'
+		
+		
+		
 		if len(self.tabs) > 0  and not error:
 			try:
 				pos = self.contents.index(tkinter.INSERT)
@@ -2885,7 +2876,7 @@ class Editor(tkinter.Toplevel):
 	def copy(self):
 		''' When copy is selected from popup-menu
 		'''
-		if self.os == 'windows':
+		if self.os_type == 'windows':
 			self.copy_windows()
 		
 		else:
@@ -3094,7 +3085,7 @@ class Editor(tkinter.Toplevel):
 		# and unindent if it is the state.
 		if hasattr(event, 'state'):
 			
-			if self.os == 'windows':
+			if self.os_type == 'windows':
 				
 				if event.state == 9:
 					self.unindent()
