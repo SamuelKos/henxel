@@ -118,6 +118,14 @@ SLIDER_MINSIZE = 66
 # ctrl -updown
 # ctrl -leftright
 # copy paste in place
+# ctrl-v cmd v
+# ctrl-x, cmd x
+# shift tab
+# all alt shortcuts makes some special char
+# alt return
+
+
+
 
 
 # macos, working:
@@ -128,17 +136,22 @@ SLIDER_MINSIZE = 66
 # ctrl-npib
 # mouse-2 right popup
 # ctrl-qd
+# ctrl-c cmd c
+# ctrl-j center view
+# tab
+# shift return backspace comment uncomment
+# ctrl -backspace show next, left go back
+# ctrl +-
+# ctrl-t
 
-
-
-
-
+# cmd w  quit_me
 
 
 # night colors macos:
 # btn_git
 # filedialog
 # entry
+
 
 
 # fontchoose, optionmenu choises bigger
@@ -296,6 +309,51 @@ class Editor(tkinter.Toplevel):
 		self.state = 'normal'
 		
 		
+		
+		
+		# fullscreen
+		#self.tk.eval('wm attributes .!editor -fullscreen 0')
+		
+		# get tcl name of widget
+		#str(self.nametowidget(self.contents))
+		#self.contents.winfo_name()
+		
+		self.os = None
+		#s = self.winfo_server()
+		t = self.tk.eval('tk windowingsystem')
+	
+		if 'aqua' in t:
+			self.os == 'macos'
+			
+		elif 'win32' in t:
+			self.os == 'windows'
+			
+		elif 'x11' in t:
+			self.os = 'linux'
+			
+		# after contents
+##		if self.os = 'linux':
+##			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
+##
+				
+		if self.os == 'windows':
+			# fix copying to clipboard in Windows.
+			self.bind( "<Control-c>", self.copy_windows)
+		
+		
+		self.right_mousebutton_num = 3
+		
+		if self.os == 'macos':
+			self.right_mousebutton_num = 2
+		
+		self.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
+		
+		
+		
+		
+		
+		
+		
 		self.bind( "<Escape>", self.do_nothing )
 		self.bind( "<Return>", self.do_nothing)
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
@@ -405,52 +463,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-e>", self.goto_lineend)
 		
 		
-		# fullscreen
-		#self.tk.eval('wm attributes .!editor -fullscreen 0')
-		
-		# get tcl name of widget
-		#str(self.nametowidget(self.contents))
-		#self.contents.winfo_name()
-		
-		self.os = None
-		s = self.winfo_server()
-		t = self.tk.eval('tk windowingsystem')
-	
-		if 'aqua' in t:
-			self.os == 'macos'
-			
-		elif 'win32' in t:
-			self.os == 'windows'
-			
-		elif 'x11' in t:
-			self.os = 'linux'
-			
-		self.mac_os = False
-		if 'Apple' in s:
-			self.mac_os = True
-		
-		# If started from Windows, is handled in tab_override
-		self.windows = False
-		
-		if not self.mac_os:
-			try:
-				self.contents.bind( "<ISO_Left_Tab>", self.unindent)
-				
-			except tkinter.TclError:
-				self.windows = True
-				# Also, fix copying to clipboard in Windows
-				self.bind( "<Control-c>", self.copy_windows)
-		
-		
-		
-		self.right_mousebutton_num = 3
-		
-		if self.mac_os:
-			self.right_mousebutton_num = 2
-		
-		self.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
-		
-		
+		if self.os == 'linux':
+			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
 		
 		
 		self.contents.bind( "<Control-i>", self.move_right)
@@ -622,7 +636,7 @@ class Editor(tkinter.Toplevel):
 			if not fontname:
 				fontname = 'TkDefaulFont'
 				
-			if self.mac_os:
+			if self.os == 'macos':
 				s0 = 22
 				s1 = 16
 			else:
@@ -789,7 +803,7 @@ class Editor(tkinter.Toplevel):
 		# set cursor pos:
 		line = self.tabs[self.tabindex].position
 		
-		if self.windows:
+		if self.os == 'windows':
 			self.contents.focus_force()
 		else:
 			self.contents.focus_set()
@@ -2871,7 +2885,7 @@ class Editor(tkinter.Toplevel):
 	def copy(self):
 		''' When copy is selected from popup-menu
 		'''
-		if self.windows:
+		if self.os == 'windows':
 			self.copy_windows()
 		
 		else:
@@ -3080,7 +3094,7 @@ class Editor(tkinter.Toplevel):
 		# and unindent if it is the state.
 		if hasattr(event, 'state'):
 			
-			if self.windows:
+			if self.os == 'windows':
 				
 				if event.state == 9:
 					self.unindent()
