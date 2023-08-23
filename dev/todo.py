@@ -1,8 +1,15 @@
+font should be check in thread at import if macos?
 
-macos give focus back to terminal at quit with osascript
-assumes Terminal
 
-# padx font measure
+macos give focus back to terminal at quit with osascript		ok?
+assumes Terminal not ok
+
+
+padx font measure ?
+after font change re-grid?
+
+
+# check font etc conf is saved
 
 
 # macos after close editor give focus to console
@@ -64,7 +71,6 @@ cmd-ret	open
 
 # mac_os helptext
 
-# fontchoose, optionmenu choises bigger
 
 
 #'.AppleSystemUIFont' is not in list
@@ -74,6 +80,7 @@ cmd-ret	open
 
 
 
+# fontchoose, optionmenu choises bigger		ok?
 
 
 

@@ -56,8 +56,8 @@ class FontChooser:
 		self.optionmenu.config(font=('TkDefaultFont',10))
 		
 		# Set font of dropdown items:
-		menu = self.topframe.nametowidget(self.optionmenu.menuname)
-		menu.config(font=('TkDefaultFont',10))
+		self.menu = self.topframe.nametowidget(self.optionmenu.menuname)
+		self.menu.config(font=('TkDefaultFont',10))
 		
 		# Optionmenu contains font-instances to be configured:
 		self.optionmenu.pack(side=tkinter.LEFT)
@@ -160,6 +160,7 @@ can have little offset. If this does not bother, then select any monospaced for 
 		'''
 		widgetlist = [
 					self.optionmenu,
+					self.menu,
 					self.lb,
 					self.sb,
 					self.cb1,
@@ -292,9 +293,10 @@ can have little offset. If this does not bother, then select any monospaced for 
 		'''
 		
 		font1 = tkinter.font.Font(family='TkDefaultFont', size=12)
-		boldfont = tkinter.font.Font(family='TkDefaultFont', size=12, weight='bold')
+		boldfont = font1.copy()
+		boldfont.config(weight='bold')
 		
-		# second test: filter out vertical fonts.
+		# Second test: filter out vertical fonts.
 		def test_font(f):
 			return f in self.badfonts or f[0] == '@'
 			
@@ -324,7 +326,7 @@ can have little offset. If this does not bother, then select any monospaced for 
 			f2=boldfont.metrics()['fixed']
 			
 			
-			# Give info that something is happening
+			# Give info that something is happening.
 			self.fontnames.append(name)
 			self.lb.insert('end', name)
 			self.lb.see('end')

@@ -110,10 +110,11 @@ VERSION = importlib.metadata.version(__name__)
 
 
 TAB_WIDTH = 4
-TAB_WIDTH_CHAR = ' '
+TAB_WIDTH_CHAR = 'A'
 
 SLIDER_MINSIZE = 66
 
+# .APPLESYSTEMUIFONT
 
 GOODFONTS = [
 			'Bitstream Vera Sans Mono',
@@ -121,12 +122,12 @@ GOODFONTS = [
 			'DejaVu Sans Mono',
 			'Inconsolata',
 			'Courier 10 Pitch',
-			'Consolas',
-			'Andale Mono',
-			'Courier New',
-			'Noto Mono',
-			'Noto Sans Mono',
-			'Courier'
+			'Consolas'
+##			'Andale Mono',
+##			'Courier New',
+##			'Noto Mono',
+##			'Noto Sans Mono',
+##			'Courier'
 			]
 			
 ############ Constants End
@@ -612,12 +613,92 @@ class Editor(tkinter.Toplevel):
 			if not fontname:
 				fontname = 'TkDefaulFont'
 				
+				
 			if self.os_type == 'mac_os':
+				
+				if fontname == 'TkDefaulFont':
+				
+					badfonts = [
+						'Standard Symbols PS',
+						'OpenSymbol',
+						'Noto Color Emoji',
+						'FontAwesome',
+						'Dingbats',
+						'Droid Sans Fallback',
+						'D050000L',
+						'Wingdings',
+						'Wingdings 2',
+						'Wingdings 3'
+						]
+						
+					good = list()
+					mono = list()
+		
+					font1 = tkinter.font.Font(family='TkDefaultFont', size=12)
+					boldfont = font1.copy()
+					boldfont.config(weight='bold')
+					
+					# Second test: filter out vertical fonts.
+					def test_font(f):
+						return f in badfonts or f[0] == '@'
+						
+					
+					fontnames = [f for f in tkinter.font.families() if not test_font(f)]
+					
+					# Remove duplicates then sort
+					s = set(fontnames)
+					fontnames = [f for f in s]
+					fontnames.sort()
+					
+					
+					for name in fontnames:
+						font1.config(family=name)
+						boldfont.config(family=name)
+						
+						l1=font1.metrics()['linespace']
+						l2=boldfont.metrics()['linespace']
+						
+						a1=font1.metrics()['ascent']
+						a2=boldfont.metrics()['ascent']
+						
+						d1=font1.metrics()['descent']
+						d2=boldfont.metrics()['descent']
+						
+						f1=font1.metrics()['fixed']
+						f2=boldfont.metrics()['fixed']
+						
+						
+						# This guarantees same lineheight between
+						# normal and bold lines. Consolas for example.
+						if l1 == l2 and a1 == a2 and d1 == d2 and f1 == True and f1 == f2:
+							good.append(name)
+						
+						
+						# Being monospaced does not guarantee same lineheight between
+						# normal and bold lines. Courier for example.
+						if f1 == True and f1 == f2:
+							mono.append(name)
+						
+						
+					if len(good) > 0:
+						fontname = good[0]
+					
+					elif len(mono) > 0:
+						fontname = mono[0]
+						
+					else:
+						fontname = fontnames[0]
+	
+				
+				# It seems there is no font-scaling in mac_os
 				s0 = 22
 				s1 = 16
+				
 			else:
 				s0 = 12
 				s1 = 10
+				
+				
 				
 			# Initialize rest of configurables
 			self.font.config(family=fontname, size=s0)
@@ -628,12 +709,15 @@ class Editor(tkinter.Toplevel):
 			
 			self.scrollbar.config(width=self.scrollbar_width)
 			self.scrollbar.config(elementborderwidth=self.elementborderwidth)
-			
+
+
+			pad = self.font.measure('A') // 3
+
 			self.ind_depth = TAB_WIDTH
 			self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
 			self.contents.config(font=self.font, foreground=self.fgcolor,
 				background=self.bgcolor, insertbackground=self.fgcolor,
-				tabs=(self.tab_width, ))
+				tabs=(self.tab_width, ), padx=pad)
 				
 			self.entry.config(font=self.menufont)
 			self.btn_open.config(font=self.menufont)
@@ -642,7 +726,7 @@ class Editor(tkinter.Toplevel):
 			
 			self.btn_git.config(font=self.menufont)
 			
-			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled')
+			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled', padx=pad)
 
 		
 		self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
@@ -763,7 +847,8 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.grid_configure(row=0, column = 2, sticky='nsew')
 		self.btn_save.grid_configure(row=0, column = 3, columnspan=2, sticky='nsew')
 		
-		self.ln_widget.grid_configure(row=1, column = 0, sticky='nsw')
+		
+		self.ln_widget.grid_configure(row=1, column = 0, sticky='nswe')
 			
 		# If want linenumbers:
 		if self.want_ln:
@@ -915,8 +1000,11 @@ class Editor(tkinter.Toplevel):
 			# This osascript-language is funny
 			# https://ss64.com/osx/osascript.html
 			s = ['osascript', '-e', 'tell app "Terminal" to activate']
-			t = threading.Thread( target=subprocess.run, args=(s,), daemon=True )
-			t.start()
+			subprocess.run(s)
+			
+			# No need to put in thread
+			#t = threading.Thread( target=subprocess.run, args=(s,), daemon=True )
+			#t.start()
 			
 		
 		if self.tracefunc_name:
@@ -1453,7 +1541,9 @@ class Editor(tkinter.Toplevel):
 				self.tabindex = 0
 				self.tabs[self.tabindex].active = True
 		
-	
+
+		pad = self.font.measure('A') // 3
+
 		self.tab_width = self.font.measure(self.ind_depth * TAB_WIDTH_CHAR)
 		
 
@@ -1464,12 +1554,13 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.config(font=self.font, foreground=self.fgcolor,
 			background=self.bgcolor, insertbackground=self.fgcolor,
-			tabs=(self.tab_width, ))
+			tabs=(self.tab_width, ), padx=pad)
 			
 		self.scrollbar.config(width=self.scrollbar_width)
 		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
 		
-		self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor)
+		self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor,
+			padx=pad)
 			
 		self.entry.config(font=self.menufont)
 		self.btn_open.config(font=self.menufont)
@@ -1981,8 +2072,11 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('breaks', font=self.boldfont)
 		self.contents.tag_config('calls', font=self.boldfont)
 		
+		pad = self.font.measure('A') // 3
+
 		self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
-		self.contents.config(tabs=(self.tab_width, ))
+		self.contents.config(tabs=(self.tab_width, ), padx=pad)
+		self.ln_widget.config(padx=pad)
 
 					
 	def font_choose(self, event=None):
