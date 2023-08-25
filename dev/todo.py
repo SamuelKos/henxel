@@ -1,4 +1,18 @@
 font should be check in thread at import if macos?
+no just check for error at closing and choosing
+
+
+
+
+add copy of NotoMono v. 1.0 to repo?
+
+
+fn-f now works
+
+cmd		-h 	hide
+alt-cmd -h 	hide other
+fn 		-h 	show desktop?
+
 
 
 macos give focus back to terminal at quit with osascript		ok?
@@ -28,8 +42,12 @@ after font change re-grid?
 
 
 # mac_os keys
-# fn Super
-# cmd Meta
+# fn Super		bind to key and check state == 64
+# cmd Meta  	bind to key and check state == 8
+# Alt			bind to key and check state == 16
+
+# ctrl works
+# ctrl  		(state == 4)
 
 
 # mac_os, working:
@@ -78,10 +96,15 @@ cmd-ret	open
 
 
 
+# cmd v paste()		ok?
+
+# override cmd-q, now quit_me		ok?
+# cmd-w is same quit_me as protocol- delete- window, start of init
 
 
 # fontchoose, optionmenu choises bigger		ok?
 
+# help.txt build to pip install -e .			ok?
 
 
 

@@ -304,19 +304,27 @@ class Editor(tkinter.Toplevel):
 		
 		if self.os_type == 'mac_os':
 			self.right_mousebutton_num = 2
+			
+			# Default cmd-q does not trigger quit_me
+			# Override Cmd-Q:
+			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
+			self.root.createcommand("tk::mac::Quit", self.quit_me)
+			
+			
 		
 		self.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
 		
 		
 		
+		if self.os_type != 'mac_os':
+			self.bind( "<Control-R>", self.replace_all)
+			self.bind( "<Control-g>", self.gotoline)
+			self.bind( "<Control-r>", self.replace)
 		
 		self.bind( "<Escape>", self.do_nothing )
 		self.bind( "<Return>", self.do_nothing)
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
 		self.bind( "<Control-plus>", self.increase_scrollbar_width)
-		self.bind( "<Control-R>", self.replace_all)
-		self.bind( "<Control-g>", self.gotoline)
-		self.bind( "<Control-r>", self.replace)
 		
 		
 		#######################################################
@@ -423,6 +431,8 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
 			self.contents.bind( "<Alt-l>", self.toggle_ln)
 			self.contents.bind( "<Alt-x>", self.toggle_syntax)
+			self.contents.bind( "<Alt-f>", self.font_choose)
+		
 		
 		
 		if self.os_type == 'linux':
@@ -430,18 +440,24 @@ class Editor(tkinter.Toplevel):
 		
 		
 		if self.os_type == 'mac_os':
-			self.contents.bind( "<n>", self.mac_cmd_overrides) # newtab
-			self.contents.bind( "<s>", self.mac_cmd_overrides) # walk_tab
-			self.contents.bind( "<a>", self.mac_cmd_overrides) # walk_back
+			self.contents.bind( "<Right>", self.mac_cmd_overrides)	# walk_tab
+			self.contents.bind( "<Left>", self.mac_cmd_overrides)	# walk_back
+			self.contents.bind( "<n>", self.mac_cmd_overrides)		# newtab
+			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen, + cmd search
+			self.contents.bind( "<v>", self.mac_cmd_overrides)		# paste
 			
+			self.bind( "<R>", self.mac_cmd_overrides)	# replace_all
+			self.bind( "<g>", self.mac_cmd_overrides)	# gotoline
+			self.bind( "<r>", self.mac_cmd_overrides)	# replace
 		
-		self.contents.bind( "<Control-g>", self.font_choose)
 		
 		#######################################################
 		
 		
+		if self.os_type != 'mac_os':
+			self.contents.bind( "<Control-f>", self.search)
+			self.contents.bind( "<Control-v>", self.paste)
 		
-		self.contents.bind( "<Control-f>", self.search)
 		
 		self.contents.bind( "<Control-a>", self.goto_linestart)
 		self.contents.bind( "<Control-e>", self.goto_lineend)
@@ -464,7 +480,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-t>", self.tabify_lines)
 		self.contents.bind( "<Control-z>", self.undo_override)
 		self.contents.bind( "<Control-Z>", self.redo_override)
-		self.contents.bind( "<Control-v>", self.paste)
 		
 		# this move_line interferes with search_next,check_nextevent, so not in use
 		#self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
@@ -485,6 +500,11 @@ class Editor(tkinter.Toplevel):
 		self.contents.unbind_class('Text', '<<PrevPara>>')
 		self.contents.unbind_class('Text', '<<SelectNextPara>>')
 		self.contents.unbind_class('Text', '<<SelectPrevPara>>')
+		self.contents.unbind_class('Text', '<<LineStart>>')
+		# ctrl-e no work
+		self.contents.unbind_class('Text', '<<LineEnd>>')
+		
+		
 			
 	
 		# Needed in leave() taglink in: Run file Related
@@ -1191,21 +1211,102 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 			
 		
+		# Pressed Cmd
 		if event.state == 8:
 			
 			if event.keysym == 'n':
 				self.new_tab(event=event)
 				
-			if event.keysym == 's':
+			elif event.keysym == 's':
 				self.walk_tabs(event=event)
 			
-			if event.keysym == 'a':
+			elif event.keysym == 'a':
 				self.walk_tabs(event=event, **{'back':True})
+				
+			elif event.keysym == 'g':
+				self.gotoline(event=event)
+			
+			elif event.keysym == 'r':
+				self.replace(event=event)
+			
+			elif event.keysym == 'f':
+				self.search(event=event)
+						
+			elif event.keysym == 'v':
+				self.paste(event=event)
+			
+			else:
+				return
+			
+			return 'break'
+			
+		
+		# Pressed Cmd + arrow left right
+		elif event.state == 104:
+		
+			if event.keysym == 'Right':
+				self.walk_tabs(event=event)
+				
+			elif event.keysym == 'Left':
+				self.walk_tabs(event=event, **{'back':True})
+	
+			else:
+				return
+			
+			return 'break'
+			
+			
+		# Pressed Cmd + Shift
+		elif event.state == 9:
+		
+			if event.keysym == 'R':
+				self.replace_all(event=event)
 				
 			else:
 				return
-				
+			
 			return 'break'
+			
+			
+		# Pressed Fn
+		elif event.state == 64:
+			
+			# fullscreen
+			if event.keysym == 'f':
+				#pass
+				return 'break'
+##			elif event.keysym == 's':
+##				self.walk_tabs(event=event)
+##
+##			elif event.keysym == 'a':
+##				self.walk_tabs(event=event, **{'back':True})
+				
+			# Some shortcuts does not insert.
+			# Like fn-h does not insert h.
+			else:
+				return
+	
+	
+##		# Pressed Alt
+##		elif event.state == 16:
+##			print('BBB1')
+##			if event.keysym == 'f':
+##				print('BBB2')
+##				self.font_choose(event=event)
+##				return 'break'
+##
+####			elif event.keysym == 's':
+####				self.walk_tabs(event=event)
+####
+####			elif event.keysym == 'a':
+####				self.walk_tabs(event=event, **{'back':True})
+##
+##			# Some shortcuts does not insert.
+##			# Like fn-h does not insert h.
+##			else:
+##				return
+		
+			
 			
 	
 	def new_tab(self, event=None, error=False):

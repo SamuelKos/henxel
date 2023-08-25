@@ -133,22 +133,10 @@ Files are in src/henxel/
 
 
 # More on virtual environments:
-This is now bit more complex, because we are not anymore expecting that we have many older versions of the project
-left (as packages). But with this lenghty method we can compare to any commit, not just released packages.
-So this is for you who are packaging Python-project and might want things like side-by-side live-comparison of two
-different versions, most propably version you are currently developing and some earlier version. I Assume you are the
-owner of the project so you have the git-history, or else you have done git clone. I use henxel as the project example.
+This is now bit more complex, because we are not anymore expecting that we have many older versions of the project left (as packages). But with this lenghty method we can compare to any commit, not just released packages. So this is for you who are packaging Python-project and might want things like side-by-side live-comparison of two different versions, most propably version you are currently developing and some earlier version. I Assume you are the owner of the project so you have the git-history, or else you have done git clone. I use henxel as the project example.
 
-First make build-env if you do not have it. It likely can be the same for many of your projects:
 
-```console
-~/$ mkvenv env
-~/$ . env/bin/activate
-(env) ~/$ pip install --upgrade build
-(env) ~/$ deactivate
-```
-
-Then create development-venv for the project, if you haven't already and install current version to it:
+First create development-venv for the project, if you haven't already and install current version to it in editable mode:
 
 ```console
 ~/myproject/henxel$ mkvenv env
@@ -156,8 +144,7 @@ Then create development-venv for the project, if you haven't already and install
 (env) ~/myproject/henxel$ pip install -e .
 ```
 
-Then select the git-commit for the reference version. I have interesting commits with message like: version 0.2.0
-so to list all such commits:
+Then select the git-commit for the reference version. I have interesting commits with message like: version 0.2.0 so to list all such commits:
 
 ```console
 ~/myproject/henxel$ git log --grep=version
@@ -170,35 +157,15 @@ For example to make new branch from version 0.2.0, copy the first letters from t
 ~/myproject/henxel$ git switch version020
 ```
 
-Then 1: activate your build-env, 2: build that ref-version of your project.
-
-There are some extra lines to help ensure you are in the correct env (that is build-env) and branch
-(branch you made from older commit).
-For example, if your build-env is in the root of your home-directory:
+Then create ref-env to some place that is not version-controlled like the parent-folder and install version020 of the project to it with pip, again in editable mode, just in case you want to try something out.
 
 ```console
-~/$ . env/bin/activate
-(env) ~/$ cd myproject/henxel
-(env) ~/myproject/henxel$ pip list
-(env) ~/myproject/henxel$ git branch
-(env) ~/myproject/henxel$ git log
-(env) ~/myproject/henxel$ python -m build
-```
-
-And it will create the ref-package: dist/henxel-0.2.0.tar.gz
-
-3: install it with pip
-
-Create ref-env to some place that is not version-controlled like the parent-folder and install your ref-package to it. First deactivate build-env if it still active:
-
-```console
-(env) ~/myproject/henxel$ deactivate
 ~/myproject/henxel$ cd ..
 ~/myproject$ mkvenv v020
 ~/myproject$ . v020/bin/activate
 (v020) ~/myproject$ cd henxel
 (v020) ~/myproject/henxel$ pip list
-(v020) ~/myproject/henxel$ pip install dist/henxel-0.2.0.tar.gz
+(v020) ~/myproject/henxel$ pip install -e .
 (v020) ~/myproject/henxel$ deactivate
 ```
 
