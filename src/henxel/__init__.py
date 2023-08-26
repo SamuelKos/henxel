@@ -143,6 +143,26 @@ class Editor(tkinter.Toplevel):
 	
 	root = None
 	
+	
+	
+				
+	l = ['lsappinfo', 'front']
+	a = subprocess.run(l, check=True, capture_output=True).stdout.decode()
+	# ASN, remove newline
+	a = a[:-1]
+		
+	l = ['lsappinfo', 'info', '-only', 'name', a]
+	b = subprocess.run(l, check=True, capture_output=True).stdout.decode()
+	# '"LSDisplayName"="Terminal"\n'
+	b = b[:-1]
+	b = b.split(sep='=')[-1].strip('"')
+		
+	print('AAAAAAAAA', b)
+	
+		
+		
+	
+	
 	def __new__(cls):
 	
 		if not cls.root:
@@ -242,6 +262,7 @@ class Editor(tkinter.Toplevel):
 					check=True, capture_output=True).stdout.decode().strip()
 		except Exception as e:
 			pass
+		
 		
 		self.search_idx = ('1.0', '1.0')
 		self.search_matches = 0
@@ -449,6 +470,8 @@ class Editor(tkinter.Toplevel):
 			self.bind( "<R>", self.mac_cmd_overrides)	# replace_all
 			self.bind( "<g>", self.mac_cmd_overrides)	# gotoline
 			self.bind( "<r>", self.mac_cmd_overrides)	# replace
+			
+			self.contents.bind( "<Control-f>", self.font_choose)
 		
 		
 		#######################################################
@@ -632,83 +655,6 @@ class Editor(tkinter.Toplevel):
 					
 			if not fontname:
 				fontname = 'TkDefaulFont'
-				
-				
-			if self.os_type == 'mac_os':
-				
-				if fontname == 'TkDefaulFont':
-				
-					badfonts = [
-						'Standard Symbols PS',
-						'OpenSymbol',
-						'Noto Color Emoji',
-						'FontAwesome',
-						'Dingbats',
-						'Droid Sans Fallback',
-						'D050000L',
-						'Wingdings',
-						'Wingdings 2',
-						'Wingdings 3'
-						]
-						
-					good = list()
-					mono = list()
-		
-					font1 = tkinter.font.Font(family='TkDefaultFont', size=12)
-					boldfont = font1.copy()
-					boldfont.config(weight='bold')
-					
-					# Second test: filter out vertical fonts.
-					def test_font(f):
-						return f in badfonts or f[0] == '@'
-						
-					
-					fontnames = [f for f in tkinter.font.families() if not test_font(f)]
-					
-					# Remove duplicates then sort
-					s = set(fontnames)
-					fontnames = [f for f in s]
-					fontnames.sort()
-					
-					
-					for name in fontnames:
-						font1.config(family=name)
-						boldfont.config(family=name)
-						
-						l1=font1.metrics()['linespace']
-						l2=boldfont.metrics()['linespace']
-						
-						a1=font1.metrics()['ascent']
-						a2=boldfont.metrics()['ascent']
-						
-						d1=font1.metrics()['descent']
-						d2=boldfont.metrics()['descent']
-						
-						f1=font1.metrics()['fixed']
-						f2=boldfont.metrics()['fixed']
-						
-						
-						# This guarantees same lineheight between
-						# normal and bold lines. Consolas for example.
-						if l1 == l2 and a1 == a2 and d1 == d2 and f1 == True and f1 == f2:
-							good.append(name)
-						
-						
-						# Being monospaced does not guarantee same lineheight between
-						# normal and bold lines. Courier for example.
-						if f1 == True and f1 == f2:
-							mono.append(name)
-						
-						
-					if len(good) > 0:
-						fontname = good[0]
-					
-					elif len(mono) > 0:
-						fontname = mono[0]
-						
-					else:
-						fontname = fontnames[0]
-	
 				
 				# It seems there is no font-scaling in mac_os
 				s0 = 22
@@ -1508,8 +1454,8 @@ class Editor(tkinter.Toplevel):
 	
 	def load_config(self, data):
 		
-		have_fonts = self.fonts_exists(data)
-		self.set_config(data, have_fonts)
+		font, menufont = self.fonts_exists(data)
+		self.set_config(data, font, menufont)
 		
 	
 	def fonts_exists(self, dictionary):
@@ -1521,15 +1467,15 @@ class Editor(tkinter.Toplevel):
 		
 		if font not in fontfamilies:
 			print(f'Font {font.upper()} does not exist.')
-			res = False
+			font = False
 		
-		font = dictionary['menufont']['family']
+		menufont = dictionary['menufont']['family']
 		
 		if dictionary['menufont']['family'] not in fontfamilies:
-			print(f'Font {font.upper()} does not exist.')
-			res = False
+			print(f'Font {menufont.upper()} does not exist.')
+			menufont = False
 			
-		return res
+		return font, menufont
 		
 		
 	def get_config(self):
@@ -1537,9 +1483,28 @@ class Editor(tkinter.Toplevel):
 		dictionary['curtheme'] = self.curtheme
 		dictionary['lastdir'] = self.lastdir.__str__()
 		
-		# replace possible Tkdefaulfont as family with real name
-		dictionary['font'] = self.font.actual()
-		dictionary['menufont'] = self.menufont.actual()
+		# Replace possible Tkdefaulfont as family with real name,
+		# if not mac_os, because tkinter.font.Font does not recognise
+		# this: .APPLESYSTEMUIFONT
+
+		if self.os_type == 'mac_os':
+		
+			if self.font.cget('family') == 'TkDefaulFont':
+				dictionary['font'] = self.font.config()
+				
+			else:
+				dictionary['font'] = self.font.actual()
+				
+			if self.menufont.cget('family') == 'TkDefaulFont':
+				dictionary['menufont'] = self.menufont.config()
+				
+			else:
+				dictionary['menufont'] = self.menufont.actual()
+				
+		else:
+			dictionary['font'] = self.font.actual()
+			dictionary['menufont'] = self.menufont.actual()
+
 		
 		dictionary['scrollbar_width'] = self.scrollbar_width
 		dictionary['elementborderwidth'] = self.elementborderwidth
@@ -1562,10 +1527,12 @@ class Editor(tkinter.Toplevel):
 		return dictionary
 		
 		
-	def set_config(self, dictionary, fonts_exists=True):
+	def set_config(self, dictionary, font, menufont):
 		
 		# Set Font Begin ##############################
-		if not fonts_exists:
+		
+		# Both missing:
+		if not font and not menufont:
 			fontname = None
 			
 			fontfamilies = [f for f in tkinter.font.families()]
@@ -1578,8 +1545,16 @@ class Editor(tkinter.Toplevel):
 			if not fontname:
 				fontname = 'TkDefaulFont'
 				
-			dictionary['font']['family']=fontname
-			dictionary['menufont']['family']=fontname
+			dictionary['font']['family'] = fontname
+			dictionary['menufont']['family'] = fontname
+		
+		# One missing, copy existing:
+		elif bool(font) ^ bool(menufont):
+			if font:
+				dictionary['menufont']['family'] = font
+			else:
+				dictionary['font']['family'] = menufont
+			
 			
 		self.font.config(**dictionary['font'])
 		self.menufont.config(**dictionary['menufont'])

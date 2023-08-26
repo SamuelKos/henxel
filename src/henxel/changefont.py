@@ -240,6 +240,7 @@ can have little offset. If this does not bother, then select any monospaced for 
 		var = args[0]
 		key = args[1]
 		
+		
 		self.font[key] = var.get()
 		
 		if self.tracefunc:
@@ -250,11 +251,19 @@ can have little offset. If this does not bother, then select any monospaced for 
 		'''	When font(instance) is selected from optionmenu.
 		'''
 		self.font = tkinter.font.nametofont(self.var.get())
-		fontname = self.font.actual("family")
-		fontindex = self.fontnames.index(fontname)
 		self.top.selection_clear()
-		self.lb.select_set(fontindex)
-		self.lb.see(fontindex)
+		
+		try:
+			fontname = self.font.actual("family")
+			fontindex = self.fontnames.index(fontname)
+			self.lb.select_set(fontindex)
+			self.lb.see(fontindex)
+		
+		except ValueError:
+			# not in list
+			pass
+
+		
 		self.sb.delete(0, 'end')
 		fontsize = self.font['size']
 		self.sb.insert(0, fontsize)
@@ -273,19 +282,29 @@ can have little offset. If this does not bother, then select any monospaced for 
 	def change_font(self, event=None):
 		'''	Change values of current font-instance.
 		'''
-		try:
+		
+		l = None
+		l = self.lb.curselection()
+		
+		#print(type(l), l)
+
+		if l in [(), None, ""]:
 			self.font.config(
-				family=self.lb.get(self.lb.curselection()),
 				size=self.sb.get()
 				)
-				
-			if self.tracefunc:
-				self.tracefunc()
-				
-		except tkinter.TclError as e:
-			print(e)
-			
-	
+		
+		else:
+			f = self.lb.get(l)
+		
+			self.font.config(
+				family=f,
+				size=self.sb.get()
+				)
+
+
+		if self.tracefunc:
+			self.tracefunc()
+
 	
 	def get_fonts(self):
 		'''	Return list of fonts, that have: same lineheight between normal
@@ -350,8 +369,12 @@ can have little offset. If this does not bother, then select any monospaced for 
 			
 
 		# Show current fontname in listbox
-		fontname = self.font.actual("family")
-		fontindex = self.fontnames.index(fontname)
-		self.top.after(100, lambda args=[fontindex]: self.lb.select_set(args))
-		self.top.after(300, lambda args=[fontindex]: self.lb.see(args))
-		
+		try:
+			fontname = self.font.actual("family")
+			fontindex = self.fontnames.index(fontname)
+			self.top.after(100, lambda args=[fontindex]: self.lb.select_set(args))
+			self.top.after(300, lambda args=[fontindex]: self.lb.see(args))
+			
+		except ValueError:
+			# not in list
+			pass

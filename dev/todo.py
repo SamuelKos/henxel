@@ -1,8 +1,30 @@
-font should be check in thread at import if macos?
-no just check for error at closing and choosing
+
+
+lsappinfo info -only name $(lsappinfo front)
+Need to get os_type before?
+
+l = ['lsappinfo', 'front']
+a = subprocess.run(l, check=True, capture_output=True).stdout.decode()
+# ASN, remove newline
+a = a[:-1]
+
+l = ['lsappinfo', 'info', '-only', 'name', a]
+b = subprocess.run(l, check=True, capture_output=True).stdout.decode()
+# '"LSDisplayName"="Terminal"\n'
+b = b[:-1]
+b = b.split(sep='=')[-1].strip('"')
+
+print(b)
+# 'Terminal' in console and class,
+# 'Python' in init and likely in all runtime-code
 
 
 
+
+if fullscreen when fontchoose  and close error
+
+
+when r in search entry bell
 
 add copy of NotoMono v. 1.0 to repo?
 
@@ -15,6 +37,7 @@ fn 		-h 	show desktop?
 
 
 
+
 macos give focus back to terminal at quit with osascript		ok?
 assumes Terminal not ok
 
@@ -23,10 +46,7 @@ padx font measure ?
 after font change re-grid?
 
 
-# check font etc conf is saved
 
-
-# macos after close editor give focus to console
 
 # mac_os, not working:
 # ctrl -updown
@@ -91,9 +111,10 @@ cmd-ret	open
 
 
 
-#'.AppleSystemUIFont' is not in list
 
 
+
+# check font etc conf is saved		ok?
 
 
 # cmd v paste()		ok?
@@ -105,6 +126,29 @@ cmd-ret	open
 # fontchoose, optionmenu choises bigger		ok?
 
 # help.txt build to pip install -e .			ok?
+
+
+
+# font should be check in thread at import if macos?
+# no just check for error at closing and choosing			ok?
+#'.AppleSystemUIFont' is not in list
+
+
+
+
+
+1:
+open with defaul font, open fontchoose , change size only, close font choose,
+close editor with w, close console with d,
+relaunch python console and editor and font chooser, choose real font,
+close chooser, close editor with w, close console with d,
+relaunch, --> still defaul font.
+
+2:
+open with defaul font, open fontchoose , choose real font,
+close chooser, close editor with w, do not close console with d, but relaunch editor --> still defaul font.
+1 and 2 fixed in set_config and check_fonts
+
 
 
 
