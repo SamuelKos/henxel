@@ -4,9 +4,10 @@ import tkinter
 
 class FontChooser:
 		
-	def __init__(self, master, fontlist, tracefunc=None):
+	def __init__(self, master, fontlist, big=False, tracefunc=None):
 		'''	master		tkinter.Toplevel
 			fontlist	list of tkinter.font.Font instances
+			big			If true start with bigger font.
 			tracefunc	callable, used in change_font. It arranges variable
 						observer for change on any item in fontlist.
 						This is practically same as if there would be virtual
@@ -146,6 +147,10 @@ can have little offset. If this does not bother, then select any monospaced for 
 		self.lb.bind('<ButtonRelease-1>', self.change_font)
 			
 		
+		# Increase font-size
+		if big: self.button_command()
+		
+		
 		self.fontnames = list()
 		self.fontnames_mono = list()
 		self.fontnames_const_line = list()
@@ -185,7 +190,6 @@ can have little offset. If this does not bother, then select any monospaced for 
 		else:
 			self.button['text'] = 'BIG'
 			
-	
 	
 	
 	def filter_fonts(self, event=None):

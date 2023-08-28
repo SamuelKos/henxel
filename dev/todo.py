@@ -1,71 +1,104 @@
 
+# cmd shift left right select from line 		but not good selection
+# used to walk tabs
 
-lsappinfo info -only name $(lsappinfo front)
-Need to get os_type before?
 
-l = ['lsappinfo', 'front']
-a = subprocess.run(l, check=True, capture_output=True).stdout.decode()
-# ASN, remove newline
-a = a[:-1]
+# ctrl ae now works
+# ctrl e  no check if space at the end of line.
+# change/add to cmd ae
 
-l = ['lsappinfo', 'info', '-only', 'name', a]
-b = subprocess.run(l, check=True, capture_output=True).stdout.decode()
-# '"LSDisplayName"="Terminal"\n'
-b = b[:-1]
-b = b.split(sep='=')[-1].strip('"')
 
-print(b)
-# 'Terminal' in console and class,
-# 'Python' in init and likely in all runtime-code
+# night colors mac_os:
+# btn_git
+# filedialog
+# entry
+
+
+# mac_os helptext
 
 
 
 
-if fullscreen when fontchoose  and close error
+###################################
+ctrl-r no work in python console
+https://bugs.python.org/issue38995
+
+Most likely what is happening is that the two Python instances you are using are linked to different versions of the external readline library.  From the version information, it's clear that you are using the Python 3.8.0 from the python.org macOS installer.  That Python uses the macOS-supplied BSD editline (AKA libedit) for readline functionality.  The Python 3.7.3 you have is not from python.org and based on the prompt it looks like it was linked with a version of GNU readline which probably does bind ^R to the reverse search function by default.  As described in the Python Library Reference page for readline (https://docs.python.org/3/library/readline.html), both GNU readline and BSD editline can be tailored via configuration files; GNU readline uses ~/.inputrc while BSD editline uses ~/.editrc.
+
+On macOS, the available configuration commands for editline are described in the man page for editrc:
+
+man 5 editrc
+
+In particular, you should be able to enable editline's reverse search functionality by adding the following line to ~/.editrc:
+
+bind ^R em-inc-search-prev
+
+where ^R is two characters, not the single character CTRL-R.
+###########################
 
 
-when r in search entry bell
+
+
+
+
+if menufont is 14 buttons are mac buttons
+if bigger they are basic buttons
+
+
+mac_os:
+When in fullscreen, other toplevels go to their own tab.
+If fullscreen when fontchoose might press wrong close button.
+
+fn-f now works
+
+# fullscreen
+# fn f
+# self.tk.eval('wm attributes .!editor -fullscreen 1')
+# get tcl name of widget
+# str(self.nametowidget(self.contents))
+# self.contents.winfo_name()
+			
+			
+
+
+
+
+
 
 add copy of NotoMono v. 1.0 to repo?
 
 
-fn-f now works
 
 cmd		-h 	hide
-alt-cmd -h 	hide other
+alt-cmd -h 	hide others
 fn 		-h 	show desktop?
 
+ctrl -up 	toggle show open apps
+ctrl -down hide others temporarily, get them back with ctrl-up
 
 
 
-macos give focus back to terminal at quit with osascript		ok?
-assumes Terminal not ok
 
+
+cont, ln_wid  padx = 10 pady = 4
 
 padx font measure ?
+pady?
 after font change re-grid?
 
 
 
 
 # mac_os, not working:
-# ctrl -updown
-# ctrl -leftright
-# copy paste in place
-# ctrl-v cmd v
-# ctrl-x, cmd x
-# shift tab
 # all alt shortcuts makes some special char
 # alt return cmd -return?
-
-# alt -n cmd -n?
+# ctrl -leftright
 
 
 # mac_os keys
 # fn Super		bind to key and check state == 64
 # cmd Meta  	bind to key and check state == 8
 # Alt			bind to key and check state == 16
-
 # ctrl works
 # ctrl  		(state == 4)
 
@@ -86,36 +119,40 @@ after font change re-grid?
 # ctrl +-
 # ctrl-t
 
+# ctrl-v cmd v		check
+
+
 fixes
-cdm-n	newtab
-cmd-s	walk	cmd-right?
-cmd-a	back	cmd-left?
-cmd-ret	open
+cdm-n		newtab
+cmd-right	walk
+cmd-left	back
+cmd-ret		open file
 
 
 # alt left right next prev word work without tcl fix
 # check in windows
 
-# cmd shift left right select from line 		but not good selection
-# fn f fullscreen	but inserts f
-# cmd w  quit_me
-
-
-# night colors mac_os:
-# btn_git
-# filedialog
-# entry
-
-
-# mac_os helptext
 
 
 
+# when r in search entry bell
+# cmd r R g binded to contents		ok?
+
+# stuff in new in class				ok?
 
 
+# mac_os seems to have some momemtum in scrolling
+# try without sb set over, if windows or mac
+# not ok leave it as is
+
+
+# tab shift tab un,indent working 	ok?
+
+# popup menu bind to contents		ok?
 
 # check font etc conf is saved		ok?
 
+# if mac_os big fontchoose			ok?
 
 # cmd v paste()		ok?
 
@@ -130,8 +167,38 @@ cmd-ret	open
 
 
 # font should be check in thread at import if macos?
-# no just check for error at closing and choosing			ok?
+# no just check for error at closing and choosing				ok?
 #'.AppleSystemUIFont' is not in list
+
+
+
+##macos give focus back to terminal at quit with osascript		ok?
+##assumes Terminal not ok
+##
+##
+##lsappinfo info -only name $(lsappinfo front)
+##Need to get os_type before?
+##
+##l = ['lsappinfo', 'front']
+##a = subprocess.run(l, check=True, capture_output=True).stdout.decode()
+### ASN, remove newline
+##a = a[:-1]
+##
+##l = ['lsappinfo', 'info', '-only', 'name', a]
+##b = subprocess.run(l, check=True, capture_output=True).stdout.decode()
+### '"LSDisplayName"="Terminal"\n'
+##b = b[:-1]
+##b = b.split(sep='=')[-1].strip('"')
+##
+##print(b)
+### 'Terminal' in console and class,
+### 'Python' in init and likely in all runtime-code
+##
+
+
+
+
+
 
 
 

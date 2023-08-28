@@ -114,20 +114,19 @@ TAB_WIDTH_CHAR = 'A'
 
 SLIDER_MINSIZE = 66
 
-# .APPLESYSTEMUIFONT
 
 GOODFONTS = [
+			'Noto Mono',
 			'Bitstream Vera Sans Mono',
 			'Liberation Mono',
 			'DejaVu Sans Mono',
 			'Inconsolata',
 			'Courier 10 Pitch',
-			'Consolas'
-##			'Andale Mono',
-##			'Courier New',
-##			'Noto Mono',
-##			'Noto Sans Mono',
-##			'Courier'
+			'Consolas',
+			'Andale Mono',
+			'Courier New',
+			'Noto Sans Mono',
+			'Courier'
 			]
 			
 ############ Constants End
@@ -141,80 +140,113 @@ class Editor(tkinter.Toplevel):
 	pic = None
 	helptxt = None
 	
+	mac_term = None
+	os_type = None
 	root = None
 	
 	
+	# macOS: Get name of terminal App.
+	# Used to give focus back to it when closing editor, in quit_me()
 	
-				
-	l = ['lsappinfo', 'front']
-	a = subprocess.run(l, check=True, capture_output=True).stdout.decode()
-	# ASN, remove newline
-	a = a[:-1]
-		
-	l = ['lsappinfo', 'info', '-only', 'name', a]
-	b = subprocess.run(l, check=True, capture_output=True).stdout.decode()
-	# '"LSDisplayName"="Terminal"\n'
-	b = b[:-1]
-	b = b.split(sep='=')[-1].strip('"')
-		
-	print('AAAAAAAAA', b)
+	# This have to be before tkinter.tk()
+	# or we get 'Python' as appname.
+	try:
+		tmp = ['lsappinfo', 'front']
+		tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
+		# ASN, remove newline
+		tmp = tmp[:-1]
 	
-		
-		
+		tmp = ['lsappinfo', 'info', '-only', 'name', tmp]
+		tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
+		# '"LSDisplayName"="Terminal"\n'
+		tmp = tmp[:-1]
+		mac_term = tmp.split(sep='=')[-1].strip('"')
+		del tmp
 	
+		#print('AAAAAAAAA', mac_term)
+	
+	# Maybe not macOS
+	except (FileNotFoundError, SubprocessError):
+		pass
+
 	
 	def __new__(cls):
 	
 		if not cls.root:
+			#print('BBBB')
 			# Was earlier v.0.2.2 in init:
-			
+
 			# self.root = tkinter.Tk().withdraw()
-			
+
 			# wich worked in Debian 11, but not in Debian 12,
 			# resulted error msg like: class str has no some attribute etc.
 			# After changing this line in init to:
-			
+
 			# self.root = tkinter.Tk()
 			# self.root.withdraw()
-			
+
 			# Editor would launch, but after closing and reopening in the same python-console-instance,
 			# there would be same kind of messages but about icon, and also fonts would change.
 			# This is why that stuff is now here to keep those references.
-			
+
 			cls.root = tkinter.Tk()
 			cls.root.withdraw()
+
 		
+		if not cls.os_type:
+			# s = self.winfo_server()
+			t = cls.root.tk.eval('tk windowingsystem')
+			
+
+			if 'aqua' in t:
+				cls.os_type = 'mac_os'
+
+			elif 'win32' in t:
+				cls.os_type = 'windows'
+
+			elif 'x11' in t:
+				cls.os_type = 'linux'
+
+			else:
+				cls.os_type = 'linux'
+
+			#print(cls.os_type)
+
+
+
 		if not cls.pkg_contents:
 			cls.pkg_contents = importlib.resources.files(__name__)
-		
-		if cls.pkg_contents:
 			
+
+		if cls.pkg_contents:
+
 			if cls.no_icon:
 				for item in cls.pkg_contents.iterdir():
-					
+
 					if item.name == ICONPATH:
 						try:
 							cls.pic = tkinter.Image("photo", file=item)
 							cls.no_icon = False
 							break
-							
+
 						except tkinter.TclError as e:
 							print(e)
-			
+
 			if not cls.helptxt:
 				for item in cls.pkg_contents.iterdir():
-				
+
 					if item.name == HELPPATH:
 						try:
 							cls.helptxt = item.read_text()
 							break
-							
+
 						except Exception as e:
 							print(e.__str__())
-						
+
+
 		if cls.no_icon: print('Could not load icon-file.')
-		
-		
+
+
 		if not cls.alive:
 			return super(Editor, cls).__new__(cls)
 			
@@ -251,6 +283,7 @@ class Editor(tkinter.Toplevel):
 		self.tabindex = None
 		self.branch = None
 		self.version = VERSION
+		self.os_type = self.__class__.os_type
 		
 		
 		self.font = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
@@ -286,55 +319,10 @@ class Editor(tkinter.Toplevel):
 		self.waitvar = tkinter.IntVar()
 		self.state = 'normal'
 		
-		
-		
-		
-		# fullscreen
-		# fn f
-		#self.tk.eval('wm attributes .!editor -fullscreen 0')
-		
-		# get tcl name of widget
-		#str(self.nametowidget(self.contents))
-		#self.contents.winfo_name()
-		
-		self.os_type = None
-		#s = self.winfo_server()
-		t = self.tk.eval('tk windowingsystem')
-		
-	
-		if 'aqua' in t:
-			self.os_type = 'mac_os'
-			
-		elif 'win32' in t:
-			self.os_type = 'windows'
-			
-		elif 'x11' in t:
-			self.os_type = 'linux'
-		
-		# after contents
-##		if self.os_type = 'linux':
-##			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
-##
 				
 		if self.os_type == 'windows':
 			# fix copying to clipboard in Windows.
 			self.bind( "<Control-c>", self.copy_windows)
-		
-		
-		self.right_mousebutton_num = 3
-		
-		if self.os_type == 'mac_os':
-			self.right_mousebutton_num = 2
-			
-			# Default cmd-q does not trigger quit_me
-			# Override Cmd-Q:
-			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
-			self.root.createcommand("tk::mac::Quit", self.quit_me)
-			
-			
-		
-		self.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
-		
 		
 		
 		if self.os_type != 'mac_os':
@@ -424,11 +412,9 @@ class Editor(tkinter.Toplevel):
 		# disable copying linenumbers:
 		self.ln_widget.bind('<Control-c>', self.no_copy_ln)
 		
-		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True,
-					tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
+		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
 		
-		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0,
-					bd=0, command = self.contents.yview)
+		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, command = self.contents.yview)
 
 		self.expander = wordexpand.ExpandWord(self.contents)
 		self.contents.bind( "<Alt-e>", self.expander.expand_word_event)
@@ -448,6 +434,20 @@ class Editor(tkinter.Toplevel):
 		
 		
 		#######################################################
+		self.right_mousebutton_num = 3
+		
+		if self.os_type == 'mac_os':
+			self.right_mousebutton_num = 2
+			
+			# Default cmd-q does not trigger quit_me
+			# Override Cmd-Q:
+			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
+			self.root.createcommand("tk::mac::Quit", self.quit_me)
+			
+				
+		self.contents.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
+		
+		
 		if self.os_type != 'mac_os':
 			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
 			self.contents.bind( "<Alt-l>", self.toggle_ln)
@@ -459,6 +459,9 @@ class Editor(tkinter.Toplevel):
 		if self.os_type == 'linux':
 			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
 		
+		elif self.os_type == 'mac_os':
+			self.contents.bind( "<Shift-Tab>", self.unindent)
+		
 		
 		if self.os_type == 'mac_os':
 			self.contents.bind( "<Right>", self.mac_cmd_overrides)	# walk_tab
@@ -467,9 +470,9 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen, + cmd search
 			self.contents.bind( "<v>", self.mac_cmd_overrides)		# paste
 			
-			self.bind( "<R>", self.mac_cmd_overrides)	# replace_all
-			self.bind( "<g>", self.mac_cmd_overrides)	# gotoline
-			self.bind( "<r>", self.mac_cmd_overrides)	# replace
+			self.contents.bind( "<R>", self.mac_cmd_overrides)	# replace_all
+			self.contents.bind( "<g>", self.mac_cmd_overrides)	# gotoline
+			self.contents.bind( "<r>", self.mac_cmd_overrides)	# replace
 			
 			self.contents.bind( "<Control-f>", self.font_choose)
 		
@@ -656,6 +659,8 @@ class Editor(tkinter.Toplevel):
 			if not fontname:
 				fontname = 'TkDefaulFont'
 				
+				
+			if self.os_type == 'mac_os':
 				# It seems there is no font-scaling in mac_os
 				s0 = 22
 				s1 = 16
@@ -962,14 +967,23 @@ class Editor(tkinter.Toplevel):
 		self.quit()
 		self.destroy()
 		
+		# Activate terminal
 		if self.os_type == 'mac_os':
 			# This osascript-language is funny
 			# https://ss64.com/osx/osascript.html
-			s = ['osascript', '-e', 'tell app "Terminal" to activate']
-			subprocess.run(s)
+			tmp = 'Terminal'
+			if self.__class__.mac_term:
+				tmp = self.__class__.mac_term
+			
+			try:
+				tmp = ['osascript', '-e', 'tell app "%s" to activate' % tmp]
+				subprocess.run(tmp)
+				
+			except (FileNotFoundError, SubprocessError):
+				pass
 			
 			# No need to put in thread
-			#t = threading.Thread( target=subprocess.run, args=(s,), daemon=True )
+			#t = threading.Thread( target=subprocess.run, args=(tmp,), daemon=True )
 			#t.start()
 			
 		
@@ -2165,8 +2179,11 @@ class Editor(tkinter.Toplevel):
 		
 		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
 				self.contents.bind( "<Alt-f>", self.font_choose)) )
-			
-		changefont.FontChooser( fonttop, [self.font, self.menufont], tracefunc=self.update_fonts )
+		
+		big = False
+		if self.os_type == 'mac_os': big = True
+		
+		changefont.FontChooser( fonttop, [self.font, self.menufont], big, tracefunc=self.update_fonts )
 		self.contents.bind( "<Alt-f>", self.do_nothing)
 		self.to_be_closed.append(fonttop)
 	
@@ -2669,7 +2686,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		
-		self.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
+		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
 		self.state = 'normal'
 		self.update_title()
 		
@@ -2706,7 +2723,7 @@ class Editor(tkinter.Toplevel):
 		
 		if len(err) != 0:
 			self.bind("<Escape>", self.stop_show_errors)
-			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
+			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.state = 'error'
 			
 			self.taglinks = dict()
@@ -2789,7 +2806,7 @@ class Editor(tkinter.Toplevel):
 		
 		if len(self.errlines) != 0:
 			self.bind("<Escape>", self.stop_show_errors)
-			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
+			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.state = 'error'
 			
 			tmp = self.contents.get('1.0', tkinter.END)
@@ -2855,7 +2872,7 @@ class Editor(tkinter.Toplevel):
 	def stop_show_errors(self, event=None):
 		self.state = 'normal'
 		self.bind("<Escape>", self.do_nothing)
-		self.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
+		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
 		
 		self.entry.delete(0, tkinter.END)
 		
@@ -3009,8 +3026,26 @@ class Editor(tkinter.Toplevel):
 		if self.state not in  [ 'normal', 'error' ]:
 			self.bell()
 			return "break"
-			
-		self.contents.event_generate('<<LineEnd>>')
+		
+		self.ensure_idx_visibility('insert')
+
+		
+##		?submodifier? linestart
+##		Adjust the index to refer to the first index on the line. If the display submodifier is given, this is the first index on the display line, otherwise on the logical line.
+##
+##		?submodifier? lineend
+##		Adjust the index to refer to the last index on the line (the newline). If the display submodifier is given, this is the last index on the display line, otherwise on the logical line.
+		
+		
+		pos = self.contents.index( 'insert display lineend' )
+		
+	
+		self.contents.see(pos)
+		self.contents.mark_set('insert', pos)
+		
+		
+		# was:
+		#self.contents.event_generate('<<LineEnd>>')
 		return "break"
 		
 		
@@ -4165,7 +4200,7 @@ class Editor(tkinter.Toplevel):
 		self.avoid_viewsync_mess()
 		
 		self.bind("<Escape>", self.do_nothing)
-		self.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
+		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
 		
 		
 	def help(self, event=None):
@@ -4196,7 +4231,7 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 		
-		self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
+		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 		self.bind("<Escape>", self.stop_help)
 			
 ########## Gotoline and Help End
@@ -4678,7 +4713,7 @@ class Editor(tkinter.Toplevel):
 				pos = "%s + %dc" % (pos, wordlen+1)
 				
 		if self.search_matches > 0:
-			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
+			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			
 			if self.state == 'search':
 				self.title( f'Search: 1/{self.search_matches}' )
@@ -4722,7 +4757,7 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 		self.replace_overlap_index = None
-		self.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
+		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
 		
 		#self.wait_for(200)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
