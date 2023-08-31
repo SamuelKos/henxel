@@ -116,6 +116,7 @@ SLIDER_MINSIZE = 66
 
 
 GOODFONTS = [
+			'Andale Mono',
 			'Noto Mono',
 			'Bitstream Vera Sans Mono',
 			'Liberation Mono',
@@ -123,7 +124,6 @@ GOODFONTS = [
 			'Inconsolata',
 			'Courier 10 Pitch',
 			'Consolas',
-			'Andale Mono',
 			'Courier New',
 			'Noto Sans Mono',
 			'Courier'
@@ -166,7 +166,7 @@ class Editor(tkinter.Toplevel):
 		#print('AAAAAAAAA', mac_term)
 	
 	# Maybe not macOS
-	except (FileNotFoundError, SubprocessError):
+	except (FileNotFoundError, subprocess.SubprocessError):
 		pass
 
 	
@@ -319,34 +319,6 @@ class Editor(tkinter.Toplevel):
 		self.waitvar = tkinter.IntVar()
 		self.state = 'normal'
 		
-				
-		if self.os_type == 'windows':
-			# fix copying to clipboard in Windows.
-			self.bind( "<Control-c>", self.copy_windows)
-		
-		
-		if self.os_type != 'mac_os':
-			self.bind( "<Control-R>", self.replace_all)
-			self.bind( "<Control-g>", self.gotoline)
-			self.bind( "<Control-r>", self.replace)
-		
-		self.bind( "<Escape>", self.do_nothing )
-		self.bind( "<Return>", self.do_nothing)
-		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
-		self.bind( "<Control-plus>", self.increase_scrollbar_width)
-		
-		
-		#######################################################
-		if not self.os_type == 'mac_os':
-			self.bind( "<Alt-n>", self.new_tab)
-			self.bind( "<Alt-s>", self.color_choose)
-			self.bind( "<Alt-t>", self.toggle_color)
-			self.bind( "<Alt-w>", self.walk_tabs)
-			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
-		
-		#######################################################
-		
-		
 		
 		self.helptxt = 'Could not load help-file. Press ESC to return.'
 		
@@ -410,14 +382,18 @@ class Editor(tkinter.Toplevel):
 		self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
 		
 		# disable copying linenumbers:
-		self.ln_widget.bind('<Control-c>', self.no_copy_ln)
+		if self.os_type != 'mac_os':
+			self.ln_widget.bind('<Control-c>', self.no_copy_ln)
+		else:
+			self.ln_widget.bind('<c>', self.mac_cmd_overrides)
 		
 		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
 		
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, command = self.contents.yview)
 
 		self.expander = wordexpand.ExpandWord(self.contents)
-		self.contents.bind( "<Alt-e>", self.expander.expand_word_event)
+		if self.os_type != 'mac_os':
+			self.contents.bind( "<Alt-e>", self.expander.expand_word_event)
 		
 		# Widgets are initiated, now more configuration
 		################################################
@@ -432,8 +408,8 @@ class Editor(tkinter.Toplevel):
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 		
 		
-		
-		#######################################################
+		# Bindigs Begin
+		####################################################
 		self.right_mousebutton_num = 3
 		
 		if self.os_type == 'mac_os':
@@ -448,45 +424,71 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
 		
 		
-		if self.os_type != 'mac_os':
-			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
-			self.contents.bind( "<Alt-l>", self.toggle_ln)
-			self.contents.bind( "<Alt-x>", self.toggle_syntax)
-			self.contents.bind( "<Alt-f>", self.font_choose)
-		
+		if self.os_type == 'windows':
+			# fix copying to clipboard in Windows.
+			self.bind( "<Control-c>", self.copy_windows)
 		
 		
 		if self.os_type == 'linux':
 			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
 		
-		elif self.os_type == 'mac_os':
-			self.contents.bind( "<Shift-Tab>", self.unindent)
+		
+		#######################################################
+		if self.os_type != 'mac_os':
+			self.bind( "<Control-R>", self.replace_all)
+			self.bind( "<Control-g>", self.gotoline)
+			self.bind( "<Control-r>", self.replace)
+
+			self.bind( "<Alt-n>", self.new_tab)
+			self.bind( "<Alt-s>", self.color_choose)
+			self.bind( "<Alt-t>", self.toggle_color)
+			self.bind( "<Alt-w>", self.walk_tabs)
+			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
+		
+			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
+			self.contents.bind( "<Alt-l>", self.toggle_ln)
+			self.contents.bind( "<Alt-x>", self.toggle_syntax)
+			self.contents.bind( "<Alt-f>", self.font_choose)
+		
+			self.contents.bind( "<Control-f>", self.search)			##############################
+			self.contents.bind( "<Control-v>", self.paste)
+		
+			self.contents.bind("<Left>", lambda event: self.check_sel)
+			self.contents.bind("<Right>", lambda event: self.check_sel)
 		
 		
-		if self.os_type == 'mac_os':
-			self.contents.bind( "<Right>", self.mac_cmd_overrides)	# walk_tab
-			self.contents.bind( "<Left>", self.mac_cmd_overrides)	# walk_back
+		#self.os_type == 'mac_os':
+		else:
+			self.contents.bind( "<Right>", self.mac_cmd_overrides)	# walk_tab  etc
+			self.contents.bind( "<Left>", self.mac_cmd_overrides)	# walk_back etc
+			
 			self.contents.bind( "<n>", self.mac_cmd_overrides)		# newtab
 			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen, + cmd search
 			self.contents.bind( "<v>", self.mac_cmd_overrides)		# paste
 			
-			self.contents.bind( "<R>", self.mac_cmd_overrides)	# replace_all
-			self.contents.bind( "<g>", self.mac_cmd_overrides)	# gotoline
-			self.contents.bind( "<r>", self.mac_cmd_overrides)	# replace
+			self.contents.bind( "<R>", self.mac_cmd_overrides)		# replace_all
+			self.contents.bind( "<g>", self.mac_cmd_overrides)		# gotoline
+			self.contents.bind( "<r>", self.mac_cmd_overrides)		# replace
 			
-			self.contents.bind( "<Control-f>", self.font_choose)
-		
-		
+			self.contents.bind( "<Control-f>", self.font_choose)		#############################
+			self.contents.bind( "<Shift-Tab>", self.unindent)
+			
+			# have to bind to symbol name to get alt-shorcuts work in macOS
+			self.contents.bind( "<function>", self.mac_cmd_overrides)
+			
 		#######################################################
 		
 		
-		if self.os_type != 'mac_os':
-			self.contents.bind( "<Control-f>", self.search)
-			self.contents.bind( "<Control-v>", self.paste)
 		
+		self.bind( "<Escape>", self.do_nothing )
+		self.bind( "<Return>", self.do_nothing)
+		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
+		self.bind( "<Control-plus>", self.increase_scrollbar_width)
 		
 		self.contents.bind( "<Control-a>", self.goto_linestart)
 		self.contents.bind( "<Control-e>", self.goto_lineend)
+		self.contents.bind( "<Control-A>", self.goto_linestart)
+		self.contents.bind( "<Control-E>", self.goto_lineend)
 		
 		self.contents.bind( "<Control-i>", self.move_right)
 		self.contents.bind( "<Control-b>", self.move_left)
@@ -507,32 +509,36 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-z>", self.undo_override)
 		self.contents.bind( "<Control-Z>", self.redo_override)
 		
-		# this move_line interferes with search_next,check_nextevent, so not in use
-		#self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
-		#self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
-		
-		# updown_override not in use
-		#self.contents.bind("<Up>", lambda event: self.updown_override(event, **{'direction':'up'} ))
-		#self.contents.bind("<Down>", lambda event: self.updown_override(event, **{'direction':'down'} ))
-		
-		
 		self.contents.bind( "<BackSpace>", self.backspace_override)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
 		
 		
+##		# this move_line interferes with search_next,check_nextevent, so not in use
+##		self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
+##		self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
+##
+##		# updown_override not in use
+##		self.contents.bind("<Up>", lambda event: self.updown_override(event, **{'direction':'up'} ))
+##		self.contents.bind("<Down>", lambda event: self.updown_override(event, **{'direction':'down'} ))
+		
 		
 		# Unbind some default bindings
+		# Paragraph-bindings: too easy to press by accident
 		self.contents.unbind_class('Text', '<<NextPara>>')
 		self.contents.unbind_class('Text', '<<PrevPara>>')
 		self.contents.unbind_class('Text', '<<SelectNextPara>>')
 		self.contents.unbind_class('Text', '<<SelectPrevPara>>')
+		
+		# LineStart and -End:
+		# fix goto_linestart-end and
+		# enable tab-walking in mac_os with cmd-left-right
 		self.contents.unbind_class('Text', '<<LineStart>>')
-		# ctrl-e no work
 		self.contents.unbind_class('Text', '<<LineEnd>>')
+		self.contents.unbind_class('Text', '<<SelectLineEnd>>')
+		self.contents.unbind_class('Text', '<<SelectLineStart>>')
 		
 		
-			
-	
+		
 		# Needed in leave() taglink in: Run file Related
 		self.name_of_cursor_in_text_widget = self.contents['cursor']
 		
@@ -680,12 +686,18 @@ class Editor(tkinter.Toplevel):
 			
 			self.scrollbar.config(width=self.scrollbar_width)
 			self.scrollbar.config(elementborderwidth=self.elementborderwidth)
-
-
-			pad = self.font.measure('A') // 3
-
+			
 			self.ind_depth = TAB_WIDTH
 			self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
+			
+
+
+			# One char lenght is: self.tab_width // self.ind_depth ###########################
+			# Use this in measuring padding
+			pad =  self.tab_width // self.ind_depth // 3
+
+			
+			
 			self.contents.config(font=self.font, foreground=self.fgcolor,
 				background=self.bgcolor, insertbackground=self.fgcolor,
 				tabs=(self.tab_width, ), padx=pad)
@@ -979,7 +991,7 @@ class Editor(tkinter.Toplevel):
 				tmp = ['osascript', '-e', 'tell app "%s" to activate' % tmp]
 				subprocess.run(tmp)
 				
-			except (FileNotFoundError, SubprocessError):
+			except (FileNotFoundError, subprocess.SubprocessError):
 				pass
 			
 			# No need to put in thread
@@ -1177,12 +1189,6 @@ class Editor(tkinter.Toplevel):
 			if event.keysym == 'n':
 				self.new_tab(event=event)
 				
-			elif event.keysym == 's':
-				self.walk_tabs(event=event)
-			
-			elif event.keysym == 'a':
-				self.walk_tabs(event=event, **{'back':True})
-				
 			elif event.keysym == 'g':
 				self.gotoline(event=event)
 			
@@ -1194,6 +1200,9 @@ class Editor(tkinter.Toplevel):
 						
 			elif event.keysym == 'v':
 				self.paste(event=event)
+			
+			elif event.keysym == 'c' and event.widget == self.ln_widget:
+				self.no_copy_ln(event=event)
 			
 			else:
 				return
@@ -1227,7 +1236,40 @@ class Editor(tkinter.Toplevel):
 			
 			return 'break'
 			
+		
+		
+		# Pressed Cmd + Shift + arrow left right
+		elif event.state == 105:
+		
+			if event.keysym == 'Right':
+				self.goto_lineend(event=event)
+				
+			elif event.keysym == 'Left':
+				self.goto_linestart(event=event)
+	
+			else:
+				return
 			
+			return 'break'
+		
+		
+		# Pressed arrow left or right.
+		# If have selection, put cursor on the wanted side of selection.
+		elif event.state == 96:
+			
+			if len(self.contents.tag_ranges('sel')) > 0:
+				if event.keysym == 'Right':
+					self.check_sel(event=event)
+					
+				elif event.keysym == 'Left':
+					self.check_sel(event=event)
+		
+			else:
+				return
+				
+			return 'break'
+			
+		
 		# Pressed Fn
 		elif event.state == 64:
 			
@@ -1247,24 +1289,24 @@ class Editor(tkinter.Toplevel):
 				return
 	
 	
-##		# Pressed Alt
-##		elif event.state == 16:
-##			print('BBB1')
-##			if event.keysym == 'f':
-##				print('BBB2')
-##				self.font_choose(event=event)
-##				return 'break'
+		# Pressed Alt
+		elif event.state == 16:
+			print('BBB1')
+			if event.keysym == 'function':
+				print('BBB2')
+				#self.font_choose(event=event)
+				return 'break'
+
+##			elif event.keysym == 's':
+##				self.walk_tabs(event=event)
 ##
-####			elif event.keysym == 's':
-####				self.walk_tabs(event=event)
-####
-####			elif event.keysym == 'a':
-####				self.walk_tabs(event=event, **{'back':True})
-##
-##			# Some shortcuts does not insert.
-##			# Like fn-h does not insert h.
-##			else:
-##				return
+##			elif event.keysym == 'a':
+##				self.walk_tabs(event=event, **{'back':True})
+
+			# Some shortcuts does not insert.
+			# Like fn-h does not insert h.
+			else:
+				return
 		
 			
 			
@@ -3022,10 +3064,69 @@ class Editor(tkinter.Toplevel):
 		return "break"
 	
 	
+	def check_sel(self, event=None):
+		if self.state not in  [ 'normal', 'error' ]:
+			self.bell()
+			return "break"
+	
+		# Pressed arrow left or right.
+		# If have selection, put cursor on the wanted side of selection.
+		# what if in entry?
+		
+		if len(self.contents.tag_ranges('sel')) == 0:
+			return
+	
+		s = self.contents.index(tkinter.SEL_FIRST)
+		e = self.contents.index(tkinter.SEL_LAST)
+		i = self.contents.index(tkinter.INSERT)
+		
+		# Leave cursor where it is if have selected all
+		if s == self.contents.index('1.0') and e == self.contents.index(tkinter.END):
+			return
+		
+		self.contents.tag_remove('sel', '1.0', tkinter.END)
+		#self.contents.see('1.0')
+		
+		
+		if event.keysym == 'Right':	self.contents.mark_set('insert', e)
+		elif event.keysym == 'Left':self.contents.mark_set('insert', s)
+		else:
+			return
+		
+		return 'break'
+		
+	
 	def goto_lineend(self, event=None):
 		if self.state not in  [ 'normal', 'error' ]:
 			self.bell()
 			return "break"
+		
+		have_selection = False
+		want_selection = False
+		# Pressed also shift, so adjust selection
+		# ctrl-shift == 5
+		# mac_os:
+		# command-shift-arrowleft or right == 105
+		if event.state in [ 5, 105 ]:
+			want_selection = True
+			i = self.contents.index(tkinter.INSERT)
+				
+			if len( self.contents.tag_ranges('sel') ) > 0:
+				# need to know if selection started from top or bottom.
+				
+				
+				have_selection = True
+				s = self.contents.index(tkinter.SEL_FIRST)
+				e = self.contents.index(tkinter.SEL_LAST)
+				
+				# selection started from top
+				from_top = False
+				if self.contents.compare(s,'<',i):
+					from_top = True
+					
+				# from bottom
+				# else:	from_top = False
+		
 		
 		self.ensure_idx_visibility('insert')
 
@@ -3039,9 +3140,23 @@ class Editor(tkinter.Toplevel):
 		
 		pos = self.contents.index( 'insert display lineend' )
 		
-	
 		self.contents.see(pos)
 		self.contents.mark_set('insert', pos)
+		
+		
+		if want_selection:
+			if have_selection:
+				if from_top:
+					self.contents.tag_remove('sel', '1.0', tkinter.END)
+					self.contents.tag_add('sel', s, 'insert')
+				
+				#from bottom
+				else:
+					self.contents.tag_remove('sel', '1.0', tkinter.END)
+					self.contents.tag_add('sel', 'insert', e)
+				
+			else:
+				self.contents.tag_add('sel', i, 'insert')
 		
 		
 		# was:
@@ -3053,7 +3168,35 @@ class Editor(tkinter.Toplevel):
 		if self.state not in  [ 'normal', 'error' ]:
 			self.bell()
 			return "break"
-			
+		
+		have_selection = False
+		want_selection = False
+		# Pressed also shift, so adjust selection
+		# ctrl-shift == 5
+		# mac_os:
+		# command-shift-arrowleft or right == 105
+		if event.state in [ 5 , 105]:
+			want_selection = True
+			i = self.contents.index(tkinter.INSERT)
+				
+			if len( self.contents.tag_ranges('sel') ) > 0:
+				# need to know if selection started from top or bottom.
+				
+				
+				have_selection = True
+				s = self.contents.index(tkinter.SEL_FIRST)
+				e = self.contents.index(tkinter.SEL_LAST)
+				
+				# selection started from top
+				from_top = False
+				if self.contents.compare(s,'<',i):
+					from_top = True
+					
+				# from bottom
+				# else:	from_top = False
+				
+				
+		
 		self.ensure_idx_visibility('insert')
 		
 		# In case of wrapped lines
@@ -3065,6 +3208,7 @@ class Editor(tkinter.Toplevel):
 		c1 = int(p.split('.')[1])
 		l2 = int(p2.split('.')[0])
 		
+		pos = None
 		# yes, put cursor start of line not the whole line:
 		if c1 != 0:
 			pos = p
@@ -3081,6 +3225,21 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.see(pos)
 		self.contents.mark_set('insert', pos)
+	
+		if want_selection:
+			if have_selection:
+				if from_top:
+					self.contents.tag_remove('sel', '1.0', tkinter.END)
+					self.contents.tag_add('sel', s, 'insert')
+				
+				#from bottom
+				else:
+					self.contents.tag_remove('sel', '1.0', tkinter.END)
+					self.contents.tag_add('sel', 'insert', e)
+				
+			else:
+				self.contents.tag_add('sel', 'insert', i)
+					
 		
 		return "break"
 		

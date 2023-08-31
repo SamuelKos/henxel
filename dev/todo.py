@@ -1,11 +1,12 @@
 
-# cmd shift left right select from line 		but not good selection
-# used to walk tabs
+# have to bind to symbol name to get alt-shorcuts work in macOS
+self.contents.bind( "<function>", self.mac_cmd_overrides)
+			
 
+ctrl-f to search
+# alt left right next prev word work without tcl fix
+# check in windows
 
-# ctrl ae now works
-# ctrl e  no check if space at the end of line.
-# change/add to cmd ae
 
 
 # night colors mac_os:
@@ -16,6 +17,12 @@
 
 # mac_os helptext
 
+
+cont, ln_wid  padx = 10 pady = 4
+
+padx font measure ?
+pady?
+after font change re-grid?
 
 
 
@@ -80,12 +87,13 @@ ctrl -down hide others temporarily, get them back with ctrl-up
 
 
 
-cont, ln_wid  padx = 10 pady = 4
-
-padx font measure ?
-pady?
-after font change re-grid?
-
+# mac_os keys
+# fn Super		bind to key and check state == 64
+# cmd Meta  	bind to key and check state == 8
+# Alt			bind to key and check state == 16
+# ctrl works
+# ctrl  		(state == 4)
+# shift			(state == 1)
 
 
 
@@ -94,13 +102,6 @@ after font change re-grid?
 # alt return cmd -return?
 # ctrl -leftright
 
-
-# mac_os keys
-# fn Super		bind to key and check state == 64
-# cmd Meta  	bind to key and check state == 8
-# Alt			bind to key and check state == 16
-# ctrl works
-# ctrl  		(state == 4)
 
 
 # mac_os, working:
@@ -129,11 +130,23 @@ cmd-left	back
 cmd-ret		open file
 
 
-# alt left right next prev word work without tcl fix
-# check in windows
 
 
 
+#####
+# ctrl-shift-a to indent
+# done initially
+# cmd-shift left right				ok?
+# ctrl ae now works
+# ctrl e  no check if space at the end of line.
+# cmd shift left right select from line same as ctrl shift ae
+# change/add to cmd ae ?
+# unbinded sel linestartend
+#####
+
+
+# when selection, if arrow left or right,
+# move cursor to other end, done 	ok?
 
 # when r in search entry bell
 # cmd r R g binded to contents		ok?
