@@ -353,7 +353,8 @@ class Editor(tkinter.Toplevel):
 						padx=0, bitmap='info', state='disabled')
 
 		
-		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, bg='#d9d9d9')
+		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0)
+		if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
 		self.entry.bind("<Return>", self.load)
 		
 		self.btn_open=tkinter.Button(self, takefocus=0, text='Open', bd=4, highlightthickness=0, command=self.load)
@@ -426,7 +427,7 @@ class Editor(tkinter.Toplevel):
 			# Override Cmd-Q:
 			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
 			self.root.createcommand("tk::mac::Quit", self.quit_me)
-			
+			#self.root.createcommand("tk::mac::OnHide", self.test_hide)
 				
 		self.contents.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
 		
@@ -919,7 +920,7 @@ class Editor(tkinter.Toplevel):
 		
 		############################# init End ##########################
 		
-		
+	
 	def update_title(self, event=None):
 		tail = len(self.tabs) - self.tabindex - 1
 		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
@@ -2353,12 +2354,13 @@ class Editor(tkinter.Toplevel):
 		
 ##		wid.after(200, lambda kwargs={'cursor':'hand2'}: t.config(**kwargs) )
 ##
-##		wid.after(500, lambda args=[tagname],
-##				kwargs={'underline':1, 'font':self.boldfont}: t.tag_config(*args, **kwargs) )
 		
 		
 		t.config(cursor="hand2")
-		t.tag_config(tagname, underline=1, font=self.boldfont)
+		wid.after(50, lambda args=[tagname],
+				kwargs={'underline':1, 'font':self.boldfont}: t.tag_config(*args, **kwargs) )
+		
+		#t.tag_config(tagname, underline=1, font=self.boldfont)
 		
 		
 	def leave2(self, args, event=None):
@@ -2370,7 +2372,10 @@ class Editor(tkinter.Toplevel):
 		t = wid.textwid
 		
 		t.config(cursor=self.name_of_cursor_in_text_widget)
-		t.tag_config(tagname, underline=0, font=self.menufont)
+		wid.after(50, lambda args=[tagname],
+				kwargs={'underline':0, 'font':self.menufont}: t.tag_config(*args, **kwargs) )
+		
+		#t.tag_config(tagname, underline=0, font=self.menufont)
 		
 		
 	def lclick2(self, args, event=None):
@@ -2565,7 +2570,7 @@ class Editor(tkinter.Toplevel):
 		'''
 		t = wid.textwid
 		
-		wid.after(100, lambda args=[tagname],
+		wid.after(50, lambda args=[tagname],
 				kwargs={'background':'green'}: t.tag_config(*args, **kwargs) )
 					
 		wid.after(600, lambda args=[tagname],
@@ -4169,7 +4174,10 @@ class Editor(tkinter.Toplevel):
 			filetop.title('Select File')
 			self.to_be_closed.append(filetop)
 			
-			fd = fdialog.FDialog(filetop, p, self.tracevar_filename, self.font, self.menufont)
+			default_colors = False
+			if self.os_type == 'mac_os': default_colors = True
+			
+			fd = fdialog.FDialog(filetop, p, self.tracevar_filename, default_colors, self.font, self.menufont)
 			
 			return 'break'
 			
@@ -4426,6 +4434,7 @@ class Editor(tkinter.Toplevel):
 		
 	
 	def stop_gotoline(self, event=None):
+		self.state = 'normal'
 		self.bind("<Escape>", self.do_nothing)
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
@@ -4450,7 +4459,9 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-			
+		
+		self.state = 'gotoline'
+		
 		try:
 			pos = self.contents.index(tkinter.INSERT)
 		except tkinter.TclError:

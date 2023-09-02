@@ -1,6 +1,8 @@
 
 
 
+
+
 cmd-w  to closetab?
 
 ::tk::mac::OnHide
@@ -19,8 +21,6 @@ print using pattern
 e.tk.eval('parray tcl_platform os')
 
 
-# After bindings done, check all callbacks for bindings in there
-
 
 
 
@@ -32,14 +32,6 @@ self.bind("<<ThemeChanged>>", self.handle_configure)
 system_colorname = self.entry.cget('fg')
 colors_as_rgb_tuple = self.winfo_rgb(system_colorname)
 for example, white color would get: (65535, 65535, 65535)
-
-
-# night colors mac_os:
-# btn_git
-# filedialog
-# entry
-
-
 
 
 
@@ -152,6 +144,18 @@ cmd-ret		open file
 
 
 
+
+
+# night colors mac_os:
+# btn_git
+# filedialog
+# entry
+# made quick fix		ok?
+
+
+
+
+# After bindings done, check all callbacks for bindings in there		ok?
 
 # mac_os helptext			ok?
 
