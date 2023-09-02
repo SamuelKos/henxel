@@ -1,12 +1,37 @@
 
-# have to bind to symbol name to get alt-shorcuts work in macOS
-self.contents.bind( "<function>", self.mac_cmd_overrides)
-			
 
-ctrl-f to search
-# alt left right next prev word work without tcl fix
-# check in windows
 
+cmd-w  to closetab?
+
+::tk::mac::OnHide
+If defined, this is called when your application receives a kEventAppHidden event, e.g. via the hide menu item in the application or Dock menus.
+
+
+::tk::mac::OnShow
+If defined, this is called when your application receives a kEventAppShown event, e.g. via the show all menu item in the application menu, or by clicking the Dock icon of a hidden application.
+
+
+# yet another way to find os_type
+print tcl-array nicely
+e.tk.eval('parray tcl_platform')
+
+print using pattern
+e.tk.eval('parray tcl_platform os')
+
+
+# After bindings done, check all callbacks for bindings in there
+
+
+
+
+self.bind("<<ThemeChanged>>", self.handle_configure)
+
+# if macos: thread, tkinter.Tk(), button, string
+
+
+system_colorname = self.entry.cget('fg')
+colors_as_rgb_tuple = self.winfo_rgb(system_colorname)
+for example, white color would get: (65535, 65535, 65535)
 
 
 # night colors mac_os:
@@ -15,7 +40,7 @@ ctrl-f to search
 # entry
 
 
-# mac_os helptext
+
 
 
 cont, ln_wid  padx = 10 pady = 4
@@ -65,14 +90,13 @@ fn-f now works
 # str(self.nametowidget(self.contents))
 # self.contents.winfo_name()
 			
-			
+label .lbl
+
+'trace add variable %s write {apply {{name1 name2 op} {upvar 1 $name1 var; puts jou }}}' % wid
 
 
 
 
-
-
-add copy of NotoMono v. 1.0 to repo?
 
 
 
@@ -82,7 +106,7 @@ fn 		-h 	show desktop?
 
 ctrl -up 	toggle show open apps
 ctrl -down hide others temporarily, get them back with ctrl-up
-
+ctrl -leftright  switch apps?
 
 
 
@@ -94,13 +118,6 @@ ctrl -down hide others temporarily, get them back with ctrl-up
 # ctrl works
 # ctrl  		(state == 4)
 # shift			(state == 1)
-
-
-
-# mac_os, not working:
-# all alt shortcuts makes some special char
-# alt return cmd -return?
-# ctrl -leftright
 
 
 
@@ -120,7 +137,9 @@ ctrl -down hide others temporarily, get them back with ctrl-up
 # ctrl +-
 # ctrl-t
 
-# ctrl-v cmd v		check
+# bind to nothing:?
+# ctrl-c
+# ctrl-v
 
 
 fixes
@@ -131,6 +150,33 @@ cmd-ret		open file
 
 
 
+
+
+
+# mac_os helptext			ok?
+
+# left right entry
+# cmd shift left right		ok?
+
+
+# all alt shortcuts makes some special char
+# have to bind to symbol name to get alt-shorcuts work in macOS
+# self.contents.bind( "<function>", self.mac_cmd_overrides)
+
+# macos info alt		ok?
+
+# alt l x
+# ctrl l x
+
+
+
+# colorchooser freezes in macos
+# after choosing color
+# give focus after close to chooser
+# fixed 	ok?
+
+
+# add copy of NotoMono v. 1.0 to repo				ok?
 
 
 #####

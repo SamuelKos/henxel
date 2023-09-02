@@ -1,0 +1,283 @@
+		Keyboard shortcuts for macOS:
+		
+		If key-sequence is like: Cmd-c
+		It means: while holding ctrl-key down, press and release c-key.
+		
+		If key-sequence is like: Cmd-c-f
+		It means: while holding ctrl-key down, press and release first
+		c-key then f-key.
+		 
+		Cmd-Return		Open file
+		Ctrl-BackSpace  Show and select next occurence of last search.
+						If got too far, press arrowleft to go to last
+						cursor position.
+		Cmd-f  Search
+		Cmd-r  Replace
+		Cmd-R  Replace all
+		Cmd-g  Gotoline:	-1 and empty goes to file-end
+		
+		Shift-Tab  Unindent
+		Tab        Indent
+		
+		Shift-Return	Comment
+		Shift-BackSpace	Uncomment
+		
+		Cmd-c  Copy		Try this: Cmd-c-f
+		Cmd-v  Paste
+		Cmd-x  Cut
+		Cmd-z  Undo
+		Cmd-Z  Redo
+		
+		Ctrl-l   Toggle linenumbers
+		Ctrl-x   Toggle syntax highlight
+		
+		Alt-f   Font setting
+		Alt-s   Color setting
+		Alt-t   Toggle color setting
+		Alt-e   expand word
+		
+		Cmd-n   Open new tab			Try this: Cmd-n-Return
+		
+		Ctrl-d  Close current tab and save it
+		Ctrl-q  Close current tab without saving it
+		
+		Cmd-right  Walk tabs forward
+		Cmd-left   Walk tabs backwards
+		
+		Ctrl-i  Move cursor right
+		Ctrl-b  Move cursor left
+		Ctrl-n  Move cursor down
+		Ctrl-p  Move cursor up
+		
+		Ctrl-e  Move cursor to lineend
+		Ctrl-a  Move cursor to linestart
+		
+		Cmd-shift-right  Select from cursor to lineend
+		Cmd-shift-left   Select from cursor to linestart
+		
+		Ctrl-k  Remove from cursor to lineend
+		Ctrl-o  Insert linebreak at cursor
+		
+		Ctrl-j  Scroll down without moving cursor (center view)
+		
+		Shift-up	Select one more line up
+		Shift-down	Select one more line down
+		
+		Alt-left  		Move cursor one word left
+		Alt-right 		Move cursor one word right
+		Alt-shift-left 	Select one more word to left
+		Alt-shift-right	Select one more word to right
+		
+		Ctrl-plus 	Increase scrollbar-width
+		Ctrl-minus	Decrease scrollbar-width
+		
+		Ctrl-t  	Change indentation of selected lines to current setting
+
+
+		While searching:
+			Ctrl-n  Next match
+			Ctrl-p  Prev match
+			-	copying text to clipboard is possible
+			-	press or select text where you want cursor to
+				be after closing searching with esc. Otherwise
+				cursor will remain where you left it.
+				Press arrow-key to refresh view back to cursor.
+		
+		While replacing:
+			Return does what is expected.
+		
+		Default bindings: https://tcl.tk/man/tcl8.6/TkCmd/text.htm#M192
+	
+	
+	When is my file Saved to Disk?
+	
+		All tabs are saved to disk when:
+		  - closing program, also configurations
+		  - running file
+		
+		Current tab is saved to disk when:
+		  - closing tab, if it had filename.
+			New tabs get filename by pressing save.
+		  
+		  - opening file from disk when there already was another file opened
+			in tab.
+		
+		Otherwise, changes are saved in memory
+		
+		This means that if you want to cancel all changes:
+		  - do not run file
+		  - do not close editor
+		  - do not close tab with a filename
+		  - do not open file in a tab which has already a file opened
+		  
+		  - instead close python-console with ctrl-d
+		
+		
+	Editor
+	  - Editor configuration is related to python-environment (sys.prefix)
+		in which python console was launched. So if you have say two
+		different envs in the same directory, they will have separate confs.
+		
+	  - Configuration is not saved if editor was not launched from
+		virtual environment.
+		
+	  - If editor was launched inside a directory what is being
+		version-controlled with git, the current git-branch will be shown
+		in top-left corner.
+		
+	  - If you do something in python-console that waits for user input,
+		Editor will be freezed during that time, like when viewing help
+		of some function.
+		
+			
+	Undo
+	  - Undo is only partly functional due to lack of motivation. But it
+		usually works just fine. Undo is reset when ever view is changed.
+	
+	
+	Save-button
+	  - To create a new file, add filename to entry and press save.
+	  	This creates an empty file like 'touch'. This is done to
+		ensure filepath is ok. Contents will be saved to disk in
+		above mentioned situations.
+	  
+	  - If a file was already open and user changed filename in entry,
+		old file is first saved (but not to disk) and then new file with
+		same content is created in a new tab (its contents are not yet in disk).
+	  
+	  - Pressing save in tab which exists in disk does not do anything.
+	  - Contents of tabs without filename are not saved when closing tab,
+		or program, but tabs are still kept as placeholders.
+			
+		
+	Open-button
+	  - When in tab without filename, files can be opened from entry
+		or by pressing button.
+	  
+	  - If tab had filename and user changed filename in entry and
+		user presses enter: old file is first saved to disk and closed,
+		then filepath in entry is opened in the same tab.
+		
+	  - If entered filename in entry and pressed open, entry is ignored.
+	
+	
+	How to: copy-paste code-blocks in editor
+	  - When copying, select additional empty line before block.
+		This ensures indentation of whole block. If you do not do this,
+		and select for example from 'def' - word, which has indentation,
+		then indentation of this first line is wrong when pasted, compared
+		to other lines. But editor moves cursor at the start of block so
+		you can start fixing indentation of that line.
+	
+	
+	How to: Execute part of the code from editor in Python-console
+	  - Remember to put import-lines before the desired code-blocks. Then
+		just select whole thing, copy and paste to console. You may have
+		to press Return before last block executes. This is very useful,
+		compared to writing all that in console is much more difficult.
+		
+	
+	How to: expand word
+	  - When starting to write object-name that has been used earlier near
+		current position, like if previous line was:
+		
+			var = functionabc()
+		
+		then when continuing at the next line:
+			
+			var2 = func
+			
+		and pressing Alt-e it should expand to functionabc. Pressing again
+		searches backwards next word with func in its name, and when no
+		matches are found, it starts to search onwards to the file-end and
+		after that another round starts.
+	
+	
+	How to: hide blinking cursor
+	  - Sometimes one wants to focus on the code and blinking cursor is
+		not helping with that. Since there is no timer to turn it off one
+		have to click on linenumber-widget to hide the cursor.
+	
+	
+	How to: change indent-depth
+		For all files:
+	  - If you started editor with: import henxel and e=henxel.Editor(),
+		then to change indent-depth in python-console:
+		e.change_indentation_width(8)
+		
+		For code-snippet:
+	  - If you copied something to your editor that has different indentation
+		than rest of the file:
+		(Note that you don't have to do anything if it is indented with normal
+		4 spaces and you have indent-depth the normal 4 )
+		1: Make sure you copied the block starting with one empty line.
+		2: Click cursor to start of empty line and paste.
+		
+		Then select that code and press Control-t, and
+		it should then be indented as you wanted and you can then continue
+		indenting the pasted code to the right place.
+		
+		(Note that you don't have to do anything if you open a file that has
+		different indentation than your setting, it is changed automatically
+		and saved with tabbed indentation after you for example close it.)
+	
+	
+	Running file
+	  - input from stdin does not work, so use test-data for that.
+	  
+	  - Editor freezes when running a program. So if you are testing
+		for possible runtime-errors, keep that in mind. You should
+		be able to terminate your program with ctrl-c from python-console.
+	
+	  - If you know where in your code that runtime-error occurs, put
+		breakpoint() there, exit editor and python-console and run
+		from terminal:
+		
+		python program_with_error.py
+		
+		and it will exit to python debugger after your breakpoint.
+		
+
+	Inspecting objects:
+	  - For inspecting module, class or functions. Not tested with other
+		object-types. You have this line in editor:
+		
+			res = package.module.function(*args)
+			
+			or
+			
+			my_instance = package.module.SomeClass()
+			
+		You are interested in function or SomeClass or module or package.
+		Then you select with mouse this text:
+		
+			pagkage.module.function
+			
+			or
+			
+			package.module.SomeClass
+			
+			or
+			
+			package.module
+			
+			or
+			
+			package
+	
+		Then open menu with mouse-right and select: inspect.
+	
+	  	Now editor tries to inspect your selection. On success: opens new tab
+		and pastes lines there. New tab can be safely closed with ctrl-d later,
+		or saved with new filename.
+		
+		Notice that this wont work:
+			my_instance = package.module.SomeClass()
+			res = my_instance.function(*args)
+			
+			And then trying to inspect: my_instance.function
+			Instead in this case you should inspect: package.module.SomeClass
+			Then search: function(
+		
+		Also builtins like math can not be inspected.
+		

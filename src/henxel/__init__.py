@@ -106,6 +106,8 @@ class Tab:
 CONFPATH = 'editor.cnf'
 ICONPATH = 'editor.png'
 HELPPATH = 'help.txt'
+HELP_MAC = 'help_mac.txt'
+
 VERSION = importlib.metadata.version(__name__)
 
 
@@ -234,8 +236,11 @@ class Editor(tkinter.Toplevel):
 
 			if not cls.helptxt:
 				for item in cls.pkg_contents.iterdir():
+					
+					helpfile = HELPPATH
+					if cls.os_type == 'mac_os': helpfile = HELP_MAC
 
-					if item.name == HELPPATH:
+					if item.name == helpfile:
 						try:
 							cls.helptxt = item.read_text()
 							break
@@ -392,8 +397,10 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, command = self.contents.yview)
 
 		self.expander = wordexpand.ExpandWord(self.contents)
-		if self.os_type != 'mac_os':
-			self.contents.bind( "<Alt-e>", self.expander.expand_word_event)
+		shortcut = "<Alt-e>"
+		if self.os_type == 'mac_os': shortcut = "<eacute>"
+		self.contents.bind( shortcut, self.expander.expand_word_event)
+		
 		
 		# Widgets are initiated, now more configuration
 		################################################
@@ -433,15 +440,37 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
 		
 		
-		#######################################################
+		############################################################
+		# In macOS all Alt-shortcuts makes some special symbol.
+		# Have to bind to this symbol-name to get Alt-shorcuts work.
+		# For example binding to Alt-f:
+		# self.contents.bind( "<function>", self.font_choose)
+		
+		# Except that tkinter does not give all symbol names, like
+		# Alt-x or l
+		# which makes these keycombinations quite unbindable.
+		# It would be much easier if one could do bindings normally:
+		# Alt-SomeKey
+		# like in Linux and Windows.
+		
+		# Also binding to combinations which has Command-key (apple-key)
+		# or fn-key have to be done by checking the state of the event
+		# in some proxy-callback: mac_cmd_overrides
+		
+		# In short, In macOS one can not bind like:
+		# Command-n
+		# fn-f
+		# Alt-f
+		
+		# This is quite bad.
+		# This is the reason why below is some extra
+		# and strange looking binding-lines when using macOS.
+		##############################################################
 		if self.os_type != 'mac_os':
-			self.bind( "<Control-R>", self.replace_all)
-			self.bind( "<Control-g>", self.gotoline)
-			self.bind( "<Control-r>", self.replace)
-
+			
 			self.bind( "<Alt-n>", self.new_tab)
-			self.bind( "<Alt-s>", self.color_choose)
-			self.bind( "<Alt-t>", self.toggle_color)
+			self.contents.bind( "<Alt-s>", self.color_choose)
+			self.contents.bind( "<Alt-t>", self.toggle_color)
 			self.bind( "<Alt-w>", self.walk_tabs)
 			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
 		
@@ -450,7 +479,6 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Alt-x>", self.toggle_syntax)
 			self.contents.bind( "<Alt-f>", self.font_choose)
 		
-			self.contents.bind( "<Control-f>", self.search)			##############################
 			self.contents.bind( "<Control-v>", self.paste)
 		
 			self.contents.bind("<Left>", lambda event: self.check_sel)
@@ -459,27 +487,43 @@ class Editor(tkinter.Toplevel):
 		
 		#self.os_type == 'mac_os':
 		else:
-			self.contents.bind( "<Right>", self.mac_cmd_overrides)	# walk_tab  etc
-			self.contents.bind( "<Left>", self.mac_cmd_overrides)	# walk_back etc
+			self.contents.bind( "<Right>", self.mac_cmd_overrides)	# + cmd walk_tab,	check_sel
+			self.contents.bind( "<Left>", self.mac_cmd_overrides)	# + cmd walk_back,	check_sel
+			self.entry.bind( "<Right>", self.mac_cmd_overrides)		# + cmd check_sel
+			self.entry.bind( "<Left>", self.mac_cmd_overrides)		# + cmd check_sel
 			
-			self.contents.bind( "<n>", self.mac_cmd_overrides)		# newtab
+			self.contents.bind( "<n>", self.mac_cmd_overrides)		# + cmd newtab
 			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen, + cmd search
-			self.contents.bind( "<v>", self.mac_cmd_overrides)		# paste
+			self.contents.bind( "<v>", self.mac_cmd_overrides)		# + cmd paste
 			
-			self.contents.bind( "<R>", self.mac_cmd_overrides)		# replace_all
-			self.contents.bind( "<g>", self.mac_cmd_overrides)		# gotoline
-			self.contents.bind( "<r>", self.mac_cmd_overrides)		# replace
+			self.contents.bind( "<R>", self.mac_cmd_overrides)		# + cmd replace_all
+			self.contents.bind( "<g>", self.mac_cmd_overrides)		# + cmd gotoline
+			self.contents.bind( "<r>", self.mac_cmd_overrides)		# + cmd replace
 			
-			self.contents.bind( "<Control-f>", self.font_choose)		#############################
+			self.contents.bind( "<z>", self.mac_cmd_overrides)		# + cmd undo_override
+			self.contents.bind( "<Z>", self.mac_cmd_overrides)		# + cmd redo_override
+			
+			# Could not get keysym for Alt-l and x, so use ctrl
+			self.contents.bind( "<Control-l>", self.toggle_ln)
+			self.contents.bind( "<Control-x>", self.toggle_syntax)
+			
+			
 			self.contents.bind( "<Shift-Tab>", self.unindent)
 			
 			# have to bind to symbol name to get alt-shorcuts work in macOS
-			self.contents.bind( "<function>", self.mac_cmd_overrides)
+			# This is: Alt-f
+			self.contents.bind( "<function>", self.font_choose)		# Alt-f
+			self.contents.bind( "<dagger>", self.toggle_color)		# Alt-t
+			self.contents.bind( "<ssharp>", self.color_choose)		# Alt-s
+			
 			
 		#######################################################
 		
 		
-		
+		self.bind( "<Control-R>", self.replace_all)
+		self.bind( "<Control-g>", self.gotoline)
+		self.bind( "<Control-r>", self.replace)
+
 		self.bind( "<Escape>", self.do_nothing )
 		self.bind( "<Return>", self.do_nothing)
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
@@ -508,6 +552,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-t>", self.tabify_lines)
 		self.contents.bind( "<Control-z>", self.undo_override)
 		self.contents.bind( "<Control-Z>", self.redo_override)
+		self.contents.bind( "<Control-f>", self.search)
 		
 		self.contents.bind( "<BackSpace>", self.backspace_override)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
@@ -555,24 +600,26 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="        help", command=self.help)
 		
 		
-##
-##		# Win11 ctrl-leftright no work (as intended) in tcl 8.6.12 but does in 8.6.13, so:
-##		self.tcl_version = self.info_patchlevel()
-##		if self.tcl_version.major == 8 and self.tcl_version.minor == 6 and self.tcl_version.micro < 13:
-##
-##			# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
-##			# replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
-##			# Need for some reason generate ctrl-leftright before, because array ::tcl::WordBreakRE does not exist yet,
-##			# but after this event it does:
-##
-##			self.contents.insert(1.0, 'asd')
-##			self.contents.event_generate('<<NextWord>>')
-##			self.contents.delete('1.0', tkinter.END)
-##
-##			self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
-##			self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
-##			self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
-##
+
+		# Win11 ctrl-leftright no work (as intended) in tcl 8.6.12 but does in
+		# Debian 12, 8.6.13, and macOS 12, 8.6.12   so:
+		self.tcl_version = self.info_patchlevel()
+		if self.os_type == 'windows':
+			if self.tcl_version.major == 8 and self.tcl_version.minor == 6 and self.tcl_version.micro < 13:
+	
+				# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
+				# replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
+				# Need for some reason generate ctrl-leftright before, because array ::tcl::WordBreakRE does not exist yet,
+				# but after this event it does:
+	
+				self.contents.insert(1.0, 'asd')
+				self.contents.event_generate('<<NextWord>>')
+				self.contents.delete('1.0', tkinter.END)
+	
+				self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
+
 		
 		
 		if data:
@@ -813,9 +860,10 @@ class Editor(tkinter.Toplevel):
 		self.do_syntax(everything=True)
 			
 		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
-		# Viewsync-event does not trigger when window size changes,
-		# so to get linenumbers right, need to bind to this:
+		# Viewsync-event does not trigger at window size changes,
+		# to get linenumbers right, we bind to this:
 		self.contents.bind("<Configure>", self.handle_configure)
+		
 		
 		####  Syntax-highlight End  ######################################
 		
@@ -1178,9 +1226,9 @@ class Editor(tkinter.Toplevel):
 	
 	def mac_cmd_overrides(self, event=None):
 	
-		if self.state != 'normal':
-			self.bell()
-			return 'break'
+##		if self.state != 'normal':
+##			self.bell()
+##			return 'break'
 			
 		
 		# Pressed Cmd
@@ -1200,6 +1248,9 @@ class Editor(tkinter.Toplevel):
 						
 			elif event.keysym == 'v':
 				self.paste(event=event)
+				
+			elif event.keysym == 'z':
+				self.undo_override(event=event)
 			
 			elif event.keysym == 'c' and event.widget == self.ln_widget:
 				self.no_copy_ln(event=event)
@@ -1231,6 +1282,9 @@ class Editor(tkinter.Toplevel):
 			if event.keysym == 'R':
 				self.replace_all(event=event)
 				
+			elif event.keysym == 'Z':
+				self.redo_override(event=event)
+				
 			else:
 				return
 			
@@ -1241,6 +1295,50 @@ class Editor(tkinter.Toplevel):
 		# Pressed Cmd + Shift + arrow left right
 		elif event.state == 105:
 		
+			# self.contents or self.entry
+			wid = event.widget
+			have_selection = False
+			
+			# Enable select from in entry
+			if wid == self.entry:
+				have_selection = self.entry.selection_present()
+				
+				if have_selection:
+					s = wid.index(tkinter.SEL_FIRST)
+					e = wid.index(tkinter.SEL_LAST)
+					
+					self.entry.selection_clear()
+					
+					if event.keysym == 'Right':
+						self.entry.icursor('end')
+						
+						if s < e:
+							self.entry.select_range(s, 'end')
+						else:
+							self.entry.select_range(e, 'end')
+							
+					elif event.keysym == 'Left':
+						self.entry.icursor(0)
+						
+						if s < e:
+							self.entry.select_range(0, e)
+						else:
+							self.entry.select_range(0, s)
+					
+				else:
+					i = wid.index(tkinter.INSERT)
+					
+					if event.keysym == 'Right':
+						self.entry.icursor('end')
+						self.entry.select_range(i, 'end')
+							
+					elif event.keysym == 'Left':
+						self.entry.icursor(0)
+						self.entry.select_range(0, i)
+						
+				return 'break'
+				
+			# Enable select from in contents
 			if event.keysym == 'Right':
 				self.goto_lineend(event=event)
 				
@@ -1256,8 +1354,20 @@ class Editor(tkinter.Toplevel):
 		# Pressed arrow left or right.
 		# If have selection, put cursor on the wanted side of selection.
 		elif event.state == 96:
+			# self.contents or self.entry
+			wid = event.widget
+			have_selection = False
 			
-			if len(self.contents.tag_ranges('sel')) > 0:
+			if wid == self.entry:
+				have_selection = self.entry.selection_present()
+				
+			elif wid == self.contents:
+				have_selection = len(self.contents.tag_ranges('sel')) > 0
+			
+			else:
+				return
+				
+			if have_selection:
 				if event.keysym == 'Right':
 					self.check_sel(event=event)
 					
@@ -1289,24 +1399,20 @@ class Editor(tkinter.Toplevel):
 				return
 	
 	
-		# Pressed Alt
-		elif event.state == 16:
-			print('BBB1')
-			if event.keysym == 'function':
-				print('BBB2')
-				#self.font_choose(event=event)
-				return 'break'
-
-##			elif event.keysym == 's':
-##				self.walk_tabs(event=event)
+##		# Pressed Alt
+##		elif event.state == 16:
+##			print('BBB1')
 ##
-##			elif event.keysym == 'a':
-##				self.walk_tabs(event=event, **{'back':True})
-
-			# Some shortcuts does not insert.
-			# Like fn-h does not insert h.
-			else:
-				return
+##			if event.char == 'ﬁ':
+##				print('l')
+##				return 'break'
+##
+##			elif event.char == '≈':
+##				print('x')
+##				return 'break'
+##
+##			else:
+##				return
 		
 			
 			
@@ -2219,14 +2325,19 @@ class Editor(tkinter.Toplevel):
 		fonttop = tkinter.Toplevel()
 		fonttop.title('Choose Font')
 		
-		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
-				self.contents.bind( "<Alt-f>", self.font_choose)) )
-		
 		big = False
-		if self.os_type == 'mac_os': big = True
+		shortcut = "<Alt-f>"
+		
+		if self.os_type == 'mac_os':
+			big = True
+			shortcut = "<function>"
+		
+		
+		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
+				self.contents.bind( shortcut, self.font_choose)) )
 		
 		changefont.FontChooser( fonttop, [self.font, self.menufont], big, tracefunc=self.update_fonts )
-		self.contents.bind( "<Alt-f>", self.do_nothing)
+		self.contents.bind( shortcut, self.do_nothing)
 		self.to_be_closed.append(fonttop)
 	
 		return 'break'
@@ -2239,6 +2350,12 @@ class Editor(tkinter.Toplevel):
 		tagname = args[1]
 		
 		t = wid.textwid
+		
+##		wid.after(200, lambda kwargs={'cursor':'hand2'}: t.config(**kwargs) )
+##
+##		wid.after(500, lambda args=[tagname],
+##				kwargs={'underline':1, 'font':self.boldfont}: t.tag_config(*args, **kwargs) )
+		
 		
 		t.config(cursor="hand2")
 		t.tag_config(tagname, underline=1, font=self.boldfont)
@@ -2323,6 +2440,7 @@ class Editor(tkinter.Toplevel):
 			tmpcolor = str(res)
 			
 			if tmpcolor in [None, '']:
+				wid.focus_set()
 				return 'break'
 			
 			
@@ -2438,6 +2556,9 @@ class Editor(tkinter.Toplevel):
 	
 				self.update_normal_text()
 				
+		
+		wid.focus_set()
+				
 				
 	def flash_tag(self, wid, tagname):
 		''' Flash save_tag when clicked in colorchooser.
@@ -2463,15 +2584,26 @@ class Editor(tkinter.Toplevel):
 		c.tmp_theme = copy.deepcopy(self.themes)
 		c.flag_tmp = False
 		
+		shortcut_color = "<Alt-s>"
+		shortcut_toggl = "<Alt-t>"
+
+		if self.os_type == 'mac_os':
+			shortcut_color = "<ssharp>"
+			shortcut_toggl = "<dagger>"
+		
+		
 		c.protocol("WM_DELETE_WINDOW", lambda: ( c.destroy(),
-				self.bind( "<Alt-s>", self.color_choose),
-				self.bind( "<Alt-t>", self.toggle_color)) )
+				self.contents.bind( shortcut_color, self.color_choose),
+				self.contents.bind( shortcut_toggl, self.toggle_color)) )
 				
-		self.bind( "<Alt-s>", self.do_nothing)
-		self.bind( "<Alt-t>", self.do_nothing)
+		self.contents.bind( shortcut_color, self.do_nothing)
+		self.contents.bind( shortcut_toggl, self.do_nothing)
 		
 		#c.textfont = tkinter.font.Font(family='TkDefaulFont', size=10)
-		c.titlefont = tkinter.font.Font(family='TkDefaulFont', size=12)
+		
+		size_title = 12
+		if self.os_type == 'mac_os': size_title = 16
+		c.titlefont = tkinter.font.Font(family='TkDefaulFont', size=size_title)
 		
 		c.textwid = tkinter.Text(c, blockcursor=True, highlightthickness=0,
 							bd=4, pady=4, padx=10, tabstyle='wordprocessor', font=self.menufont)
@@ -2513,6 +2645,10 @@ class Editor(tkinter.Toplevel):
 		'Start',
 		'Defaults'
 		]
+		
+		
+		
+				
 		
 		
 		for tag in tags:
@@ -3071,27 +3207,36 @@ class Editor(tkinter.Toplevel):
 	
 		# Pressed arrow left or right.
 		# If have selection, put cursor on the wanted side of selection.
-		# what if in entry?
+		wid = event.widget
 		
-		if len(self.contents.tag_ranges('sel')) == 0:
-			return
-	
-		s = self.contents.index(tkinter.SEL_FIRST)
-		e = self.contents.index(tkinter.SEL_LAST)
-		i = self.contents.index(tkinter.INSERT)
+		s = wid.index(tkinter.SEL_FIRST)
+		e = wid.index(tkinter.SEL_LAST)
+		i = wid.index(tkinter.INSERT)
 		
-		# Leave cursor where it is if have selected all
-		if s == self.contents.index('1.0') and e == self.contents.index(tkinter.END):
-			return
-		
-		self.contents.tag_remove('sel', '1.0', tkinter.END)
-		#self.contents.see('1.0')
-		
-		
-		if event.keysym == 'Right':	self.contents.mark_set('insert', e)
-		elif event.keysym == 'Left':self.contents.mark_set('insert', s)
-		else:
-			return
+		if wid == self.contents:
+			
+			# Leave cursor where it is if have selected all
+			if s == self.contents.index('1.0') and e == self.contents.index(tkinter.END):
+				return
+			
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			#self.wid.see('1.0')
+			
+			
+			if event.keysym == 'Right':	self.contents.mark_set('insert', e)
+			elif event.keysym == 'Left':self.contents.mark_set('insert', s)
+			else:
+				return
+				
+				
+		if wid == self.entry:
+			self.entry.selection_clear()
+			
+			if event.keysym == 'Right':	self.entry.icursor(e)
+			elif event.keysym == 'Left':self.entry.icursor(s)
+			else:
+				return
+			
 		
 		return 'break'
 		
