@@ -481,9 +481,11 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Alt-f>", self.font_choose)
 		
 			self.contents.bind( "<Control-v>", self.paste)
-		
-			self.contents.bind("<Left>", lambda event: self.check_sel)
-			self.contents.bind("<Right>", lambda event: self.check_sel)
+			
+			self.contents.bind("<Left>", self.check_sel)
+			self.contents.bind("<Right>", self.check_sel)
+			self.entry.bind("<Left>", self.check_sel)
+			self.entry.bind("<Right>", self.check_sel)
 		
 		
 		#self.os_type == 'mac_os':
@@ -1358,23 +1360,23 @@ class Editor(tkinter.Toplevel):
 			# self.contents or self.entry
 			wid = event.widget
 			have_selection = False
-			
+
 			if wid == self.entry:
 				have_selection = self.entry.selection_present()
-				
+
 			elif wid == self.contents:
 				have_selection = len(self.contents.tag_ranges('sel')) > 0
-			
+
 			else:
 				return
-				
+
 			if have_selection:
 				if event.keysym == 'Right':
 					self.check_sel(event=event)
-					
+						
 				elif event.keysym == 'Left':
 					self.check_sel(event=event)
-		
+			
 			else:
 				return
 				
@@ -3212,7 +3214,28 @@ class Editor(tkinter.Toplevel):
 	
 		# Pressed arrow left or right.
 		# If have selection, put cursor on the wanted side of selection.
-		wid = event.widget
+		
+		# Check if have shift etc. pressed.
+		# macOS event is already handled in mac_cmd_overrides.
+		if self.os_type != 'mac_os':
+			if self.os_type == 'linux' and event.state != 0: return
+			if self.os_type == 'windows' and event.state != 262152: return
+			
+			# self.contents or self.entry
+			wid = event.widget
+			have_selection = False
+	
+			if wid == self.entry:
+				have_selection = self.entry.selection_present()
+	
+			elif wid == self.contents:
+				have_selection = len(self.contents.tag_ranges('sel')) > 0
+	
+			else:
+				return
+
+			if not have_selection: return
+			
 		
 		s = wid.index(tkinter.SEL_FIRST)
 		e = wid.index(tkinter.SEL_LAST)

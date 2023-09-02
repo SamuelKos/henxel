@@ -1,6 +1,28 @@
 # Changelog
-* To version: 	0.2.5
+* To version: 	0.2.6
 * From version:	0.0.3
+
+
+# 0.2.6
+- Added initial support for macOS. Tested to work in macOS 12. Had some major issues with it like
+inability to bind. Also, focus it not restored to Python-console after closing editor, so some
+trickery is made at import stage. You can find this in the beginning of class Editor.
+Coloring with system theme (light/dark) is also difficult and
+may require event-loop, if done with tkinter, or tracing in Tcl and is not yet done.
+- Both command-w and -q closes editor with save. Cmd-left or right walks tabs. Cmd-n opens new tab
+and cmd-return opens filedialog.
+- When have selection in contents or entry, pressing arrow left or right
+moves cursor to other end clearing selection.
+- Ctrl-shift-a or -e does select from line, so does Cmd-shift-left or -right in macOS.
+- Made macOS-helptext.
+- Added copy of NotoMono v. 1.0 to /font for possible use in future.
+- Some improvements in colorchooser.
+- Noticed that macOS seems to have some momemtum in scrolling.
+- Improvements in fontchoose, like made optionmenu choises bigger etc.
+- Removed building part from 'More on virtual environments' -section of Readme.md
+- TkDefaulFont is '.AppleSystemUIFont' in macOS and causes troubles
+because it is not in font-families. We check for error at closing editor
+and when choosing font.
 
 
 # 0.2.5

@@ -143,141 +143,16 @@ cmd-ret		open file
 
 
 
+night colors mac_os:
+btn_git
+filedialog
+entry
+made quick fix
 
 
-
-# night colors mac_os:
-# btn_git
-# filedialog
-# entry
-# made quick fix		ok?
-
-
-
-
-# After bindings done, check all callbacks for bindings in there		ok?
-
-# mac_os helptext			ok?
-
-# left right entry
-# cmd shift left right		ok?
-
-
-# all alt shortcuts makes some special char
-# have to bind to symbol name to get alt-shorcuts work in macOS
-# self.contents.bind( "<function>", self.mac_cmd_overrides)
-
-# macos info alt		ok?
-
-# alt l x
-# ctrl l x
-
-
-
-# colorchooser freezes in macos
-# after choosing color
-# give focus after close to chooser
-# fixed 	ok?
-
-
-# add copy of NotoMono v. 1.0 to repo				ok?
-
-
-#####
-# ctrl-shift-a to indent
-# done initially
-# cmd-shift left right				ok?
-# ctrl ae now works
-# ctrl e  no check if space at the end of line.
-# cmd shift left right select from line same as ctrl shift ae
-# change/add to cmd ae ?
-# unbinded sel linestartend
-#####
-
-
-# when selection, if arrow left or right,
-# move cursor to other end, done 	ok?
-
-# when r in search entry bell
-# cmd r R g binded to contents		ok?
-
-# stuff in new in class				ok?
-
-
-# mac_os seems to have some momemtum in scrolling
-# try without sb set over, if windows or mac
-# not ok leave it as is
-
-
-# tab shift tab un,indent working 	ok?
-
-# popup menu bind to contents		ok?
-
-# check font etc conf is saved		ok?
-
-# if mac_os big fontchoose			ok?
-
-# cmd v paste()		ok?
-
-# override cmd-q, now quit_me		ok?
-# cmd-w is same quit_me as protocol- delete- window, start of init
-
-
-# fontchoose, optionmenu choises bigger		ok?
-
-# help.txt build to pip install -e .			ok?
-
-
-
-# font should be check in thread at import if macos?
-# no just check for error at closing and choosing				ok?
-#'.AppleSystemUIFont' is not in list
-
-
-
-##macos give focus back to terminal at quit with osascript		ok?
-##assumes Terminal not ok
-##
-##
-##lsappinfo info -only name $(lsappinfo front)
-##Need to get os_type before?
-##
-##l = ['lsappinfo', 'front']
-##a = subprocess.run(l, check=True, capture_output=True).stdout.decode()
-### ASN, remove newline
-##a = a[:-1]
-##
-##l = ['lsappinfo', 'info', '-only', 'name', a]
-##b = subprocess.run(l, check=True, capture_output=True).stdout.decode()
-### '"LSDisplayName"="Terminal"\n'
-##b = b[:-1]
-##b = b.split(sep='=')[-1].strip('"')
-##
-##print(b)
-### 'Terminal' in console and class,
-### 'Python' in init and likely in all runtime-code
-##
-
-
-
-
-
-
-
-
-
-
-1:
-open with defaul font, open fontchoose , change size only, close font choose,
-close editor with w, close console with d,
-relaunch python console and editor and font chooser, choose real font,
-close chooser, close editor with w, close console with d,
-relaunch, --> still defaul font.
-
-2:
-open with defaul font, open fontchoose , choose real font,
-close chooser, close editor with w, do not close console with d, but relaunch editor --> still defaul font.
-1 and 2 fixed in set_config and check_fonts
+all alt shortcuts makes some special char
+have to bind to symbol name to get alt-shorcuts work in macOS
+self.contents.bind( "<function>", self.mac_cmd_overrides)
 
 
 
@@ -290,10 +165,7 @@ at the end of file, center view?
 
 linespacing2 to reduce empty lines?
 
-ctrl shift ae should select-from line?
-
 cancel ctrl npib as move cursor?
-
 
 run file shortcut in windows?
 cancel shortcut for run file?

@@ -1,5 +1,5 @@
 # Henxel
-GUI-editor for Python development. Tested to work with Debian 12 and Windows 11.
+GUI-editor for Python development. Tested to work with Debian 12, Windows 11 and macOS 12.
 
 
 # Featuring
@@ -89,6 +89,25 @@ And it is ready to use:
 (env) myproject> pip list
 (env) myproject> deactivate
 ```
+
+
+# Prerequisites in macOS and venv-creation
+Python installation (you may need to install newer version of python from python.org)
+should already include tkinter. There currently is no mkvenv script for macOS,
+but making venv is quite same as in Linux. I will update this section later.
+
+```console
+~$ mkdir myproject
+~$ cd myproject
+~/myproject$ python -m venv env
+-------------------------------
+~/myproject$ source env/bin/activate
+(env) ~/myproject$ pip list
+-----------------------------------
+(env) ~/myproject$ deactivate
+~/myproject$
+```
+
 
 
 # Installing
