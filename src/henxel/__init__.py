@@ -537,6 +537,11 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-A>", self.goto_linestart)
 		self.contents.bind( "<Control-E>", self.goto_lineend)
 		
+		if self.os_type == 'windows':
+			self.entry.bind( "<Control-E>", lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
+			self.entry.bind( "<Control-A>", lambda event, arg=('<<SelectLineStart>>'): self.entry.event_generate)
+		
+		
 		self.contents.bind( "<Control-i>", self.move_right)
 		self.contents.bind( "<Control-b>", self.move_left)
 		self.contents.bind( "<Control-n>", self.move_down)
