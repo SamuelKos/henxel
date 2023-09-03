@@ -482,7 +482,8 @@ class Editor(tkinter.Toplevel):
 		
 			self.contents.bind( "<Control-v>", self.paste)
 			
-			self.contents.bind("<Left>", self.check_sel)
+			# Used in check_next_event
+			self.bid_left = self.contents.bind("<Left>", self.check_sel)
 			self.contents.bind("<Right>", self.check_sel)
 			self.entry.bind("<Left>", self.check_sel)
 			self.entry.bind("<Right>", self.check_sel)
@@ -490,8 +491,9 @@ class Editor(tkinter.Toplevel):
 		
 		#self.os_type == 'mac_os':
 		else:
+			# Used in check_next_event
+			self.bid_left = self.contents.bind( "<Left>", self.mac_cmd_overrides)	# + cmd walk_back,	check_sel
 			self.contents.bind( "<Right>", self.mac_cmd_overrides)	# + cmd walk_tab,	check_sel
-			self.contents.bind( "<Left>", self.mac_cmd_overrides)	# + cmd walk_back,	check_sel
 			self.entry.bind( "<Right>", self.mac_cmd_overrides)		# + cmd check_sel
 			self.entry.bind( "<Left>", self.mac_cmd_overrides)		# + cmd check_sel
 			
@@ -4847,15 +4849,25 @@ class Editor(tkinter.Toplevel):
 			
 			self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
 			self.contents.unbind("<Any-Button>", funcid=self.anybutid)
+			
+			f = self.check_sel
+			if self.os_type == 'mac_os': f = self.mac_cmd_overrides
+			
+			self.bid_left = self.contents.bind("<Left>", f )
 		
 			return 'break'
-		else:
-				
 			
+		else:
 			self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
 			self.contents.unbind("<Any-Button>", funcid=self.anybutid)
+			
+			f = self.check_sel
+			if self.os_type == 'mac_os': f = self.mac_cmd_overrides
+			self.bid_left = self.contents.bind("<Left>", f )
+			
 			return
 			
+		
 		
 	def search_next(self, event=None):
 		'''	Do last search from cursor position, show and select next match.
@@ -4899,6 +4911,9 @@ class Editor(tkinter.Toplevel):
 		# go back to last place with arrow left
 		self.anykeyid = self.contents.bind( "<Any-Key>", self.check_next_event)
 		self.anybutid = self.contents.bind( "<Any-Button>", self.check_next_event)
+		self.contents.unbind("<Left>", self.bid_left)
+		
+			
 		
 		lastpos = "%s + %dc" % (pos, wordlen)
 		self.contents.tag_remove('sel', '1.0', tkinter.END)

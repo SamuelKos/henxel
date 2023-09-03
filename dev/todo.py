@@ -128,36 +128,6 @@ ctrl -leftright  switch apps?
 
 
 
-# mac_os, working:
-# ctrl-f, then ctrl-np and esc
-# ctrl-r, then ctrl-np and esc
-# ctrl-zZ
-# ctrl-ae
-# ctrl-npib
-# mouse-2 right popup
-# ctrl-qd   change ctrl d -> cmd d?
-# ctrl-c cmd c
-# ctrl-j center view
-# tab
-# shift return backspace comment uncomment
-# ctrl -backspace show next, left go back
-# ctrl +-
-# ctrl-t
-
-# bind to nothing:?
-# ctrl-c
-# ctrl-v
-
-
-fixes
-cdm-n		newtab
-cmd-right	walk
-cmd-left	back
-cmd-ret		open file
-
-
-
-
 night colors mac_os:
 btn_git
 filedialog
@@ -168,9 +138,6 @@ made quick fix
 all alt shortcuts makes some special char
 have to bind to symbol name to get alt-shorcuts work in macOS
 self.contents.bind( "<function>", self.mac_cmd_overrides)
-
-
-
 
 
 
