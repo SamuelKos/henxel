@@ -1,7 +1,30 @@
 
 
+win
+plain a	==8
++ ctrl	==12
++ shift	==9
++ both	==13
 
 
+linux and macos
+plain a	==0
++ ctrl	==4
++ shift	==1
++ both	==5
+
+
+# mac_os extra keys:
+# fn Super		bind to key and check state == 64
+# Cmd Meta  	bind to key and check state == 8
+# Alt			bind to key and check state == 16
+# ctrl works
+# ctrl  		(state == 4)
+# shift			(state == 1)
+
+
+
+ctrl-x macos
 
 cmd-w  to closetab?
 
@@ -102,14 +125,6 @@ ctrl -leftright  switch apps?
 
 
 
-
-# mac_os keys
-# fn Super		bind to key and check state == 64
-# cmd Meta  	bind to key and check state == 8
-# Alt			bind to key and check state == 16
-# ctrl works
-# ctrl  		(state == 4)
-# shift			(state == 1)
 
 
 

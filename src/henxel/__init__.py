@@ -1295,61 +1295,27 @@ class Editor(tkinter.Toplevel):
 			
 		
 		
-		# Pressed Cmd + Shift + arrow left right
+		# Pressed Cmd + Shift + arrow left right.
+		# Want: select line from cursor.
 		elif event.state == 105:
 		
 			# self.contents or self.entry
 			wid = event.widget
-			have_selection = False
 			
 			# Enable select from in entry
-			if wid == self.entry:
-				have_selection = self.entry.selection_present()
-				
-				if have_selection:
-					s = wid.index(tkinter.SEL_FIRST)
-					e = wid.index(tkinter.SEL_LAST)
-					
-					self.entry.selection_clear()
-					
-					if event.keysym == 'Right':
-						self.entry.icursor('end')
-						
-						if s < e:
-							self.entry.select_range(s, 'end')
-						else:
-							self.entry.select_range(e, 'end')
-							
-					elif event.keysym == 'Left':
-						self.entry.icursor(0)
-						
-						if s < e:
-							self.entry.select_range(0, e)
-						else:
-							self.entry.select_range(0, s)
-					
-				else:
-					i = wid.index(tkinter.INSERT)
-					
-					if event.keysym == 'Right':
-						self.entry.icursor('end')
-						self.entry.select_range(i, 'end')
-							
-					elif event.keysym == 'Left':
-						self.entry.icursor(0)
-						self.entry.select_range(0, i)
-						
-				return 'break'
-				
+			if wid == self.entry: return
+			
 			# Enable select from in contents
-			if event.keysym == 'Right':
-				self.goto_lineend(event=event)
+			elif wid == self.contents:
 				
-			elif event.keysym == 'Left':
-				self.goto_linestart(event=event)
-	
-			else:
-				return
+				if event.keysym == 'Right':
+					self.goto_lineend(event=event)
+					
+				elif event.keysym == 'Left':
+					self.goto_linestart(event=event)
+		
+				else:
+					return
 			
 			return 'break'
 		
@@ -3208,21 +3174,23 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def check_sel(self, event=None):
-		if self.state not in  [ 'normal', 'error' ]:
+		if self.state in  [ 'filedialog' ]:
 			self.bell()
 			return "break"
 	
 		# Pressed arrow left or right.
 		# If have selection, put cursor on the wanted side of selection.
-		
-		# Check if have shift etc. pressed.
+	
+		# self.contents or self.entry
+		wid = event.widget
+			
+		# Check if have shift etc. pressed. If is, return to default bindings.
 		# macOS event is already handled in mac_cmd_overrides.
+		# macOS event here is only plain arrow left or right and has selection.
 		if self.os_type != 'mac_os':
 			if self.os_type == 'linux' and event.state != 0: return
 			if self.os_type == 'windows' and event.state != 262152: return
 			
-			# self.contents or self.entry
-			wid = event.widget
 			have_selection = False
 	
 			if wid == self.entry:
@@ -3270,17 +3238,25 @@ class Editor(tkinter.Toplevel):
 		
 	
 	def goto_lineend(self, event=None):
-		if self.state not in  [ 'normal', 'error' ]:
+		if self.state in [ 'filedialog' ]:
 			self.bell()
 			return "break"
 		
 		have_selection = False
 		want_selection = False
+		
+		# ctrl-shift-a or e
+		
 		# Pressed also shift, so adjust selection
+		# Linux, macOS state:
 		# ctrl-shift == 5
-		# mac_os:
+		
+		# Windows state:
+		# ctrl-shift == 13
+		
+		# Also in mac_OS:
 		# command-shift-arrowleft or right == 105
-		if event.state in [ 5, 105 ]:
+		if event.state in [ 5 , 105, 13 ]:
 			want_selection = True
 			i = self.contents.index(tkinter.INSERT)
 				
@@ -3338,17 +3314,25 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def goto_linestart(self, event=None):
-		if self.state not in  [ 'normal', 'error' ]:
+		if self.state in [ 'filedialog' ]:
 			self.bell()
 			return "break"
 		
 		have_selection = False
 		want_selection = False
+		
+		# ctrl-shift-a or e
+		
 		# Pressed also shift, so adjust selection
+		# Linux, macOS state:
 		# ctrl-shift == 5
-		# mac_os:
+		
+		# Windows state:
+		# ctrl-shift == 13
+		
+		# Also in mac_OS:
 		# command-shift-arrowleft or right == 105
-		if event.state in [ 5 , 105]:
+		if event.state in [ 5 , 105, 13 ]:
 			want_selection = True
 			i = self.contents.index(tkinter.INSERT)
 				
