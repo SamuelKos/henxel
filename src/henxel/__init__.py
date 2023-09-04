@@ -388,12 +388,11 @@ class Editor(tkinter.Toplevel):
 		self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
 		
 		# disable copying linenumbers:
-		if self.os_type != 'mac_os':
-			self.ln_widget.bind('<Control-c>', self.no_copy_ln)
-		else:
-			self.ln_widget.bind('<c>', self.mac_cmd_overrides)
+		shortcut = '<Mod1-Key-c>'
+		if self.os_type != 'mac_os': shortcut = '<Control-c>'
+		self.ln_widget.bind(shortcut, self.no_copy_ln)
 		
-		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
+		self.contents = tkinter.Text(self, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
 		
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, command = self.contents.yview)
 
@@ -449,21 +448,24 @@ class Editor(tkinter.Toplevel):
 		
 		# Except that tkinter does not give all symbol names, like
 		# Alt-x or l
-		# which makes these keycombinations quite unbindable.
+		# which makes these key-combinations quite unbindable.
 		# It would be much easier if one could do bindings normally:
 		# Alt-SomeKey
 		# like in Linux and Windows.
 		
 		# Also binding to combinations which has Command-key (apple-key)
-		# or fn-key have to be done by checking the state of the event
-		# in some proxy-callback: mac_cmd_overrides
+		# (or Meta-key as reported by events.py)
+		# must use Mod1-Key as modifier name:
+		# Mod1-Key-n == Command-Key-n
 		
-		# In short, In macOS one can not bind like:
+		# fn-key -bindings have to be done by checking the state of the event
+		# in proxy-callback: mac_cmd_overrides
+		
+		# In short, In macOS one can not just bind like:
 		# Command-n
 		# fn-f
 		# Alt-f
 		
-		# This is quite bad.
 		# This is the reason why below is some extra
 		# and strange looking binding-lines when using macOS.
 		##############################################################
@@ -492,30 +494,37 @@ class Editor(tkinter.Toplevel):
 		#self.os_type == 'mac_os':
 		else:
 			# Used in check_next_event
-			self.bid_left = self.contents.bind( "<Left>", self.mac_cmd_overrides)	# + cmd walk_back,	check_sel
-			self.contents.bind( "<Right>", self.mac_cmd_overrides)	# + cmd walk_tab,	check_sel
+			self.bid_left = self.contents.bind( "<Left>", self.mac_cmd_overrides)# + cmd walk_tab, check_sel
+			
+			self.contents.bind( "<Right>", self.mac_cmd_overrides)	# + cmd walk_tab, check_sel
 			self.entry.bind( "<Right>", self.mac_cmd_overrides)		# + cmd check_sel
 			self.entry.bind( "<Left>", self.mac_cmd_overrides)		# + cmd check_sel
 			
-			self.contents.bind( "<n>", self.mac_cmd_overrides)		# + cmd newtab
-			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen, + cmd search
-			self.contents.bind( "<v>", self.mac_cmd_overrides)		# + cmd paste
 			
-			self.contents.bind( "<R>", self.mac_cmd_overrides)		# + cmd replace_all
-			self.contents.bind( "<g>", self.mac_cmd_overrides)		# + cmd gotoline
-			self.contents.bind( "<r>", self.mac_cmd_overrides)		# + cmd replace
+			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
 			
-			self.contents.bind( "<z>", self.mac_cmd_overrides)		# + cmd undo_override
-			self.contents.bind( "<Z>", self.mac_cmd_overrides)		# + cmd redo_override
+			# Have to bind using Mod1 as modifier name if want bind to Command-key,
+			# Last line is the only one working:
+			#self.contents.bind( "<Meta-Key-k>", lambda event, arg=('AAA'): print(arg) )
+			#self.contents.bind( "<Command-Key-k>", lambda event, arg=('AAA'): print(arg) )
+			#self.contents.bind( "<Mod1-Key-k>", lambda event, arg=('AAA'): print(arg) )
+			
+			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
+			self.contents.bind( "<Mod1-Key-f>", self.search)
+			self.contents.bind( "<Mod1-Key-v>", self.paste)
+			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
+			self.contents.bind( "<Mod1-Key-g>", self.gotoline)
+			self.contents.bind( "<Mod1-Key-r>", self.replace)
+			self.contents.bind( "<Mod1-Key-z>", self.undo_override)
+			self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
 			
 			# Could not get keysym for Alt-l and x, so use ctrl
 			self.contents.bind( "<Control-l>", self.toggle_ln)
 			self.contents.bind( "<Control-x>", self.toggle_syntax)
 			
-			
 			self.contents.bind( "<Shift-Tab>", self.unindent)
 			
-			# have to bind to symbol name to get alt-shorcuts work in macOS
+			# have to bind to symbol name to get Alt-shorcuts work in macOS
 			# This is: Alt-f
 			self.contents.bind( "<function>", self.font_choose)		# Alt-f
 			self.contents.bind( "<dagger>", self.toggle_color)		# Alt-t
@@ -1235,76 +1244,11 @@ class Editor(tkinter.Toplevel):
 
 	
 	def mac_cmd_overrides(self, event=None):
-	
-##		if self.state != 'normal':
-##			self.bell()
-##			return 'break'
-			
-		
-		# Pressed Cmd
-		if event.state == 8:
-			
-			if event.keysym == 'n':
-				self.new_tab(event=event)
-				
-			elif event.keysym == 'g':
-				self.gotoline(event=event)
-			
-			elif event.keysym == 'r':
-				self.replace(event=event)
-			
-			elif event.keysym == 'f':
-				self.search(event=event)
-						
-			elif event.keysym == 'v':
-				self.paste(event=event)
-				
-			elif event.keysym == 'z':
-				self.undo_override(event=event)
-			
-			elif event.keysym == 'c' and event.widget == self.ln_widget:
-				self.no_copy_ln(event=event)
-			
-			else:
-				return
-			
-			return 'break'
-			
-		
-		# Pressed Cmd + arrow left right
-		elif event.state == 104:
-		
-			if event.keysym == 'Right':
-				self.walk_tabs(event=event)
-				
-			elif event.keysym == 'Left':
-				self.walk_tabs(event=event, **{'back':True})
-	
-			else:
-				return
-			
-			return 'break'
-			
-			
-		# Pressed Cmd + Shift
-		elif event.state == 9:
-		
-			if event.keysym == 'R':
-				self.replace_all(event=event)
-				
-			elif event.keysym == 'Z':
-				self.redo_override(event=event)
-				
-			else:
-				return
-			
-			return 'break'
-			
 		
 		
-		# Pressed Cmd + Shift + arrow left right.
+		# Pressed Cmd + Shift + arrow left or right.
 		# Want: select line from cursor.
-		elif event.state == 105:
+		if event.state == 105:
 		
 			# self.contents or self.entry
 			wid = event.widget
@@ -1327,9 +1271,26 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 		
 		
+		# Pressed Cmd + arrow left or right.
+		elif event.state == 104:
+	
+			if event.keysym == 'Right':
+				self.walk_tabs(event=event)
+				
+			elif event.keysym == 'Left':
+				self.walk_tabs(event=event, **{'back':True})
+	
+			else:
+				return
+			
+			return 'break'
+		
+		
+		
 		# Pressed arrow left or right.
 		# If have selection, put cursor on the wanted side of selection.
 		elif event.state == 96:
+			
 			# self.contents or self.entry
 			wid = event.widget
 			have_selection = False
@@ -1374,24 +1335,6 @@ class Editor(tkinter.Toplevel):
 			else:
 				return
 	
-	
-##		# Pressed Alt
-##		elif event.state == 16:
-##			print('BBB1')
-##
-##			if event.char == 'ﬁ':
-##				print('l')
-##				return 'break'
-##
-##			elif event.char == '≈':
-##				print('x')
-##				return 'break'
-##
-##			else:
-##				return
-		
-			
-			
 	
 	def new_tab(self, event=None, error=False):
 	
@@ -1502,6 +1445,7 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal' or len(self.tabs) < 2:
 			self.bell()
 			return "break"
+		
 		
 		self.tabs[self.tabindex].active = False
 		

@@ -14,19 +14,28 @@ plain a	==0
 + both	==5
 
 
-# mac_os extra keys:
-# fn Super		bind to key and check state == 64
-# Cmd Meta  	bind to key and check state == 8
-# Alt			bind to key and check state == 16
-# ctrl works
-# ctrl  		(state == 4)
-# shift			(state == 1)
+no block cursor					ok?
+
+copy paste state in search
+
+ 
+mac_os extra keys:
+fn Super	bind to key and check state == 64
+Cmd Meta  	bind to key and check state == 8
+Alt			bind to key and check state == 16
+Mod1 == Cmd
+
+# Binding to combinations which has Command-key (apple-key)
+# (or Meta-key as reported by events.py)
+# must use Mod1-Key as modifier name:
+# Mod1-Key-n == Command-Key-n
+		
 
 
-
-ctrl-x macos
 
 cmd-w  to closetab?
+
+
 
 ::tk::mac::OnHide
 If defined, this is called when your application receives a kEventAppHidden event, e.g. via the hide menu item in the application or Dock menus.
@@ -34,6 +43,7 @@ If defined, this is called when your application receives a kEventAppHidden even
 
 ::tk::mac::OnShow
 If defined, this is called when your application receives a kEventAppShown event, e.g. via the show all menu item in the application menu, or by clicking the Dock icon of a hidden application.
+
 
 
 # yet another way to find os_type
