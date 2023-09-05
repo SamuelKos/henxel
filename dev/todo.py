@@ -1,9 +1,7 @@
 
-# yank line ctrl or cmd -y			ok?
 
-# blockcursor -> normal cursor		ok?
+at the end of file, center view?
 
-# update help ok
 
 padx font measure
 cont, ln_wid
@@ -92,8 +90,6 @@ made quick fix
 
 after font change re-grid?
 
-
-at the end of file, center view?
 
 
 

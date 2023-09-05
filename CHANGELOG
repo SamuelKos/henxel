@@ -1,6 +1,15 @@
 # Changelog
-* To version: 	0.2.6
+* To version: 	0.2.7
 * From version:	0.0.3
+
+
+# 0.2.7
+- One can now yank line with ctrl- or cmd-y.
+- Testing blockcursor -> normal cursor.
+- Made padx and pady depend on font.measure instead of hardcoded values. Currently used only in contents and linenumbers.
+- Clarified bindings after finding out that one can bind to Cmd with Mod1.
+- Fixed goto_linestart -end etc. to make 'select line from' work.
+- Not much else but wanted to release a little more working version.
 
 
 # 0.2.6
