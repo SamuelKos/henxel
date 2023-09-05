@@ -28,6 +28,7 @@
 		Ctrl-c  Copy		Try this: Ctrl-c-f
 		Ctrl-v  Paste
 		Ctrl-x  Cut
+		Ctrl-y  Copy current line without newline, (yank line)
 		Ctrl-z  Undo
 		Ctrl-Z  Redo
 		

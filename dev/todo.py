@@ -1,4 +1,24 @@
 
+# yank line ctrl or cmd -y			ok?
+
+# blockcursor -> normal cursor		ok?
+
+# update help ok
+
+padx font measure
+cont, ln_wid
+
+padx = self.tab_width // self.ind_depth // 3
+pady = padx
+in init apply conf and update fonts
+
+
+flash after view change?
+
+
+
+
+
 
 win
 plain a	==8
@@ -14,11 +34,6 @@ plain a	==0
 + both	==5
 
 
-no block cursor					ok?
-
-copy paste state in search
-
- 
 mac_os extra keys:
 fn Super	bind to key and check state == 64
 Cmd Meta  	bind to key and check state == 8
@@ -67,12 +82,18 @@ colors_as_rgb_tuple = self.winfo_rgb(system_colorname)
 for example, white color would get: (65535, 65535, 65535)
 
 
+night colors mac_os:
+btn_git
+filedialog
+entry
+made quick fix
 
-cont, ln_wid  padx = 10 pady = 4
 
-padx font measure ?
-pady?
+
 after font change re-grid?
+
+
+at the end of file, center view?
 
 
 
@@ -136,28 +157,16 @@ ctrl -leftright  switch apps?
 
 
 
-
-
-night colors mac_os:
-btn_git
-filedialog
-entry
-made quick fix
-
-
 all alt shortcuts makes some special char
 have to bind to symbol name to get alt-shorcuts work in macOS
 self.contents.bind( "<function>", self.mac_cmd_overrides)
 
 
 
-search proceed with return?
 
-at the end of file, center view?
 
 linespacing2 to reduce empty lines?
 
-cancel ctrl npib as move cursor?
 
 run file shortcut in windows?
 cancel shortcut for run file?

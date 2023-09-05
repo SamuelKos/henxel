@@ -338,7 +338,7 @@ class Editor(tkinter.Toplevel):
 		
 		# Initiate widgets
 		####################################
-		self.btn_git=tkinter.Button(self, takefocus=0)
+		self.btn_git = tkinter.Button(self, takefocus=0)
 		
 		if self.branch:
 			branch = self.branch[:5]
@@ -402,207 +402,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( shortcut, self.expander.expand_word_event)
 		
 		
-		# Widgets are initiated, now more configuration
-		################################################
-		# Needed in update_linenums(), there is more info.
-		self.update_idletasks()
-		# if self.y_extra_offset > 0, it needs attention
-		self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
-		# Needed in update_linenums() and sbset_override()
-		self.bbox_height = self.contents.bbox('@0,0')[3]
-		self.text_widget_height = self.scrollbar.winfo_height()
-				
-		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
-		
-		
-		# Bindigs Begin
-		####################################################
-		self.right_mousebutton_num = 3
-		
-		if self.os_type == 'mac_os':
-			self.right_mousebutton_num = 2
-			
-			# Default cmd-q does not trigger quit_me
-			# Override Cmd-Q:
-			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
-			self.root.createcommand("tk::mac::Quit", self.quit_me)
-			#self.root.createcommand("tk::mac::OnHide", self.test_hide)
-				
-		self.contents.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
-		
-		
-		if self.os_type == 'windows':
-			# fix copying to clipboard in Windows.
-			self.bind( "<Control-c>", self.copy_windows)
-		
-		
-		if self.os_type == 'linux':
-			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
-		
-		
-		############################################################
-		# In macOS all Alt-shortcuts makes some special symbol.
-		# Have to bind to this symbol-name to get Alt-shorcuts work.
-		# For example binding to Alt-f:
-		# self.contents.bind( "<function>", self.font_choose)
-		
-		# Except that tkinter does not give all symbol names, like
-		# Alt-x or l
-		# which makes these key-combinations quite unbindable.
-		# It would be much easier if one could do bindings normally:
-		# Alt-SomeKey
-		# like in Linux and Windows.
-		
-		# Also binding to combinations which has Command-key (apple-key)
-		# (or Meta-key as reported by events.py)
-		# must use Mod1-Key as modifier name:
-		# Mod1-Key-n == Command-Key-n
-		
-		# fn-key -bindings have to be done by checking the state of the event
-		# in proxy-callback: mac_cmd_overrides
-		
-		# In short, In macOS one can not just bind like:
-		# Command-n
-		# fn-f
-		# Alt-f
-		
-		# This is the reason why below is some extra
-		# and strange looking binding-lines when using macOS.
-		##############################################################
-		if self.os_type != 'mac_os':
-			
-			self.bind( "<Alt-n>", self.new_tab)
-			self.contents.bind( "<Alt-s>", self.color_choose)
-			self.contents.bind( "<Alt-t>", self.toggle_color)
-			self.bind( "<Alt-w>", self.walk_tabs)
-			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
-		
-			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
-			self.contents.bind( "<Alt-l>", self.toggle_ln)
-			self.contents.bind( "<Alt-x>", self.toggle_syntax)
-			self.contents.bind( "<Alt-f>", self.font_choose)
-		
-			self.contents.bind( "<Control-v>", self.paste)
-			
-			# Used in check_next_event
-			self.bid_left = self.contents.bind("<Left>", self.check_sel)
-			self.contents.bind("<Right>", self.check_sel)
-			self.entry.bind("<Left>", self.check_sel)
-			self.entry.bind("<Right>", self.check_sel)
-		
-		
-		#self.os_type == 'mac_os':
-		else:
-			# Used in check_next_event
-			self.bid_left = self.contents.bind( "<Left>", self.mac_cmd_overrides)# + cmd walk_tab, check_sel
-			
-			self.contents.bind( "<Right>", self.mac_cmd_overrides)	# + cmd walk_tab, check_sel
-			self.entry.bind( "<Right>", self.mac_cmd_overrides)		# + cmd check_sel
-			self.entry.bind( "<Left>", self.mac_cmd_overrides)		# + cmd check_sel
-			
-			
-			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
-			
-			# Have to bind using Mod1 as modifier name if want bind to Command-key,
-			# Last line is the only one working:
-			#self.contents.bind( "<Meta-Key-k>", lambda event, arg=('AAA'): print(arg) )
-			#self.contents.bind( "<Command-Key-k>", lambda event, arg=('AAA'): print(arg) )
-			#self.contents.bind( "<Mod1-Key-k>", lambda event, arg=('AAA'): print(arg) )
-			
-			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
-			self.contents.bind( "<Mod1-Key-f>", self.search)
-			self.contents.bind( "<Mod1-Key-v>", self.paste)
-			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
-			self.contents.bind( "<Mod1-Key-g>", self.gotoline)
-			self.contents.bind( "<Mod1-Key-r>", self.replace)
-			self.contents.bind( "<Mod1-Key-z>", self.undo_override)
-			self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
-			
-			# Could not get keysym for Alt-l and x, so use ctrl
-			self.contents.bind( "<Control-l>", self.toggle_ln)
-			self.contents.bind( "<Control-x>", self.toggle_syntax)
-			
-			self.contents.bind( "<Shift-Tab>", self.unindent)
-			
-			# have to bind to symbol name to get Alt-shorcuts work in macOS
-			# This is: Alt-f
-			self.contents.bind( "<function>", self.font_choose)		# Alt-f
-			self.contents.bind( "<dagger>", self.toggle_color)		# Alt-t
-			self.contents.bind( "<ssharp>", self.color_choose)		# Alt-s
-			
-			
-		#######################################################
-		
-		
-		self.bind( "<Control-R>", self.replace_all)
-		self.bind( "<Control-g>", self.gotoline)
-		self.bind( "<Control-r>", self.replace)
-
-		self.bind( "<Escape>", self.do_nothing )
-		self.bind( "<Return>", self.do_nothing)
-		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
-		self.bind( "<Control-plus>", self.increase_scrollbar_width)
-		
-		self.contents.bind( "<Control-a>", self.goto_linestart)
-		self.contents.bind( "<Control-e>", self.goto_lineend)
-		self.contents.bind( "<Control-A>", self.goto_linestart)
-		self.contents.bind( "<Control-E>", self.goto_lineend)
-		
-		if self.os_type == 'windows':
-			self.entry.bind( "<Control-E>", lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
-			self.entry.bind( "<Control-A>", lambda event, arg=('<<SelectLineStart>>'): self.entry.event_generate)
-		
-		
-		self.contents.bind( "<Control-i>", self.move_right)
-		self.contents.bind( "<Control-b>", self.move_left)
-		self.contents.bind( "<Control-n>", self.move_down)
-		self.contents.bind( "<Control-p>", self.move_up)
-		
-		self.contents.bind( "<Control-j>", self.center_view)
-		self.contents.bind( "<Return>", self.return_override)
-		
-		self.contents.bind( "<Control-d>", self.del_tab)
-		self.contents.bind( "<Control-q>", lambda event: self.del_tab(event, **{'save':False}) )
-		
-		self.contents.bind( "<Shift-Return>", self.comment)
-		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
-		self.contents.bind( "<Tab>", self.tab_override)
-		
-		self.contents.bind( "<Control-t>", self.tabify_lines)
-		self.contents.bind( "<Control-z>", self.undo_override)
-		self.contents.bind( "<Control-Z>", self.redo_override)
-		self.contents.bind( "<Control-f>", self.search)
-		
-		self.contents.bind( "<BackSpace>", self.backspace_override)
-		self.contents.bind( "<Control-BackSpace>", self.search_next)
-		
-		
-##		# this move_line interferes with search_next,check_nextevent, so not in use
-##		self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
-##		self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
-##
-##		# updown_override not in use
-##		self.contents.bind("<Up>", lambda event: self.updown_override(event, **{'direction':'up'} ))
-##		self.contents.bind("<Down>", lambda event: self.updown_override(event, **{'direction':'down'} ))
-		
-		
-		# Unbind some default bindings
-		# Paragraph-bindings: too easy to press by accident
-		self.contents.unbind_class('Text', '<<NextPara>>')
-		self.contents.unbind_class('Text', '<<PrevPara>>')
-		self.contents.unbind_class('Text', '<<SelectNextPara>>')
-		self.contents.unbind_class('Text', '<<SelectPrevPara>>')
-		
-		# LineStart and -End:
-		# fix goto_linestart-end and
-		# enable tab-walking in mac_os with cmd-left-right
-		self.contents.unbind_class('Text', '<<LineStart>>')
-		self.contents.unbind_class('Text', '<<LineEnd>>')
-		self.contents.unbind_class('Text', '<<SelectLineEnd>>')
-		self.contents.unbind_class('Text', '<<SelectLineStart>>')
-		
-		
-		
 		# Needed in leave() taglink in: Run file Related
 		self.name_of_cursor_in_text_widget = self.contents['cursor']
 		
@@ -617,28 +416,6 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="     inspect", command=self.insert_inspected)
 		self.popup.add_command(label="      errors", command=self.show_errors)
 		self.popup.add_command(label="        help", command=self.help)
-		
-		
-
-		# Win11 ctrl-leftright no work (as intended) in tcl 8.6.12 but does in
-		# Debian 12, 8.6.13, and macOS 12, 8.6.12   so:
-		self.tcl_version = self.info_patchlevel()
-		if self.os_type == 'windows':
-			if self.tcl_version.major == 8 and self.tcl_version.minor == 6 and self.tcl_version.micro < 13:
-	
-				# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
-				# replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
-				# Need for some reason generate ctrl-leftright before, because array ::tcl::WordBreakRE does not exist yet,
-				# but after this event it does:
-	
-				self.contents.insert(1.0, 'asd')
-				self.contents.event_generate('<<NextWord>>')
-				self.contents.delete('1.0', tkinter.END)
-	
-				self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
-				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
-				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
-
 		
 		
 		if data:
@@ -758,15 +535,15 @@ class Editor(tkinter.Toplevel):
 			
 
 
-			# One char lenght is: self.tab_width // self.ind_depth ###########################
+			# One char lenght is: self.tab_width // self.ind_depth
 			# Use this in measuring padding
-			pad =  self.tab_width // self.ind_depth // 3
+			pad_x =  self.tab_width // self.ind_depth // 3
+			pad_y = pad_x
 
-			
-			
+
 			self.contents.config(font=self.font, foreground=self.fgcolor,
 				background=self.bgcolor, insertbackground=self.fgcolor,
-				tabs=(self.tab_width, ), padx=pad)
+				tabs=(self.tab_width, ), padx=pad_x, pady=pad_y)
 				
 			self.entry.config(font=self.menufont)
 			self.btn_open.config(font=self.menufont)
@@ -775,7 +552,232 @@ class Editor(tkinter.Toplevel):
 			
 			self.btn_git.config(font=self.menufont)
 			
-			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled', padx=pad)
+			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled', padx=pad_x, pady=pad_y)
+
+		
+		# Widgets are initiated, now more configuration
+		################################################
+		# Needed in update_linenums(), there is more info.
+		self.update_idletasks()
+		# if self.y_extra_offset > 0, it needs attention
+		self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
+		# Needed in update_linenums() and sbset_override()
+		self.bbox_height = self.contents.bbox('@0,0')[3]
+		self.text_widget_height = self.scrollbar.winfo_height()
+				
+		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
+		
+		
+		
+		
+		# Bindigs Begin
+		####################################################
+		self.right_mousebutton_num = 3
+		
+		if self.os_type == 'mac_os':
+			self.right_mousebutton_num = 2
+			
+			# Default cmd-q does not trigger quit_me
+			# Override Cmd-Q:
+			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
+			self.root.createcommand("tk::mac::Quit", self.quit_me)
+			#self.root.createcommand("tk::mac::OnHide", self.test_hide)
+				
+		self.contents.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
+		
+		
+		if self.os_type == 'windows':
+			# fix copying to clipboard in Windows.
+			self.bind( "<Control-c>", self.copy_windows)
+		
+		
+		if self.os_type == 'linux':
+			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
+		
+		
+		############################################################
+		# In macOS all Alt-shortcuts makes some special symbol.
+		# Have to bind to this symbol-name to get Alt-shorcuts work.
+		# For example binding to Alt-f:
+		# self.contents.bind( "<function>", self.font_choose)
+		
+		# Except that tkinter does not give all symbol names, like
+		# Alt-x or l
+		# which makes these key-combinations quite unbindable.
+		# It would be much easier if one could do bindings normally:
+		# Alt-SomeKey
+		# like in Linux and Windows.
+		
+		# Also binding to combinations which has Command-key (apple-key)
+		# (or Meta-key as reported by events.py)
+		# must use Mod1-Key as modifier name:
+		# Mod1-Key-n == Command-Key-n
+		
+		# fn-key -bindings have to be done by checking the state of the event
+		# in proxy-callback: mac_cmd_overrides
+		
+		# In short, In macOS one can not just bind like:
+		# Command-n
+		# fn-f
+		# Alt-f
+		
+		# This is the reason why below is some extra
+		# and strange looking binding-lines when using macOS.
+		##############################################################
+		if self.os_type != 'mac_os':
+			
+			self.bind( "<Alt-n>", self.new_tab)
+			self.contents.bind( "<Alt-s>", self.color_choose)
+			self.contents.bind( "<Alt-t>", self.toggle_color)
+			self.bind( "<Alt-w>", self.walk_tabs)
+			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
+		
+			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
+			self.contents.bind( "<Alt-l>", self.toggle_ln)
+			self.contents.bind( "<Alt-x>", self.toggle_syntax)
+			self.contents.bind( "<Alt-f>", self.font_choose)
+		
+			self.contents.bind( "<Control-v>", self.paste)
+			self.contents.bind( "<Control-y>", self.yank_line)
+			
+			# Used in check_next_event
+			self.bid_left = self.contents.bind("<Left>", self.check_sel)
+			self.contents.bind("<Right>", self.check_sel)
+			self.entry.bind("<Left>", self.check_sel)
+			self.entry.bind("<Right>", self.check_sel)
+		
+		
+		#self.os_type == 'mac_os':
+		else:
+			# Used in check_next_event
+			self.bid_left = self.contents.bind( "<Left>", self.mac_cmd_overrides)# + cmd walk_tab, check_sel
+			
+			self.contents.bind( "<Right>", self.mac_cmd_overrides)	# + cmd walk_tab, check_sel
+			self.entry.bind( "<Right>", self.mac_cmd_overrides)		# + cmd check_sel
+			self.entry.bind( "<Left>", self.mac_cmd_overrides)		# + cmd check_sel
+			
+			
+			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
+			
+			# Have to bind using Mod1 as modifier name if want bind to Command-key,
+			# Last line is the only one working:
+			#self.contents.bind( "<Meta-Key-k>", lambda event, arg=('AAA'): print(arg) )
+			#self.contents.bind( "<Command-Key-k>", lambda event, arg=('AAA'): print(arg) )
+			#self.contents.bind( "<Mod1-Key-k>", lambda event, arg=('AAA'): print(arg) )
+			
+			
+			self.contents.bind( "<Mod1-Key-y>", self.yank_line)
+			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
+			self.contents.bind( "<Mod1-Key-f>", self.search)
+			self.contents.bind( "<Mod1-Key-v>", self.paste)
+			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
+			self.contents.bind( "<Mod1-Key-g>", self.gotoline)
+			self.contents.bind( "<Mod1-Key-r>", self.replace)
+			self.contents.bind( "<Mod1-Key-z>", self.undo_override)
+			self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
+			
+			# Could not get keysym for Alt-l and x, so use ctrl
+			self.contents.bind( "<Control-l>", self.toggle_ln)
+			self.contents.bind( "<Control-x>", self.toggle_syntax)
+			
+			self.contents.bind( "<Shift-Tab>", self.unindent)
+			
+			# have to bind to symbol name to get Alt-shorcuts work in macOS
+			# This is: Alt-f
+			self.contents.bind( "<function>", self.font_choose)		# Alt-f
+			self.contents.bind( "<dagger>", self.toggle_color)		# Alt-t
+			self.contents.bind( "<ssharp>", self.color_choose)		# Alt-s
+			
+			
+		#######################################################
+		
+		
+		self.bind( "<Control-R>", self.replace_all)
+		self.bind( "<Control-g>", self.gotoline)
+		self.bind( "<Control-r>", self.replace)
+
+		self.bind( "<Escape>", self.do_nothing )
+		self.bind( "<Return>", self.do_nothing)
+		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
+		self.bind( "<Control-plus>", self.increase_scrollbar_width)
+		
+		self.contents.bind( "<Control-a>", self.goto_linestart)
+		self.contents.bind( "<Control-e>", self.goto_lineend)
+		self.contents.bind( "<Control-A>", self.goto_linestart)
+		self.contents.bind( "<Control-E>", self.goto_lineend)
+		
+		if self.os_type == 'windows':
+			self.entry.bind( "<Control-E>", lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
+			self.entry.bind( "<Control-A>", lambda event, arg=('<<SelectLineStart>>'): self.entry.event_generate)
+		
+		
+		self.contents.bind( "<Control-i>", self.move_right)
+		self.contents.bind( "<Control-b>", self.move_left)
+		self.contents.bind( "<Control-n>", self.move_down)
+		self.contents.bind( "<Control-p>", self.move_up)
+		
+		self.contents.bind( "<Control-j>", self.center_view)
+		self.contents.bind( "<Return>", self.return_override)
+		
+		self.contents.bind( "<Control-d>", self.del_tab)
+		self.contents.bind( "<Control-q>", lambda event: self.del_tab(event, **{'save':False}) )
+		
+		self.contents.bind( "<Shift-Return>", self.comment)
+		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
+		self.contents.bind( "<Tab>", self.tab_override)
+		
+		self.contents.bind( "<Control-t>", self.tabify_lines)
+		self.contents.bind( "<Control-z>", self.undo_override)
+		self.contents.bind( "<Control-Z>", self.redo_override)
+		self.contents.bind( "<Control-f>", self.search)
+		
+		self.contents.bind( "<BackSpace>", self.backspace_override)
+		self.contents.bind( "<Control-BackSpace>", self.search_next)
+		
+		
+##		# this move_line interferes with search_next,check_nextevent, so not in use
+##		self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
+##		self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
+##
+##		# updown_override not in use
+##		self.contents.bind("<Up>", lambda event: self.updown_override(event, **{'direction':'up'} ))
+##		self.contents.bind("<Down>", lambda event: self.updown_override(event, **{'direction':'down'} ))
+		
+		
+		# Unbind some default bindings
+		# Paragraph-bindings: too easy to press by accident
+		self.contents.unbind_class('Text', '<<NextPara>>')
+		self.contents.unbind_class('Text', '<<PrevPara>>')
+		self.contents.unbind_class('Text', '<<SelectNextPara>>')
+		self.contents.unbind_class('Text', '<<SelectPrevPara>>')
+		
+		# LineStart and -End:
+		# fix goto_linestart-end and
+		# enable tab-walking in mac_os with cmd-left-right
+		self.contents.unbind_class('Text', '<<LineStart>>')
+		self.contents.unbind_class('Text', '<<LineEnd>>')
+		self.contents.unbind_class('Text', '<<SelectLineEnd>>')
+		self.contents.unbind_class('Text', '<<SelectLineStart>>')
+		
+
+		# Win11 ctrl-leftright no work (as intended) in tcl 8.6.12 but does in
+		# Debian 12, 8.6.13, and macOS 12, 8.6.12   so:
+		self.tcl_version = self.info_patchlevel()
+		if self.os_type == 'windows':
+			if self.tcl_version.major == 8 and self.tcl_version.minor == 6 and self.tcl_version.micro < 13:
+	
+				# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
+				# replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
+				# Need for some reason generate ctrl-leftright before, because array ::tcl::WordBreakRE does not exist yet,
+				# but after this event it does:
+	
+				self.contents.insert(1.0, 'asd')
+				self.contents.event_generate('<<NextWord>>')
+				self.contents.delete('1.0', tkinter.END)
+	
+				self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
 
 		
 		self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
@@ -1700,10 +1702,10 @@ class Editor(tkinter.Toplevel):
 				self.tabs[self.tabindex].active = True
 		
 
-		pad = self.font.measure('A') // 3
-
 		self.tab_width = self.font.measure(self.ind_depth * TAB_WIDTH_CHAR)
 		
+		pad_x =  self.tab_width // self.ind_depth // 3
+		pad_y = pad_x
 
 		for tagname in self.themes[self.curtheme]:
 			bg, fg = self.themes[self.curtheme][tagname][:]
@@ -1712,13 +1714,13 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.config(font=self.font, foreground=self.fgcolor,
 			background=self.bgcolor, insertbackground=self.fgcolor,
-			tabs=(self.tab_width, ), padx=pad)
+			tabs=(self.tab_width, ), padx=pad_x, pady=pad_y)
 			
 		self.scrollbar.config(width=self.scrollbar_width)
 		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
 		
 		self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor,
-			padx=pad)
+			padx=pad_x, pady=pad_y)
 			
 		self.entry.config(font=self.menufont)
 		self.btn_open.config(font=self.menufont)
@@ -2230,11 +2232,16 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('breaks', font=self.boldfont)
 		self.contents.tag_config('calls', font=self.boldfont)
 		
-		pad = self.font.measure('A') // 3
-
+		
 		self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
-		self.contents.config(tabs=(self.tab_width, ), padx=pad)
-		self.ln_widget.config(padx=pad)
+		pad_x =  self.tab_width // self.ind_depth // 3
+		pad_y = pad_x
+		
+		self.contents.config(tabs=(self.tab_width, ), padx=pad_x, pady=pad_y)
+		self.ln_widget.config(padx=pad_x, pady=pad_y)
+		self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
+		#self.bbox_height = self.contents.bbox('@0,0')[3]
+		
 
 					
 	def font_choose(self, event=None):
@@ -3188,6 +3195,37 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 		
 	
+	def yank_line(self, event=None):
+		if self.state not in [ 'normal', 'error' ]:
+			self.bell()
+			return "break"
+			
+		curpos = self.contents.index(tkinter.INSERT)
+		t = self.contents.get('%s display linestart' % curpos, '%s display lineend' % curpos)
+		
+		if not t.strip().isspace():
+			self.goto_linestart(event=event)
+			s = self.contents.index( 'insert' )
+			e = self.contents.index( 'insert display lineend' )
+			self.contents.mark_set('insert', curpos)
+		
+			tmp = self.contents.get(s,e)
+			self.contents.clipboard_clear()
+			
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.after(50, lambda args=['sel', s, e]: self.contents.tag_add(*args) )
+		
+			if self.os_type != 'windows':
+				self.contents.clipboard_append(tmp)
+			else:
+				self.copy_windows(event=event)
+			
+			self.after(600, lambda args=['sel', '1.0', tkinter.END]: self.contents.tag_remove(*args) )
+		
+			
+		return 'break'
+		
+		
 	def goto_lineend(self, event=None):
 		if self.state in [ 'filedialog' ]:
 			self.bell()

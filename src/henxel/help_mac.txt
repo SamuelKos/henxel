@@ -25,6 +25,7 @@
 		Cmd-c  Copy		Try this: Cmd-c-f
 		Cmd-v  Paste
 		Cmd-x  Cut
+		Cmd-y  Copy current line without newline, (yank line)
 		Cmd-z  Undo
 		Cmd-Z  Redo
 		
