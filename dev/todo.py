@@ -25,11 +25,21 @@ if sys.platform.count('linux'):
 
 #move windows eval ok
 
+yank empty line
 
+
+
+if sel started from top
+if from bottom:
 
 ctrl-left start of line:
 	if middle of first word: goto_linestart
 	if middle of last word: goto_lineend
+
+
+
+
+
 
 
 at the end of file, center view?
