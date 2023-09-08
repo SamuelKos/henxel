@@ -142,34 +142,46 @@ class Editor(tkinter.Toplevel):
 	pic = None
 	helptxt = None
 	
-	mac_term = None
-	os_type = None
 	root = None
 	
+	mac_term = None
+	win_id = None
+	os_type = None
 	
-	# macOS: Get name of terminal App.
-	# Used to give focus back to it when closing editor, in quit_me()
+	if sys.platform == 'darwin': os_type = 'mac_os'
+	elif sys.platform[:3] == 'win': os_type = 'windows'
+	elif sys.platform.count('linux'): os_type = 'linux'
+	else: os_type = 'linux'
+		
 	
-	# This have to be before tkinter.tk()
-	# or we get 'Python' as appname.
-	try:
-		tmp = ['lsappinfo', 'front']
-		tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
-		# ASN, remove newline
-		tmp = tmp[:-1]
-	
-		tmp = ['lsappinfo', 'info', '-only', 'name', tmp]
-		tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
-		# '"LSDisplayName"="Terminal"\n'
-		tmp = tmp[:-1]
-		mac_term = tmp.split(sep='=')[-1].strip('"')
-		del tmp
-	
-		#print('AAAAAAAAA', mac_term)
-	
-	# Maybe not macOS
-	except (FileNotFoundError, subprocess.SubprocessError):
-		pass
+	if os_type == 'mac_os':
+		# macOS: Get name of terminal App.
+		# Used to give focus back to it when closing editor, in quit_me()
+		
+		# This have to be before tkinter.tk()
+		# or we get 'Python' as appname.
+		try:
+			tmp = ['lsappinfo', 'front']
+			tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
+			# ASN, remove newline
+			tmp = tmp[:-1]
+
+			tmp = ['lsappinfo', 'info', '-only', 'name', tmp]
+			tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
+			# '"LSDisplayName"="Terminal"\n'
+			tmp = tmp[:-1]
+			mac_term = tmp.split(sep='=')[-1].strip('"')
+			
+			tmp = ['osascript', '-e', 'id of window 1 of app "%s"' % mac_term]
+			tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
+			win_id = tmp[:-1]
+			del tmp
+			#print(win_id)
+			#print('AAAAAAAAA', mac_term)
+		
+		# Maybe not macOS
+		except (FileNotFoundError, subprocess.SubprocessError):
+			pass
 
 	
 	def __new__(cls):
@@ -195,27 +207,6 @@ class Editor(tkinter.Toplevel):
 			cls.root.withdraw()
 
 		
-		if not cls.os_type:
-			# s = self.winfo_server()
-			t = cls.root.tk.eval('tk windowingsystem')
-			
-
-			if 'aqua' in t:
-				cls.os_type = 'mac_os'
-
-			elif 'win32' in t:
-				cls.os_type = 'windows'
-
-			elif 'x11' in t:
-				cls.os_type = 'linux'
-
-			else:
-				cls.os_type = 'linux'
-
-			#print(cls.os_type)
-
-
-
 		if not cls.pkg_contents:
 			cls.pkg_contents = importlib.resources.files(__name__)
 			
@@ -416,7 +407,28 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="     inspect", command=self.insert_inspected)
 		self.popup.add_command(label="      errors", command=self.show_errors)
 		self.popup.add_command(label="        help", command=self.help)
-		
+
+
+		# Win11 ctrl-leftright does not work (as supposed) in tcl 8.6.12 but does in
+		# Debian 12, 8.6.13, and macOS 12, 8.6.12   so:
+		self.tcl_version = self.info_patchlevel()
+		if self.os_type == 'windows':
+			if self.tcl_version.major == 8 and self.tcl_version.minor == 6 and self.tcl_version.micro < 13:
+	
+				# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
+				# replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
+				# Need for some reason generate ctrl-leftright before, because array ::tcl::WordBreakRE does not exist yet,
+				# but after this event it does:
+	
+				self.contents.insert(1.0, 'asd')
+				self.contents.event_generate('<<NextWord>>')
+				self.contents.delete('1.0', tkinter.END)
+	
+				self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
+
+
 		
 		if data:
 			self.apply_config()
@@ -759,26 +771,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.unbind_class('Text', '<<SelectLineEnd>>')
 		self.contents.unbind_class('Text', '<<SelectLineStart>>')
 		
-
-		# Win11 ctrl-leftright no work (as intended) in tcl 8.6.12 but does in
-		# Debian 12, 8.6.13, and macOS 12, 8.6.12   so:
-		self.tcl_version = self.info_patchlevel()
-		if self.os_type == 'windows':
-			if self.tcl_version.major == 8 and self.tcl_version.minor == 6 and self.tcl_version.micro < 13:
-	
-				# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
-				# replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
-				# Need for some reason generate ctrl-leftright before, because array ::tcl::WordBreakRE does not exist yet,
-				# but after this event it does:
-	
-				self.contents.insert(1.0, 'asd')
-				self.contents.event_generate('<<NextWord>>')
-				self.contents.delete('1.0', tkinter.END)
-	
-				self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
-				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
-				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
-
 		
 		self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
 		
@@ -1048,17 +1040,35 @@ class Editor(tkinter.Toplevel):
 		self.quit()
 		self.destroy()
 		
+		
 		# Activate terminal
 		if self.os_type == 'mac_os':
+		
 			# This osascript-language is funny
 			# https://ss64.com/osx/osascript.html
-			tmp = 'Terminal'
-			if self.__class__.mac_term:
-				tmp = self.__class__.mac_term
+			
+			mac_term = 'Terminal'
+			
 			
 			try:
-				tmp = ['osascript', '-e', 'tell app "%s" to activate' % tmp]
+				# Giving focus back to python terminal-window is not very simple task in macOS
+				# https://apple.stackexchange.com/questions/421137
+				tmp = None
+				if self.__class__.mac_term and self.__class__.win_id:
+					mac_term = self.__class__.mac_term
+					win_id  = self.__class__.win_id
+					
+					tmp = [ 'osascript', '-e', 'tell app "%s" to set frontmost of windows whose id = %s to true' % (mac_term, win_id), '-e', 'tell app "%s" to activate' % mac_term ]
+				
+				elif self.__class__.mac_term:
+					mac_term = self.__class__.mac_term
+					tmp = ['osascript', '-e', 'tell app "%s" to activate' % mac_term ]
+					
+				else:
+					tmp = ['osascript', '-e', 'tell app "%s" to activate' % mac_term ]
+					
 				subprocess.run(tmp)
+				
 				
 			except (FileNotFoundError, subprocess.SubprocessError):
 				pass
@@ -1281,6 +1291,75 @@ class Editor(tkinter.Toplevel):
 				
 			elif event.keysym == 'Left':
 				self.walk_tabs(event=event, **{'back':True})
+	
+			else:
+				return
+			
+			return 'break'
+			
+			
+		# Pressed Alt + arrow left or right.
+		elif event.state == 112:
+	
+			if event.keysym == 'Right':
+				e = self.contents.index( 'insert display lineend' )
+				self.contents.event_generate('<<NextWord>>')
+				#if after second last word but not at end: goto_lineend
+				i = self.contents.index( 'insert')
+				if self.contents.compare( e,'<',i ):
+					print('AAA')
+					self.contents.mark_set('insert', e)
+				
+			elif event.keysym == 'Left':
+				#if before second first word but not at start:  goto_linestart
+				#self.walk_tabs(event=event, **{'back':True})
+				print('l')
+	
+			else:
+				return
+			
+			return 'break'
+		
+		# Pressed Alt + Shift + arrow left or right.
+		elif event.state == 113:
+			have_selection = len(self.contents.tag_ranges('sel')) > 0
+			
+			if event.keysym == 'Right':
+				s = self.contents.index( 'insert')
+				
+				if have_selection:
+					sel_start = self.contents.index(tkinter.SEL_FIRST)
+					
+				else:
+					sel_start = s
+				
+				
+				e = self.contents.index( 'insert display lineend' )
+				self.contents.event_generate('<<NextWord>>')
+				#if after second last word but not at end: goto_lineend
+				i = self.contents.index( 'insert')
+				if self.contents.compare( e,'<',i ):
+					print('AAA')
+					
+					if have_selection:
+						self.contents.tag_remove('sel', '1.0', tkinter.END)
+						
+					self.contents.tag_add('sel', sel_start, e)
+					self.contents.mark_set('insert', e)
+				
+				else:
+					if have_selection:
+						self.contents.tag_remove('sel', '1.0', tkinter.END)
+						
+					self.contents.tag_add('sel', sel_start, s)
+					self.contents.mark_set('insert', s)
+					return
+					
+				
+			elif event.keysym == 'Left':
+				#if before second first word but not at start:  goto_linestart
+				#self.walk_tabs(event=event, **{'back':True})
+				print('l')
 	
 			else:
 				return

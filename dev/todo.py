@@ -1,3 +1,35 @@
+entry.winfo_atom('bg')
+81
+e.entry.winfo_atom('fg')
+82
+e.entry.winfo_atomname(81)
+'bg'
+e.entry.winfo_atomname(82)
+'fg'
+
+
+
+# Giving focus back to python terminal-window is not very simple task in macOS
+
+# at closing editor: if python terminal is in fullscreen and
+# there is other terminal-window opened which is not in fullscreen,
+# then focus is set to that other terminal-window not in fullscreen.
+
+# If instead both terminal windows were in fullscreen, then focus
+# restored to python terminal.
+#ok ?
+
+darwin = sys.platform == 'darwin'
+elif sys.platform[:3] == 'win':
+if sys.platform.count('linux'):
+
+#move windows eval ok
+
+
+
+ctrl-left start of line:
+	if middle of first word: goto_linestart
+	if middle of last word: goto_lineend
 
 
 at the end of file, center view?
@@ -129,13 +161,27 @@ fn-f now works
 # fn f
 # self.tk.eval('wm attributes .!editor -fullscreen 1')
 # get tcl name of widget
-# str(self.nametowidget(self.contents))
-# self.contents.winfo_name()
+str(e.nametowidget(e.entry))
+e.contents.winfo_name()
 			
 label .lbl
 
-'trace add variable %s write {apply {{name1 name2 op} {upvar 1 $name1 var; puts jou }}}' % wid
+e.tk.eval('.!editor.!entry config -bg')
 
+e.tk.eval('proc myproc {args} {puts AAA}')
+e.tk.eval('set myvar A')
+e.tk.eval('trace add variable myvar write myproc')
+
+
+
+
+e.tk.eval('proc myproc {args} {puts AAA}')
+e.tk.eval('trace add execution .!editor.!entry enter myproc')
+
+
+
+
+e.tk.eval('set myvar B')
 
 
 
