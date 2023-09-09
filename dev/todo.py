@@ -8,7 +8,9 @@ e.entry.winfo_atomname(82)
 'fg'
 
 
-
+lsappinfo metainfo
+bringForwardOrder = "Terminal" ASN:
+ok
 # Giving focus back to python terminal-window is not very simple task in macOS
 
 # at closing editor: if python terminal is in fullscreen and
@@ -24,8 +26,7 @@ elif sys.platform[:3] == 'win':
 if sys.platform.count('linux'):
 
 #move windows eval ok
-
-yank empty line
+#yank empty line ok?
 
 
 
