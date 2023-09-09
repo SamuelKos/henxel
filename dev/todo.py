@@ -8,6 +8,8 @@ e.entry.winfo_atomname(82)
 'fg'
 
 
+chek this
+
 lsappinfo metainfo
 bringForwardOrder = "Terminal" ASN:
 ok

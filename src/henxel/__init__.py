@@ -163,16 +163,26 @@ class Editor(tkinter.Toplevel):
 		try:
 			tmp = ['lsappinfo', 'metainfo']
 			tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
+			# Returns many lines.
 			# Line of interest is like:
 			#bringForwardOrder = "Terminal" ASN:0x0-0x1438437:  "Safari" ASN:0x0-0x1447446:  "Python" ASN:0x0-0x1452451:  "Finder" ASN:0x0-0x1436435:
 			
-			mac_term = tmp.split(sep='" ', maxsplit=1)[0].split(sep='= "', maxsplit=1)[1]
-			#Terminal
+			# Get that line
+			tmp = tmp.partition('bringForwardOrder')[2]
+			# Get appname from line
+			mac_term = tmp.split(sep='"', maxsplit=2)[1]
 			
+			# Get window id in case many windows/tabs open
 			tmp = ['osascript', '-e', 'id of window 1 of app "%s"' % mac_term]
 			tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
+			
 			win_id = tmp[:-1]
 			del tmp
+			
+			
+			
+			
+			
 			#print(win_id)
 			#print('AAAAAAAAA', mac_term)
 		
@@ -1049,6 +1059,7 @@ class Editor(tkinter.Toplevel):
 			mac_term = 'Terminal'
 			
 			
+			
 			try:
 				# Giving focus back to python terminal-window is not very simple task in macOS
 				# https://apple.stackexchange.com/questions/421137
@@ -1056,19 +1067,27 @@ class Editor(tkinter.Toplevel):
 				if self.__class__.mac_term and self.__class__.win_id:
 					mac_term = self.__class__.mac_term
 					win_id  = self.__class__.win_id
+
 					
-					tmp = [ 'osascript', '-e', 'tell app "%s" to set frontmost of windows whose id = %s to true' % (mac_term, win_id), '-e', 'tell app "%s" to activate' % mac_term ]
-				
+					if mac_term == 'iTerm2':
+						tmp = [ 'osascript', '-e', 'tell app "%s" to select windows whose id = %s' % (mac_term, win_id), '-e', 'tell app "%s" to activate' % mac_term ]
+						
+					else:
+						tmp = [ 'osascript', '-e', 'tell app "%s" to set frontmost of windows whose id = %s to true' % (mac_term, win_id), '-e', 'tell app "%s" to activate' % mac_term ]
+
+
+
+
 				elif self.__class__.mac_term:
 					mac_term = self.__class__.mac_term
 					tmp = ['osascript', '-e', 'tell app "%s" to activate' % mac_term ]
-					
+
 				else:
 					tmp = ['osascript', '-e', 'tell app "%s" to activate' % mac_term ]
-					
+
 				subprocess.run(tmp)
-				
-				
+
+
 			except (FileNotFoundError, subprocess.SubprocessError):
 				pass
 			
@@ -3292,17 +3311,21 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def check_lineends(self, event=None):
-		'''	Pressed arrow left or right.
+		'''	Pressed ctrl or Alt and arrow left or right.
 			Make <<NextWord>> and <<PrevWord>> to stop at lineends.
 		'''
-		if self.state not in  [ 'normal', 'error' ]:
+		if self.state not in [ 'normal', 'error' ]:
 			self.bell()
 			return "break"
 			
 		
-		# add windows ctrl-leftright state
+		# Check if not only ctrl down.
+		# MacOS event is already checked.
 		if self.os_type == 'linux':
 			if event.state != 4: return
+		
+		elif self.os_type == 'windows':
+			if event.state != 262156: return
 			
 		
 		# Check if near lineend, so stop there
