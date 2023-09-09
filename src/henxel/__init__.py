@@ -179,10 +179,6 @@ class Editor(tkinter.Toplevel):
 			win_id = tmp[:-1]
 			del tmp
 			
-			
-			
-			
-			
 			#print(win_id)
 			#print('AAAAAAAAA', mac_term)
 		
@@ -1322,155 +1318,185 @@ class Editor(tkinter.Toplevel):
 			return res
 		
 		
-		
-		# Need check
-##		# Pressed Alt + Shift + arrow left or right.
-##		elif event.state == 113:
-##			have_selection = len(self.contents.tag_ranges('sel')) > 0
-##			selection_started_from_top = False
-##
-##			if event.keysym == 'Right':
-##				s = self.contents.index( 'insert')
-##				e = self.contents.index( 'insert display lineend' )
-##
-##				# Already at lineend, proceed over first word of next line.
-##				# We can return here because selection etc. has not been altered.
-##				if s == e: return
-##
-##				if have_selection:
-##					sel_start = self.contents.index(tkinter.SEL_FIRST)
-##					sel_end = self.contents.index(tkinter.SEL_LAST)
-##					if s == sel_end:
-##						selection_started_from_top = True
-##
-##					#else: selection_started_from_top = False
-##
-##				else:
-##					selection_started_from_top = True
-##					sel_start = s
-##
-##
-##				self.contents.event_generate('<<NextWord>>')
-##				i = self.contents.index( 'insert')
-##
-##				# if i is over lineend
-##				if self.contents.compare( e,'<',i ):
-##
-##					if have_selection:
-##						self.contents.tag_remove('sel', '1.0', tkinter.END)
-##
-##						if selection_started_from_top:
-##							self.contents.tag_add('sel', sel_start, e)
-##							self.contents.mark_set('insert', e)
-##						else:
-##							self.contents.tag_add('sel', e, sel_end)
-##							self.contents.mark_set('insert', e)
-##
-##					else:
-##						self.contents.tag_add('sel', s, e)
-##						self.contents.mark_set('insert', e)
-##
-##
-##				else:
-##					if have_selection:
-##						self.contents.tag_remove('sel', '1.0', tkinter.END)
-##
-##						if selection_started_from_top:
-##							self.contents.tag_add('sel', sel_start, i)
-##							self.contents.mark_set('insert', i)
-##						else:
-##							self.contents.tag_add('sel', i, sel_end)
-##							self.contents.mark_set('insert', i)
-##
-##					else:
-##						self.contents.tag_add('sel', s, i)
-##						self.contents.mark_set('insert', i)
-##
-##
-##
-##			elif event.keysym == 'Left':
-##				s = self.contents.index( 'insert')
-##
-##				if have_selection:
-##					sel_start = self.contents.index(tkinter.SEL_FIRST)
-##					sel_end = self.contents.index(tkinter.SEL_LAST)
-##					if s != sel_start:
-##						selection_started_from_top = True
-##
-##					#else: selection_started_from_top = False
-##
-##				else:
-##					#selection_started_from_top = False
-##					sel_end = s
-##
-##
-##				i_orig = s
-##				self.contents.event_generate('<<PrevWord>>')
-##				i_prevword = self.contents.index( 'insert')
-##
-##				self.contents.mark_set('insert', i_orig)
-##				self.goto_linestart(event=event)
-##				i_linestart = self.contents.index( 'insert')
-##
-##				# Already at linestart, proceed over last word of prev line.
-##				# We can not return easily from here because selection etc. has been altered.
-##				if i_orig == i_linestart:
-##
-##					if have_selection:
-##
-##						if selection_started_from_top:
-##							self.contents.tag_remove('sel', '1.0', tkinter.END)
-##							self.contents.tag_add('sel', sel_start, i_prevword)
-##							self.contents.mark_set('insert', i_prevword)
-##						else:
-##							self.contents.tag_remove('sel', '1.0', tkinter.END)
-##							self.contents.tag_add('sel', i_prevword, sel_end)
-##							self.contents.mark_set('insert', i_prevword)
-##
-##					else:
-##						self.contents.tag_add('sel', i_prevword, sel_end)
-##						self.contents.mark_set('insert', i_prevword)
-##
-##					return 'break'
-##
-##
-##
-##				if self.contents.compare( i_prevword,'<',i_linestart):
-##
-##					if have_selection:
-##						self.contents.tag_remove('sel', '1.0', tkinter.END)
-##
-##						if selection_started_from_top:
-##							self.contents.tag_add('sel', sel_start, i_linestart)
-##						else:
-##							self.contents.tag_add('sel', i_linestart, sel_end)
-##
-##					else:
-##						self.contents.tag_add('sel', i_linestart, s)
-##
-##					self.contents.mark_set('insert', i_linestart)
-##
-##
-##				else:
-##					if have_selection:
-##						self.contents.tag_remove('sel', '1.0', tkinter.END)
-##
-##						if selection_started_from_top:
-##							self.contents.tag_add('sel', sel_start, i_prevword)
-##						else:
-##							self.contents.tag_add('sel', i_prevword, sel_end)
-##
-##					else:
-##						self.contents.tag_add('sel', i_prevword, s)
-##
-##					self.contents.mark_set('insert', i_prevword)
-##
-##
-##			else:
-##				return
-##
-##			return 'break'
-		
+		# check done
+		# Pressed Alt + Shift + arrow left or right.
+		elif event.state == 113:
+			have_selection = len(self.contents.tag_ranges('sel')) > 0
+			selection_started_from_top = False
+			
+			if event.keysym == 'Right':
+				s = self.contents.index( 'insert')
+				e = self.idx_lineend()
+				idx_linestart = self.idx_linestart()
+				# empty line?
+				if not idx_linestart: return
+				t = self.contents.get(idx_linestart, e).strip()
+
+				# Already at lineend, proceed over first word of next line.
+				if s == e:
+					self.contents.event_generate('<<SelectNextWord>>')
+					return 'break'
+				
+				# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
+				# no matter if selection started from top or bottom:
+				if have_selection:
+					sel_start = self.contents.index(tkinter.SEL_FIRST)
+					sel_end = self.contents.index(tkinter.SEL_LAST)
+					if s == sel_end:
+						selection_started_from_top = True
+
+					#else: selection_started_from_top = False
+
+				else:
+					selection_started_from_top = True
+					sel_start = s
+
+				
+				
+				##################### Right Real start:
+				
+				
+				self.contents.event_generate('<<NextWord>>')
+				i = self.contents.index( 'insert')
+
+				# if i is over lineend:
+				# 	stop at lineend == e
+				if self.contents.compare( e,'<',i ):
+					
+					if have_selection:
+						self.contents.tag_remove('sel', '1.0', tkinter.END)
+
+						if selection_started_from_top:
+							self.contents.tag_add('sel', sel_start, e)
+						else:
+							self.contents.tag_add('sel', e, sel_end)
+							
+					# No selection,
+					# no need to check direction of selection:
+					else:
+						self.contents.tag_add('sel', s, e)
+						
+					self.contents.mark_set('insert', e)
+
+
+				# i is on the current line:
+				# 	stop at i == nextword
+				else:
+					if have_selection:
+						self.contents.tag_remove('sel', '1.0', tkinter.END)
+
+						if selection_started_from_top:
+							self.contents.tag_add('sel', sel_start, i)
+						else:
+							self.contents.tag_add('sel', i, sel_end)
+							
+					# No selection,
+					# no need to check direction of selection:
+					else:
+						self.contents.tag_add('sel', s, i)
+						
+					self.contents.mark_set('insert', i)
+
+
+
+			elif event.keysym == 'Left':
+				s = self.contents.index( 'insert')
+				
+				# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
+				# no matter if selection started from top or bottom:
+				if have_selection:
+					sel_start = self.contents.index(tkinter.SEL_FIRST)
+					sel_end = self.contents.index(tkinter.SEL_LAST)
+					if s != sel_start:
+						selection_started_from_top = True
+
+					#else: selection_started_from_top = False
+
+				else:
+					#selection_started_from_top = False
+					sel_end = s
+
+
+				i_orig = s
+				i_linestart = self.idx_linestart()
+				# empty line?
+				if not i_linestart: return
+				
+				
+				self.contents.event_generate('<<PrevWord>>')
+								
+				i_prevword = self.contents.index( 'insert')
+				
+
+				# Already at linestart, proceed over last word of prev line.
+				if i_orig == i_linestart:
+
+					if have_selection:
+
+						if selection_started_from_top:
+							self.contents.tag_remove('sel', '1.0', tkinter.END)
+							self.contents.tag_add('sel', sel_start, i_prevword)
+							self.contents.mark_set('insert', i_prevword)
+						else:
+							self.contents.tag_remove('sel', '1.0', tkinter.END)
+							self.contents.tag_add('sel', i_prevword, sel_end)
+							self.contents.mark_set('insert', i_prevword)
+					
+					# No selection,
+					# no need to check direction of selection:
+					else:
+						self.contents.tag_add('sel', i_prevword, s)
+						self.contents.mark_set('insert', i_prevword)
+
+					return 'break'
+
+				
+				
+				##################### Left Real start:
+				
+				
+				# if i_prevword is over(before) linestart:
+				# 	stop at linestart == i_linestart
+				if self.contents.compare( i_prevword, '<', i_linestart):
+
+					if have_selection:
+						self.contents.tag_remove('sel', '1.0', tkinter.END)
+
+						if selection_started_from_top:
+							self.contents.tag_add('sel', sel_start, i_linestart)
+						else:
+							self.contents.tag_add('sel', i_linestart, sel_end)
+					
+					
+					# No selection,
+					# no need to check direction of selection:
+					else:
+						self.contents.tag_add('sel', i_linestart, s)
+
+					self.contents.mark_set('insert', i_linestart)
+
+
+				# i_prevword is on the current line:
+				# 	stop at i_prevword
+				else:
+					if have_selection:
+						self.contents.tag_remove('sel', '1.0', tkinter.END)
+
+						if selection_started_from_top:
+							self.contents.tag_add('sel', sel_start, i_prevword)
+						else:
+							self.contents.tag_add('sel', i_prevword, sel_end)
+					
+					
+					# No selection,
+					# no need to check direction of selection:
+					else:
+						self.contents.tag_add('sel', i_prevword, s)
+
+					self.contents.mark_set('insert', i_prevword)
+
+
+			return 'break'
 		
 		
 		# Pressed arrow left or right.
@@ -3310,6 +3336,46 @@ class Editor(tkinter.Toplevel):
 		return "break"
 	
 	
+	def idx_lineend(self):
+	
+##		?submodifier? linestart
+##		Adjust the index to refer to the first index on the line. If the display submodifier is given, this is the first index on the display line, otherwise on the logical line.
+##
+##		?submodifier? lineend
+##		Adjust the index to refer to the last index on the line (the newline). If the display submodifier is given, this is the last index on the display line, otherwise on the logical line.
+
+		pos = self.contents.index( 'insert display lineend' )
+		return pos
+			
+			
+	def idx_linestart(self):
+		
+		# In case of wrapped lines
+		y_cursor = self.contents.bbox(tkinter.INSERT)[1]
+		p = self.contents.index( '@0,%s' % y_cursor )
+		p2 = self.contents.index( '%s linestart' % p )
+		
+		# is wrapped?
+		c1 = int(p.split('.')[1])
+		l2 = int(p2.split('.')[0])
+		
+		pos = None
+		# yes, put cursor start of line not the whole line:
+		if c1 != 0:
+			pos = p
+			
+		# no, so put cursor after indentation:
+		else:
+			tmp = self.contents.get( '%s linestart' % p2, '%s lineend' % p2 )
+			if len(tmp) > 0:
+				if not tmp.isspace():
+					tmp2 = tmp.lstrip()
+					indent = tmp.index(tmp2)
+					pos = self.contents.index( '%i.%i' % (l2, indent) )
+		
+		return pos
+		
+	
 	def check_lineends(self, event=None):
 		'''	Pressed ctrl or Alt and arrow left or right.
 			Make <<NextWord>> and <<PrevWord>> to stop at lineends.
@@ -3318,8 +3384,12 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return "break"
 			
+		idx_linestart = self.idx_linestart()
+		# empty line?
+		if not idx_linestart: return
 		
-		# Check if not only ctrl down.
+		
+		# Check if: not only ctrl down, then return
 		# MacOS event is already checked.
 		if self.os_type == 'linux':
 			if event.state != 4: return
@@ -3331,7 +3401,7 @@ class Editor(tkinter.Toplevel):
 		# Check if near lineend, so stop there
 		if event.keysym == 'Right':
 			i_orig = self.contents.index( 'insert')
-			e = self.contents.index( 'insert display lineend' )
+			e = self.idx_lineend()
 			# Already at lineend, proceed over first word of next line
 			if i_orig == e: return
 			
@@ -3440,7 +3510,8 @@ class Editor(tkinter.Toplevel):
 		if t.strip() != '':
 			self.goto_linestart(event=event)
 			s = self.contents.index( 'insert' )
-			e = self.contents.index( 'insert display lineend' )
+			e = self.idx_lineend()
+			# return cursor back to original place
 			self.contents.mark_set('insert', curpos)
 		
 			tmp = self.contents.get(s,e)
@@ -3464,6 +3535,11 @@ class Editor(tkinter.Toplevel):
 		if self.state in [ 'filedialog' ]:
 			self.bell()
 			return "break"
+		
+		idx_linestart = self.idx_linestart()
+		# empty line?
+		if not idx_linestart: return
+		
 		
 		have_selection = False
 		want_selection = False
@@ -3501,16 +3577,8 @@ class Editor(tkinter.Toplevel):
 		
 		
 		self.ensure_idx_visibility('insert')
-
 		
-##		?submodifier? linestart
-##		Adjust the index to refer to the first index on the line. If the display submodifier is given, this is the first index on the display line, otherwise on the logical line.
-##
-##		?submodifier? lineend
-##		Adjust the index to refer to the last index on the line (the newline). If the display submodifier is given, this is the last index on the display line, otherwise on the logical line.
-		
-		
-		pos = self.contents.index( 'insert display lineend' )
+		pos = self.idx_lineend()
 		
 		self.contents.see(pos)
 		self.contents.mark_set('insert', pos)
@@ -3541,6 +3609,11 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return "break"
 		
+		idx_linestart = self.idx_linestart()
+		# empty line?
+		if not idx_linestart: return
+		
+		
 		have_selection = False
 		want_selection = False
 		
@@ -3575,33 +3648,10 @@ class Editor(tkinter.Toplevel):
 				# from bottom
 				# else:	from_top = False
 				
-				
 		
 		self.ensure_idx_visibility('insert')
 		
-		# In case of wrapped lines
-		y_cursor = self.contents.bbox(tkinter.INSERT)[1]
-		p = self.contents.index( '@0,%s' % y_cursor )
-		p2 = self.contents.index( '%s linestart' % p )
-		
-		# is wrapped?
-		c1 = int(p.split('.')[1])
-		l2 = int(p2.split('.')[0])
-		
-		pos = None
-		# yes, put cursor start of line not the whole line:
-		if c1 != 0:
-			pos = p
-			
-		# no, so put cursor after indentation:
-		else:
-			tmp = self.contents.get( '%s linestart' % p2, '%s lineend' % p2 )
-			if len(tmp) > 0:
-				if not tmp.isspace():
-					tmp2 = tmp.lstrip()
-					indent = tmp.index(tmp2)
-					pos = self.contents.index( '%i.%i' % (l2, indent) )
-		
+		pos = self.idx_linestart()
 		
 		self.contents.see(pos)
 		self.contents.mark_set('insert', pos)

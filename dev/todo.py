@@ -8,7 +8,25 @@ e.entry.winfo_atomname(82)
 'fg'
 
 
-chek this
+
+get idx_linestartend()
+ok
+
+
+check_sel, goto_lines:
+empty line --> return
+ok?
+
+
+check sel	ensure view()
+not done
+
+
+do for linux and win:
+ctrl-shift-leftright
+call 113 from mac_cm: done ok?
+make func from 113, not done
+
 
 lsappinfo metainfo
 bringForwardOrder = "Terminal" ASN:
