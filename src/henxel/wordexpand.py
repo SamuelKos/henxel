@@ -1,5 +1,8 @@
 '''Complete the current word before the cursor with words in the editor.
 
+This file is taken from Python:idlelib -github-page:
+https://github.com/python/cpython/tree/3.11/Lib/idlelib/
+
 Each event that is binded to expander replaces the word with a
 different word with the same prefix. The search for matches begins
 before the target and moves toward the top of the editor. It then starts

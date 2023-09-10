@@ -195,7 +195,6 @@ class Editor(tkinter.Toplevel):
 			#print(win_id)
 			#print('AAAAAAAAA', mac_term)
 		
-		# Maybe not macOS
 		except (FileNotFoundError, subprocess.SubprocessError):
 			pass
 
@@ -536,24 +535,18 @@ class Editor(tkinter.Toplevel):
 			if not fontname:
 				fontname = 'TkDefaulFont'
 				
-				
-			if self.os_type == 'mac_os':
-				# It seems there is no font-scaling in mac_os
-				s0 = 22
-				s1 = 16
-				
-			else:
-				s0 = 12
-				s1 = 10
-				
+			
+			size0, size1 = 12, 10
+			# There is no font-scaling in macOS?
+			if self.os_type == 'mac_os': size0, size1 = 12, 10
 				
 				
 			# Initialize rest of configurables
-			self.font.config(family=fontname, size=s0)
-			self.menufont.config(family=fontname, size=s1)
-		
-			self.scrollbar_width = 30
-			self.elementborderwidth = 4
+			self.font.config(family=fontname, size=size0)
+			self.menufont.config(family=fontname, size=size1)
+			
+			self.scrollbar_width, self.elementborderwidth = 30, 4
+			if self.os_type == 'mac_os': self.scrollbar_width, self.elementborderwidth = 16, 2
 			
 			self.scrollbar.config(width=self.scrollbar_width)
 			self.scrollbar.config(elementborderwidth=self.elementborderwidth)
@@ -5222,7 +5215,8 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal' or self.old_word == '':
 			self.bell()
 			return "break"
-		
+			
+			
 		wordlen = len(self.old_word)
 		self.lastcursorpos = self.contents.index(tkinter.INSERT)
 		pos = self.contents.search(self.old_word, 'insert +1c', tkinter.END)
@@ -5237,12 +5231,15 @@ class Editor(tkinter.Toplevel):
 				#print('no')
 				return "break"
 		
-		# go back to last place with arrow left
+		# Go back to last place with arrow left
 		self.anykeyid = self.contents.bind( "<Any-Key>", self.check_next_event)
 		self.anybutid = self.contents.bind( "<Any-Button>", self.check_next_event)
-		self.contents.unbind("<Left>", self.bid_left)
 		
-			
+		# Without this one can not search by holding ctrl down and
+		# pressing and releasing repeatedly backspace only:
+		if self.bid_left: self.contents.unbind("<Left>", self.bid_left)
+		self.bid_left = None
+		
 		
 		lastpos = "%s + %dc" % (pos, wordlen)
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
@@ -5250,7 +5247,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.mark_set('insert', lastpos)
 		line = pos
 		self.ensure_idx_visibility(line)
-		
 					
 		return "break"
 

@@ -8,6 +8,9 @@ e.entry.winfo_atomname(82)
 'fg'
 
 
+scrollbar thinner if macos ok?
+
+
 guides?
 on mouseover guideline: show startline of block
 
@@ -78,12 +81,15 @@ ctrl-left start of line:
 
 
 
+ctrl-backspace-backspace
+--> error
+fixed ok?
 
+check state == ctrl
 
 
 
 at the end of file, center view?
-
 
 padx font measure
 cont, ln_wid
