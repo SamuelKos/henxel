@@ -1,6 +1,31 @@
 # Changelog
-* To version: 	0.2.7
+* To version: 	0.2.8
 * From version:	0.0.3
+
+
+# 0.2.8
+- Moved tcl-script, that fixes ctrl-rightleft behaviour for Windows, to better place.
+So active tab should be safe now also in Windows.
+- Tried 'lsappinfo metainfo' as a way to get terminal app name in macOS but it did not
+work much faster so left as it was before: 'lsappinfo front' to get ASN and then
+'lsappinfo info -only name'. Giving focus back to python terminal-window is not very
+simple task in macOS. Currently tested with Terminal and iTerm2. It works quite ok now.
+- OS-type is now determined as does IDLE-editor, copied it from there:
+
+sys.platform == 'darwin'
+sys.platform[:3] == 'win':
+sys.platform.count('linux'):
+
+This usage of module sys is nice addition, it was used very little before. Also now
+there is no need to blindly try to find macOS terminal.
+- Fix for: search_next would not work if holding ctrl down and repeatedly pressing backspace.
+- Scrollbar is now little thinner if using macOS.
+- Yank_line copies now whole line instead of just visible part of line.
+- Added functions idx_linestart and -end to get effective indexes of the line.
+- Added functions move_by_words and select_by_words which handles ctrl-leftright and
+ctrl-shift-leftright behaviour in Linux and Windows and Alt-leftright and
+Alt-shift-leftright behaviour in macOS. This was done to fix default handling of related
+events near lineends.
 
 
 # 0.2.7

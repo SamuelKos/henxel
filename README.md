@@ -94,7 +94,8 @@ And it is ready to use:
 # Prerequisites in macOS and venv-creation
 Python installation (you may need to install newer version of python from python.org)
 should already include tkinter. There currently is no mkvenv script for macOS,
-but making venv is quite same as in Linux. I will update this section later.
+but making venv is quite same as in Linux. It seems to be enough to make venv
+and then install henxel to it without anything else.
 
 ```console
 ~$ mkdir myproject

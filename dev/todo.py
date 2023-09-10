@@ -8,8 +8,6 @@ e.entry.winfo_atomname(82)
 'fg'
 
 
-scrollbar thinner if macos ok?
-
 
 guides?
 on mouseover guideline: show startline of block
@@ -17,75 +15,6 @@ on mouseover guideline: show startline of block
 marks?
 toggle mark
 
-yank line gets _only_ display line
-now whole line ok?
-
-
-'lsappinfo metainfo'
-'lsappinfo front'
-'lsappinfo info -only name'
-
-
-get idx_linestartend()
-ok
-
-
-check_sel, goto_lines:
-empty line --> return
-ok?
-
-
-check sel	ensure view()
-ok?
-
-##
-do for linux and win:
-ctrl-shift-leftright
-call 113 from mac_cm: done ok?
-make func from 113
-done
-
-done move_by_words
-select_by_words
-##
-
-
-lsappinfo metainfo
-bringForwardOrder = "Terminal" ASN:
-ok
-# Giving focus back to python terminal-window is not very simple task in macOS
-
-# at closing editor: if python terminal is in fullscreen and
-# there is other terminal-window opened which is not in fullscreen,
-# then focus is set to that other terminal-window not in fullscreen.
-
-# If instead both terminal windows were in fullscreen, then focus
-# restored to python terminal.
-#ok ?
-
-darwin = sys.platform == 'darwin'
-elif sys.platform[:3] == 'win':
-if sys.platform.count('linux'):
-
-#move windows eval ok
-#yank empty line ok?
-
-
-
-if sel started from top
-if from bottom:
-
-ctrl-left start of line:
-	if middle of first word: goto_linestart
-	if middle of last word: goto_lineend
-
-
-
-ctrl-backspace-backspace
---> error
-fixed ok?
-
-check state == ctrl
 
 
 
