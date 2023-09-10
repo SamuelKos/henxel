@@ -8,6 +8,20 @@ e.entry.winfo_atomname(82)
 'fg'
 
 
+guides?
+on mouseover guideline: show startline of block
+
+marks?
+toggle mark
+
+yank line gets _only_ display line
+now whole line ok?
+
+
+'lsappinfo metainfo'
+'lsappinfo front'
+'lsappinfo info -only name'
+
 
 get idx_linestartend()
 ok
@@ -19,13 +33,18 @@ ok?
 
 
 check sel	ensure view()
-not done
+ok?
 
-
+##
 do for linux and win:
 ctrl-shift-leftright
 call 113 from mac_cm: done ok?
-make func from 113, not done
+make func from 113
+done
+
+done move_by_words
+select_by_words
+##
 
 
 lsappinfo metainfo
