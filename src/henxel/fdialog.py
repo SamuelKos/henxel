@@ -28,11 +28,11 @@ class FDialog:
 	'''
 
 
-	def __init__(self, master, path, stringvar, default_colors=False, font=None, menufont=None):
+	def __init__(self, master, path, stringvar, os_type='linux', font=None, menufont=None):
 		'''	master		tkinter.Toplevel
 			path		pathlib.Path
 			stringvar	tkinter.StringVar
-			want_color	should we use default coloring which enables system theme change on macOS
+			os_type		'linux', 'mac_os', 'windows'
 			fonts		tkinter.font.Font
 		'''
 		
@@ -42,11 +42,14 @@ class FDialog:
 		self.font = font
 		self.menufont = menufont
 		
+		s0, s1 = 12, 10
+		if os_type == 'mac_os': s0, s1 = 22, 16
+		
 		if not self.font:
-			self.font = tkinter.font.Font(family='TkDefaulFont', size=12)
+			self.font = tkinter.font.Font(family='TkDefaulFont', size=s0)
 	
 		if not self.menufont:
-			self.menufont = tkinter.font.Font(family='TkDefaulFont', size=10)
+			self.menufont = tkinter.font.Font(family='TkDefaulFont', size=s1)
 		
 		self.top.config(bd=4)
 		self.direction = 'up'
@@ -58,9 +61,7 @@ class FDialog:
 
 
 		self.entry = tkinter.Entry(self.top, takefocus=0, bd=4, font=self.menufont, highlightthickness=0)
-		if not default_colors:
-			self.entry.config(bg='#d9d9d9', disabledbackground='#d9d9d9', disabledforeground='black')
-				
+		
 		self.filesbar = tkinter.Scrollbar(self.top, takefocus=0)
 		
 		# choosed activestyle:underline because dotbox was almost invisible.
@@ -73,16 +74,21 @@ class FDialog:
 		self.dirs['yscrollcommand'] = self.dirsbar.set
 		self.dirsbar.config(command=self.dirs.yview)
 
-		self.dirs.configure(font=self.font, width=30, selectmode='single', bd=4, highlightthickness=0)
-		if not default_colors:
-			self.dirs.config(bg='#d9d9d9')
+		self.dirs.configure(font=self.font, width=30, selectmode='single', highlightthickness=0)
 			
-		self.files.configure(font=self.font, width=30, selectmode='single', bd=4, highlightthickness=0)
-		if not default_colors:
-			self.files.config(bg='#d9d9d9')
+		self.files.configure(font=self.font, width=30, selectmode='single', highlightthickness=0)
 		
-		self.dirsbar.configure(width=30, elementborderwidth=4)
-		self.filesbar.configure(width=30, elementborderwidth=4)
+		if os_type != 'mac_os':
+			self.dirs.config(bg='#d9d9d9', bd=4)
+			self.files.config(bg='#d9d9d9', bd=4)
+			self.dirsbar.configure(width=30, elementborderwidth=4)
+			self.filesbar.configure(width=30, elementborderwidth=4)
+			self.entry.config(bg='#d9d9d9', disabledbackground='#d9d9d9', disabledforeground='black')
+		else:
+			#self.dirs.config(bd=4)
+			#self.files.config(bd=4)
+			self.dirsbar.configure(width=16, elementborderwidth=2)
+			self.filesbar.configure(width=16, elementborderwidth=2)
 		
 		
 		self.dirs.bind('<Double-ButtonRelease-1>', self.chdir)

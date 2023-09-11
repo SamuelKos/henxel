@@ -8,6 +8,12 @@ e.entry.winfo_atomname(82)
 'fg'
 
 
+# macos font size0 fixed ok
+
+# fdialog arg os_type
+# ok?
+
+
 
 guides?
 on mouseover guideline: show startline of block

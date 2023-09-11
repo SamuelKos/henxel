@@ -315,7 +315,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.errlines = list()
 		
-		# When clicked with mouse button 1 while searhing
+		# When clicked with mouse button 1 while searching
 		# to set cursor position to that position clicked.
 		self.save_pos = None
 		
@@ -538,7 +538,7 @@ class Editor(tkinter.Toplevel):
 			
 			size0, size1 = 12, 10
 			# There is no font-scaling in macOS?
-			if self.os_type == 'mac_os': size0, size1 = 12, 10
+			if self.os_type == 'mac_os': size0, size1 = 22, 16
 				
 				
 			# Initialize rest of configurables
@@ -4510,10 +4510,8 @@ class Editor(tkinter.Toplevel):
 			filetop.title('Select File')
 			self.to_be_closed.append(filetop)
 			
-			default_colors = False
-			if self.os_type == 'mac_os': default_colors = True
 			
-			fd = fdialog.FDialog(filetop, p, self.tracevar_filename, default_colors, self.font, self.menufont)
+			fd = fdialog.FDialog(filetop, p, self.tracevar_filename, self.os_type, self.font, self.menufont)
 			
 			return 'break'
 			
