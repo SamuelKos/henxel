@@ -28,12 +28,12 @@ class FDialog:
 	'''
 
 
-	def __init__(self, master, path, stringvar, os_type='linux', font=None, menufont=None):
+	def __init__(self, master, path, stringvar, font=None, menufont=None, os_type='linux'):
 		'''	master		tkinter.Toplevel
 			path		pathlib.Path
 			stringvar	tkinter.StringVar
-			os_type		'linux', 'mac_os', 'windows'
 			fonts		tkinter.font.Font
+			os_type		'linux', 'mac_os', 'windows'
 		'''
 		
 		self.top = master
@@ -85,8 +85,6 @@ class FDialog:
 			self.filesbar.configure(width=30, elementborderwidth=4)
 			self.entry.config(bg='#d9d9d9', disabledbackground='#d9d9d9', disabledforeground='black')
 		else:
-			#self.dirs.config(bd=4)
-			#self.files.config(bd=4)
 			self.dirsbar.configure(width=16, elementborderwidth=2)
 			self.filesbar.configure(width=16, elementborderwidth=2)
 		

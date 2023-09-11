@@ -437,7 +437,7 @@ class Editor(tkinter.Toplevel):
 	
 				self.contents.insert(1.0, 'asd')
 				self.contents.event_generate('<<NextWord>>')
-				self.contents.delete('1.0', tkinter.END)
+				self.contents.delete('1.0', '1.3')
 	
 				self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
 				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
@@ -4511,7 +4511,7 @@ class Editor(tkinter.Toplevel):
 			self.to_be_closed.append(filetop)
 			
 			
-			fd = fdialog.FDialog(filetop, p, self.tracevar_filename, self.os_type, self.font, self.menufont)
+			fd = fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.font, menufont=self.menufont, os_type=self.os_type)
 			
 			return 'break'
 			
