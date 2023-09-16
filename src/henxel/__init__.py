@@ -1048,7 +1048,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.see('%s + 4lines' % index)
 		
 		
-	def quit_me(self):
+	def quit_me(self, event=None):
 	
 		self.save(forced=True)
 		self.save_config()
