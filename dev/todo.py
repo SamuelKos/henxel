@@ -13,6 +13,9 @@ e.entry.winfo_atomname(82)
 # fdialog arg os_type
 # ok?
 
+alt -leftright walk
+alt-wq close
+
 
 
 guides?

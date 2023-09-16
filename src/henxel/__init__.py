@@ -650,8 +650,14 @@ class Editor(tkinter.Toplevel):
 			self.bind( "<Alt-n>", self.new_tab)
 			self.contents.bind( "<Alt-s>", self.color_choose)
 			self.contents.bind( "<Alt-t>", self.toggle_color)
-			self.bind( "<Alt-w>", self.walk_tabs)
-			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
+			
+			self.bind( "<Alt-Right>", self.walk_tabs)
+			self.bind( "<Alt-Left>", lambda event: self.walk_tabs(event, **{'back':True}) )
+			
+			self.bind( "<Alt-w>", self.quit_me)
+			self.bind( "<Alt-q>", self.quit_me)
+			
+			
 		
 			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
 			self.contents.bind( "<Alt-l>", self.toggle_ln)
