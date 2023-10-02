@@ -15,7 +15,7 @@ echo git status >> %1\\act.bat
 echo %1\Scripts\\activate.bat >> %1\\act.bat
 
 echo @echo off > %1\launch_ed.bat
-echo start /B "" "py" "-m" "idlelib" "-c" "import henxel;e=henxel.Editor()" "-t" %cd% >> %1\launch_ed.bat
+echo %cd%\%1\\act.bat ^& start /B "" "py" "-m" "idlelib" "-c" "import henxel;e=henxel.Editor()" "-t" %cd% >> %1\launch_ed.bat
 '''
 
 temp3 = '''@echo off
@@ -30,10 +30,10 @@ GOTO No1
   IF EXIST %folder% echo %folder% exists already, aborting venv creation. & GOTO End1
   
   IF EXIST "requirements.txt" (
-    cmd /k "py -m venv %folder% & %folder%\Scripts\\activate.bat & pip install wheel & pip install -r requirements.txt & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder%"
+    py -m venv %folder% & %folder%\Scripts\\activate.bat & pip install wheel & pip install -r requirements.txt & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder%
 	
   ) ELSE (
-    cmd /k "py -m venv %folder% & %folder%\Scripts\\activate.bat & pip install wheel & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder%"
+    py -m venv %folder% & %folder%\Scripts\\activate.bat & pip install wheel & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder%
 	
   )
 
