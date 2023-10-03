@@ -4644,7 +4644,7 @@ class Editor(tkinter.Toplevel):
 						self.tabs[self.tabindex].type = 'normal'
 				except EnvironmentError as e:
 					print(e.__str__())
-					print('\n Could not save file: {fpath_in_entry}')
+					print(f'\n Could not save file: {fpath_in_entry}')
 					return
 				
 				if self.tabs[self.tabindex].filepath != None:

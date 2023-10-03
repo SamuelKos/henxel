@@ -5,6 +5,11 @@ tmp2 = 'create_scripts.bat'
 tmp3 = 'mkvenv.bat'
 
 
+if sys.platform[:3] != 'win':
+    print('This script is meant to be used on Windows only.')
+    sys.exit(1)
+
+
 temp1 = '''@echo off
 start /B "" "py" "-m" "idlelib" "-c" "import henxel;e=henxel.Editor()" "-t" %cd%'''
 
@@ -30,10 +35,10 @@ GOTO No1
   IF EXIST %folder% echo %folder% exists already, aborting venv creation. & GOTO End1
   
   IF EXIST "requirements.txt" (
-    py -m venv %folder% & %folder%\Scripts\\activate.bat & pip install wheel & pip install -r requirements.txt & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder%
+    py -m venv %folder% & %folder%\Scripts\\activate.bat & pip install wheel & pip install -r requirements.txt & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder% & echo: & echo Created %1\\act.bat, which you can use to activate this virtual environment, and %1\launch_ed.bat, which you can use to activate this venv and launch IDLE-shell and Henxel-editor. You can install henxel-editor to this venv with: pip install henxel.
 	
   ) ELSE (
-    py -m venv %folder% & %folder%\Scripts\\activate.bat & pip install wheel & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder%
+    py -m venv %folder% & %folder%\Scripts\\activate.bat & pip install wheel & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder% & echo: & echo Created %1\\act.bat, which you can use to activate this virtual environment, and %1\launch_ed.bat, which you can use to activate this venv and launch IDLE-shell and Henxel-editor. You can install henxel-editor to this venv with: pip install henxel.  
 	
   )
 
@@ -48,10 +53,11 @@ else:
     try:
         with open(fpath, 'w', encoding='utf-8') as f:
             f.write(temp1)
+            print(f'Created file: {fpath}')
 		
     except EnvironmentError as e:
         print(e.__str__())
-        print('\n Could not save file: {fpath}')
+        print(f'\n Could not save file: {fpath}')
 
 
 
@@ -63,10 +69,11 @@ else:
     try:
         with open(fpath, 'w', encoding='utf-8') as f:
             f.write(temp2)
+            print(f'Created file: {fpath}')
 		
     except EnvironmentError as e:
         print(e.__str__())
-        print('\n Could not save file: {fpath}')
+        print(f'\n Could not save file: {fpath}')
 
 
 fpath = pathlib.Path(sys.prefix) / tmp3
@@ -77,7 +84,11 @@ else:
     try:
         with open(fpath, 'w', encoding='utf-8') as f:
             f.write(temp3)
+            print(f'Created file: {fpath}')
 		
     except EnvironmentError as e:
         print(e.__str__())
-        print('\n Could not save file: {fpath}')
+        print(f'\n Could not save file: {fpath}')
+        
+print('\nYou should now be able to create Python virtual environment with:\n mkvenv name_of_env')
+		

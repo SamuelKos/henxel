@@ -1,10 +1,10 @@
 		Keyboard shortcuts for macOS:
 		
 		If key-sequence is like: Cmd-c
-		It means: while holding ctrl-key down, press and release c-key.
+		It means: while holding Cmd-key down, press and release c-key.
 		
 		If key-sequence is like: Cmd-c-f
-		It means: while holding ctrl-key down, press and release first
+		It means: while holding Cmd-key down, press and release first
 		c-key then f-key.
 		 
 		Cmd-Return		Open file
