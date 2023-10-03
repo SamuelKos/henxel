@@ -71,6 +71,10 @@ plain a	==8
 + shift	==9
 + both	==13
 
+win10 left
+262144
+win11 left
+262152
 
 linux and macos
 plain a	==0

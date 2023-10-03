@@ -3231,7 +3231,7 @@ class Editor(tkinter.Toplevel):
 			if event.state != 5: return
 		
 		elif self.os_type == 'windows':
-			if event.state != 262157: return
+			if event.state not in [ 262157, 262149 ]: return
 		
 		
 		have_selection = len(self.contents.tag_ranges('sel')) > 0
@@ -3445,7 +3445,7 @@ class Editor(tkinter.Toplevel):
 			if event.state != 4: return
 		
 		elif self.os_type == 'windows':
-			if event.state != 262156: return
+			if event.state not in [ 262156, 262148 ]: return
 			
 		
 		# Check if near lineend, so stop there
@@ -3501,7 +3501,7 @@ class Editor(tkinter.Toplevel):
 		# macOS event here is only plain arrow left or right and has selection.
 		if self.os_type != 'mac_os':
 			if self.os_type == 'linux' and event.state != 0: return
-			if self.os_type == 'windows' and event.state != 262152: return
+			if self.os_type == 'windows' and event.state not in [ 262152, 262144 ]: return
 			
 			have_selection = False
 	
@@ -3580,7 +3580,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.clipboard_clear()
 			
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			self.after(50, lambda args=['sel', s, e]: self.contents.tag_add(*args) )
+			self.contents.tag_add('sel', s, e)
 		
 			if self.os_type != 'windows':
 				self.contents.clipboard_append(tmp)
@@ -3772,8 +3772,8 @@ class Editor(tkinter.Toplevel):
 		# currently this interferes with backspace_override
 		
 		# Enable continue adjusting selection area.
-		# 262152 is state when pressing arrow left-right in Windows
-		if self.state != 'normal' or event.state not in [0, 262152]:
+		# 262152 is state when pressing arrow left-right in Win11, 262144 in Win10
+		if self.state != 'normal' or event.state not in [0, 262152, 262144 ]:
 			return 'continue'
 			
 			
