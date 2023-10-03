@@ -1,5 +1,5 @@
 # Henxel
-GUI-editor for Python development. Tested to work with Debian 12, Windows 11 and macOS 12.
+GUI-editor for Python development. Tested to work with Debian 12, Windows 10 and 11 and macOS 12.
 
 
 # Featuring
@@ -66,28 +66,40 @@ Then make folder for your new project and install venv there and activate it, an
 To remove venv just remove the env-directory and you can start from clean desk making new one with mkvenv later. Optional about virtual environment ends here.
 
 # Prerequisites in Windows and venv-creation
-Python installation should already include tkinter. There currently is no
-mkvenv script for Windows in this project, but here is short info about how to
+Python installation should already include tkinter. There is
+mkvenv-install script for Windows in /util. Here is short info about how to
 create a working Python virtual environment in Windows. First open console, like
-PowerShell (in which: ctrl-r to search command history, most useful) and:
+PowerShell (in which: ctrl-r to search command history, most useful) or CMD-Terminal and:
 
 ```console
 mkdir myproject
 cd myproject
-myproject> python.exe -m venv env
+myproject> py win_install_mkvenv.py
+myproject> mkvenv env
+
+If Win11:
 myproject> .\env\Scripts\activate
 what you can get with pressing: (e <tab> s <tab> a <tab> <return>)
 
-First the essential for the env:
-(env) myproject> pip install --upgrade pip
-(env) myproject> pip install wheel
+If Win10:
+myproject> env\act.bat
+what you can get with pressing: (e <tab> a <tab> <return>)
 
-Then to enable tab-completion in Python-console, most useful:
-(env) myproject> pip install pyreadline3
+Upgrade pip and install Henxel:
+(env) myproject> pip install --upgrade pip
+(env) myproject> pip install henxel
 
 And it is ready to use:
 (env) myproject> pip list
 (env) myproject> deactivate
+
+Launch Henxel win10:
+myproject> env\launch_ed.bat
+what you can get with pressing: (e <tab> l <tab> <return>)
+
+Launch Henxel win11:
+myproject> .env\launch_ed.bat
+what you can get with pressing: (e <tab> l <tab> <return>)
 ```
 
 

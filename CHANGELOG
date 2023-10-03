@@ -1,6 +1,39 @@
 # Changelog
-* To version: 	0.2.8
+* To version: 	0.2.9
 * From version:	0.0.3
+
+
+# 0.2.9
+- Added win_install_mkvenv.py to /util which can be run in Windows with
+	py win_install_mkvenv.py
+
+Running it creates:
+	create_scripts.bat
+	launched.bat
+	mkvenv.bat
+	
+in sys.prefix which hopefully is in the PATH.
+
+Then one can do in Windows: mkvenv name_of_env.
+
+That will install possible requirements also.
+And mkvenv creates act.bat to root of venv that will activate venv.
+And mkvenv creates launch_ed.bat to root of venv that will activate venv
+and launch IDLE-shell and launch Henxel-editor if it is installed.
+I no longer recommend installing pyreadline3 because it seems to not work
+properly in Win10. Instead, using IDLE-shell has tab-completion and multiline
+editing etc. Only that one can not change direction of prompt movement after
+command execution. It now moves down and will eventually stay at the
+bottom line. It would be preferable if prompt would move up instead,
+and stay in the first line. One cannot clear screen in Windows so this is quite unfortunate.
+
+- Small looks fixes.
+
+- Alt -leftright now walks tabs in all OS-types. And Alt-wq closes editor
+with save. This was done to increase cross-platform consistency in
+shortcut-keys. It is also more easy to remember, maybe not so ideal though.
+
+- Fixed move_by_words, select_by_words and yank_line for win10.
 
 
 # 0.2.8

@@ -1,32 +1,5 @@
 
 
-
-if sys.platform is windows:		ok
-	when run:
-	win_install_mkvenv.bat
-
-creates in sys.prefix:	ok
-print created:
-	create_scripts.bat
-	launched.bat
-	mkvenv.bat
-
-after win_inst and after every mkvenv:	ok
-	print usage mkvenv both launched act
-	
-
-
-
-# macos font size0 fixed ok
-
-# fdialog arg os_type
-# ok?
-
-alt -leftright walk			ok
-alt-wq close
-
-
-
 entry.winfo_atom('bg')
 81
 e.entry.winfo_atom('fg')
