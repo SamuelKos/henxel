@@ -4,7 +4,7 @@ import tkinter
 
 class FontChooser:
 		
-	def __init__(self, master, fontlist, big=False, tracefunc=None):
+	def __init__(self, master, fontlist, big=False, tracefunc=None, os_type='linux'):
 		'''	master		tkinter.Toplevel
 			fontlist	list of tkinter.font.Font instances
 			big			If true start with bigger font.
@@ -74,7 +74,10 @@ class FontChooser:
 		self.scrollbar.pack(side='left', fill='y')
 		self.scrollbar.config(width=30, elementborderwidth=4, command=self.lb.yview)
 		
-		
+		if os_type != 'linux':
+			self.scrollbar.configure(width=16, elementborderwidth=2)
+			
+				
 		# With spinbox we set font size:
 		self.sb = tkinter.Spinbox(self.topframe, font=('TkDefaultFont', 10), from_=self.min, to=self.max, increment=2, width=3, command=self.change_font)
 		self.sb.pack(pady=10, anchor='w')

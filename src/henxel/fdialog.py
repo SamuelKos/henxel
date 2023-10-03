@@ -81,13 +81,15 @@ class FDialog:
 		if os_type != 'mac_os':
 			self.dirs.config(bg='#d9d9d9', bd=4)
 			self.files.config(bg='#d9d9d9', bd=4)
-			self.dirsbar.configure(width=30, elementborderwidth=4)
-			self.filesbar.configure(width=30, elementborderwidth=4)
 			self.entry.config(bg='#d9d9d9', disabledbackground='#d9d9d9', disabledforeground='black')
-		else:
+			
+		if os_type != 'linux':
 			self.dirsbar.configure(width=16, elementborderwidth=2)
 			self.filesbar.configure(width=16, elementborderwidth=2)
-		
+		else:
+			self.dirsbar.configure(width=30, elementborderwidth=4)
+			self.filesbar.configure(width=30, elementborderwidth=4)
+			
 		
 		self.dirs.bind('<Double-ButtonRelease-1>', self.chdir)
 		self.dirs.bind('<Return>', self.chdir)

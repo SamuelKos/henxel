@@ -545,8 +545,8 @@ class Editor(tkinter.Toplevel):
 			self.font.config(family=fontname, size=size0)
 			self.menufont.config(family=fontname, size=size1)
 			
-			self.scrollbar_width, self.elementborderwidth = 30, 4
-			if self.os_type == 'mac_os': self.scrollbar_width, self.elementborderwidth = 16, 2
+			self.scrollbar_width, self.elementborderwidth = 16, 2
+			if self.os_type == 'linux': self.scrollbar_width, self.elementborderwidth = 30, 4
 			
 			self.scrollbar.config(width=self.scrollbar_width)
 			self.scrollbar.config(elementborderwidth=self.elementborderwidth)
@@ -2308,7 +2308,7 @@ class Editor(tkinter.Toplevel):
 		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
 				self.contents.bind( shortcut, self.font_choose)) )
 		
-		changefont.FontChooser( fonttop, [self.font, self.menufont], big, tracefunc=self.update_fonts )
+		changefont.FontChooser( fonttop, [self.font, self.menufont], big, tracefunc=self.update_fonts, os_type=self.os_type )
 		self.contents.bind( shortcut, self.do_nothing)
 		self.to_be_closed.append(fonttop)
 	

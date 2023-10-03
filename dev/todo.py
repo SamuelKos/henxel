@@ -1,3 +1,24 @@
+
+
+
+if sys.platform is windows:
+	when run:
+	win_install_mkvenv.bat
+
+creates in sys.prefix:
+print created:
+	create_scripts.bat
+	launched.bat
+	mkvenv.bat
+
+after win_inst and after every mkvenv:
+	print usage mkvenv both launched act
+	
+at launch of idle, print info: history alt-np
+
+
+
+
 entry.winfo_atom('bg')
 81
 e.entry.winfo_atom('fg')
