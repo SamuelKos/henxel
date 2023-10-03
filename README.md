@@ -77,29 +77,27 @@ cd myproject
 myproject> py win_install_mkvenv.py
 myproject> mkvenv env
 
-If Win11:
-myproject> .\env\Scripts\activate
-what you can get with pressing: (e <tab> s <tab> a <tab> <return>)
-
-If Win10:
 myproject> env\act.bat
-what you can get with pressing: (e <tab> a <tab> <return>)
+what you can get with pressing in powershell: (e <tab> a <tab> <return>)
+or in CMD-Terminal: (e <tab> \ a <tab> <return>)
 
-Upgrade pip and install Henxel:
+If that did not activate venv:
+myproject> env\Scripts\activate
+what you can get with pressing in powershell: (e <tab> s <tab> a <tab> <return>)
+or in CMD-Terminal: (e <tab> \ s <tab> \ a <tab> <return>)
+
+After venv is active upgrade pip and install Henxel:
 (env) myproject> pip install --upgrade pip
 (env) myproject> pip install henxel
 
-And it is ready to use:
+Venv is now ready to use:
 (env) myproject> pip list
 (env) myproject> deactivate
 
-Launch Henxel win10:
+Launch Henxel:
 myproject> env\launch_ed.bat
-what you can get with pressing: (e <tab> l <tab> <return>)
-
-Launch Henxel win11:
-myproject> .env\launch_ed.bat
-what you can get with pressing: (e <tab> l <tab> <return>)
+what you can get with pressing in powershell: (e <tab> l <tab> <return>)
+or in CMD-Terminal: (e <tab> \ l <tab> <return>)
 ```
 
 
