@@ -20,7 +20,7 @@ echo git status >> %1\\act.bat
 echo %1\Scripts\\activate.bat >> %1\\act.bat
 
 echo @echo off > %1\launch_ed.bat
-echo %cd%\%1\\act.bat ^& start /B "" "py" "-m" "idlelib" "-c" "import henxel;e=henxel.Editor()" "-t" %cd% >> %1\launch_ed.bat
+echo %cd%\%1\\act.bat ^& start /B "" "py" "-m" "idlelib" "-c" "import henxel;e=henxel.Editor()" "-t" "(%1) %cd%" >> %1\launch_ed.bat
 '''
 
 temp3 = '''@echo off
