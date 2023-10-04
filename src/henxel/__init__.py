@@ -3170,7 +3170,20 @@ class Editor(tkinter.Toplevel):
 		
 		num_lines = self.text_widget_height // self.bbox_height
 		num_scroll = num_lines // 3
+		pos = self.contents.index('insert')
+		#posint = int(float(self.contents.index('insert')))
+		# lastline of visible window
+		# print(int(float(text.index("@0,65535"))))
 		
+		# lastline
+		last = int(float(self.contents.index('end'))) - 1
+		curline = int(float(self.contents.index('insert'))) - 1
+				
+		if curline + 2*num_scroll + 2 > last:
+			self.contents.insert(tkinter.END, num_scroll*'\n')
+			self.contents.mark_set('insert', pos)
+			
+			
 		self.contents.yview_scroll(num_scroll, 'units')
 		# No ensure_view, enable return to cursor by arrow keys
 		return "break"

@@ -1,4 +1,6 @@
 
+at the end of file, center view?
+
 
 entry.winfo_atom('bg')
 81
@@ -20,8 +22,6 @@ toggle mark
 
 
 
-
-at the end of file, center view?
 
 padx font measure
 cont, ln_wid
