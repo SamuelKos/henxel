@@ -78,26 +78,20 @@ myproject> py win_install_mkvenv.py
 myproject> mkvenv env
 
 myproject> env\act.bat
-what you can get with pressing in powershell: (e <tab> a <tab> <return>)
-or in CMD-Terminal: (e <tab> \ a <tab> <return>)
 
 If that did not activate venv:
 myproject> env\Scripts\activate
-what you can get with pressing in powershell: (e <tab> s <tab> a <tab> <return>)
-or in CMD-Terminal: (e <tab> \ s <tab> \ a <tab> <return>)
 
 After venv is active upgrade pip and install Henxel:
 (env) myproject> pip install --upgrade pip
 (env) myproject> pip install henxel
 
-Venv is now ready to use:
+Venv is now ready:
 (env) myproject> pip list
 (env) myproject> deactivate
 
 Launch Henxel:
 myproject> env\launch_ed.bat
-what you can get with pressing in powershell: (e <tab> l <tab> <return>)
-or in CMD-Terminal: (e <tab> \ l <tab> <return>)
 ```
 
 
