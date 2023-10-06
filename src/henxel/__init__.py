@@ -651,14 +651,9 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Alt-s>", self.color_choose)
 			self.contents.bind( "<Alt-t>", self.toggle_color)
 			
-			self.bind( "<Alt-Right>", self.walk_tabs)
-			self.bind( "<Alt-Left>", lambda event: self.walk_tabs(event, **{'back':True}) )
+			self.bind( "<Alt-w>", self.walk_tabs)
+			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
 			
-			self.bind( "<Alt-w>", self.quit_me)
-			self.bind( "<Alt-q>", self.quit_me)
-			
-			
-		
 			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
 			self.contents.bind( "<Alt-l>", self.toggle_ln)
 			self.contents.bind( "<Alt-x>", self.toggle_syntax)
@@ -3173,18 +3168,24 @@ class Editor(tkinter.Toplevel):
 		pos = self.contents.index('insert')
 		#posint = int(float(self.contents.index('insert')))
 		# lastline of visible window
-		# print(int(float(text.index("@0,65535"))))
+		lastline_screen = int(float(self.contents.index("@0,65535")))
 		
 		# lastline
 		last = int(float(self.contents.index('end'))) - 1
 		curline = int(float(self.contents.index('insert'))) - 1
-				
+		
+		# if near fileend
 		if curline + 2*num_scroll + 2 > last:
 			self.contents.insert(tkinter.END, num_scroll*'\n')
 			self.contents.mark_set('insert', pos)
-			
-			
-		self.contents.yview_scroll(num_scroll, 'units')
+						
+			self.contents.yview_scroll(num_scroll, 'units')
+		
+		# if near screen end
+		elif curline + 2*num_scroll + 2 > lastline_screen:
+			self.contents.yview_scroll(num_scroll, 'units')
+		
+		
 		# No ensure_view, enable return to cursor by arrow keys
 		return "break"
 	

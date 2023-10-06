@@ -1,3 +1,4 @@
+alt wq	ok
 
 at the end of file, center view?
 
