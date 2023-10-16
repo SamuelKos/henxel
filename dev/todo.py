@@ -1,6 +1,6 @@
 alt wq	ok
 
-at the end of file, center view?
+at the end of file, center view? ok?
 
 
 entry.winfo_atom('bg')
