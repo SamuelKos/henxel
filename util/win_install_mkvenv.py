@@ -35,17 +35,17 @@ GOTO No1
   IF EXIST %folder% echo %folder% exists already, aborting venv creation. & GOTO End1
   
   IF EXIST "requirements.txt" (
-	py -m venv %folder% & %folder%\Scripts\\activate.bat & pip install wheel & pip install -r requirements.txt & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder% & echo: & echo Created %1\\act.bat, which you can use to activate this virtual environment, and %1\launch_ed.bat, which you can use to activate this venv and launch IDLE-shell and Henxel-editor. You can install henxel-editor to this venv with: pip install henxel.
+	py -m venv %folder% & %folder%\Scripts\\activate.bat & python.exe -m pip install --upgrade pip wheel & pip install -r requirements.txt & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder% & echo: & echo Created %1\\act.bat, which you can use to activate this virtual environment, and %1\launch_ed.bat, which you can use to activate this venv and launch IDLE-shell and Henxel-editor. You can install henxel-editor to this venv with: pip install henxel.
 	
   ) ELSE (
-	py -m venv %folder% & %folder%\Scripts\\activate.bat & pip install wheel & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder% & echo: & echo Created %1\\act.bat, which you can use to activate this virtual environment, and %1\launch_ed.bat, which you can use to activate this venv and launch IDLE-shell and Henxel-editor. You can install henxel-editor to this venv with: pip install henxel.
+	py -m venv %folder% & %folder%\Scripts\\activate.bat & python.exe -m pip install --upgrade pip wheel & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder% & echo: & echo Created %1\\act.bat, which you can use to activate this virtual environment, and %1\launch_ed.bat, which you can use to activate this venv and launch IDLE-shell and Henxel-editor. You can install henxel-editor to this venv with: pip install henxel.
 	
   )
 
 :End1'''
 
 
-fpath = pathlib.Path(sys.prefix) / tmp1
+fpath = pathlib.Path(sys.base_prefix) / tmp1
 
 if fpath.exists():
 	print(f'\nCan not overwrite file: {fpath}')
@@ -61,7 +61,7 @@ else:
 
 
 
-fpath = pathlib.Path(sys.prefix) / tmp2
+fpath = pathlib.Path(sys.base_prefix) / tmp2
 
 if fpath.exists():
 	print(f'\nCan not overwrite file: {fpath}')
@@ -76,7 +76,7 @@ else:
 		print(f'\n Could not save file: {fpath}')
 
 
-fpath = pathlib.Path(sys.prefix) / tmp3
+fpath = pathlib.Path(sys.base_prefix) / tmp3
 
 if fpath.exists():
 	print(f'\nCan not overwrite file: {fpath}')
