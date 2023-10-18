@@ -17,10 +17,10 @@ temp2 = '''@echo off
 echo @echo off > %1\\act.bat
 echo cd %cd% >> %1\\act.bat
 echo git status >> %1\\act.bat
-echo %1\Scripts\\activate.bat >> %1\\act.bat
+echo %1\\Scripts\\activate.bat >> %1\\act.bat
 
-echo @echo off > %1\launch_ed.bat
-echo %cd%\%1\\act.bat ^& start /B "" "py" "-m" "idlelib" "-c" "import henxel;e=henxel.Editor()" "-t" "(%1) %cd%" >> %1\launch_ed.bat
+echo @echo off > %1\\launch_ed.bat
+echo %cd%\\%1\\act.bat ^& start /B "" "py" "-m" "idlelib" "-c" "import henxel;e=henxel.Editor()" "-t" "(%1) %cd%" >> %1\\launch_ed.bat
 '''
 
 temp3 = '''@echo off
@@ -35,10 +35,10 @@ GOTO No1
   IF EXIST %folder% echo %folder% exists already, aborting venv creation. & GOTO End1
   
   IF EXIST "requirements.txt" (
-	py -m venv %folder% & %folder%\Scripts\\activate.bat & python.exe -m pip install --upgrade pip wheel & pip install -r requirements.txt & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder% & echo: & echo Created %1\\act.bat, which you can use to activate this virtual environment, and %1\launch_ed.bat, which you can use to activate this venv and launch IDLE-shell and Henxel-editor. You can install henxel-editor to this venv with: pip install henxel.
+	py -m venv %folder% & %folder%\\Scripts\\activate.bat & python.exe -m pip install --upgrade pip wheel & pip install -r requirements.txt & %folder%\\Scripts\\deactivate.bat & create_scripts.bat %folder% & echo: & echo Created %1\\act.bat, which you can use to activate this virtual environment, and %1\\launch_ed.bat, which you can use to activate this venv and launch IDLE-shell and Henxel-editor. You can install henxel-editor to this venv with: pip install henxel.
 	
   ) ELSE (
-	py -m venv %folder% & %folder%\Scripts\\activate.bat & python.exe -m pip install --upgrade pip wheel & %folder%\Scripts\deactivate.bat & create_scripts.bat %folder% & echo: & echo Created %1\\act.bat, which you can use to activate this virtual environment, and %1\launch_ed.bat, which you can use to activate this venv and launch IDLE-shell and Henxel-editor. You can install henxel-editor to this venv with: pip install henxel.
+	py -m venv %folder% & %folder%\\Scripts\\activate.bat & python.exe -m pip install --upgrade pip wheel & %folder%\\Scripts\\deactivate.bat & create_scripts.bat %folder% & echo: & echo Created %1\\act.bat, which you can use to activate this virtual environment, and %1\\launch_ed.bat, which you can use to activate this venv and launch IDLE-shell and Henxel-editor. You can install henxel-editor to this venv with: pip install henxel.
 	
   )
 
