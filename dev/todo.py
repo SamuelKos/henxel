@@ -1,6 +1,6 @@
 alt wq	ok
 
-at the end of file, center view? ok?
+at the end of file, center view? crtl-ju downup
 
 
 entry.winfo_atom('bg')
@@ -659,4 +659,3 @@ class Ed(tkinter.Toplevel):
 		# about double cpu compared to after(100ms), but is smoother
 ##		cls.updateId = ed.contents.after_idle(
 ##			cls.updateAllLineNumbers)
-

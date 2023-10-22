@@ -744,6 +744,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-p>", self.move_up)
 		
 		self.contents.bind( "<Control-j>", self.center_view)
+		self.contents.bind( "<Control-u>", lambda event: self.center_view(event, **{'up':True}) )
+		
 		self.contents.bind( "<Return>", self.return_override)
 		
 		self.contents.bind( "<Control-d>", self.del_tab)
@@ -3155,7 +3157,7 @@ class Editor(tkinter.Toplevel):
 ##			return 'continue'
 	
 	
-	def center_view(self, event=None):
+	def center_view(self, event=None, up=False):
 		''' Raise insertion-line
 		'''
 		if self.state != 'normal':
@@ -3174,16 +3176,18 @@ class Editor(tkinter.Toplevel):
 		last = int(float(self.contents.index('end'))) - 1
 		curline = int(float(self.contents.index('insert'))) - 1
 		
+		
+		if up: num_scroll *= -1
+			
 		# if near fileend
-		if curline + 2*num_scroll + 2 > last:
+		elif curline + 2*num_scroll + 2 > last:
 			self.contents.insert(tkinter.END, num_scroll*'\n')
 			self.contents.mark_set('insert', pos)
 						
-			self.contents.yview_scroll(num_scroll, 'units')
 		
 		# if near screen end
-		elif curline + 2*num_scroll + 2 > lastline_screen:
-			self.contents.yview_scroll(num_scroll, 'units')
+		#elif curline + 2*num_scroll + 2 > lastline_screen:
+		self.contents.yview_scroll(num_scroll, 'units')
 		
 		
 		# No ensure_view, enable return to cursor by arrow keys
