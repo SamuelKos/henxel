@@ -51,7 +51,8 @@
 		Ctrl-p  Move cursor up
 		Ctrl-e  Move cursor to lineend
 		Ctrl-a  Move cursor to linestart
-		Ctrl-j  Scroll down without moving cursor (center view)
+		Ctrl-j  Scroll down without moving cursor
+		Ctrl-u  Scroll up without moving cursor
 		Ctrl-k  Remove from cursor to lineend
 		Ctrl-o  Insert linebreak at cursor
 		

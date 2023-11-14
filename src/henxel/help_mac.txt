@@ -59,7 +59,8 @@
 		Ctrl-k  Remove from cursor to lineend
 		Ctrl-o  Insert linebreak at cursor
 		
-		Ctrl-j  Scroll down without moving cursor (center view)
+		Ctrl-j  Scroll down without moving cursor
+		Ctrl-u  Scroll up without moving cursor
 		
 		Shift-up	Select one more line up
 		Shift-down	Select one more line down

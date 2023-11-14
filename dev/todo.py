@@ -67,7 +67,19 @@ Mod1 == Cmd
 # (or Meta-key as reported by events.py)
 # must use Mod1-Key as modifier name:
 # Mod1-Key-n == Command-Key-n
-		
+
+cmd		-h 	hide
+alt-cmd -h 	hide others
+fn 		-h 	show desktop?
+
+ctrl -up 	toggle show open apps
+ctrl -down hide others temporarily, get them back with ctrl-up
+ctrl -leftright  switch apps?
+
+
+all alt shortcuts makes some special char
+have to bind to symbol name to get alt-shorcuts work in macOS
+self.contents.bind( "<function>", self.mac_cmd_overrides)
 
 
 
@@ -179,34 +191,11 @@ e.tk.eval('set myvar B')
 
 
 
-
-
-cmd		-h 	hide
-alt-cmd -h 	hide others
-fn 		-h 	show desktop?
-
-ctrl -up 	toggle show open apps
-ctrl -down hide others temporarily, get them back with ctrl-up
-ctrl -leftright  switch apps?
-
-
-
-
-all alt shortcuts makes some special char
-have to bind to symbol name to get alt-shorcuts work in macOS
-self.contents.bind( "<function>", self.mac_cmd_overrides)
-
-
-
-
-
 linespacing2 to reduce empty lines?
 
 
 run file shortcut in windows?
 cancel shortcut for run file?
-
-makevenv.bat
 
 
 
