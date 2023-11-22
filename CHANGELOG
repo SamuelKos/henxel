@@ -1,6 +1,13 @@
 # Changelog
-* To version: 	0.2.9
+* To version: 	0.3.0
 * From version:	0.0.3
+
+
+# 0.3.0
+- Fixed win_install_mkvenv
+- Small fixes
+- Ctrl-ju --> scroll downup without moving cursor, also at the end of the file.
+- Walktabs is again alt-wq if not in macOS.
 
 
 # 0.2.9
