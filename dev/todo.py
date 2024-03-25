@@ -1,6 +1,13 @@
-alt wq	ok
 
-at the end of file, center view? crtl-ju downup
+return over if line empty rtsrip to cursor
+
+alt-right word,cursor,) then shift right sel start moves one char right
+
+ctrl -q -> ctrl-Q prevent close tab without save by accident
+
+command ae goto lineends?
+
+expand over dot
 
 
 entry.winfo_atom('bg')

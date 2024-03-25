@@ -3,7 +3,7 @@
 This file is taken from Python:idlelib -github-page:
 https://github.com/python/cpython/tree/3.11/Lib/idlelib/
 
-Each event that is binded to expander replaces the word with a
+Each call to expand_word() replaces the word with a
 different word with the same prefix. The search for matches begins
 before the target and moves toward the top of the editor. It then starts
 after the cursor and moves down. It then returns to the original word and
@@ -19,8 +19,8 @@ import re
 
 
 class ExpandWord:
-	wordchars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_'
-	# string.ascii_letters + string.digits + "_"
+	wordchars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.'
+	# string.ascii_letters + string.digits + "_" + "."
 
 
 	def __init__(self, textwid):
@@ -29,17 +29,21 @@ class ExpandWord:
 		self.textwid = textwid
 		self.bell = self.textwid.bell
 		self.state = None
+		
 
-
-	def expand_word_event(self, event):
+	def expand_word(self):
 		"Replace the current word with the next expansion."
 		
 		curinsert = self.textwid.index("insert")
 		curline = self.textwid.get("insert linestart", "insert lineend")
 		
+		# if used first time:
 		if not self.state:
 			words = self.getwords()
 			index = 0
+			
+			
+		# if used second time:
 		else:
 			words, index, insert, line = self.state
 			
@@ -47,14 +51,16 @@ class ExpandWord:
 				words = self.getwords()
 				index = 0
 				
+				
 		if not words:
 			self.bell()
-			
 			return "break"
+			
 			
 			
 		word = self.getprevword()
 		self.textwid.delete("insert - %d chars" % len(word), "insert")
+		
 		newword = words[index]
 		index = (index + 1) % len(words)
 		
@@ -62,13 +68,15 @@ class ExpandWord:
 			self.bell()            # Warn we cycled around
 			
 		self.textwid.insert("insert", newword)
+		
+
 		curinsert = self.textwid.index("insert")
 		curline = self.textwid.get("insert linestart", "insert lineend")
 		self.state = words, index, curinsert, curline
 		
 		return "break"
 
-
+			
 	def getwords(self):
 		"Return a list of words that match the prefix before the cursor."
 		
@@ -87,8 +95,8 @@ class ExpandWord:
 
 		if not wbefore and not wafter:
 			return []
-
-
+		
+		
 		words = []
 		dict = {}
 		

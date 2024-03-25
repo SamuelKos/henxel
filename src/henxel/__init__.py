@@ -403,9 +403,9 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, command = self.contents.yview)
 
 		self.expander = wordexpand.ExpandWord(self.contents)
-		shortcut = "<Alt-e>"
-		if self.os_type == 'mac_os': shortcut = "<eacute>"
-		self.contents.bind( shortcut, self.expander.expand_word_event)
+##		shortcut = "<Alt-e>"
+##		if self.os_type == 'mac_os': shortcut = "<eacute>"
+##		self.contents.bind( shortcut, self.expander.expand_word)
 		
 		
 		# Needed in leave() taglink in: Run file Related
@@ -3996,9 +3996,39 @@ class Editor(tkinter.Toplevel):
 		# added to selection content of a Text widget, and since there is no
 		# actual selection (clipboard-text is outside from Text-widget),
 		# tab_override() gets quite broken.
-		if len(self.contents.tag_ranges('sel')) == 0:
-			return
 		
+		
+		if len(self.contents.tag_ranges('sel')) == 0:
+			
+			# Expand word Begin
+			pos = self.contents.index(tkinter.INSERT)
+			lineend = '%s lineend' % pos
+			linestart = '%s linestart' % pos
+			tmp = self.contents.get( linestart, lineend )
+			startline, startcol = map(int, pos.split(sep='.') )
+			
+			prev_char = None
+			next_char = None
+			
+			
+			# Check not at the indent 0:
+			if startcol > 0:
+				prev_char = tmp[startcol-1:startcol]
+				
+			else:
+				return
+			
+			
+			if prev_char and ( prev_char.isalnum() or prev_char == '.' ):
+				self.expander.expand_word()
+				return 'break'
+				
+			else:
+				return
+				
+			# Expand word End
+			
+				
 		try:
 			tmp = self.contents.selection_get()
 			self.indent(event)
@@ -5045,9 +5075,10 @@ class Editor(tkinter.Toplevel):
 		try:
 			# unindenting curline only:
 			if len(self.contents.tag_ranges('sel')) == 0:
-				startline = int( self.contents.index(tkinter.INSERT).split(sep='.')[0] )
+			
+				startline = int(self.contents.index(tkinter.INSERT).split(sep='.')[0])
 				endline = startline
-	
+				
 			else:
 				startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 				endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
