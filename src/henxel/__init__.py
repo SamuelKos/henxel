@@ -402,10 +402,8 @@ class Editor(tkinter.Toplevel):
 		
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, command = self.contents.yview)
 
+		# tab-completion, used in tab_override()
 		self.expander = wordexpand.ExpandWord(self.contents)
-##		shortcut = "<Alt-e>"
-##		if self.os_type == 'mac_os': shortcut = "<eacute>"
-##		self.contents.bind( shortcut, self.expander.expand_word)
 		
 		
 		# Needed in leave() taglink in: Run file Related
@@ -3968,7 +3966,7 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def tab_override(self, event):
-		'''	Used to bind Tab-key with indent()
+		'''	Used to bind Tab-key with indent() and expander.expand_word()
 		'''
 		
 		if self.state in [ 'search', 'replace', 'replace_all' ]:
@@ -4110,12 +4108,8 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return "break"
 		
-		# ctrl_L-super_L-return
-		if event.state == 68:
-			self.run()
-			return "break"
 		
-		# cmd-return:
+		# macOS, open file with cmd-return:
 		if self.os_type == 'mac_os' and event.state == 8:
 			self.btn_open.invoke()
 			return 'break'
@@ -4146,6 +4140,10 @@ class Editor(tkinter.Toplevel):
 			return "break"
 			
 		else:
+			# rstrip space to prevent indentation sailing.
+			if tmp[col:].isspace():
+				self.contents.delete(tkinter.INSERT, 'insert lineend')
+			
 			for i in range(len(tmp)):
 				if tmp[i] != '\t':
 					break
@@ -4235,7 +4233,7 @@ class Editor(tkinter.Toplevel):
 							tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 							tmp = ''.join(tmp)
 							self.tabs[self.tabindex].contents = tmp
-							
+				
 						else:
 							self.tabs[self.tabindex].contents = fcontents
 					else:

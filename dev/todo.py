@@ -1,5 +1,10 @@
+expand over dot ok?
 
-return over if line empty rtsrip to cursor
+removed binding ctrl_L-super_L-return to run file in return_override()	ok?
+
+return over if line empty rtsrip to cursor ok?
+
+
 
 alt-right word,cursor,) then shift right sel start moves one char right
 
@@ -7,7 +12,9 @@ ctrl -q -> ctrl-Q prevent close tab without save by accident
 
 command ae goto lineends?
 
-expand over dot
+macos fullscreen title
+
+
 
 
 entry.winfo_atom('bg')
