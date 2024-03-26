@@ -697,6 +697,8 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Mod1-Key-v>", self.paste)
 			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
 			self.contents.bind( "<Mod1-Key-g>", self.gotoline)
+			self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
+			self.contents.bind( "<Mod1-Key-e>", self.goto_lineend)
 			self.contents.bind( "<Mod1-Key-r>", self.replace)
 			self.contents.bind( "<Mod1-Key-z>", self.undo_override)
 			self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
@@ -747,7 +749,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Return>", self.return_override)
 		
 		self.contents.bind( "<Control-d>", self.del_tab)
-		self.contents.bind( "<Control-q>", lambda event: self.del_tab(event, **{'save':False}) )
+		self.contents.bind( "<Control-Q>", lambda event: self.del_tab(event, **{'save':False}) )
 		
 		self.contents.bind( "<Shift-Return>", self.comment)
 		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
@@ -1327,7 +1329,6 @@ class Editor(tkinter.Toplevel):
 			res = self.move_by_words(event=event)
 			return res
 		
-		# disabled as inconsistent
 		# Pressed Alt + Shift + arrow left or right.
 		elif event.state == 113:
 			res = self.select_by_words(event=event)
@@ -3366,8 +3367,11 @@ class Editor(tkinter.Toplevel):
 			if not i_linestart: return
 			
 			
+			
+			##################### Left Real start:
+			
+			
 			self.contents.event_generate('<<PrevWord>>')
-							
 			i_prevword = self.contents.index( 'insert')
 			
 
@@ -3393,10 +3397,6 @@ class Editor(tkinter.Toplevel):
 
 				return 'break'
 
-			
-			
-			##################### Left Real start:
-			
 			
 			# if i_prevword is over(before) linestart:
 			# 	stop at linestart == i_linestart
@@ -3696,6 +3696,8 @@ class Editor(tkinter.Toplevel):
 		want_selection = False
 		
 		# ctrl-shift-a or e
+		# and cmd-a or e in macOS
+		
 		
 		# Pressed also shift, so adjust selection
 		# Linux, macOS state:
@@ -3706,6 +3708,7 @@ class Editor(tkinter.Toplevel):
 		
 		# Also in mac_OS:
 		# command-shift-arrowleft or right == 105
+		# Note: command-shift-a or e not binded.
 		if event.state in [ 5 , 105, 13 ]:
 			want_selection = True
 			i = self.contents.index(tkinter.INSERT)

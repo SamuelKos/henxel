@@ -4,13 +4,15 @@ removed binding ctrl_L-super_L-return to run file in return_override()	ok?
 
 return over if line empty rtsrip to cursor ok?
 
+ctrl -q -> ctrl-Q prevent close tab without save by accident ok?
+
+command ae goto lineends? ok?
+
 
 
 alt-right word,cursor,) then shift right sel start moves one char right
 
-ctrl -q -> ctrl-Q prevent close tab without save by accident
 
-command ae goto lineends?
 
 macos fullscreen title
 
