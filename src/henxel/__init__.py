@@ -1337,6 +1337,9 @@ class Editor(tkinter.Toplevel):
 			
 		# Pressed arrow left or right.
 		# If have selection, put cursor on the wanted side of selection.
+		# +shift: 97
+		elif event.state == 97: return
+		
 		elif event.state == 96:
 			
 			# self.contents or self.entry
@@ -1358,7 +1361,10 @@ class Editor(tkinter.Toplevel):
 						
 				elif event.keysym == 'Left':
 					self.check_sel(event=event)
-			
+					
+				else:
+					return
+				
 			else:
 				return
 				
@@ -3282,7 +3288,7 @@ class Editor(tkinter.Toplevel):
 			##################### Right Real start:
 			
 			
-			self.contents.event_generate('<<NextWord>>')
+			self.contents.event_generate('<<SelectNextWord>>')
 			i = self.contents.index( 'insert')
 
 			# Already at lineend, proceed to next line
@@ -3371,7 +3377,7 @@ class Editor(tkinter.Toplevel):
 			##################### Left Real start:
 			
 			
-			self.contents.event_generate('<<PrevWord>>')
+			self.contents.event_generate('<<SelectPrevWord>>')
 			i_prevword = self.contents.index( 'insert')
 			
 
@@ -3529,7 +3535,7 @@ class Editor(tkinter.Toplevel):
 	
 			else:
 				return
-
+	
 			if not have_selection: return
 			
 		
