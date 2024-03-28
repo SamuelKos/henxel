@@ -17,6 +17,12 @@ self.contents.event_generate('<<PrevWord>>')
 -->
 self.contents.event_generate('<<SelectPrevWord>>')
 ok?
+
+self.contents.mark_names()
+'insert', 'current', 'tk::anchor1'
+self.contents.index('tk::anchor1')
+'38.5'
+self.contents.mark_set('tk::anchor1', '38.6')
 #####
 
 
