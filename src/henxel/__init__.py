@@ -328,6 +328,7 @@ class Editor(tkinter.Toplevel):
 		self.par_err = False
 		
 		self.waitvar = tkinter.IntVar()
+		self.fullscreen = False
 		self.state = 'normal'
 		
 		
@@ -959,6 +960,17 @@ class Editor(tkinter.Toplevel):
 		'''	In case of size change, like maximize etc. viewsync-event is not
 			generated in such situation so need to bind to <Configure>-event.
 		'''
+		# Handle fullscreen toggles, (lost title-bar)
+		if self.tk.eval('wm attributes .!editor -fullscreen') == '1':
+			if self.fullscreen == False:
+				print('full --> normal  config')
+				self.fullscreen = True
+		else:
+			if self.fullscreen == True:
+				print('normal --> full  config')
+				self.fullscreen = False
+				
+		
 		self.text_widget_height = self.scrollbar.winfo_height()
 		self.update_linenums()
 		
@@ -1458,7 +1470,8 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
-		
+			self.entry.xview_moveto(1.0)
+			
 		
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
@@ -1528,7 +1541,7 @@ class Editor(tkinter.Toplevel):
 
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
-			
+			self.entry.xview_moveto(1.0)
 		
 		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
@@ -1778,6 +1791,8 @@ class Editor(tkinter.Toplevel):
 		if self.tabs[self.tabindex].type == 'normal':
 			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+			self.entry.xview_moveto(1.0)
+			
 			
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
@@ -2813,6 +2828,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.entry.delete(0, tkinter.END)
 		self.entry.insert(0, self.tabs[self.tabindex].filepath)
+		self.entry.xview_moveto(1.0)
 		
 		
 		self.contents.delete('1.0', tkinter.END)
@@ -3034,6 +3050,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].type == 'normal':
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+			self.entry.xview_moveto(1.0)
 			
 		
 		self.contents.delete('1.0', tkinter.END)
@@ -4438,6 +4455,7 @@ class Editor(tkinter.Toplevel):
 			
 			if self.tabs[self.tabindex].filepath != None:
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
+				self.entry.xview_moveto(1.0)
 				
 		else:
 			# update self.lastdir
@@ -4478,7 +4496,8 @@ class Editor(tkinter.Toplevel):
 			
 			if self.tabs[self.tabindex].filepath != None:
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
-			
+				self.entry.xview_moveto(1.0)
+				
 			return
 		
 		if self.tabs[self.tabindex].type == 'normal':
@@ -4512,6 +4531,7 @@ class Editor(tkinter.Toplevel):
 				self.tabs[self.tabindex].type = 'normal'
 				self.tabs[self.tabindex].position = '1.0'
 				self.entry.insert(0, filename)
+				self.entry.xview_moveto(1.0)
 				
 				
 				self.contents.delete('1.0', tkinter.END)
@@ -4536,6 +4556,7 @@ class Editor(tkinter.Toplevel):
 			
 			if self.tabs[self.tabindex].filepath != None:
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
+				self.entry.xview_moveto(1.0)
 				
 		return
 		
@@ -4679,6 +4700,8 @@ class Editor(tkinter.Toplevel):
 			
 				if self.tabs[self.tabindex].filepath != None:
 					self.entry.insert(0, self.tabs[self.tabindex].filepath)
+					self.entry.xview_moveto(1.0)
+					
 				return
 				
 			if fpath_in_entry.exists():
@@ -4688,6 +4711,8 @@ class Editor(tkinter.Toplevel):
 			
 				if self.tabs[self.tabindex].filepath != None:
 					self.entry.insert(0, self.tabs[self.tabindex].filepath)
+					self.entry.xview_moveto(1.0)
+					
 				return
 			
 			if self.tabs[self.tabindex].type == 'newtab':
@@ -4705,7 +4730,7 @@ class Editor(tkinter.Toplevel):
 				if self.tabs[self.tabindex].filepath != None:
 					self.entry.delete(0, tkinter.END)
 					self.entry.insert(0, self.tabs[self.tabindex].filepath)
-					
+					self.entry.xview_moveto(1.0)
 					
 					self.do_syntax()
 			
@@ -4737,6 +4762,8 @@ class Editor(tkinter.Toplevel):
 			
 					if self.tabs[self.tabindex].filepath != None:
 						self.entry.insert(0, self.tabs[self.tabindex].filepath)
+						self.entry.xview_moveto(1.0)
+						
 					return
 					
 				self.new_tab()
@@ -4747,6 +4774,7 @@ class Editor(tkinter.Toplevel):
 				
 				self.entry.delete(0, tkinter.END)
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
+				self.entry.xview_moveto(1.0)
 				
 			
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
@@ -4835,6 +4863,8 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+			self.entry.xview_moveto(1.0)
+			
 		self.update_title()
 		
 		# set cursor pos
@@ -4885,7 +4915,8 @@ class Editor(tkinter.Toplevel):
 		
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
-		
+			self.entry.xview_moveto(1.0)
+			
 		self.token_can_update = True
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
@@ -5502,7 +5533,8 @@ class Editor(tkinter.Toplevel):
 	
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
-	
+			self.entry.xview_moveto(1.0)
+			
 		self.new_word = ''
 		self.search_matches = 0
 		self.update_title()
@@ -5576,6 +5608,7 @@ class Editor(tkinter.Toplevel):
 			tmp = self.clipboard_get()
 			if 80 > len(tmp) > 0:
 				self.entry.insert(tkinter.END, tmp)
+				self.entry.xview_moveto(1.0)
 				self.entry.select_to(tkinter.END)
 				self.entry.icursor(tkinter.END)
 				
@@ -5620,6 +5653,7 @@ class Editor(tkinter.Toplevel):
 			tmp = self.clipboard_get()
 			if 80 > len(tmp) > 0:
 				self.entry.insert(tkinter.END, tmp)
+				self.entry.xview_moveto(1.0)
 				self.entry.select_to(tkinter.END)
 				self.entry.icursor(tkinter.END)
 	

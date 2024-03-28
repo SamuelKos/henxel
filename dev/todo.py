@@ -1,5 +1,6 @@
 expand over dot ok?
 
+canceled shortcut for run file:
 removed binding ctrl_L-super_L-return to run file in return_override()	ok?
 
 return_over if line empty rtsrip to cursor ok?
@@ -8,8 +9,7 @@ ctrl-q -> ctrl-Q del_tab prevent close tab without save by accident ok?
 
 command-ae goto_lineends? ok?
 
-
-
+#####
 alt-right until: word,cursor,) then shift-right -> sel start moves one char right
 
 in select_by_words():
@@ -17,18 +17,47 @@ self.contents.event_generate('<<PrevWord>>')
 -->
 self.contents.event_generate('<<SelectPrevWord>>')
 ok?
+#####
+
+
+replace all
+dont remove tags if do something after that binds escape but dont change view
+like gotoline etc.
+
+if absolutely want clear replaced tags
+then switch back and forth tabs
+if not another tab open new
 
 
 
+title label before open_btn
+entry search
 
+
+self.entry.insert(0, self.tabs[self.tabindex].filepath)
+self.entry.xview_moveto(1.0)
+			
+
+
+
+macos fullscreen title
+in handle_configure():
+close and reopen editor
+bad window path name ".!editor"
 
 helpfile
 
-macos fullscreen title
+
+
 
 pics to readme?
 
+ctrl-c override?
+
 import keyword?
+
+
+
 
 
 entry.winfo_atom('bg')
@@ -219,11 +248,7 @@ e.tk.eval('set myvar B')
 
 
 
-linespacing2 to reduce empty lines?
 
-
-run file shortcut in windows?
-cancel shortcut for run file?
 
 
 
