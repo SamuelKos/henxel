@@ -422,30 +422,15 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="      errors", command=self.show_errors)
 		self.popup.add_command(label="        help", command=self.help)
 
-
-		# Win11 ctrl-leftright does not work (as supposed) in tcl 8.6.12 but does in
-		# Debian 12, 8.6.13, and macOS 12, 8.6.12   so:
-		self.tcl_version = self.info_patchlevel()
-		if self.os_type == 'windows':
-			if self.tcl_version.major == 8 and self.tcl_version.minor == 6 and self.tcl_version.micro < 13:
-	
-				# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
-				# replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
-				# Need for some reason generate ctrl-leftright before, because array ::tcl::WordBreakRE does not exist yet,
-				# but after this event it does:
-	
-				self.contents.insert(1.0, 'asd')
-				self.contents.event_generate('<<NextWord>>')
-				self.contents.delete('1.0', '1.3')
-	
-				self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
-				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
-				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
-
-			
-		# Get anchor-name of selection-start (used in select_by_words):
+		
+		# Get anchor-name of selection-start.
+		# Used in for example select_by_words():
 		self.contents.insert(1.0, 'asd')
 		self.contents.event_generate('<<SelectNextWord>>')
+		
+		# Now also this array is created which is needed
+		# in RE-fixing ctrl-leftright behaviour in Windows below.
+		# self.tk.eval('parray ::tcl::WordBreakRE')
 		
 		self.anchorname = None
 		for item in self.contents.mark_names():
@@ -455,6 +440,21 @@ class Editor(tkinter.Toplevel):
 
 		self.contents.delete('1.0', '1.3')
 		
+		# Win11 ctrl-leftright does not work (as supposed) in tcl 8.6.12 but does in
+		# Debian 12, 8.6.13, and macOS 12, 8.6.12   so:
+		self.tcl_version = self.info_patchlevel()
+		if self.os_type == 'windows':
+			if self.tcl_version.major == 8 and self.tcl_version.minor == 6 and self.tcl_version.micro < 13:
+	
+				# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
+				# replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
+				# Need for some reason generate ctrl-leftright before, because array ::tcl::WordBreakRE does not exist yet,
+				# but after this event it does. This was done above.
+	
+				self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
+
 		
 		if data:
 			self.apply_config()
@@ -680,6 +680,7 @@ class Editor(tkinter.Toplevel):
 			
 			# Used in check_next_event
 			self.bid_left = self.contents.bind("<Left>", self.check_sel)
+			
 			self.contents.bind("<Right>", self.check_sel)
 			self.entry.bind("<Left>", self.check_sel)
 			self.entry.bind("<Right>", self.check_sel)
@@ -688,14 +689,14 @@ class Editor(tkinter.Toplevel):
 		#self.os_type == 'mac_os':
 		else:
 			# Used in check_next_event
-			self.bid_left = self.contents.bind( "<Left>", self.mac_cmd_overrides)# + cmd walk_tab, check_sel
+			self.bid_left = self.contents.bind( "<Left>", self.mac_cmd_overrides)
 			
-			self.contents.bind( "<Right>", self.mac_cmd_overrides)	# + cmd walk_tab, check_sel
-			self.entry.bind( "<Right>", self.mac_cmd_overrides)		# + cmd check_sel
-			self.entry.bind( "<Left>", self.mac_cmd_overrides)		# + cmd check_sel
+			self.contents.bind( "<Right>", self.mac_cmd_overrides)
+			self.entry.bind( "<Right>", self.mac_cmd_overrides)
+			self.entry.bind( "<Left>", self.mac_cmd_overrides)
 			
 			
-			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
+			#self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
 			
 			# Have to bind using Mod1 as modifier name if want bind to Command-key,
 			# Last line is the only one working:
@@ -1308,6 +1309,9 @@ class Editor(tkinter.Toplevel):
 
 	
 	def mac_cmd_overrides(self, event=None):
+		'''	Used to catch key-combinations like Alt-shift-Right
+			in macOS, which are difficult to bind.
+		'''
 		
 		
 		# Pressed Cmd + Shift + arrow left or right.
@@ -1352,13 +1356,49 @@ class Editor(tkinter.Toplevel):
 			
 		# Pressed Alt + arrow left or right.
 		elif event.state == 112:
-			res = self.move_by_words(event=event)
-			return res
+		
+			# self.contents or self.entry
+			wid = event.widget
+			
+			if wid == self.entry:
+				
+				if event.keysym == 'Right':
+					self.entry.event_generate('<<NextWord>>')
+					
+				elif event.keysym == 'Left':
+					self.entry.event_generate('<<PrevWord>>')
+					
+				else:
+					return
+		
+			else:
+				res = self.move_by_words(event=event)
+				return res
+			
+			return 'break'
+		
 		
 		# Pressed Alt + Shift + arrow left or right.
 		elif event.state == 113:
-			res = self.select_by_words(event=event)
-			return res
+			# self.contents or self.entry
+			wid = event.widget
+			
+			if wid == self.entry:
+				
+				if event.keysym == 'Right':
+					self.entry.event_generate('<<SelectNextWord>>')
+					
+				elif event.keysym == 'Left':
+					self.entry.event_generate('<<SelectPrevWord>>')
+					
+				else:
+					return
+		
+			else:
+				res = self.select_by_words(event=event)
+				return res
+				
+			return 'break'
 			
 			
 		# Pressed arrow left or right.
@@ -1397,18 +1437,18 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 			
 		
-		# Pressed Fn
-		elif event.state == 64:
-			
-			# fullscreen
-			if event.keysym == 'f':
-				#pass
-				return 'break'
-
-			# Some shortcuts does not insert.
-			# Like fn-h does not insert h.
-			else:
-				return
+##		# Pressed Fn
+##		elif event.state == 64:
+##
+##			# fullscreen
+##			if event.keysym == 'f':
+##				#pass
+##				return 'break'
+##
+##			# Some shortcuts does not insert.
+##			# Like fn-h does not insert h.
+##			else:
+##				return
 	
 	
 	def new_tab(self, event=None, error=False):

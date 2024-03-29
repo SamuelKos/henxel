@@ -16,8 +16,7 @@ in select_by_words():
 self.contents.event_generate('<<PrevWord>>')
 -->
 self.contents.event_generate('<<SelectPrevWord>>')
-ok?
-
+ok? not ok, flashy at lineends--> using PrevWord with mark_set self.anchor:
 self.contents.mark_names()
 'insert', 'current', 'tk::anchor1'
 self.contents.index('tk::anchor1')
@@ -28,25 +27,36 @@ self.contents.mark_set('tk::anchor1', '38.6')
 
 replace all
 dont remove tags if do something after that binds escape but dont change view
-like gotoline etc.
-
+like gotoline etc. this is ominaisuus, add to helpfile:
 if absolutely want clear replaced tags
 then switch back and forth tabs
 if not another tab open new
 
+####
+entry search
+ctrl-right no work ok?
+in mac_cmd_overrides
+####
+removed binding fn-f ok?
+handled in handle_config
+####
+self.entry.insert(0, self.tabs[self.tabindex].filepath)
+self.entry.xview_moveto(1.0) ok?
+####
+selnextword gives anchor and
+e.tk.eval('parray ::tcl::WordBreakRE' )
+####
 
 
 title label before open_btn
-entry search
+
+skip_bind?
 
 
-self.entry.insert(0, self.tabs[self.tabindex].filepath)
-self.entry.xview_moveto(1.0) ok?
 			
 
 
 
-chek nextword selnextword gives anchor
 
 chek sel line etc:
 done:
@@ -58,22 +68,18 @@ indent
 
 
 search be able to select and copy?
+arrow right esc here
+remove buttonrelease-1
 
 
 tab-comp in entry?
 
 
 macos fullscreen title
-self.wm_attri?
+self.wm_attri ok?
 
-in handle_configure():
-close and reopen editor
-bad window path name ".!editor"
 
 helpfile
-
-
-
 
 pics to readme?
 
