@@ -973,13 +973,15 @@ class Editor(tkinter.Toplevel):
 			generated in such situation so need to bind to <Configure>-event.
 		'''
 		# Handle fullscreen toggles, (lost title-bar)
-		if self.tk.eval('wm attributes .!editor -fullscreen') == '1':
+		self.update_idletasks()
+		
+		if self.wm_attributes('-fullscreen') == 1:
 			if self.fullscreen == False:
-				print('full --> normal  config')
+				print('normal --> full  config')
 				self.fullscreen = True
 		else:
 			if self.fullscreen == True:
-				print('normal --> full  config')
+				print('full --> normal  config')
 				self.fullscreen = False
 				
 		
@@ -3679,8 +3681,8 @@ class Editor(tkinter.Toplevel):
 			return "break"
 		
 		idx_linestart = self.idx_linestart()
-		# empty line?
-		if not idx_linestart: return
+		# Empty line?
+		if not idx_linestart: return "break"
 		
 		
 		have_selection = False
@@ -3697,19 +3699,20 @@ class Editor(tkinter.Toplevel):
 		
 		# Also in mac_OS:
 		# command-shift-arrowleft or right == 105
-		if event.state in [ 5 , 105, 13 ]:
+		# Note: command-shift-a or e not binded.
+		if event.state in [ 5, 105, 13 ]:
 			want_selection = True
 			i = self.contents.index(tkinter.INSERT)
 				
 			if len( self.contents.tag_ranges('sel') ) > 0:
-				# need to know if selection started from top or bottom.
+				# Need to know if selection started from top or bottom.
 				
 				
 				have_selection = True
 				s = self.contents.index(tkinter.SEL_FIRST)
 				e = self.contents.index(tkinter.SEL_LAST)
 				
-				# selection started from top
+				# Selection started from top
 				from_top = False
 				if self.contents.compare(s,'<',i):
 					from_top = True
@@ -3728,21 +3731,22 @@ class Editor(tkinter.Toplevel):
 		
 		if want_selection:
 			if have_selection:
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
+					
 				if from_top:
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
+					self.contents.mark_set(self.anchorname, s)
 					self.contents.tag_add('sel', s, 'insert')
 				
-				#from bottom
+				# from bottom:
 				else:
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
+					self.contents.mark_set(self.anchorname, e)
 					self.contents.tag_add('sel', 'insert', e)
 				
 			else:
+				self.contents.mark_set(self.anchorname, i)
 				self.contents.tag_add('sel', i, 'insert')
 		
 		
-		# was:
-		#self.contents.event_generate('<<LineEnd>>')
 		return "break"
 		
 		
@@ -3752,8 +3756,8 @@ class Editor(tkinter.Toplevel):
 			return "break"
 		
 		idx_linestart = self.idx_linestart()
-		# empty line?
-		if not idx_linestart: return
+		# Empty line?
+		if not idx_linestart: return "break"
 		
 		
 		have_selection = False
@@ -3778,14 +3782,14 @@ class Editor(tkinter.Toplevel):
 			i = self.contents.index(tkinter.INSERT)
 				
 			if len( self.contents.tag_ranges('sel') ) > 0:
-				# need to know if selection started from top or bottom.
+				# Need to know if selection started from top or bottom.
 				
 				
 				have_selection = True
 				s = self.contents.index(tkinter.SEL_FIRST)
 				e = self.contents.index(tkinter.SEL_LAST)
 				
-				# selection started from top
+				# Selection started from top
 				from_top = False
 				if self.contents.compare(s,'<',i):
 					from_top = True
@@ -3802,17 +3806,21 @@ class Editor(tkinter.Toplevel):
 		self.contents.mark_set('insert', pos)
 	
 		if want_selection:
+			
 			if have_selection:
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
+				
 				if from_top:
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
+					self.contents.mark_set(self.anchorname, s)
 					self.contents.tag_add('sel', s, 'insert')
 				
-				#from bottom
+				# from bottom
 				else:
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
+					self.contents.mark_set(self.anchorname, e)
 					self.contents.tag_add('sel', 'insert', e)
 				
 			else:
+				self.contents.mark_set(self.anchorname, i)
 				self.contents.tag_add('sel', 'insert', i)
 					
 		

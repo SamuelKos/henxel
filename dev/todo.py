@@ -41,12 +41,31 @@ entry search
 
 
 self.entry.insert(0, self.tabs[self.tabindex].filepath)
-self.entry.xview_moveto(1.0)
+self.entry.xview_moveto(1.0) ok?
 			
 
 
 
+chek nextword selnextword gives anchor
+
+chek sel line etc:
+done:
+	goto_linestartend
+
+yank line
+comment
+indent
+
+
+search be able to select and copy?
+
+
+tab-comp in entry?
+
+
 macos fullscreen title
+self.wm_attri?
+
 in handle_configure():
 close and reopen editor
 bad window path name ".!editor"
