@@ -34,32 +34,33 @@
 ############ TODO End
 ############ Imports Begin
 
-# from standard library
+# From standard library
 import tkinter.font
 import tkinter
 import pathlib
 import json
 import copy
 
-# used in init
+# Used in init
 import importlib.resources
 import importlib.metadata
 import sys
 
-# used in syntax highlight
+# Used in syntax highlight
 import tokenize
+import keyword
 import io
 
-# from current directory
+# From current directory
 from . import wordexpand
 from . import changefont
 from . import fdialog
 
-# for executing edited file in the same env than this editor, which is nice:
+# For executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
 import subprocess
 
-# for making paste to work in Windows
+# For making paste to work in Windows
 import threading
 		
 ############ Imports End
@@ -426,7 +427,12 @@ class Editor(tkinter.Toplevel):
 		# Get anchor-name of selection-start.
 		# Used in for example select_by_words():
 		self.contents.insert(1.0, 'asd')
+		# This is needed to get some tcl-objects created,
+		# ::tcl::WordBreakRE and self.anchorname
 		self.contents.event_generate('<<SelectNextWord>>')
+		# This is needed to clear selection
+		# otherwise left at the end of file:
+		self.contents.event_generate('<<PrevLine>>')
 		
 		# Now also this array is created which is needed
 		# in RE-fixing ctrl-leftright behaviour in Windows below.
@@ -437,7 +443,7 @@ class Editor(tkinter.Toplevel):
 			if 'tk::' in item:
 				self.anchorname = item
 				break
-
+		
 		self.contents.delete('1.0', '1.3')
 		
 		# Win11 ctrl-leftright does not work (as supposed) in tcl 8.6.12 but does in
@@ -695,8 +701,7 @@ class Editor(tkinter.Toplevel):
 			self.entry.bind( "<Right>", self.mac_cmd_overrides)
 			self.entry.bind( "<Left>", self.mac_cmd_overrides)
 			
-			
-			#self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
+			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
 			
 			# Have to bind using Mod1 as modifier name if want bind to Command-key,
 			# Last line is the only one working:
@@ -810,45 +815,8 @@ class Editor(tkinter.Toplevel):
 		#
 		# Syntax-highlight Begin #################
 		
-		self.keywords = [
-						'self',
-						'False',
-						'True',
-						'None',
-						'break',
-						'for',
-						'not',
-						'class',
-						'from',
-						'or',
-						'continue',
-						'global',
-						'pass',
-						'def',
-						'if',
-						'raise',
-						'and',
-						'del',
-						'import',
-						'return',
-						'as',
-						'elif',
-						'in',
-						'try',
-						'assert',
-						'else',
-						'is',
-						'while',
-						'async',
-						'except',
-						'lambda',
-						'with',
-						'await',
-						'finally',
-						'nonlocal',
-						'yield',
-						'open'
-						]
+		self.keywords = keyword.kwlist
+		self.keywords.extend(['self'])
 						
 		self.bools = [ 'False', 'True', 'None' ]
 		self.breaks = [
@@ -1173,7 +1141,6 @@ class Editor(tkinter.Toplevel):
 			This event itself is generated *after* when inserting, deleting or on screen geometry change, but
 			not when just scrolling (like yview). Almost all font-changes also generates this event.
 		'''
-		
 		# More info in update_linenums()
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
@@ -1437,18 +1404,18 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 			
 		
-##		# Pressed Fn
-##		elif event.state == 64:
-##
-##			# fullscreen
-##			if event.keysym == 'f':
-##				#pass
-##				return 'break'
-##
-##			# Some shortcuts does not insert.
-##			# Like fn-h does not insert h.
-##			else:
-##				return
+		# Pressed Fn
+		elif event.state == 64:
+
+			# fullscreen
+			if event.keysym == 'f':
+				# prevent inserting 'f' when doing fn-f:
+				return 'break'
+
+			# Some shortcuts does not insert.
+			# Like fn-h does not insert h.
+			else:
+				return
 	
 	
 	def new_tab(self, event=None, error=False):
@@ -4132,7 +4099,7 @@ class Editor(tkinter.Toplevel):
 				return
 			
 			
-			if prev_char and ( prev_char.isalnum() or prev_char == '.' ):
+			if prev_char and ( prev_char in self.expander.wordchars ):
 				self.expander.expand_word()
 				return 'break'
 				
@@ -5423,6 +5390,7 @@ class Editor(tkinter.Toplevel):
 		
 		lastpos = "%s + %dc" % (pos, wordlen)
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
+		self.contents.mark_set(self.anchorname, pos)
 		self.contents.tag_add('sel', pos, lastpos)
 		self.contents.mark_set('insert', lastpos)
 		line = pos
@@ -5895,4 +5863,3 @@ class Editor(tkinter.Toplevel):
 		
 ################ Replace End
 ########### Class Editor End
-

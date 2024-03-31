@@ -1,4 +1,8 @@
+import keyword ok?
+
 expand over dot ok?
+
+expand indent_ no work to indent_cursor fixed ok?
 
 canceled shortcut for run file:
 removed binding ctrl_L-super_L-return to run file in return_override()	ok?
@@ -45,15 +49,21 @@ self.entry.xview_moveto(1.0) ok?
 ####
 selnextword gives anchor and
 e.tk.eval('parray ::tcl::WordBreakRE' )
+clearsel prevline because selection at end of file
 ####
+
+
+
+update structure briefing?
+update links after imports?
+
 
 
 title label before open_btn
 
 skip_bind?
 
-
-			
+ctrl-shift-ju select many lines?
 
 
 
@@ -61,10 +71,10 @@ skip_bind?
 chek sel line etc:
 done:
 	goto_linestartend
-
-yank line
-comment
-indent
+	goto_line
+	yank line
+	comment
+	indent
 
 
 search be able to select and copy?
@@ -77,6 +87,10 @@ tab-comp in entry?
 
 macos fullscreen title
 self.wm_attri ok?
+git branch to title
+tab position to btn_git
+gotoline search replace to entry
+
 
 
 helpfile
@@ -84,8 +98,6 @@ helpfile
 pics to readme?
 
 ctrl-c override?
-
-import keyword?
 
 
 
