@@ -1,18 +1,16 @@
 import keyword ok?
-
+#####
 expand over dot ok?
-
 expand indent_ no work to indent_cursor fixed ok?
-
+#####
 canceled shortcut for run file:
 removed binding ctrl_L-super_L-return to run file in return_override()	ok?
-
-return_over if line empty rtsrip to cursor ok?
-
+#####
+return_over if line empty rtsrip to cursor, fix indent sailing ok?
+#####
 ctrl-q -> ctrl-Q del_tab prevent close tab without save by accident ok?
-
+#####
 command-ae goto_lineends? ok?
-
 #####
 alt-right until: word,cursor,) then shift-right -> sel start moves one char right
 
@@ -27,30 +25,30 @@ self.contents.index('tk::anchor1')
 '38.5'
 self.contents.mark_set('tk::anchor1', '38.6')
 #####
-
-
-replace all
-dont remove tags if do something after that binds escape but dont change view
-like gotoline etc. this is ominaisuus, add to helpfile:
-if absolutely want clear replaced tags
-then switch back and forth tabs
-if not another tab open new
-
+selnextword gives anchor and
+e.tk.eval('parray ::tcl::WordBreakRE' )
+clearsel prevline because selection at end of file
+windows removed tcl_version check ok?
 ####
 entry search
 ctrl-right no work ok?
 in mac_cmd_overrides
 ####
-removed binding fn-f ok?
+removed binding fn-f ok? not ok, need to return 'break' or inserts 'f'
 handled in handle_config
 ####
+show long filenames
 self.entry.insert(0, self.tabs[self.tabindex].filepath)
 self.entry.xview_moveto(1.0) ok?
 ####
-selnextword gives anchor and
-e.tk.eval('parray ::tcl::WordBreakRE' )
-clearsel prevline because selection at end of file
-####
+
+
+replace all
+dont remove tags if do something after that binds escape but dont change view
+like gotoline etc. this is feature, add to helpfile:
+if absolutely want clear replaced tags
+then switch back and forth tabs
+if not another tab open new
 
 
 
@@ -59,11 +57,13 @@ update links after imports?
 
 
 
-title label before open_btn
 
 skip_bind?
 
-ctrl-shift-ju select many lines?
+cmd-shift-up
+select many lines?
+cmd-up
+move many lines
 
 
 
@@ -77,21 +77,49 @@ done:
 	indent
 
 
-search be able to select and copy?
-arrow right esc here
-remove buttonrelease-1
+######
+search replace be able to select and copy? ok?
+space esc here ok?
 
+remove buttonrelease-1 ok?
+double-click or space stop search to insert
+ok?
+	
+unbind ctrl-np
+done in init ok?
+
+clear sel in stop_search ok?
+
+
+windows wordchar link
+
+
+now work when search or replace:
+	move_bywords ok? re
+	sel_bywords ok? re
+	chek_sel ok? re
+	goto_line_startend ok? re
+	yank_line ok? re
+	
+when replace all?
+
+######
 
 tab-comp in entry?
 
+search in help?
 
 macos fullscreen title
 self.wm_attri ok?
 git branch to title
 tab position to btn_git
-gotoline search replace to entry
+gotoline search replace to btn_git and entry
 
-
+search:
+search:
+gotoln:
+oldword
+newword
 
 helpfile
 
@@ -99,8 +127,14 @@ pics to readme?
 
 ctrl-c override?
 
+keyword order matter?
 
+####
+ln_wid padx when macOS?
+self.bd = 0 ok
 
+check linux
+####
 
 
 entry.winfo_atom('bg')

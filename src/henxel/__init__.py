@@ -446,20 +446,18 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.delete('1.0', '1.3')
 		
-		# Win11 ctrl-leftright does not work (as supposed) in tcl 8.6.12 but does in
-		# Debian 12, 8.6.13, and macOS 12, 8.6.12   so:
-		self.tcl_version = self.info_patchlevel()
+		# In Win11 event: <<NextWord>> does not work (as supposed) but does so in Linux and macOS
 		if self.os_type == 'windows':
-			if self.tcl_version.major == 8 and self.tcl_version.minor == 6 and self.tcl_version.micro < 13:
-	
-				# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
-				# replace proc tk::TextNextWord with newer version which was looked in Debian 12 from tcl version 8.6.13.
-				# Need for some reason generate ctrl-leftright before, because array ::tcl::WordBreakRE does not exist yet,
-				# but after this event it does. This was done above.
-	
-				self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
-				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
-				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
+			
+			# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
+			# replace proc tk::TextNextWord with newer version which was looked in Debian 12
+			# Need for some reason generate event: <<NextWord>> before this,
+			# because array ::tcl::WordBreakRE does not exist yet,
+			# but after this event it does. This was done above.
+
+			self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+			self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+			self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
 
 		
 		if data:
@@ -746,6 +744,12 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Return>", self.do_nothing)
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
 		self.bind( "<Control-plus>", self.increase_scrollbar_width)
+		
+		# If accidentally pressed too early when searching:
+		self.entry.bind("<Control-n>", self.do_nothing_without_bell)
+		self.entry.bind("<Control-p>", self.do_nothing_without_bell)
+		self.ln_widget.bind("<Control-n>", self.do_nothing_without_bell)
+		self.ln_widget.bind("<Control-p>", self.do_nothing_without_bell)
 		
 		self.contents.bind( "<Control-a>", self.goto_linestart)
 		self.contents.bind( "<Control-e>", self.goto_lineend)
@@ -3282,7 +3286,7 @@ class Editor(tkinter.Toplevel):
 		'''	Pressed ctrl or Alt + shift and arrow left or right.
 			Make <<SelectNextWord>> and <<SelectPrevWord>> to stop at lineends.
 		'''
-		if self.state not in [ 'normal', 'error' ]:
+		if self.state not in [ 'normal', 'error', 'search', 'replace' ]:
 			self.bell()
 			return "break"
 		
@@ -3519,7 +3523,7 @@ class Editor(tkinter.Toplevel):
 		'''	Pressed ctrl or Alt and arrow left or right.
 			Make <<NextWord>> and <<PrevWord>> to stop at lineends.
 		'''
-		if self.state not in [ 'normal', 'error' ]:
+		if self.state not in [ 'normal', 'error', 'search', 'replace' ]:
 			self.bell()
 			return "break"
 			
@@ -3648,7 +3652,7 @@ class Editor(tkinter.Toplevel):
 		'''	copy current line to clipboard
 		'''
 		
-		if self.state not in [ 'normal', 'error' ]:
+		if self.state not in [ 'normal', 'error', 'search', 'replace' ]:
 			self.bell()
 			return "break"
 			
@@ -4045,6 +4049,21 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		self.contents.tag_add('sel', 1.0, tkinter.END)
 		return "break"
+	
+	
+	def space_override(self, event):
+		'''	Used to bind Space-key when searching or replacing.
+		'''
+		
+		if self.state not in [ 'search', 'replace', 'replace_all' ]:
+			return
+		
+		self.save_pos = self.search_idx[1]
+		self.stop_search()
+		
+		return 'break'
+	
+	
 	
 	
 	def tab_override(self, event):
@@ -5532,7 +5551,6 @@ class Editor(tkinter.Toplevel):
 			
 			if self.state == 'search':
 				self.title( f'Search: 1/{self.search_matches}' )
-				
 				self.bind("<Control-n>", self.show_next)
 				self.bind("<Control-p>", self.show_prev)
 			
@@ -5546,14 +5564,18 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 		
 		
-	def update_curpos(self, event=None):
+	def update_curpos(self, event=None, doubleclick=False):
 		self.save_pos = self.contents.index(tkinter.INSERT)
 		
-		# This is needed to enable replacing with Return.
-		# Because of binding to self in start_replace().
-		# And when pressing contents with mouse, self.contents gets focus,
-		# so put it back to self.
-		self.focus_set()
+		if doubleclick:
+			self.stop_search()
+		
+		else:
+			# This is needed to enable replacing with Return.
+			# Because of binding to self in start_replace().
+			# And when pressing contents with mouse, self.contents gets focus,
+			# so put it back to self.
+			self.focus_set()
 		
 		return "break"
 			
@@ -5577,7 +5599,8 @@ class Editor(tkinter.Toplevel):
 		#self.wait_for(200)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.contents.tag_remove('match', '1.0', tkinter.END)
-			
+		self.contents.tag_remove('sel', '1.0', tkinter.END)
+		
 		# Leave marks on replaced areas, Esc clears.
 		if len(self.contents.tag_ranges('replaced')) > 0:
 			self.bind("<Escape>", self.clear_search_tags)
@@ -5608,7 +5631,8 @@ class Editor(tkinter.Toplevel):
 		self.state = 'normal'
 		self.contents.unbind( "<Control-n>", funcid=self.bid1 )
 		self.contents.unbind( "<Control-p>", funcid=self.bid2 )
-		self.contents.unbind( "<ButtonRelease-1>", funcid=self.bid3 )
+		self.contents.unbind( "<Double-Button-1>", funcid=self.bid3 )
+		self.contents.unbind( "<space>", funcid=self.bid4 )
 		self.contents.bind( "<Control-n>", self.move_down)
 		self.contents.bind( "<Control-p>", self.move_up)
 		self.bind( "<Return>", self.do_nothing)
@@ -5633,7 +5657,9 @@ class Editor(tkinter.Toplevel):
 			
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
-			
+		
+		return "break"
+	
 	
 	def search(self, event=None):
 		if self.state != 'normal':
@@ -5655,7 +5681,11 @@ class Editor(tkinter.Toplevel):
 		
 		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
 		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
-		self.bid3 = self.contents.bind("<ButtonRelease-1>", func=self.update_curpos, add=True )
+		
+		self.bid3 = self.contents.bind("<Double-Button-1>",
+			func=lambda event: self.update_curpos(event, **{'doubleclick':True}), add=True )
+		
+		self.bid4 = self.contents.bind("<space>", func=self.space_override )
 		
 		self.title('Search:')
 		self.entry.delete(0, tkinter.END)
@@ -5700,7 +5730,11 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Escape>", self.stop_search)
 		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
 		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
-		self.bid3 = self.contents.bind("<ButtonRelease-1>", func=self.update_curpos, add=True )
+		
+		self.bid3 = self.contents.bind("<Double-Button-1>",
+			func=lambda event: self.update_curpos(event, **{'doubleclick':True}), add=True )
+		
+		self.bid4 = self.contents.bind("<space>", func=self.space_override )
 		
 		self.title('Replace this:')
 		self.entry.delete(0, tkinter.END)
@@ -5832,7 +5866,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.old_word == self.new_word:
 			return 'break'
-				
+		
 		self.bind("<Control-n>", self.show_next)
 		self.bind("<Control-p>", self.show_prev)
 		
