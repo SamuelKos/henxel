@@ -1,4 +1,4 @@
-import keyword ok?
+import keyword ok? slow tokens try old list?
 #####
 expand over dot ok?
 expand indent_ no work to indent_cursor fixed ok?
@@ -52,13 +52,7 @@ if not another tab open new
 
 
 
-update structure briefing?
-update links after imports?
 
-
-
-
-skip_bind?
 
 cmd-shift-up
 select many lines?
@@ -72,7 +66,7 @@ chek sel line etc:
 done:
 	goto_linestartend
 	goto_line
-	yank line
+	yank_line
 	comment
 	indent
 
@@ -91,24 +85,33 @@ done in init ok?
 clear sel in stop_search ok?
 
 
-windows wordchar link
-
+windows wordchar link ok?
+\s
+https://www.tcl.tk/man/tcl9.0/TclCmd/tclvars.html
+\w
+https://www.tcl.tk/man/tcl9.0/TclCmd/library.html
 
 now work when search or replace:
-	move_bywords ok? re
-	sel_bywords ok? re
-	chek_sel ok? re
-	goto_line_startend ok? re
-	yank_line ok? re
+	move_bywords ok? re all
+	sel_bywords ok? re all
+	chek_sel ok? re all
+	goto_line_startend ok? re all
+	yank_line ok? re all
 	
-when replace all?
-
+when replace, all,
+if clicked any widget:
+	now can continue replacing
+	
+when replace, all:
+contents, entry:
+	return skip bind ok?
+	test esc cont entry ok?
 ######
 
-tab-comp in entry?
 
-search in help?
 
+
+#######
 macos fullscreen title
 self.wm_attri ok?
 git branch to title
@@ -120,6 +123,12 @@ search:
 gotoln:
 oldword
 newword
+#######
+
+
+unbind ctrl-v macOS
+
+select_by_words: when selection closes after <<nextword>>?
 
 helpfile
 
@@ -128,6 +137,17 @@ pics to readme?
 ctrl-c override?
 
 keyword order matter?
+
+update structure briefing?
+
+update links after imports?
+
+tab-comp in entry?
+
+search in help?
+
+replace stay in start-insert in start_search()?
+
 
 ####
 ln_wid padx when macOS?

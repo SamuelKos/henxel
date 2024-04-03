@@ -447,6 +447,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.delete('1.0', '1.3')
 		
 		# In Win11 event: <<NextWord>> does not work (as supposed) but does so in Linux and macOS
+		# https://www.tcl.tk/man/tcl9.0/TclCmd/tclvars.html
+		# https://www.tcl.tk/man/tcl9.0/TclCmd/library.html
+
 		if self.os_type == 'windows':
 			
 			# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
@@ -3286,7 +3289,7 @@ class Editor(tkinter.Toplevel):
 		'''	Pressed ctrl or Alt + shift and arrow left or right.
 			Make <<SelectNextWord>> and <<SelectPrevWord>> to stop at lineends.
 		'''
-		if self.state not in [ 'normal', 'error', 'search', 'replace' ]:
+		if self.state not in [ 'normal', 'error', 'search', 'replace', 'replace_all' ]:
 			self.bell()
 			return "break"
 		
@@ -3523,7 +3526,7 @@ class Editor(tkinter.Toplevel):
 		'''	Pressed ctrl or Alt and arrow left or right.
 			Make <<NextWord>> and <<PrevWord>> to stop at lineends.
 		'''
-		if self.state not in [ 'normal', 'error', 'search', 'replace' ]:
+		if self.state not in [ 'normal', 'error', 'search', 'replace', 'replace_all' ]:
 			self.bell()
 			return "break"
 			
@@ -3652,7 +3655,7 @@ class Editor(tkinter.Toplevel):
 		'''	copy current line to clipboard
 		'''
 		
-		if self.state not in [ 'normal', 'error', 'search', 'replace' ]:
+		if self.state not in [ 'normal', 'error', 'search', 'replace', 'replace_all' ]:
 			self.bell()
 			return "break"
 			
@@ -5635,6 +5638,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.unbind( "<space>", funcid=self.bid4 )
 		self.contents.bind( "<Control-n>", self.move_down)
 		self.contents.bind( "<Control-p>", self.move_up)
+		self.contents.bind("<Return>", self.return_override)
 		self.bind( "<Return>", self.do_nothing)
 		
 		
@@ -5870,8 +5874,8 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Control-n>", self.show_next)
 		self.bind("<Control-p>", self.show_prev)
 		
-		# prevent focus messing
-		self.entry.bind("<Return>", self.do_nothing)
+		self.entry.bind("<Return>", self.skip_bindlevel)
+		self.contents.bind("<Return>", self.skip_bindlevel)
 		self.entry.config(state='disabled')
 		self.focus_set()
 		
