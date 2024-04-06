@@ -815,6 +815,10 @@ class Editor(tkinter.Toplevel):
 		self.contents.unbind_class('Text', '<<SelectLineStart>>')
 		
 		
+		# Register validation-functions:
+		self.vcmd = (self.register(self.do_validate_gotoline), '%i', '%S', '%P')
+		
+		
 		self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
 		
 		# Widgets are configured
@@ -4907,12 +4911,25 @@ class Editor(tkinter.Toplevel):
 	
 	def do_gotoline(self, event=None):
 		try:
-			tmp = self.entry.get().strip()
+			tmp = self.entry.get()
+			idx = len(self.entry.patt)
+			tmp = tmp[idx:].strip()
 			
-			if tmp in ['-1', '']:
-				line = tkinter.END
-			else:
+			
+			if '-' not in tmp:
 				line = tmp + '.0'
+				
+			elif tmp in ['-1', '']:
+				line = tkinter.END
+				
+			elif tmp[0] == '-' and '-' not in tmp[1:]:
+				if int(tmp[1:]) < int(self.entry.endline):
+					line = self.entry.endline + '.0 -%s lines' % tmp[1:]
+				else:
+					line = tkinter.END
+			
+			else:
+				line = tkinter.INSERT
 				
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
@@ -4937,6 +4954,9 @@ class Editor(tkinter.Toplevel):
 	def stop_gotoline(self, event=None):
 		self.state = 'normal'
 		self.bind("<Escape>", self.do_nothing)
+		
+		self.entry.config(validate='none')
+		
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
 		if self.tabs[self.tabindex].filepath:
@@ -4973,15 +4993,47 @@ class Editor(tkinter.Toplevel):
 		self.tabs[self.tabindex].position = pos
 		
 		# Remove extra line
-		endline = int(self.contents.index(tkinter.END).split('.')[0]) - 1
+		self.entry.endline = str(int(self.contents.index(tkinter.END).split('.')[0]) - 1)
 		
 		self.entry.bind("<Return>", self.do_gotoline)
 		self.bind("<Escape>", self.stop_gotoline)
-		self.title('Go to line, 1-%s:' % endline)
+		
+		self.title('Go to line, 1-%s:' % self.entry.endline)
 		self.entry.delete(0, tkinter.END)
 		self.entry.focus_set()
+		
+		self.entry.patt = 'Go to line, 1-%s: ' % self.entry.endline
+		self.entry.idx_insert = self.entry.patt.index(':') + 2
+		self.entry.insert(0, self.entry.patt)
+		self.entry.config(validate='all', validatecommand=self.vcmd)
+		
 		return "break"
 	
+	
+	def do_validate_gotoline(self, i, S, P):
+		'''	i is index of action,
+			S is new string to be validated,
+			P is all content of entry.
+		'''
+		
+		#print(i,S,P)
+		max_idx = self.entry.idx_insert + len(self.entry.endline) + 1
+		
+		if int(i) < self.entry.idx_insert:
+			self.entry.selection_clear()
+			self.entry.icursor(self.entry.idx_insert)
+			
+			return S == ''
+			
+		elif len(P) > max_idx:
+			return S == ''
+		
+		elif S.isdigit() or S == '-':
+			return True
+			
+		else:
+			return S == ''
+		
 	
 	def stop_help(self, event=None):
 		self.state = 'normal'

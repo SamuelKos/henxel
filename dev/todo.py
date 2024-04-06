@@ -1,4 +1,4 @@
-import keyword ok? slow tokens try old list?
+import keyword ok? keyword order matter? slow tokens try old list?
 #####
 expand over dot ok?
 expand indent_ no work to indent_cursor fixed ok?
@@ -10,10 +10,11 @@ return_over if line empty rtsrip to cursor, fix indent sailing ok?
 #####
 ctrl-q -> ctrl-Q del_tab prevent close tab without save by accident ok?
 #####
-command-ae goto_lineends? ok?
+command-ae goto_lineends? ok? this is good.
 #####
 alt-right until: word,cursor,) then shift-right -> sel start moves one char right
-
+this was because of bad and missing selection-anchor handling.
+Fixed with:
 in select_by_words():
 self.contents.event_generate('<<PrevWord>>')
 -->
@@ -27,11 +28,12 @@ self.contents.mark_set('tk::anchor1', '38.6')
 #####
 selnextword gives anchor and
 e.tk.eval('parray ::tcl::WordBreakRE' )
-clearsel prevline because selection at end of file
+must clear selection with event: prevline,
+because now there is selection at end of file.
 windows removed tcl_version check ok?
 ####
 entry search
-ctrl-right no work ok?
+ctrl-right no work, fixed ok?
 in mac_cmd_overrides
 ####
 removed binding fn-f ok? not ok, need to return 'break' or inserts 'f'
@@ -41,15 +43,13 @@ show long filenames
 self.entry.insert(0, self.tabs[self.tabindex].filepath)
 self.entry.xview_moveto(1.0) ok?
 ####
-
-
 replace all
 dont remove tags if do something after that binds escape but dont change view
 like gotoline etc. this is feature, add to helpfile:
 if absolutely want clear replaced tags
 then switch back and forth tabs
 if not another tab open new
-
+####
 
 
 
@@ -60,13 +60,7 @@ cmd-up
 move many lines
 
 
-
-
-chek sel line etc:
-done:
-	goto_linestartend
-	goto_line
-	yank_line
+selection handling not perfect when:
 	comment
 	indent
 
@@ -76,7 +70,7 @@ search replace be able to select and copy? ok?
 space esc here ok?
 
 remove buttonrelease-1 ok?
-double-click or space stop search to insert
+double-click or space stop search to cursor
 ok?
 	
 unbind ctrl-np
@@ -105,7 +99,7 @@ if clicked any widget:
 when replace, all:
 contents, entry:
 	return skip bind ok?
-	test esc cont entry ok?
+	test esc in contents entry ok?
 ######
 
 
@@ -117,16 +111,29 @@ self.wm_attri ok?
 git branch to title
 tab position to btn_git
 gotoline search replace to btn_git and entry
+btn_git 3 letter wide? affects ln_wid
 
-search:
-search:
-gotoln:
-oldword
-newword
+progress:
+gotoline:
+def do_validate_gotoline(self, why, where, what):
+in init:
+	validate_gotoline = self.register(self.do_validate_gotoline)
+self.entry = Entry(self, validate='all',
+	validatecommand=(validate_gotoline, '%d', '%i', '%S') )
+
+at the end of gotoline:
+	self.entry.config(validate='all', validatecommand=(validate_gotoline, '%d', '%i', '%S') )
+at the end of do_gotoline:
+	self.entry.config(validate='none')
+	
 #######
 
+show caps-lock state in somehere
 
 unbind ctrl-v macOS
+
+marks?
+toggle mark
 
 select_by_words: when selection closes after <<nextword>>?
 
@@ -135,8 +142,6 @@ helpfile
 pics to readme?
 
 ctrl-c override?
-
-keyword order matter?
 
 update structure briefing?
 
@@ -172,8 +177,6 @@ e.entry.winfo_atomname(82)
 guides?
 on mouseover guideline: show startline of block
 
-marks?
-toggle mark
 
 
 
