@@ -815,9 +815,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.unbind_class('Text', '<<SelectLineStart>>')
 		
 		
-		# Register validation-functions:
-		self.vcmd = (self.register(self.do_validate_gotoline), '%i', '%S', '%P')
-		
+		# Register validation-functions, note the tuple-syntax:
+		self.validate_gotoline = (self.register(self.do_validate_gotoline), '%i', '%S', '%P')
+		self.validate_search = (self.register(self.do_validate_search), '%i', '%S')
 		
 		self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
 		
@@ -3706,7 +3706,10 @@ class Editor(tkinter.Toplevel):
 		have_selection = False
 		want_selection = False
 		
-		# ctrl-shift-a or e
+		# ctrl-(shift)?-a or e
+		# and cmd-a or e in macOS
+		
+		# If want selection:
 		
 		# Pressed also shift, so adjust selection
 		# Linux, macOS state:
@@ -3718,6 +3721,8 @@ class Editor(tkinter.Toplevel):
 		# Also in mac_OS:
 		# command-shift-arrowleft or right == 105
 		# Note: command-shift-a or e not binded.
+		
+		# If want selection:
 		if event.state in [ 5, 105, 13 ]:
 			want_selection = True
 			i = self.contents.index(tkinter.INSERT)
@@ -3735,8 +3740,13 @@ class Editor(tkinter.Toplevel):
 				if self.contents.compare(s,'<',i):
 					from_top = True
 					
-				# from bottom
+				# From bottom
 				# else:	from_top = False
+		
+		
+		# Dont want selection, ctrl/cmd-a/e:
+		else:
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
 		
 		
 		self.ensure_idx_visibility('insert')
@@ -3755,7 +3765,7 @@ class Editor(tkinter.Toplevel):
 					self.contents.mark_set(self.anchorname, s)
 					self.contents.tag_add('sel', s, 'insert')
 				
-				# from bottom:
+				# From bottom:
 				else:
 					self.contents.mark_set(self.anchorname, e)
 					self.contents.tag_add('sel', 'insert', e)
@@ -3781,9 +3791,10 @@ class Editor(tkinter.Toplevel):
 		have_selection = False
 		want_selection = False
 		
-		# ctrl-shift-a or e
+		# ctrl-(shift)?-a or e
 		# and cmd-a or e in macOS
 		
+		# If want selection:
 		
 		# Pressed also shift, so adjust selection
 		# Linux, macOS state:
@@ -3795,6 +3806,8 @@ class Editor(tkinter.Toplevel):
 		# Also in mac_OS:
 		# command-shift-arrowleft or right == 105
 		# Note: command-shift-a or e not binded.
+		
+		# If want selection:
 		if event.state in [ 5 , 105, 13 ]:
 			want_selection = True
 			i = self.contents.index(tkinter.INSERT)
@@ -3812,9 +3825,14 @@ class Editor(tkinter.Toplevel):
 				if self.contents.compare(s,'<',i):
 					from_top = True
 					
-				# from bottom
+				# From bottom
 				# else:	from_top = False
-				
+		
+		
+		# Dont want selection, ctrl/cmd-a/e:
+		else:
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			
 		
 		self.ensure_idx_visibility('insert')
 		
@@ -3832,7 +3850,7 @@ class Editor(tkinter.Toplevel):
 					self.contents.mark_set(self.anchorname, s)
 					self.contents.tag_add('sel', s, 'insert')
 				
-				# from bottom
+				# From bottom
 				else:
 					self.contents.mark_set(self.anchorname, e)
 					self.contents.tag_add('sel', 'insert', e)
@@ -4910,17 +4928,28 @@ class Editor(tkinter.Toplevel):
 ########## Gotoline and Help Begin
 	
 	def do_gotoline(self, event=None):
+		''' If tkinter.END is linenumber of last line:
+			When linenumber given is positive and between 0 - tkinter.END,
+			go to start of that line, if greater, go to tkinter.END.
+			
+			When given negative number between -1 - -tkinter.END or so,
+			start counting from tkinter.END towards beginning and
+			go to that line.
+		
+		'''
+		
 		try:
+			# Get stuff after prompt
 			tmp = self.entry.get()
-			idx = len(self.entry.patt)
+			idx = self.entry.len_prompt
 			tmp = tmp[idx:].strip()
 			
 			
-			if '-' not in tmp:
-				line = tmp + '.0'
-				
-			elif tmp in ['-1', '']:
+			if tmp in ['-1', '']:
 				line = tkinter.END
+			
+			elif '-' not in tmp:
+				line = tmp + '.0'
 				
 			elif tmp[0] == '-' and '-' not in tmp[1:]:
 				if int(tmp[1:]) < int(self.entry.endline):
@@ -4963,9 +4992,8 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
 			
-		self.update_title()
 		
-		# set cursor pos
+		# Set cursor pos
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
@@ -4992,20 +5020,19 @@ class Editor(tkinter.Toplevel):
 		
 		self.tabs[self.tabindex].position = pos
 		
-		# Remove extra line
+		# Remove extra line, this is number of lines in contents
 		self.entry.endline = str(int(self.contents.index(tkinter.END).split('.')[0]) - 1)
 		
 		self.entry.bind("<Return>", self.do_gotoline)
 		self.bind("<Escape>", self.stop_gotoline)
 		
-		self.title('Go to line, 1-%s:' % self.entry.endline)
 		self.entry.delete(0, tkinter.END)
 		self.entry.focus_set()
 		
 		self.entry.patt = 'Go to line, 1-%s: ' % self.entry.endline
-		self.entry.idx_insert = self.entry.patt.index(':') + 2
+		self.entry.len_prompt = len(self.entry.patt)
 		self.entry.insert(0, self.entry.patt)
-		self.entry.config(validate='all', validatecommand=self.vcmd)
+		self.entry.config(validate='key', validatecommand=self.validate_gotoline)
 		
 		return "break"
 	
@@ -5017,11 +5044,11 @@ class Editor(tkinter.Toplevel):
 		'''
 		
 		#print(i,S,P)
-		max_idx = self.entry.idx_insert + len(self.entry.endline) + 1
+		max_idx = self.entry.len_prompt + len(self.entry.endline) + 1
 		
-		if int(i) < self.entry.idx_insert:
+		if int(i) < self.entry.len_prompt:
 			self.entry.selection_clear()
-			self.entry.icursor(self.entry.idx_insert)
+			self.entry.icursor(self.entry.len_prompt)
 			
 			return S == ''
 			
@@ -5033,6 +5060,23 @@ class Editor(tkinter.Toplevel):
 			
 		else:
 			return S == ''
+	
+	
+	def do_validate_search(self, i, S):
+		'''	i is index of action,
+			S is new string to be validated,
+		'''
+		
+		#print(i,S)
+		
+		if int(i) < self.entry.len_prompt:
+			self.entry.selection_clear()
+			self.entry.icursor(tkinter.END)
+			
+			return S == ''
+			
+		else:
+			return True
 		
 	
 	def stop_help(self, event=None):
@@ -5479,7 +5523,7 @@ class Editor(tkinter.Toplevel):
 			
 		match_ranges = self.contents.tag_ranges('match')
 		
-		# check if at last match or beyond:
+		# Check if at last match or beyond:
 		i = len(match_ranges) - 2
 		last = match_ranges[i]
 	
@@ -5495,17 +5539,28 @@ class Editor(tkinter.Toplevel):
 		self.search_idx = self.contents.tag_nextrange('match', self.search_idx[1])
 		line = self.search_idx[0]
 		
-		# is it viewable?
+		# Is it viewable?
 		if not self.contents.bbox(line):
 			self.wait_for(100)
 		
 		self.ensure_idx_visibility(line)
 		
 		
-		# change color
+		if self.entry.flag_start:
+			self.wait_for(100)
+			bg, fg = self.themes[self.curtheme]['match'][:]
+			self.contents.tag_config('match', background=bg, foreground=fg)
+			self.wait_for(200)
+			
+		
+		
+		# Change color
 		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
-		# compare found to match
+		# Compare above range of focus-tag to match_ranges to get current
+		# index position among all current matches. Like if we now have 10 matches left,
+		# and last position was 1/11, but then one match got replaced,
+		# so we now are at 1/10 and after this show next-call we should be at 2/10.
 		ref = self.contents.tag_ranges('focus')[0]
 		
 		for idx in range(self.search_matches):
@@ -5515,7 +5570,25 @@ class Editor(tkinter.Toplevel):
 		
 		if self.state == 'replace':
 			self.title( f'Replace: {idx+1}/{self.search_matches}' )
+			
 		else:
+			if self.entry.flag_start:
+				self.entry.flag_start = False
+				
+			else:
+				
+				#entry_contents = self.entry.get()
+				#lenght_of_original_prompt = self.entry.len_prompt
+				
+				lenght_of_search_position_index = len(str(idx+1))
+				lenght_of_search_matches = len(str(self.search_matches))
+				diff = lenght_of_search_matches - lenght_of_search_position_index
+				patt = f'{diff*" "}{idx+1}'
+								
+				self.entry.delete(0, lenght_of_search_matches)
+				self.entry.insert(0, patt)
+				
+				
 			self.title( f'Search: {idx+1}/{self.search_matches}' )
 		
 		
@@ -5543,19 +5616,24 @@ class Editor(tkinter.Toplevel):
 		else:
 			self.contents.tag_remove('focus', '1.0', tkinter.END)
 		
-		self.search_idx = self.contents.tag_prevrange('match', self.search_idx[0])
 		
+		self.search_idx = self.contents.tag_prevrange('match', self.search_idx[0])
 		line = self.search_idx[0]
-		# is it viewable?
+		
+		# Is it viewable?
 		if not self.contents.bbox(line):
 			self.wait_for(100)
 		
 		self.ensure_idx_visibility(line)
 		
-		# change color
+		
+		# Change color
 		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
-		# compare found to match
+		# Compare above range of focus-tag to match_ranges to get current
+		# index position among all current matches. Like if we now have 11 matches left,
+		# and last position was 2/12, but then one match got replaced,
+		# so we now are at say 2/11 and after this show prev-call we should be at 1/11.
 		ref = self.contents.tag_ranges('focus')[0]
 		
 		for idx in range(self.search_matches):
@@ -5565,7 +5643,17 @@ class Editor(tkinter.Toplevel):
 		
 		if self.state == 'replace':
 			self.title( f'Replace: {idx+1}/{self.search_matches}' )
+			
 		else:
+			
+			lenght_of_search_position_index = len(str(idx+1))
+			lenght_of_search_matches = len(str(self.search_matches))
+			diff = lenght_of_search_matches - lenght_of_search_position_index
+			patt = f'{diff*" "}{idx+1}'
+							
+			self.entry.delete(0, lenght_of_search_matches)
+			self.entry.insert(0, patt)
+			
 			self.title( f'Search: {idx+1}/{self.search_matches}' )
 		
 		
@@ -5577,7 +5665,14 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def start_search(self, event=None):
-		self.old_word = self.entry.get()
+		#self.old_word = self.entry.get()
+		
+		# Get stuff after prompt
+		tmp = self.entry.get()
+		idx = self.entry.len_prompt
+		tmp = tmp[idx:].strip()
+		self.old_word = tmp
+		
 		self.contents.tag_remove('match', '1.0', tkinter.END)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.search_idx = ('1.0', '1.0')
@@ -5586,7 +5681,8 @@ class Editor(tkinter.Toplevel):
 		if len(self.old_word) != 0:
 			pos = '1.0'
 			wordlen = len(self.old_word)
-			flag_start = True
+			self.entry.flag_start = True
+			self.contents.tag_config('match', background='', foreground='')
 			
 			while True:
 				pos = self.contents.search(self.old_word, pos, tkinter.END)
@@ -5594,11 +5690,11 @@ class Editor(tkinter.Toplevel):
 				self.search_matches += 1
 				lastpos = "%s + %dc" % (pos, wordlen)
 				self.contents.tag_add('match', pos, lastpos)
-				if flag_start:
-					flag_start = False
-					self.contents.focus_set()
-					self.wait_for(100)
-					self.show_next()
+##				if flag_start:
+##					flag_start = False
+##					self.contents.focus_set()
+##					self.wait_for(100)
+##					self.show_next()
 				pos = "%s + %dc" % (pos, wordlen+1)
 				
 		if self.search_matches > 0:
@@ -5608,13 +5704,32 @@ class Editor(tkinter.Toplevel):
 				self.title( f'Search: 1/{self.search_matches}' )
 				self.bind("<Control-n>", self.show_next)
 				self.bind("<Control-p>", self.show_prev)
-			
+				
+
+				#self.entry.search_browsing_prompt_lenght = len(str(self.search_matches))
+				#self.entry.search_browsing_prompt = None
+				self.entry.config(validate='none')
+				#self.entry.delete(0, tkinter.END)
+				
+				lenght_of_search_matches = len(str(self.search_matches))
+				diff = lenght_of_search_matches - 1
+				patt = f'{diff*" "}1/{self.search_matches} '
+				self.entry.insert(0, patt)
+				self.entry.flag_start = True
+				self.contents.focus_set()
+				self.wait_for(100)
+				self.show_next()
+				
+				
 			else:
 				self.title('Replace %s matches with:' % str(self.search_matches))
 				self.entry.bind("<Return>", self.start_replace)
 				self.entry.focus_set()
 		else:
 			self.bell()
+			bg, fg = self.themes[self.curtheme]['match'][:]
+			self.contents.tag_config('match', background=bg, foreground=fg)
+			
 				
 		return 'break'
 		
@@ -5662,6 +5777,8 @@ class Editor(tkinter.Toplevel):
 		else:
 			self.bind("<Escape>", self.do_nothing)
 			
+		
+		self.entry.config(validate='none')
 		
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
@@ -5746,6 +5863,7 @@ class Editor(tkinter.Toplevel):
 		self.title('Search:')
 		self.entry.delete(0, tkinter.END)
 		
+		
 		# autofill from clipboard
 		try:
 			tmp = self.clipboard_get()
@@ -5759,8 +5877,15 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			pass
 			
+		
+		self.entry.patt = 'Search: '
+		self.entry.len_prompt = len(self.entry.patt)
+		self.entry.insert(0, self.entry.patt)
+		self.entry.config(validate='key', validatecommand=self.validate_search)
+		
 		self.contents.config(state='disabled')
 		self.entry.focus_set()
+		
 		return "break"
 			
 

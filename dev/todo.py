@@ -114,6 +114,9 @@ gotoline search replace to btn_git and entry
 btn_git 3 letter wide? affects ln_wid
 
 progress:
+search:
+	after start search, focusin entry: clear match position index from entry
+	
 gotoline:
 def do_validate_gotoline(self, why, where, what):
 in init:
@@ -126,7 +129,23 @@ at the end of gotoline:
 at the end of do_gotoline:
 	self.entry.config(validate='none')
 	
+	
+num characters in entry:
+self.entry.winfo_width() // self.menufont.measure('A') - 1
+
+	
+	
+	
 #######
+
+###
+tab in entry with self.en selects whole line check from search and indent
+unbind or leave?
+e.contents.bind_class('Entry', '<<TraverseIn>>')
+'\n    %W selection range 0 end\n    %W icursor end\n'
+###
+
+goto linestartend must clear selection done ok?
 
 show caps-lock state in somehere
 
