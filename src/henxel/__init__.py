@@ -817,7 +817,8 @@ class Editor(tkinter.Toplevel):
 		
 		# Register validation-functions, note the tuple-syntax:
 		self.validate_gotoline = (self.register(self.do_validate_gotoline), '%i', '%S', '%P')
-		self.validate_search = (self.register(self.do_validate_search), '%i', '%S')
+		self.validate_search = (self.register(self.do_validate_search), '%i', '%s', '%S')
+		
 		
 		self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
 		
@@ -5062,14 +5063,20 @@ class Editor(tkinter.Toplevel):
 			return S == ''
 	
 	
-	def do_validate_search(self, i, S):
+	def do_validate_search(self, i, s, S):
 		'''	i is index of action,
-			S is new string to be validated,
+			s is string before action,
+			S is new string to be validated
 		'''
 		
-		#print(i,S)
+		#print(i,s,S)
+		# 'focusin'
+		# 'focusout'
 		
-		if int(i) < self.entry.len_prompt:
+		len_s = len('Search: ')
+		idx = s.index('Sea') + len_s
+		
+		if int(i) < idx:
 			self.entry.selection_clear()
 			self.entry.icursor(tkinter.END)
 			
@@ -5574,6 +5581,7 @@ class Editor(tkinter.Toplevel):
 		else:
 			if self.entry.flag_start:
 				self.entry.flag_start = False
+				self.entry.config(validate='key')
 				
 			else:
 				
@@ -5584,9 +5592,11 @@ class Editor(tkinter.Toplevel):
 				lenght_of_search_matches = len(str(self.search_matches))
 				diff = lenght_of_search_matches - lenght_of_search_position_index
 				patt = f'{diff*" "}{idx+1}'
-								
+				
+				self.entry.config(validate='none')
 				self.entry.delete(0, lenght_of_search_matches)
 				self.entry.insert(0, patt)
+				self.entry.config(validate='key')
 				
 				
 			self.title( f'Search: {idx+1}/{self.search_matches}' )
@@ -5650,9 +5660,11 @@ class Editor(tkinter.Toplevel):
 			lenght_of_search_matches = len(str(self.search_matches))
 			diff = lenght_of_search_matches - lenght_of_search_position_index
 			patt = f'{diff*" "}{idx+1}'
-							
+			
+			self.entry.config(validate='none')
 			self.entry.delete(0, lenght_of_search_matches)
 			self.entry.insert(0, patt)
+			self.entry.config(validate='key')
 			
 			self.title( f'Search: {idx+1}/{self.search_matches}' )
 		
@@ -5665,12 +5677,15 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def start_search(self, event=None):
-		#self.old_word = self.entry.get()
 		
 		# Get stuff after prompt
-		tmp = self.entry.get()
-		idx = self.entry.len_prompt
-		tmp = tmp[idx:].strip()
+		tmp_orig = self.entry.get()
+		idx = tmp_orig.index('Sea') + self.entry.len_prompt
+		tmp = tmp_orig[idx:].strip()
+		
+		if len(tmp) == 0 or tmp == self.old_word:
+			return 'break'
+		
 		self.old_word = tmp
 		
 		self.contents.tag_remove('match', '1.0', tkinter.END)
@@ -5690,11 +5705,6 @@ class Editor(tkinter.Toplevel):
 				self.search_matches += 1
 				lastpos = "%s + %dc" % (pos, wordlen)
 				self.contents.tag_add('match', pos, lastpos)
-##				if flag_start:
-##					flag_start = False
-##					self.contents.focus_set()
-##					self.wait_for(100)
-##					self.show_next()
 				pos = "%s + %dc" % (pos, wordlen+1)
 				
 		if self.search_matches > 0:
@@ -5706,16 +5716,17 @@ class Editor(tkinter.Toplevel):
 				self.bind("<Control-p>", self.show_prev)
 				
 
-				#self.entry.search_browsing_prompt_lenght = len(str(self.search_matches))
-				#self.entry.search_browsing_prompt = None
 				self.entry.config(validate='none')
-				#self.entry.delete(0, tkinter.END)
 				
 				lenght_of_search_matches = len(str(self.search_matches))
 				diff = lenght_of_search_matches - 1
 				patt = f'{diff*" "}1/{self.search_matches} '
+				idx = tmp_orig.index('Sea')
+				self.entry.delete(0, idx)
 				self.entry.insert(0, patt)
 				self.entry.flag_start = True
+				
+				
 				self.contents.focus_set()
 				self.wait_for(100)
 				self.show_next()
@@ -5733,7 +5744,7 @@ class Editor(tkinter.Toplevel):
 				
 		return 'break'
 		
-		
+	
 	def update_curpos(self, event=None, doubleclick=False):
 		self.save_pos = self.contents.index(tkinter.INSERT)
 		
@@ -5780,6 +5791,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.entry.config(validate='none')
 		
+		
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
 	
@@ -5788,6 +5800,7 @@ class Editor(tkinter.Toplevel):
 			self.entry.xview_moveto(1.0)
 			
 		self.new_word = ''
+		self.old_word = ''
 		self.search_matches = 0
 		self.update_title()
 		flag_all = False
@@ -5859,6 +5872,7 @@ class Editor(tkinter.Toplevel):
 			func=lambda event: self.update_curpos(event, **{'doubleclick':True}), add=True )
 		
 		self.bid4 = self.contents.bind("<space>", func=self.space_override )
+		
 		
 		self.title('Search:')
 		self.entry.delete(0, tkinter.END)

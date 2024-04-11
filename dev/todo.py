@@ -133,9 +133,11 @@ at the end of do_gotoline:
 num characters in entry:
 self.entry.winfo_width() // self.menufont.measure('A') - 1
 
-	
-	
-	
+
+entry no work goto/select line_startend
+entry
+end of start_search: validate focusin etc
+
 #######
 
 ###
@@ -146,15 +148,16 @@ e.contents.bind_class('Entry', '<<TraverseIn>>')
 ###
 
 goto linestartend must clear selection done ok?
+select_by_words: when selection closes after <<nextword>>?
 
 show caps-lock state in somehere
+
+remove title updates
 
 unbind ctrl-v macOS
 
 marks?
 toggle mark
-
-select_by_words: when selection closes after <<nextword>>?
 
 helpfile
 
