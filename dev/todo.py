@@ -134,6 +134,12 @@ num characters in entry:
 self.entry.winfo_width() // self.menufont.measure('A') - 1
 
 
+delete_over one line syntax faster
+paste one line also
+insert # also
+
+sel tag higher priority than replaced?
+
 entry no work goto/select line_startend
 entry
 end of start_search: validate focusin etc

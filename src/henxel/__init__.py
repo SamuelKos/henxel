@@ -309,7 +309,9 @@ class Editor(tkinter.Toplevel):
 			pass
 		
 		
+		# This marks range of focus-tag:
 		self.search_idx = ('1.0', '1.0')
+		
 		self.search_matches = 0
 		self.old_word = ''
 		self.new_word = ''
@@ -4084,6 +4086,7 @@ class Editor(tkinter.Toplevel):
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
 		
+		# self.search_idx marks range of focus-tag:
 		self.save_pos = self.search_idx[1]
 		self.stop_search()
 		
@@ -5030,9 +5033,9 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		self.entry.focus_set()
 		
-		self.entry.patt = 'Go to line, 1-%s: ' % self.entry.endline
-		self.entry.len_prompt = len(self.entry.patt)
-		self.entry.insert(0, self.entry.patt)
+		patt = 'Go to line, 1-%s: ' % self.entry.endline
+		self.entry.len_prompt = len(patt)
+		self.entry.insert(0, patt)
 		self.entry.config(validate='key', validatecommand=self.validate_gotoline)
 		
 		return "break"
@@ -5073,9 +5076,8 @@ class Editor(tkinter.Toplevel):
 		# 'focusin'
 		# 'focusout'
 		
-		len_s = len('Search: ')
-		idx = s.index('Sea') + len_s
-		
+		idx = s.index(':') + 2
+			
 		if int(i) < idx:
 			self.entry.selection_clear()
 			self.entry.icursor(tkinter.END)
@@ -5533,7 +5535,8 @@ class Editor(tkinter.Toplevel):
 		# Check if at last match or beyond:
 		i = len(match_ranges) - 2
 		last = match_ranges[i]
-	
+		
+		# self.search_idx marks range of focus-tag:
 		if self.contents.compare(self.search_idx[0], '>=', last):
 			self.search_idx = ('1.0', '1.0')
 				
@@ -5543,6 +5546,8 @@ class Editor(tkinter.Toplevel):
 			self.contents.tag_remove('focus', '1.0', tkinter.END)
 		
 		
+		# self.search_idx marks range of focus-tag.
+		# Here focus is moved to next match after current focus:
 		self.search_idx = self.contents.tag_nextrange('match', self.search_idx[1])
 		line = self.search_idx[0]
 		
@@ -5554,14 +5559,15 @@ class Editor(tkinter.Toplevel):
 		
 		
 		if self.entry.flag_start:
-			self.wait_for(100)
-			bg, fg = self.themes[self.curtheme]['match'][:]
-			self.contents.tag_config('match', background=bg, foreground=fg)
+			if self.state == 'search':
+				self.wait_for(100)
+				bg, fg = self.themes[self.curtheme]['match'][:]
+				self.contents.tag_config('match', background=bg, foreground=fg)
 			self.wait_for(200)
 			
 		
-		
 		# Change color
+		# self.search_idx marks range of focus-tag. Here focus-tag is changed.
 		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
 		# Compare above range of focus-tag to match_ranges to get current
@@ -5578,15 +5584,30 @@ class Editor(tkinter.Toplevel):
 		if self.state == 'replace':
 			self.title( f'Replace: {idx+1}/{self.search_matches}' )
 			
+			if self.entry.flag_start:
+				self.entry.flag_start = False
+				self.entry.config(validate='key')
+			
+			else:
+				lenght_of_search_position_index = len(str(idx+1))
+				lenght_of_search_matches = len(str(self.search_matches))
+				diff = lenght_of_search_matches - lenght_of_search_position_index
+				patt = f'{diff*" "}{idx+1}/{self.search_matches}'
+				
+				self.entry.config(validate='none')
+				tmp = self.entry.get()
+				idx = tmp.index(' ')
+				self.entry.delete(0, idx)
+				self.entry.insert(0, patt)
+				self.entry.config(validate='key')
+				
+			
 		else:
 			if self.entry.flag_start:
 				self.entry.flag_start = False
 				self.entry.config(validate='key')
 				
 			else:
-				
-				#entry_contents = self.entry.get()
-				#lenght_of_original_prompt = self.entry.len_prompt
 				
 				lenght_of_search_position_index = len(str(idx+1))
 				lenght_of_search_matches = len(str(self.search_matches))
@@ -5617,7 +5638,8 @@ class Editor(tkinter.Toplevel):
 		match_ranges = self.contents.tag_ranges('match')
 		
 		first = match_ranges[0]
-	
+		
+		# self.search_idx marks range of focus-tag:
 		if self.contents.compare(self.search_idx[0], '<=', first):
 			self.search_idx = (tkinter.END, tkinter.END)
 		
@@ -5627,6 +5649,8 @@ class Editor(tkinter.Toplevel):
 			self.contents.tag_remove('focus', '1.0', tkinter.END)
 		
 		
+		# self.search_idx marks range of focus-tag.
+		# Here focus is moved to previous match before current focus:
 		self.search_idx = self.contents.tag_prevrange('match', self.search_idx[0])
 		line = self.search_idx[0]
 		
@@ -5638,6 +5662,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 		# Change color
+		# self.search_idx marks range of focus-tag. Here focus-tag is changed.
 		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
 		# Compare above range of focus-tag to match_ranges to get current
@@ -5653,6 +5678,19 @@ class Editor(tkinter.Toplevel):
 		
 		if self.state == 'replace':
 			self.title( f'Replace: {idx+1}/{self.search_matches}' )
+			
+			lenght_of_search_position_index = len(str(idx+1))
+			lenght_of_search_matches = len(str(self.search_matches))
+			diff = lenght_of_search_matches - lenght_of_search_position_index
+			patt = f'{diff*" "}{idx+1}/{self.search_matches}'
+			
+			self.entry.config(validate='none')
+			tmp = self.entry.get()
+			idx = tmp.index(' ')
+			self.entry.delete(0, idx)
+			self.entry.insert(0, patt)
+			self.entry.config(validate='key')
+			
 			
 		else:
 			
@@ -5680,7 +5718,8 @@ class Editor(tkinter.Toplevel):
 		
 		# Get stuff after prompt
 		tmp_orig = self.entry.get()
-		idx = tmp_orig.index('Sea') + self.entry.len_prompt
+		
+		idx = tmp_orig.index(':') + 2
 		tmp = tmp_orig[idx:].strip()
 		
 		if len(tmp) == 0 or tmp == self.old_word:
@@ -5696,7 +5735,6 @@ class Editor(tkinter.Toplevel):
 		if len(self.old_word) != 0:
 			pos = '1.0'
 			wordlen = len(self.old_word)
-			self.entry.flag_start = True
 			self.contents.tag_config('match', background='', foreground='')
 			
 			while True:
@@ -5709,14 +5747,13 @@ class Editor(tkinter.Toplevel):
 				
 		if self.search_matches > 0:
 			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
-			
+			self.entry.config(validate='none')
+				
 			if self.state == 'search':
 				self.title( f'Search: 1/{self.search_matches}' )
 				self.bind("<Control-n>", self.show_next)
 				self.bind("<Control-p>", self.show_prev)
 				
-
-				self.entry.config(validate='none')
 				
 				lenght_of_search_matches = len(str(self.search_matches))
 				diff = lenght_of_search_matches - 1
@@ -5733,13 +5770,34 @@ class Editor(tkinter.Toplevel):
 				
 				
 			else:
-				self.title('Replace %s matches with:' % str(self.search_matches))
+				patt = 'Replace %s matches with: ' % str(self.search_matches)
+				self.title(patt)
+				
+				idx = tmp_orig.index(':') + 2
+				self.entry.delete(0, idx)
+				self.entry.insert(0, patt)
+				
+				
+				bg, fg = self.themes[self.curtheme]['match'][:]
+				self.contents.tag_config('match', background=bg, foreground=fg)
+				
+				###
+				#self.entry.flag_start = True
+				#self.wait_for(100)
+				#self.show_next()
+				###
+				
 				self.entry.bind("<Return>", self.start_replace)
 				self.entry.focus_set()
+				self.entry.config(validate='key')
+				
 		else:
 			self.bell()
 			bg, fg = self.themes[self.curtheme]['match'][:]
 			self.contents.tag_config('match', background=bg, foreground=fg)
+			self.bind("<Control-n>", self.do_nothing)
+			self.bind("<Control-p>", self.do_nothing)
+			
 			
 				
 		return 'break'
@@ -5821,7 +5879,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-n>", self.move_down)
 		self.contents.bind( "<Control-p>", self.move_up)
 		self.contents.bind("<Return>", self.return_override)
-		self.bind( "<Return>", self.do_nothing)
+		self.entry.bind("<Control-n>", self.do_nothing_without_bell)
+		self.entry.bind("<Control-p>", self.do_nothing_without_bell)
+		self.bind( "<Return>", self.do_nothing_without_bell)
 		
 		
 		#self.wait_for(200)
@@ -5848,11 +5908,14 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def search(self, event=None):
+		'''	Ctrl-f --> search --> start_search --> show_next / show_prev --> stop_search
+		'''
+		
 		if self.state != 'normal':
 			self.bell()
 			return "break"
 		
-		# save cursor pos
+		# Save cursor pos
 		try:
 			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
 		
@@ -5867,6 +5930,9 @@ class Editor(tkinter.Toplevel):
 		
 		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
 		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
+		self.entry.bind("<Control-n>", self.skip_bindlevel)
+		self.entry.bind("<Control-p>", self.skip_bindlevel)
+		
 		
 		self.bid3 = self.contents.bind("<Double-Button-1>",
 			func=lambda event: self.update_curpos(event, **{'doubleclick':True}), add=True )
@@ -5878,7 +5944,7 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		
 		
-		# autofill from clipboard
+		# Autofill from clipboard
 		try:
 			tmp = self.clipboard_get()
 			if 80 > len(tmp) > 0:
@@ -5887,14 +5953,14 @@ class Editor(tkinter.Toplevel):
 				self.entry.select_to(tkinter.END)
 				self.entry.icursor(tkinter.END)
 				
-		# empty clipboard
+		# Empty clipboard
 		except tkinter.TclError:
 			pass
 			
 		
-		self.entry.patt = 'Search: '
-		self.entry.len_prompt = len(self.entry.patt)
-		self.entry.insert(0, self.entry.patt)
+		patt = 'Search: '
+		self.entry.len_prompt = len(patt)
+		self.entry.insert(0, patt)
 		self.entry.config(validate='key', validatecommand=self.validate_search)
 		
 		self.contents.config(state='disabled')
@@ -5907,11 +5973,15 @@ class Editor(tkinter.Toplevel):
 ################ Replace Begin
 
 	def replace(self, event=None, state='replace'):
+		'''	Ctrl-r --> replace --> start_search --> start_replace
+			--> show_next / show_prev / do_single_replace --> stop_search
+		'''
+		
 		if self.state != 'normal':
 			self.bell()
 			return "break"
 		
-		# save cursor pos
+		# Save cursor pos
 		try:
 			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
 		
@@ -5925,6 +5995,9 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Escape>", self.stop_search)
 		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
 		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
+		self.entry.bind("<Control-n>", self.skip_bindlevel)
+		self.entry.bind("<Control-p>", self.skip_bindlevel)
+		
 		
 		self.bid3 = self.contents.bind("<Double-Button-1>",
 			func=lambda event: self.update_curpos(event, **{'doubleclick':True}), add=True )
@@ -5934,7 +6007,7 @@ class Editor(tkinter.Toplevel):
 		self.title('Replace this:')
 		self.entry.delete(0, tkinter.END)
 		
-		# autofill from clipboard
+		# Autofill from clipboard
 		try:
 			tmp = self.clipboard_get()
 			if 80 > len(tmp) > 0:
@@ -5946,6 +6019,11 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			pass
 			
+		
+		patt = 'Replace this: '
+		self.entry.len_prompt = len(patt)
+		self.entry.insert(0, patt)
+		self.entry.config(validate='key', validatecommand=self.validate_search)
 		
 		self.contents.config(state='disabled')
 		self.entry.focus_set()
@@ -5961,7 +6039,38 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def do_single_replace(self, event=None):
+		
+		# Enable changing newword between replaces
+		#################
+		# Get stuff after prompt
+		tmp_orig = self.entry.get()
+		idx = tmp_orig.index(':') + 2
+		tmp = tmp_orig[idx:].strip()
 	
+		if tmp != self.new_word:
+	
+			if self.old_word == self.new_word:
+	
+				self.entry.config(validate='none')
+				self.entry.delete(idx, tkinter.END)
+				self.entry.insert(tkinter.END, self.new_word)
+				self.entry.config(validate='key')
+	
+				return 'break'
+	
+			else:
+				self.new_word = tmp
+				self.replace_overlap_index = None
+				
+				if self.old_word in self.new_word:
+					self.replace_overlap_index = self.new_word.index(self.old_word)
+				
+			
+		#################
+		
+		
+		
+		
 		
 		# Apply normal 'Replace and proceed to next by pressing Return' -behaviour
 		c = self.contents.tag_nextrange('focus', 1.0)
@@ -5996,8 +6105,12 @@ class Editor(tkinter.Toplevel):
 			
 			if 'replaced' in self.contents.tag_names(pos):
 				x = range_func('replaced', pos)
+				
+				# Check this: #########################
 				if len(x) == 0:
 					x = range_func('replaced', pos)
+				#######################################
+				
 				# replaced already, skip
 				pos = "%s + %dc" % ( x[1], wordlen2+1 )
 				
@@ -6006,8 +6119,9 @@ class Editor(tkinter.Toplevel):
 				self.contents.tag_add('match', pos, lastpos)
 				pos = "%s + %dc" % (pos, wordlen+1)
 				self.search_matches += 1
-			
-			
+				
+				
+		# self.search_idx marks range of focus-tag:
 		self.contents.tag_remove('focus', self.search_idx[0], self.search_idx[1])
 		self.contents.tag_remove('match', self.search_idx[0], self.search_idx[1])
 		self.contents.delete(self.search_idx[0], self.search_idx[1])
@@ -6052,12 +6166,28 @@ class Editor(tkinter.Toplevel):
 		self.wait_for(100)
 		self.ensure_idx_visibility(line)
 
-
 		self.stop_search()
 		
 		
 	def start_replace(self, event=None):
-		self.new_word = self.entry.get()
+		
+		# Get stuff after prompt
+		tmp_orig = self.entry.get()
+		idx = tmp_orig.index(':') + 2
+		tmp = tmp_orig[idx:].strip()
+		self.new_word = tmp
+		
+		self.entry.config(validate='none')
+		
+		
+		lenght_of_search_matches = len(str(self.search_matches))
+		diff = lenght_of_search_matches - 1
+		patt = f'{diff*" "}1/{self.search_matches} Replace with'
+		idx = tmp_orig.index(':')
+		self.entry.delete(0, idx)
+		self.entry.insert(0, patt)
+		
+		# No check for empty newword to enable deletion.
 		
 		if self.old_word == self.new_word:
 			return 'break'
@@ -6065,9 +6195,14 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Control-n>", self.show_next)
 		self.bind("<Control-p>", self.show_prev)
 		
+		
+		self.entry.flag_start = True
+		self.wait_for(100)
+		self.show_next()
+		
 		self.entry.bind("<Return>", self.skip_bindlevel)
 		self.contents.bind("<Return>", self.skip_bindlevel)
-		self.entry.config(state='disabled')
+		#self.entry.config(state='disabled')############################
 		self.focus_set()
 		
 		self.contents.tag_remove('replaced', '1.0', tkinter.END)
