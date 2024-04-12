@@ -5781,11 +5781,6 @@ class Editor(tkinter.Toplevel):
 				bg, fg = self.themes[self.curtheme]['match'][:]
 				self.contents.tag_config('match', background=bg, foreground=fg)
 				
-				###
-				#self.entry.flag_start = True
-				#self.wait_for(100)
-				#self.show_next()
-				###
 				
 				self.entry.bind("<Return>", self.start_replace)
 				self.entry.focus_set()
@@ -5832,7 +5827,6 @@ class Editor(tkinter.Toplevel):
 		self.entry.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
-		self.replace_overlap_index = None
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
 		
 		#self.wait_for(200)
@@ -6025,6 +6019,9 @@ class Editor(tkinter.Toplevel):
 		self.entry.insert(0, patt)
 		self.entry.config(validate='key', validatecommand=self.validate_search)
 		
+		self.wait_for(400)
+		self.contents.tag_remove('replaced', '1.0', tkinter.END)
+		
 		self.contents.config(state='disabled')
 		self.entry.focus_set()
 		return "break"
@@ -6040,39 +6037,38 @@ class Editor(tkinter.Toplevel):
 		
 	def do_single_replace(self, event=None):
 		
-		# Enable changing newword between replaces
+		# Enable changing newword between replaces Begin
 		#################
 		# Get stuff after prompt
 		tmp_orig = self.entry.get()
 		idx = tmp_orig.index(':') + 2
 		tmp = tmp_orig[idx:].strip()
-	
+		
+		# Replacement-string has changed
 		if tmp != self.new_word:
-	
-			if self.old_word == self.new_word:
-	
+			
+			# Not allowed to do this:
+			if tmp == self.old_word:
+
 				self.entry.config(validate='none')
 				self.entry.delete(idx, tkinter.END)
 				self.entry.insert(tkinter.END, self.new_word)
 				self.entry.config(validate='key')
-	
+				self.bell()
+
 				return 'break'
-	
+
 			else:
 				self.new_word = tmp
-				self.replace_overlap_index = None
-				
-				if self.old_word in self.new_word:
-					self.replace_overlap_index = self.new_word.index(self.old_word)
-				
-			
+		# Enable changing newword between replaces End
 		#################
 		
+
 		
-		
-		
-		
-		# Apply normal 'Replace and proceed to next by pressing Return' -behaviour
+		# Apply normal 'Replace and proceed to next by pressing Return' -behaviour.
+		# If last replace was done by pressing Return, there is currently no focus-tag.
+		# Check this and get focus-tag with show_next() if this is the case, and break.
+		# This means that the actual replacing happens only when have focus-tag.
 		c = self.contents.tag_nextrange('focus', 1.0)
 		
 		if not len(c) > 0:
@@ -6082,45 +6078,11 @@ class Editor(tkinter.Toplevel):
 		
 		# Start of actual replacing
 		self.contents.config(state='normal')
-		self.search_matches = 0
 		
-		if self.replace_overlap_index != None:
-			
-			if self.replace_overlap_index == 0:
-				range_func = self.contents.tag_nextrange
-			
-			else:
-				range_func = self.contents.tag_prevrange
-		else:
-			range_func = self.contents.tag_prevrange
-			
 		wordlen = len(self.old_word)
 		wordlen2 = len(self.new_word)
-		pos = '1.0'
-		self.contents.tag_remove('match', '1.0', tkinter.END)
 		
-		while True:
-			pos = self.contents.search(self.old_word, pos, tkinter.END)
-			if not pos: break
-			
-			if 'replaced' in self.contents.tag_names(pos):
-				x = range_func('replaced', pos)
-				
-				# Check this: #########################
-				if len(x) == 0:
-					x = range_func('replaced', pos)
-				#######################################
-				
-				# replaced already, skip
-				pos = "%s + %dc" % ( x[1], wordlen2+1 )
-				
-			else:
-				lastpos = "%s + %dc" % (pos, wordlen)
-				self.contents.tag_add('match', pos, lastpos)
-				pos = "%s + %dc" % (pos, wordlen+1)
-				self.search_matches += 1
-				
-				
+		
 		# self.search_idx marks range of focus-tag:
 		self.contents.tag_remove('focus', self.search_idx[0], self.search_idx[1])
 		self.contents.tag_remove('match', self.search_idx[0], self.search_idx[1])
@@ -6161,7 +6123,7 @@ class Editor(tkinter.Toplevel):
 				
 			pos = "%s + %dc" % (pos, wordlen+1)
 			
-		# show lastpos but dont put cursor on it
+		# Show lastpos but dont put cursor on it
 		line = lastpos
 		self.wait_for(100)
 		self.ensure_idx_visibility(line)
@@ -6190,6 +6152,7 @@ class Editor(tkinter.Toplevel):
 		# No check for empty newword to enable deletion.
 		
 		if self.old_word == self.new_word:
+			self.bell()
 			return 'break'
 		
 		self.bind("<Control-n>", self.show_next)
@@ -6202,19 +6165,12 @@ class Editor(tkinter.Toplevel):
 		
 		self.entry.bind("<Return>", self.skip_bindlevel)
 		self.contents.bind("<Return>", self.skip_bindlevel)
-		#self.entry.config(state='disabled')############################
 		self.focus_set()
 		
-		self.contents.tag_remove('replaced', '1.0', tkinter.END)
+		#self.contents.tag_remove('replaced', '1.0', tkinter.END)
 		
 		
 		if self.state == 'replace':
-		
-			self.replace_overlap_index = None
-			
-			if self.old_word in self.new_word:
-				self.replace_overlap_index = self.new_word.index(self.old_word)
-				
 			self.title( f'Replace: 1/{self.search_matches}' )
 			self.bind( "<Return>", self.do_single_replace)
 			
