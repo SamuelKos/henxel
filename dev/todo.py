@@ -138,6 +138,12 @@ delete_over one line syntax faster
 paste one line also
 insert # also
 
+ctrl-backspace no work macOS
+
+remove more on virtualenvironments section from README as potentially dangerous
+
+check deletion when replacing done ok?
+
 sel tag higher priority than replaced?
 
 entry no work goto/select line_startend

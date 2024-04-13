@@ -156,58 +156,6 @@ If you currently have no internet but have previously installed virtual environm
 Files are in src/henxel/
 
 
-# More on virtual environments:
-This is now bit more complex, because we are not anymore expecting that we have many older versions of the project left (as packages). But with this lenghty method we can compare to any commit, not just released packages. So this is for you who are packaging Python-project and might want things like side-by-side live-comparison of two different versions, most propably version you are currently developing and some earlier version. I Assume you are the owner of the project so you have the git-history, or else you have done git clone. I use henxel as the project example.
-
-
-First create development-venv for the project, if you haven't already and install current version to it in editable mode:
-
-```console
-~/myproject/henxel$ mkvenv env
-~/myproject/henxel$ . env/bin/activate
-(env) ~/myproject/henxel$ pip install -e .
-```
-
-Then select the git-commit for the reference version. I have interesting commits with message like: version 0.2.0 so to list all such commits:
-
-```console
-~/myproject/henxel$ git log --grep=version
-```
-
-For example to make new branch from version 0.2.0, copy the first letters from the commit-id and:
-
-```console
-~/myproject/henxel$ git branch version020 e4f1f4ab3f
-~/myproject/henxel$ git switch version020
-```
-
-Then create ref-env to some place that is not version-controlled like the parent-folder and install version020 of the project to it with pip, again in editable mode, just in case you want to try something out.
-
-```console
-~/myproject/henxel$ cd ..
-~/myproject$ mkvenv v020
-~/myproject$ . v020/bin/activate
-(v020) ~/myproject$ cd henxel
-(v020) ~/myproject/henxel$ pip list
-(v020) ~/myproject/henxel$ pip install -e .
-(v020) ~/myproject/henxel$ deactivate
-```
-
-Now you are ready to launch both versions of your project and do side-by-side comparison if that is what you want:
-
-```console
-~/myproject/henxel$ . env/bin/activate
-(env) ~/myproject/henxel$ pip list
-```
-
-From other shell-window:
-
-```console
-~/myproject$ . v020/bin/activate
-(v020) ~/myproject$ pip list
-```
-
-
 # More resources
 [Changelog](https://github.com/SamuelKos/henxel/blob/main/CHANGELOG)
 

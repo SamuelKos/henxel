@@ -5064,28 +5064,6 @@ class Editor(tkinter.Toplevel):
 			
 		else:
 			return S == ''
-	
-	
-	def do_validate_search(self, i, s, S):
-		'''	i is index of action,
-			s is string before action,
-			S is new string to be validated
-		'''
-		
-		#print(i,s,S)
-		# 'focusin'
-		# 'focusout'
-		
-		idx = s.index(':') + 2
-			
-		if int(i) < idx:
-			self.entry.selection_clear()
-			self.entry.icursor(tkinter.END)
-			
-			return S == ''
-			
-		else:
-			return True
 		
 	
 	def stop_help(self, event=None):
@@ -5581,13 +5559,12 @@ class Editor(tkinter.Toplevel):
 			if self.contents.compare(ref, '==', tmp): break
 		
 		
-		if self.state == 'replace':
-			self.title( f'Replace: {idx+1}/{self.search_matches}' )
+		if self.state != 'search':
 			
 			if self.entry.flag_start:
 				self.entry.flag_start = False
 				self.entry.config(validate='key')
-			
+				
 			else:
 				lenght_of_search_position_index = len(str(idx+1))
 				lenght_of_search_matches = len(str(self.search_matches))
@@ -5619,9 +5596,7 @@ class Editor(tkinter.Toplevel):
 				self.entry.insert(0, patt)
 				self.entry.config(validate='key')
 				
-				
-			self.title( f'Search: {idx+1}/{self.search_matches}' )
-		
+			
 		
 		if self.search_matches == 1:
 			self.bind("<Control-n>", self.do_nothing)
@@ -5676,8 +5651,7 @@ class Editor(tkinter.Toplevel):
 			if self.contents.compare(ref, '==', tmp): break
 			
 		
-		if self.state == 'replace':
-			self.title( f'Replace: {idx+1}/{self.search_matches}' )
+		if self.state != 'search':
 			
 			lenght_of_search_position_index = len(str(idx+1))
 			lenght_of_search_matches = len(str(self.search_matches))
@@ -5704,9 +5678,7 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, patt)
 			self.entry.config(validate='key')
 			
-			self.title( f'Search: {idx+1}/{self.search_matches}' )
-		
-		
+			
 		if self.search_matches == 1:
 			self.bind("<Control-n>", self.do_nothing)
 			self.bind("<Control-p>", self.do_nothing)
@@ -5745,12 +5717,12 @@ class Editor(tkinter.Toplevel):
 				self.contents.tag_add('match', pos, lastpos)
 				pos = "%s + %dc" % (pos, wordlen+1)
 				
+				
 		if self.search_matches > 0:
 			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.entry.config(validate='none')
 				
 			if self.state == 'search':
-				self.title( f'Search: 1/{self.search_matches}' )
 				self.bind("<Control-n>", self.show_next)
 				self.bind("<Control-p>", self.show_prev)
 				
@@ -5771,8 +5743,6 @@ class Editor(tkinter.Toplevel):
 				
 			else:
 				patt = 'Replace %s matches with: ' % str(self.search_matches)
-				self.title(patt)
-				
 				idx = tmp_orig.index(':') + 2
 				self.entry.delete(0, idx)
 				self.entry.insert(0, patt)
@@ -5842,6 +5812,7 @@ class Editor(tkinter.Toplevel):
 			
 		
 		self.entry.config(validate='none')
+		self.entry.flag = None
 		
 		
 		self.entry.bind("<Return>", self.load)
@@ -5934,7 +5905,6 @@ class Editor(tkinter.Toplevel):
 		self.bid4 = self.contents.bind("<space>", func=self.space_override )
 		
 		
-		self.title('Search:')
 		self.entry.delete(0, tkinter.END)
 		
 		
@@ -5952,6 +5922,7 @@ class Editor(tkinter.Toplevel):
 			pass
 			
 		
+		self.entry.flag = None
 		patt = 'Search: '
 		self.entry.len_prompt = len(patt)
 		self.entry.insert(0, patt)
@@ -5961,7 +5932,28 @@ class Editor(tkinter.Toplevel):
 		self.entry.focus_set()
 		
 		return "break"
+		
+		
+	def do_validate_search(self, i, s, S):
+		'''	i is index of action,
+			s is string before action,
+			S is new string to be validated
+		'''
+		
+		#print(i,s,S)
+		# 'focusin'
+		# 'focusout'
+		
+		idx = s.index(':') + 2
 			
+		if int(i) < idx or self.entry.flag == 'replace_all':
+			self.entry.selection_clear()
+			self.entry.icursor(idx)
+			
+			return S == ''
+			
+		else:
+			return True
 
 ################ Search End
 ################ Replace Begin
@@ -5998,8 +5990,9 @@ class Editor(tkinter.Toplevel):
 		
 		self.bid4 = self.contents.bind("<space>", func=self.space_override )
 		
-		self.title('Replace this:')
+		
 		self.entry.delete(0, tkinter.END)
+		
 		
 		# Autofill from clipboard
 		try:
@@ -6013,6 +6006,8 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			pass
 			
+		
+		self.entry.flag = None
 		
 		patt = 'Replace this: '
 		self.entry.len_prompt = len(patt)
@@ -6139,44 +6134,46 @@ class Editor(tkinter.Toplevel):
 		tmp = tmp_orig[idx:].strip()
 		self.new_word = tmp
 		
-		self.entry.config(validate='none')
-		
-		
-		lenght_of_search_matches = len(str(self.search_matches))
-		diff = lenght_of_search_matches - 1
-		patt = f'{diff*" "}1/{self.search_matches} Replace with'
-		idx = tmp_orig.index(':')
-		self.entry.delete(0, idx)
-		self.entry.insert(0, patt)
-		
 		# No check for empty newword to enable deletion.
 		
 		if self.old_word == self.new_word:
 			self.bell()
 			return 'break'
 		
-		self.bind("<Control-n>", self.show_next)
-		self.bind("<Control-p>", self.show_prev)
+		
+		self.entry.config(validate='none')
+		
+		lenght_of_search_matches = len(str(self.search_matches))
+		diff = lenght_of_search_matches - 1
+		idx = tmp_orig.index(':')
+		self.entry.delete(0, idx)
+			
+		patt = f'{diff*" "}1/{self.search_matches} Replace with'
+			
+		if self.state == 'replace_all':
+			patt = f'{diff*" "}1/{self.search_matches} Replace ALL with'
+			self.entry.flag = 'replace_all'
+			
+		self.entry.insert(0, patt)
 		
 		
 		self.entry.flag_start = True
 		self.wait_for(100)
 		self.show_next()
 		
+		
+		self.bind("<Control-n>", self.show_next)
+		self.bind("<Control-p>", self.show_prev)
 		self.entry.bind("<Return>", self.skip_bindlevel)
 		self.contents.bind("<Return>", self.skip_bindlevel)
 		self.focus_set()
 		
-		#self.contents.tag_remove('replaced', '1.0', tkinter.END)
-		
 		
 		if self.state == 'replace':
-			self.title( f'Replace: 1/{self.search_matches}' )
 			self.bind( "<Return>", self.do_single_replace)
 			
 		elif self.state == 'replace_all':
 			self.bind( "<Return>", self.do_replace_all)
-			self.title('Replacing ALL %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )
 			
 		return 'break'
 		
