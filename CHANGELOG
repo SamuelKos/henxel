@@ -55,7 +55,9 @@ similar fix for Windows, and it is ugly.
 - Small but important change in wait_for() to change state so that certain bindings
 	do not trigger while waiting.
 
+- Added two tkinter-books to dev/books.
 
+- Added screenshots to README
 
 
 

@@ -1,6 +1,7 @@
 # Henxel
 GUI-editor for Python development. Tested to work with Debian 12, Windows 10 and 11 and macOS 12.
 
+![editor_mac](pics/editor_macOS.png)
 
 # Featuring
 * Auto-indent
@@ -8,6 +9,7 @@ GUI-editor for Python development. Tested to work with Debian 12, Windows 10 and
 * Color Chooser
 * Line numbering
 * Tabbed editing
+* Tab-completion
 * Inspect object
 * Show git-branch
 * Run current file
@@ -19,9 +21,6 @@ GUI-editor for Python development. Tested to work with Debian 12, Windows 10 and
 * Parenthesis checking
 * Persistent configuration
 
-# Lacking
-* Auto-completion
-* Hinting
 
 # Prerequisites in Linux
 Python modules required that are sometimes not installed with OS: tkinter. Check in Python-console:

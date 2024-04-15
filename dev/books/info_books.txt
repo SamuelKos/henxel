@@ -1,0 +1,3 @@
+These are here to serve as development aid for the editor.
+They are not meant for learning Python or tkinter or beginners in 
+programming.
