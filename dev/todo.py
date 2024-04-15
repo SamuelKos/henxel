@@ -1,125 +1,4 @@
-import keyword ok? keyword order matter? slow tokens try old list?
-#####
-sel tag higher priority than replaced? done ok?
-#####
-ctrl-backspace no work macOS fixed ok ?
-#####
-remove title updates done ok?
-####
-expand over dot ok?
-expand indent_ no work to indent_cursor fixed ok?
-#####
-canceled shortcut for run file:
-removed binding ctrl_L-super_L-return to run file in return_override()	ok?
-#####
-return_over if line empty rtsrip to cursor, fix indent sailing ok?
-#####
-ctrl-q -> ctrl-Q del_tab prevent close tab without save by accident ok?
-#####
-command-ae goto_lineends? ok? this is good.
-#####
-alt-right until: word,cursor,) then shift-right -> sel start moves one char right
-this was because of bad and missing selection-anchor handling.
-Fixed with:
-in select_by_words():
-self.contents.event_generate('<<PrevWord>>')
--->
-self.contents.event_generate('<<SelectPrevWord>>')
-ok? not ok, flashy at lineends--> using PrevWord with mark_set self.anchor:
-self.contents.mark_names()
-'insert', 'current', 'tk::anchor1'
-self.contents.index('tk::anchor1')
-'38.5'
-self.contents.mark_set('tk::anchor1', '38.6')
-#####
-selnextword gives anchor and
-e.tk.eval('parray ::tcl::WordBreakRE' )
-must clear selection with event: prevline,
-because now there is selection at end of file.
-windows removed tcl_version check ok?
-####
-entry search:
-ctrl-right no work, fixed ok?
-in mac_cmd_overrides
-####
-removed binding fn-f ok? not ok, need to return 'break' or inserts 'f'
-handled in handle_config
-####
-show long stuff in entry like filenames
-self.entry.insert(0, self.tabs[self.tabindex].filepath)
-self.entry.xview_moveto(1.0) ok?
-#####
-def wait_for(self, ms):
-		# This is important, 'cancel' all bindings which checks the state.
-		state = self.state
-		self.state = 'waiting'
-#####
 
-cmd-shift-up
-select many lines? done for macOS
-cmd-up
-move many lines
-
-
-######
-search replace be able to select and copy? ok?
-space esc here ok?
-
-remove buttonrelease-1 ok?
-double-click or space stop search to cursor
-ok?
-
-now work when search or replace:
-	move_bywords ok? re all
-	sel_bywords ok? re all
-	chek_sel ok? re all
-	goto_line_startend ok? re all
-	yank_line ok? re all
-	
-when replace, all,
-if clicked any widget:
-	now can continue replacing
-	
-when replace, all:
-contents, entry:
-	return skip bind ok?
-	test esc in contents entry ok?
-	
-clear sel in stop_search ok?
-######
-
-
-windows wordchar link ok?
-\s
-https://www.tcl.tk/man/tcl9.0/TclCmd/tclvars.html
-\w
-https://www.tcl.tk/man/tcl9.0/TclCmd/library.html
-
-
-#######
-macos fullscreen title
-self.wm_attri ok?
-git branch remains in btn_git
-tab position remains in title
-
-gotoline search replace to entry
-btn_git 3 letter wide? affects ln_width
-
-##########
-
-
-
-
-
-helpfile
-
-pics to readme?
-remove more on virtualenvironments section from README as potentially dangerous done ok?
-
-
-update structure briefing?
-
-update links after imports?
 
 
 
@@ -138,15 +17,12 @@ marks?
 toggle mark
 
 unbind ctrl-v macOS
-check ctrl-c macOS?
 
 ctrl-c (copy) override?
 
 tab-comp in entry?
 
 search in help?
-
-replace stay in start-insert in start_search()?
 
 select_by_words: when selection closes after <<nextword>>?
 
@@ -155,12 +31,7 @@ selection handling not perfect when:
 	indent
 
 
-####
-ln_wid padx when macOS?
-self.bd = 0 ok
 
-check linux
-####
 
 
 entry.winfo_atom('bg')
@@ -193,6 +64,18 @@ in init apply conf and update fonts
 flash after view change?
 
 
+
+
+
+
+Manual selection handling in Text-widget:
+self.contents.mark_names()
+'insert', 'current', 'tk::anchor1'
+self.contents.index('tk::anchor1')
+'38.5'
+self.contents.mark_set('tk::anchor1', '38.6')
+then set SEL_FIRST to same index if selection starts from top
+else: SEL_LAST
 
 
 

@@ -5,38 +5,52 @@
 
 # 0.3.1
 - Keywords for syntax highlighting are now from: import keyword.
+
 - 'sel'-tag has now second highest priority only below focus.
+
 - Control-backspace to search again now works again.
+
 - Word-expander works now as Tab-completion, its expands over dot attributes,
-	like: self.at TAB --> self.attrib1, if self.attrib1 is already somewhere in contents. It is quite usable.
+	like: self.at TAB --> self.attrib1, if self.attrib1 is already somewhere in contents.
+	It is quite usable.
+
 - Removed binding ctrl_L-super_L-return to run file in return_override().
+
 - Ctrl-q -> Ctrl-Q for del_tab: prevent closing tab without saving by accident.
+
 - Cmd-ae -> goto_linestart/end, when in macOS, this is quite usable.
+
 - Also in macOS: Cmd-(Shift)-Up/Down -> move/select 10 lines up/down. Also usable.
 	In Linux and Windows this is: Control-(Shift)-Up/Down and bind is to move_many_lines() instead
 	of mac_cmd_overrides(). Not tested in Windows, but hopes are that the states are right.
+
 - In return_override, if line is empty, rstrip to cursor to fix indent sailing if
-in middle of space.
+	in middle of space.
 
-- There were lot of issues with functions like select_by_words(), move_by_words() etc. which changed selection. First fix was like:
-self.contents.event_generate('<<SelectPrevWord>>')
 
-But it was flashy at lineends (because needed to adjust selection later),
-so ended up using <<PrevWord>> instead with:
-self.contents.mark_set(self.anchor, idx).
+- There were lot of issues with functions like select_by_words(), move_by_words() etc.
+	which changed selection. First fix was like:
+	self.contents.event_generate('<<SelectPrevWord>>')
+	
+	But it was flashy at lineends (because needed to adjust selection later),
+	so ended up using <<PrevWord>> instead with:
+	self.contents.mark_set(self.anchor, idx).
+	
+	It (that is: handling of selection changes) is now done right by setting
+	selection-start-mark or -anchor with:
+	self.contents.mark_set('tk::anchor1', '38.6').
+	
+	The name of anchor changes if editor is launched multiple times in one Python-session,
+	so the current name is retrieved in init but there is still another problem:
+	this anchor does not exist if certain event has not occured before.
+	
+	To get this working, the name of anchor is needed, it is done just before quite
+	similar fix for Windows, and it is ugly.
 
-It (that is: handling of selection changes) is now done right by setting selection-start-mark or -anchor with:
-self.contents.mark_set('tk::anchor1', '38.6').
-
-The name of anchor changes if editor is launched multiple times in one Python-session,
-so the current name is retrieved in init but there is still another problem:
-this is anchor does not exist if certain event has not occured before.
-
-To get this working the name of anchor is needed, it is done just before quite
-similar fix for Windows, and it is ugly.
 
 - When doing search and replace one can now copy text and select and adjust selection
 	with many functions like yank line, goto lineend etc.
+	
 	
 - When doing search and replace:
 	space 	--> exit to focus
@@ -52,33 +66,21 @@ similar fix for Windows, and it is ugly.
 	
 - Editor is now aware if it is in fullscreen-mode. It is not used on anything.
 
-- Editor now handles long string better in entry like filenames or searches.
+- Editor now handles long strings better in entry, like filenames or searches.
 
 - Small but important change in wait_for() to change state so that certain bindings
 	do not trigger while waiting.
 
 - Added two tkinter-books to dev/books.
 
-- Added screenshots to README
+- Added screenshots to README, and removed 'more on virtual environments' -section
+	as potentially dangerous.
 
-- ctrl-q now quits with save when not in macOS, in same way than cmd-q in macOS.
+- Ctrl-q now quits with save when not in macOS, same way than cmd-q does in macOS.
 
+- Updated helpfile
 
-
-helpfile
-
-pics to readme?
-remove more on virtualenvironments section from README as potentially dangerous done ok?
-
-
-update structure briefing?
-
-update links after imports?
-
-
-
-
-
+- Updated links to point to Tcl 9.0
 
 
 # 0.3.0

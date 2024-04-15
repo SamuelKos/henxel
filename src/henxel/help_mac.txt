@@ -1,23 +1,23 @@
 		Keyboard shortcuts for macOS:
 		
 		If key-sequence is like: Cmd-c
-		It means: while holding Cmd-key down, press and release c-key.
+		It means: while holding Cmd-key down, press c-key.
 		
 		If key-sequence is like: Cmd-c-f
-		It means: while holding Cmd-key down, press and release first
-		c-key then f-key.
+		It means: while holding Cmd-key down, press first
+		c-key then f-key. It can be quite fast, more like: Cmd-cf
 		 
 		Cmd-Return		Open file
 		Ctrl-BackSpace  Show and select next occurence of last search.
 						If got too far, press arrowleft to go to last
-						cursor position.
+						cursor position. Search again in short.
 		Cmd-f  Search
 		Cmd-r  Replace
 		Cmd-R  Replace all
-		Cmd-g  Gotoline:	-1 and empty goes to file-end
-		
+		Cmd-g  Gotoline:	-1 and empty goes to file-end.
+							-20 goes to 20 lines before file-end etc.
 		Shift-Tab  Unindent
-		Tab        Indent
+		Tab        Indent, complete word
 		
 		Shift-Return	Comment
 		Shift-BackSpace	Uncomment
@@ -35,60 +35,67 @@
 		Alt-f   Font setting
 		Alt-s   Color setting
 		Alt-t   Toggle color setting
-		Alt-e   expand word
 		
 		Cmd-n   Open new tab			Try this: Cmd-n-Return
 		
 		Ctrl-d  Close current tab and save it
-		Ctrl-q  Close current tab without saving it
+		Ctrl-Q  Close current tab without saving it
+		Cmd-q   Close editor and save files and configuration.
 		
 		Cmd-right  Walk tabs forward
 		Cmd-left   Walk tabs backwards
 		
-		Ctrl-i  Move cursor right
-		Ctrl-b  Move cursor left
-		Ctrl-n  Move cursor down
-		Ctrl-p  Move cursor up
-		
-		Ctrl-e  Move cursor to lineend
-		Ctrl-a  Move cursor to linestart
+		Cmd-e  Move cursor to lineend
+		Cmd-a  Move cursor to linestart
 		
 		Cmd-shift-right  Select from cursor to lineend
 		Cmd-shift-left   Select from cursor to linestart
 		
-		Ctrl-k  Remove from cursor to lineend
-		Ctrl-o  Insert linebreak at cursor
-		
 		Ctrl-j  Scroll down without moving cursor
 		Ctrl-u  Scroll up without moving cursor
 		
-		Shift-up	Select one more line up
-		Shift-down	Select one more line down
+		Shift-up		Select one more line up
+		Shift-down		Select one more line down
+		Cmd-Shift-up	Select 10 more line up
+		Cmd-Shift-down	Select 10 more line down
+		Cmd-up			Move 10 more line up
+		Cmd-down		Move 10 more line down
 		
 		Alt-left  		Move cursor one word left
 		Alt-right 		Move cursor one word right
 		Alt-shift-left 	Select one more word to left
 		Alt-shift-right	Select one more word to right
 		
+		
+		# Not often needed:
 		Ctrl-plus 	Increase scrollbar-width
 		Ctrl-minus	Decrease scrollbar-width
 		
 		Ctrl-t  	Change indentation of selected lines to current setting
-
+		
+		Ctrl-i  Move cursor right
+		Ctrl-b  Move cursor left
+		Ctrl-n  Move cursor down
+		Ctrl-p  Move cursor up
+		
+		Ctrl-k  Remove from cursor to lineend
+		Ctrl-o  Insert linebreak at cursor
+		
 
 		While searching:
 			Ctrl-n  Next match
 			Ctrl-p  Prev match
-			-	copying text to clipboard is possible
-			-	press or select text where you want cursor to
-				be after closing searching with esc. Otherwise
-				cursor will remain where you left it.
-				Press arrow-key to refresh view back to cursor.
+			-	Copying text to clipboard is possible with yank-line etc.
+			-	Changing the replacement string is possible while replacing.
+			-	1: Press Space to exit search to focus.
+				2: Double-click to exit to cursor.
+				3: Press Esc to exit to cursor position at the start of the search.
+				Press arrow-key to refresh view back to cursor, if necessary.
 		
 		While replacing:
 			Return does what is expected.
 		
-		Default bindings: https://tcl.tk/man/tcl8.6/TkCmd/text.htm#M192
+		Default bindings: https://tcl.tk/man/tcl9.0/TkCmd/text.html#M192
 	
 	
 	When is my file Saved to Disk?
@@ -177,29 +184,21 @@
 		just select whole thing, copy and paste to console. You may have
 		to press Return before last block executes. This is very useful,
 		compared to writing all that in console is much more difficult.
+		You might need to reduce indentation.
 		
 	
 	How to: expand word
-	  - When starting to write object-name that has been used earlier near
-		current position, like if previous line was:
+	  - When starting to write object-name that has already been used
+		somewhere in contents like:
 		
-			var = functionabc()
+			self.at
 		
-		then when continuing at the next line:
+		then when hitting TAB, editor searches all matches in contents which
+		starts with self.at and shows them one by one when pressing again TAB
+		until all matches have been showed.
 			
-			var2 = func
+			self.attribute1
 			
-		and pressing Alt-e it should expand to functionabc. Pressing again
-		searches backwards next word with func in its name, and when no
-		matches are found, it starts to search onwards to the file-end and
-		after that another round starts.
-	
-	
-	How to: hide blinking cursor
-	  - Sometimes one wants to focus on the code and blinking cursor is
-		not helping with that. Since there is no timer to turn it off one
-		have to click on linenumber-widget to hide the cursor.
-	
 	
 	How to: change indent-depth
 		For all files:
@@ -241,45 +240,10 @@
 		
 
 	Inspecting objects:
-	  - For inspecting module, class or functions. Not tested with other
-		object-types. You have this line in editor:
-		
-			res = package.module.function(*args)
-			
-			or
-			
-			my_instance = package.module.SomeClass()
-			
-		You are interested in function or SomeClass or module or package.
-		Then you select with mouse this text:
-		
-			pagkage.module.function
-			
-			or
-			
-			package.module.SomeClass
-			
-			or
-			
-			package.module
-			
-			or
-			
-			package
+	  - Just write the name of the module, like tkinter.font in the editor,
+		select it and choose inspect from popup-menu. Then search.
+				
 	
-		Then open menu with mouse-right and select: inspect.
+	Homepage: https://github.com/SamuelKos/henxel
 	
-	  	Now editor tries to inspect your selection. On success: opens new tab
-		and pastes lines there. New tab can be safely closed with ctrl-d later,
-		or saved with new filename.
-		
-		Notice that this wont work:
-			my_instance = package.module.SomeClass()
-			res = my_instance.function(*args)
-			
-			And then trying to inspect: my_instance.function
-			Instead in this case you should inspect: package.module.SomeClass
-			Then search: function(
-		
-		Also builtins like math can not be inspected.
-		
+	

@@ -16,6 +16,7 @@
 # Syntax highlight
 # Theme Related
 # Run file Related
+# Select and move
 # Overrides
 # Utilities
 # Save and Load
@@ -98,7 +99,10 @@ class Tab:
 # config(**options) Modifies one or more widget options. If no options are
 # given, method returns a dictionary containing all current option values.
 #
-# https://www.tcl.tk/man/tcl8.6/TkCmd/event.htm
+# https://tcl.tk/man/tcl9.0/TkCmd/index.html
+#
+# Look in: 'text', 'event' and 'bind'
+#
 # https://docs.python.org/3/library/tkinter.html
 #
 ###############################################################################
@@ -3161,7 +3165,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 ########## Run file Related End
-########## Overrides Begin
+########## Select and move Begin
 
 	def move_right(self, event=None):
 		''' move cursor right with
@@ -4005,8 +4009,10 @@ class Editor(tkinter.Toplevel):
 					
 		
 		return "break"
-		
-		
+
+########## Select and move End
+########## Overrides Begin
+
 	def raise_popup(self, event=None):
 		if self.state != 'normal':
 			self.bell()
@@ -4234,8 +4240,6 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 	
 	
-	
-	
 	def tab_override(self, event):
 		'''	Used to bind Tab-key with indent() and expander.expand_word()
 		'''
@@ -4265,7 +4269,6 @@ class Editor(tkinter.Toplevel):
 		# added to selection content of a Text widget, and since there is no
 		# actual selection (clipboard-text is outside from Text-widget),
 		# tab_override() gets quite broken.
-		
 		
 		if len(self.contents.tag_ranges('sel')) == 0:
 			
@@ -4297,7 +4300,6 @@ class Editor(tkinter.Toplevel):
 				
 			# Expand word End
 			
-				
 		try:
 			tmp = self.contents.selection_get()
 			self.indent(event)
@@ -4386,7 +4388,6 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 		
 		
-	
 		# Cursor indexes when pressed return:
 		line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
 		
@@ -4454,7 +4455,6 @@ class Editor(tkinter.Toplevel):
 		
 		self.update_linenums()
 		
-
 ########## Overrides End
 ########## Utilities Begin
 
@@ -5714,7 +5714,8 @@ class Editor(tkinter.Toplevel):
 				
 				self.entry.config(validate='none')
 				tmp = self.entry.get()
-				idx = tmp.index(' ')
+				idx_0 = tmp.index('/')
+				idx = tmp.index(' ', idx_0)
 				self.entry.delete(0, idx)
 				self.entry.insert(0, patt)
 				self.entry.config(validate='key')
@@ -5804,7 +5805,8 @@ class Editor(tkinter.Toplevel):
 			
 			self.entry.config(validate='none')
 			tmp = self.entry.get()
-			idx = tmp.index(' ')
+			idx_0 = tmp.index('/')
+			idx = tmp.index(' ', idx_0)
 			self.entry.delete(0, idx)
 			self.entry.insert(0, patt)
 			self.entry.config(validate='key')
