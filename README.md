@@ -157,6 +157,8 @@ Files are in src/henxel/
 
 
 # More resources
+[Tcl/Tk](https://tcl.tk/man/tcl9.0/TkCmd/index.html)
+[Python/Tkinter](https://docs.python.org/3/library/tkinter.html)
 [Changelog](https://github.com/SamuelKos/henxel/blob/main/CHANGELOG)
 
 # Licence
