@@ -13,6 +13,8 @@
 - Ctrl-q -> Ctrl-Q for del_tab: prevent closing tab without saving by accident.
 - Cmd-ae -> goto_linestart/end, when in macOS, this is quite usable.
 - Also in macOS: Cmd-(Shift)-Up/Down -> move/select 10 lines up/down. Also usable.
+	In Linux and Windows this is: Control-(Shift)-Up/Down and bind is to move_many_lines() instead
+	of mac_cmd_overrides(). Not tested in Windows, but hopes are that the states are right.
 - In return_override, if line is empty, rstrip to cursor to fix indent sailing if
 in middle of space.
 
@@ -59,6 +61,7 @@ similar fix for Windows, and it is ugly.
 
 - Added screenshots to README
 
+- ctrl-q now quits with save when not in macOS, in same way than cmd-q in macOS.
 
 
 

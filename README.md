@@ -2,6 +2,7 @@
 GUI-editor for Python development. Tested to work with Debian 12, Windows 10 and 11 and macOS 12.
 
 ![editor_mac](pics/editor_macOS.png)
+![editor_linux](pics/editor_linux.png)
 
 # Featuring
 * Auto-indent

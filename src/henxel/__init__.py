@@ -668,6 +668,7 @@ class Editor(tkinter.Toplevel):
 		if self.os_type != 'mac_os':
 			
 			self.bind( "<Alt-n>", self.new_tab)
+			self.bind( "<Control-q>", self.quit_me)
 			self.contents.bind( "<Alt-s>", self.color_choose)
 			self.contents.bind( "<Alt-t>", self.toggle_color)
 			
@@ -686,6 +687,11 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Control-Right>", self.move_by_words)
 			self.contents.bind( "<Control-Shift-Left>", self.select_by_words)
 			self.contents.bind( "<Control-Shift-Right>", self.select_by_words)
+			
+			self.contents.bind( "<Control-Up>", self.move_many_lines)
+			self.contents.bind( "<Control-Down>", self.move_many_lines)
+			self.contents.bind( "<Control-Shift-Up>", self.move_many_lines)
+			self.contents.bind( "<Control-Shift-Down>", self.move_many_lines)
 			
 			# Used in check_next_event
 			self.bid_left = self.contents.bind("<Left>", self.check_sel)
@@ -3262,6 +3268,59 @@ class Editor(tkinter.Toplevel):
 ##			return 'continue'
 	
 	
+	def move_many_lines(self, event=None):
+		''' Move or select 10 lines from cursor.
+		'''
+		
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+		
+		if event.widget != self.contents:
+			return
+		
+		
+		# Check if: not only ctrl (+shift) down, then return
+		if self.os_type == 'linux':
+			if event.state not in  [4, 5]: return
+		
+		elif self.os_type == 'windows':
+			if event.state not in [ 262156, 262148, 262157, 262149 ]: return
+				
+		
+		# Pressed Control + Shift + arrow up or down.
+		# Want: select 10 lines from cursor.
+		
+		# Pressed Control + arrow up or down.
+		# Want: move 10 lines from cursor.
+						
+		if event.keysym == 'Up':
+			e = '<<SelectPrevLine>>'
+			
+			if event.state not in [ 5, 262157, 262149 ]:
+				e = '<<PrevLine>>'
+			
+			for i in range(10):
+				self.contents.event_generate(e)
+				
+			return 'break'
+		
+		elif event.keysym == 'Down':
+			e = '<<SelectNextLine>>'
+			
+			if event.state not in [ 5, 262157, 262149 ]:
+				e = '<<NextLine>>'
+			
+			for i in range(10):
+				self.contents.event_generate(e)
+			
+			return 'break'
+		
+		else:
+			return
+			
+			
+	
 	def center_view(self, event=None, up=False):
 		''' Raise insertion-line
 		'''
@@ -3309,7 +3368,7 @@ class Editor(tkinter.Toplevel):
 
 		pos = self.contents.index( 'insert display lineend' )
 		return pos
-			
+		
 			
 	def idx_linestart(self):
 		
