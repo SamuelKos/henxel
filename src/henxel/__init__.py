@@ -701,6 +701,11 @@ class Editor(tkinter.Toplevel):
 			self.bid_left = self.contents.bind( "<Left>", self.mac_cmd_overrides)
 			
 			self.contents.bind( "<Right>", self.mac_cmd_overrides)
+			
+			
+			self.contents.bind( "<Up>", self.mac_cmd_overrides)
+			self.contents.bind( "<Down>", self.mac_cmd_overrides)
+			
 			self.entry.bind( "<Right>", self.mac_cmd_overrides)
 			self.entry.bind( "<Left>", self.mac_cmd_overrides)
 			
@@ -721,6 +726,8 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Mod1-Key-g>", self.gotoline)
 			self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
 			self.contents.bind( "<Mod1-Key-e>", self.goto_lineend)
+			self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
+			self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
 			self.contents.bind( "<Mod1-Key-r>", self.replace)
 			self.contents.bind( "<Mod1-Key-z>", self.undo_override)
 			self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
@@ -764,7 +771,6 @@ class Editor(tkinter.Toplevel):
 		if self.os_type == 'windows':
 			self.entry.bind( "<Control-E>", lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
 			self.entry.bind( "<Control-A>", lambda event, arg=('<<SelectLineStart>>'): self.entry.event_generate)
-		
 		
 		self.contents.bind( "<Control-i>", self.move_right)
 		self.contents.bind( "<Control-b>", self.move_left)
@@ -828,10 +834,9 @@ class Editor(tkinter.Toplevel):
 		###############################
 		#
 		# Syntax-highlight Begin #################
-		
 		self.keywords = keyword.kwlist
-		self.keywords.extend(['self'])
-						
+		self.keywords.insert(0, 'self')
+		
 		self.bools = [ 'False', 'True', 'None' ]
 		self.breaks = [
 						'break',
@@ -875,6 +880,7 @@ class Editor(tkinter.Toplevel):
 		# search tags have highest priority
 		self.contents.tag_raise('match')
 		self.contents.tag_raise('replaced')
+		self.contents.tag_raise('sel')
 		self.contents.tag_raise('focus')
 		
 		
@@ -955,16 +961,16 @@ class Editor(tkinter.Toplevel):
 		'''	In case of size change, like maximize etc. viewsync-event is not
 			generated in such situation so need to bind to <Configure>-event.
 		'''
-		# Handle fullscreen toggles, (lost title-bar)
+		# Handle fullscreen toggles
 		self.update_idletasks()
 		
 		if self.wm_attributes('-fullscreen') == 1:
 			if self.fullscreen == False:
-				print('normal --> full  config')
+				#print('normal --> full  config')
 				self.fullscreen = True
 		else:
 			if self.fullscreen == True:
-				print('full --> normal  config')
+				#print('full --> normal  config')
 				self.fullscreen = False
 				
 		
@@ -1007,9 +1013,16 @@ class Editor(tkinter.Toplevel):
 		
 	
 	def wait_for(self, ms):
+		# This is important, 'cancel' all bindings which checks the state.
+		state = self.state
+		self.state = 'waiting'
+		
 		self.waitvar.set(False)
 		self.after(ms, self.waiter)
 		self.wait_variable(self.waitvar)
+		
+		# 'Release' bindings
+		self.state = state
 		
 	
 	def waiter(self):
@@ -1297,13 +1310,17 @@ class Editor(tkinter.Toplevel):
 		
 		# Pressed Cmd + Shift + arrow left or right.
 		# Want: select line from cursor.
+		
+		# Pressed Cmd + Shift + arrow up or down.
+		# Want: select 10 lines from cursor.
 		if event.state == 105:
 		
 			# self.contents or self.entry
 			wid = event.widget
 			
 			# Enable select from in entry
-			if wid == self.entry: return
+			if wid == self.entry:
+				return
 			
 			# Enable select from in contents
 			elif wid == self.contents:
@@ -1313,7 +1330,15 @@ class Editor(tkinter.Toplevel):
 					
 				elif event.keysym == 'Left':
 					self.goto_linestart(event=event)
-		
+					
+				elif event.keysym == 'Up':
+					for i in range(10):
+						self.contents.event_generate('<<SelectPrevLine>>')
+				
+				elif event.keysym == 'Down':
+					for i in range(10):
+						self.contents.event_generate('<<SelectNextLine>>')
+					
 				else:
 					return
 			
@@ -1321,6 +1346,10 @@ class Editor(tkinter.Toplevel):
 		
 		
 		# Pressed Cmd + arrow left or right.
+		# Want: walk tabs.
+		
+		# Pressed Cmd + arrow up or down.
+		# Want: move cursor 10 lines from cursor.
 		elif event.state == 104:
 	
 			if event.keysym == 'Right':
@@ -1329,6 +1358,14 @@ class Editor(tkinter.Toplevel):
 			elif event.keysym == 'Left':
 				self.walk_tabs(event=event, **{'back':True})
 	
+			elif event.keysym == 'Up':
+					for i in range(10):
+						self.contents.event_generate('<<PrevLine>>')
+				
+			elif event.keysym == 'Down':
+				for i in range(10):
+					self.contents.event_generate('<<NextLine>>')
+				
 			else:
 				return
 			
@@ -1337,7 +1374,9 @@ class Editor(tkinter.Toplevel):
 			
 		# Pressed Alt + arrow left or right.
 		elif event.state == 112:
-		
+			
+			if event.keysym in ['Up', 'Down']: return
+			
 			# self.contents or self.entry
 			wid = event.widget
 			
@@ -1361,6 +1400,9 @@ class Editor(tkinter.Toplevel):
 		
 		# Pressed Alt + Shift + arrow left or right.
 		elif event.state == 113:
+		
+			if event.keysym in ['Up', 'Down']: return
+			
 			# self.contents or self.entry
 			wid = event.widget
 			
@@ -1385,10 +1427,14 @@ class Editor(tkinter.Toplevel):
 		# Pressed arrow left or right.
 		# If have selection, put cursor on the wanted side of selection.
 		# +shift: 97
+		
+		# Pressed arrow up or down: return event.
 		elif event.state == 97: return
 		
 		elif event.state == 96:
 			
+			if event.keysym in ['Up', 'Down']: return
+				
 			# self.contents or self.entry
 			wid = event.widget
 			have_selection = False
@@ -1430,6 +1476,8 @@ class Editor(tkinter.Toplevel):
 			# Like fn-h does not insert h.
 			else:
 				return
+				
+		return
 	
 	
 	def new_tab(self, event=None, error=False):
@@ -1965,7 +2013,7 @@ class Editor(tkinter.Toplevel):
 						idx_start = s0 + '.' + s1
 						idx_end = e0 + '.' + e1
 						
-							
+						
 						if token.type == tokenize.NAME:
 							
 							#lastoken = token
@@ -3649,8 +3697,19 @@ class Editor(tkinter.Toplevel):
 		if wid == self.entry:
 			self.entry.selection_clear()
 			
-			if event.keysym == 'Right':	self.entry.icursor(e)
-			elif event.keysym == 'Left':self.entry.icursor(s)
+			if event.keysym == 'Right':
+				self.entry.icursor(e)
+				self.entry.xview_moveto(1.0)
+				
+			elif event.keysym == 'Left':
+				
+				if self.state in ['search', 'replace', 'replace_all']:
+					tmp = self.entry.get()
+					s = tmp.index(':') + 2
+				
+				self.entry.icursor(s)
+				self.entry.xview_moveto(0)
+			
 			else:
 				return
 			
@@ -3700,6 +3759,16 @@ class Editor(tkinter.Toplevel):
 		if self.state in [ 'filedialog' ]:
 			self.bell()
 			return "break"
+		
+		
+		wid = event.widget
+		if wid == self.entry:
+			wid.selection_clear()
+			idx = tkinter.END
+			wid.icursor(idx)
+			wid.xview_moveto(1.0)
+			return 'break'
+		
 		
 		idx_linestart = self.idx_linestart()
 		# Empty line?
@@ -3785,6 +3854,19 @@ class Editor(tkinter.Toplevel):
 		if self.state in [ 'filedialog' ]:
 			self.bell()
 			return "break"
+		
+		wid = event.widget
+		if wid == self.entry:
+			wid.selection_clear()
+			idx = 0
+			if self.state in ['search', 'replace', 'replace_all']:
+				tmp = wid.get()
+				idx = tmp.index(':') + 2
+			
+			wid.icursor(idx)
+			wid.xview_moveto(0)
+			return 'break'
+			
 		
 		idx_linestart = self.idx_linestart()
 		# Empty line?
@@ -4273,8 +4355,8 @@ class Editor(tkinter.Toplevel):
 			# rstrip space to prevent indentation sailing.
 			if tmp[col:].isspace():
 				self.contents.delete(tkinter.INSERT, 'insert lineend')
-			
-			for i in range(len(tmp)):
+				
+			for i in range(len(tmp[:col]) + 1):
 				if tmp[i] != '\t':
 					break
 	
@@ -5601,6 +5683,9 @@ class Editor(tkinter.Toplevel):
 		if self.search_matches == 1:
 			self.bind("<Control-n>", self.do_nothing)
 			self.bind("<Control-p>", self.do_nothing)
+			
+		
+		self.entry.xview_moveto(0)
 		
 		return 'break'
 		
@@ -5682,7 +5767,10 @@ class Editor(tkinter.Toplevel):
 		if self.search_matches == 1:
 			self.bind("<Control-n>", self.do_nothing)
 			self.bind("<Control-p>", self.do_nothing)
-			
+		
+		
+		self.entry.xview_moveto(0)
+		
 		return 'break'
 		
 		
@@ -5695,6 +5783,7 @@ class Editor(tkinter.Toplevel):
 		tmp = tmp_orig[idx:].strip()
 		
 		if len(tmp) == 0 or tmp == self.old_word:
+			self.bell()
 			return 'break'
 		
 		self.old_word = tmp
@@ -5747,7 +5836,12 @@ class Editor(tkinter.Toplevel):
 				self.entry.delete(0, idx)
 				self.entry.insert(0, patt)
 				
+				self.entry.select_from(len(patt))
+				self.entry.select_to(tkinter.END)
+				self.entry.icursor(len(patt))
+				self.entry.xview_moveto(0)
 				
+
 				bg, fg = self.themes[self.curtheme]['match'][:]
 				self.contents.tag_config('match', background=bg, foreground=fg)
 				
@@ -5823,9 +5917,7 @@ class Editor(tkinter.Toplevel):
 			self.entry.xview_moveto(1.0)
 			
 		self.new_word = ''
-		self.old_word = ''
 		self.search_matches = 0
-		self.update_title()
 		flag_all = False
 		if self.state == 'replace_all': flag_all = True
 		
@@ -5888,6 +5980,7 @@ class Editor(tkinter.Toplevel):
 			pass
 			
 		self.state = 'search'
+		self.old_word = ''
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 		self.entry.bind("<Return>", self.start_search)
@@ -5975,6 +6068,7 @@ class Editor(tkinter.Toplevel):
 			pass
 		
 		self.state = state
+		self.old_word = ''
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 		self.entry.bind("<Return>", self.start_search)

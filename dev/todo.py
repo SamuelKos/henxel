@@ -1,5 +1,11 @@
 import keyword ok? keyword order matter? slow tokens try old list?
 #####
+sel tag higher priority than replaced? done ok?
+#####
+ctrl-backspace no work macOS fixed ok ?
+#####
+remove title updates done ok?
+####
 expand over dot ok?
 expand indent_ no work to indent_cursor fixed ok?
 #####
@@ -32,37 +38,27 @@ must clear selection with event: prevline,
 because now there is selection at end of file.
 windows removed tcl_version check ok?
 ####
-entry search
+entry search:
 ctrl-right no work, fixed ok?
 in mac_cmd_overrides
 ####
 removed binding fn-f ok? not ok, need to return 'break' or inserts 'f'
 handled in handle_config
 ####
-show long filenames
+show long stuff in entry like filenames
 self.entry.insert(0, self.tabs[self.tabindex].filepath)
 self.entry.xview_moveto(1.0) ok?
-####
-replace all
-dont remove tags if do something after that binds escape but dont change view
-like gotoline etc. this is feature, add to helpfile:
-if absolutely want clear replaced tags
-then switch back and forth tabs
-if not another tab open new
-####
-
-
-
+#####
+def wait_for(self, ms):
+		# This is important, 'cancel' all bindings which checks the state.
+		state = self.state
+		self.state = 'waiting'
+#####
 
 cmd-shift-up
-select many lines?
+select many lines? done for macOS
 cmd-up
 move many lines
-
-
-selection handling not perfect when:
-	comment
-	indent
 
 
 ######
@@ -72,18 +68,6 @@ space esc here ok?
 remove buttonrelease-1 ok?
 double-click or space stop search to cursor
 ok?
-	
-unbind ctrl-np
-done in init ok?
-
-clear sel in stop_search ok?
-
-
-windows wordchar link ok?
-\s
-https://www.tcl.tk/man/tcl9.0/TclCmd/tclvars.html
-\w
-https://www.tcl.tk/man/tcl9.0/TclCmd/library.html
 
 now work when search or replace:
 	move_bywords ok? re all
@@ -100,92 +84,75 @@ when replace, all:
 contents, entry:
 	return skip bind ok?
 	test esc in contents entry ok?
+	
+clear sel in stop_search ok?
 ######
 
 
+windows wordchar link ok?
+\s
+https://www.tcl.tk/man/tcl9.0/TclCmd/tclvars.html
+\w
+https://www.tcl.tk/man/tcl9.0/TclCmd/library.html
 
 
 #######
 macos fullscreen title
 self.wm_attri ok?
-git branch to title
-tab position to btn_git
-gotoline search replace to btn_git and entry
-btn_git 3 letter wide? affects ln_wid
+git branch remains in btn_git
+tab position remains in title
 
-progress:
-search:
-	after start search, focusin entry: clear match position index from entry
-	
-gotoline:
-def do_validate_gotoline(self, why, where, what):
-in init:
-	validate_gotoline = self.register(self.do_validate_gotoline)
-self.entry = Entry(self, validate='all',
-	validatecommand=(validate_gotoline, '%d', '%i', '%S') )
+gotoline search replace to entry
+btn_git 3 letter wide? affects ln_width
 
-at the end of gotoline:
-	self.entry.config(validate='all', validatecommand=(validate_gotoline, '%d', '%i', '%S') )
-at the end of do_gotoline:
-	self.entry.config(validate='none')
-	
-	
-num characters in entry:
-self.entry.winfo_width() // self.menufont.measure('A') - 1
+##########
 
 
-delete_over one line syntax faster
-paste one line also
-insert # also
 
-ctrl-backspace no work macOS
 
-remove more on virtualenvironments section from README as potentially dangerous
-
-check deletion when replacing done ok?
-
-sel tag higher priority than replaced?
-
-entry no work goto/select line_startend
-entry
-end of start_search: validate focusin etc
-
-#######
-
-###
-tab in entry with self.en selects whole line check from search and indent
-unbind or leave?
-e.contents.bind_class('Entry', '<<TraverseIn>>')
-'\n    %W selection range 0 end\n    %W icursor end\n'
-###
-
-goto linestartend must clear selection done ok?
-select_by_words: when selection closes after <<nextword>>?
-
-show caps-lock state in somehere
-
-remove title updates
-
-unbind ctrl-v macOS
-
-marks?
-toggle mark
 
 helpfile
 
 pics to readme?
+remove more on virtualenvironments section from README as potentially dangerous done ok?
 
-ctrl-c override?
 
 update structure briefing?
 
 update links after imports?
+
+
+
+
+
+
+
+
+
+
+
+
+show caps-lock state in somehere
+
+marks?
+toggle mark
+
+unbind ctrl-v macOS
+check ctrl-c macOS?
+
+ctrl-c (copy) override?
 
 tab-comp in entry?
 
 search in help?
 
 replace stay in start-insert in start_search()?
+
+select_by_words: when selection closes after <<nextword>>?
+
+selection handling not perfect when:
+	comment
+	indent
 
 
 ####
