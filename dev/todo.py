@@ -1,4 +1,8 @@
-
+Fix this python 3.12 string escape fix, ok?
+>>> import henxel
+/Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py:467: SyntaxWarning: invalid escape sequence '\W'
+  self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+####
 
 
 

@@ -463,8 +463,8 @@ class Editor(tkinter.Toplevel):
 			# Need for some reason generate event: <<NextWord>> before this,
 			# because array ::tcl::WordBreakRE does not exist yet,
 			# but after this event it does. This was done above.
-
-			self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+			
+			self.tk.eval(r'set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
 			self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
 			self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
 

@@ -1,4 +1,4 @@
-		Keyboard shortcuts for macOS:
+		Keyboard shortcuts:
 		
 		If key-sequence is like: Cmd-c
 		It means: while holding Cmd-key down, press c-key.
