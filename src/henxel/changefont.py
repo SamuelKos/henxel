@@ -22,17 +22,6 @@ class FontChooser:
 		else:
 			self.tracefunc = None
 		
-		self.badfonts = [
-					'Standard Symbols PS',
-					'OpenSymbol',
-					'Noto Color Emoji',
-					'FontAwesome',
-					'Dingbats',
-					'Droid Sans Fallback',
-					'D050000L'
-					]
-		
-		
 		self.max = 42
 		self.min = 8
 		
@@ -105,27 +94,10 @@ class FontChooser:
 ##		self.cb4.config(command=lambda args=[self.overstrike, 'overstrike']: self.checkbutton_command(args))
 		
 		
-		
 		self.filter_mono = tkinter.IntVar()
 		self.cb5 = tkinter.Checkbutton(self.topframe, font=('TkDefaultFont', 10), offvalue=0, onvalue=1, text='Mono', variable=self.filter_mono)
 		self.cb5.pack(pady=10, anchor='w')
 		self.cb5.config(command=self.filter_fonts)
-		
-		self.filter_const_height = tkinter.IntVar()
-		self.cb6 = tkinter.Checkbutton(self.topframe, font=('TkDefaultFont', 10), offvalue=0, onvalue=1, text='Const height', variable=self.filter_const_height)
-		self.cb6.pack(pady=10, anchor='w')
-		self.cb6.config(command=self.filter_fonts)
-		
-			
-		info_text = '''Being monospaced does not guarantee same lineheight between lines not containing bold text
-and lines that do contain bold text, like keywords.
-Courier for example is monospaced but does not have this kind of constant lineheight.
-If choosing other than constant lineheight font, linenumbers
-can have little offset. If this does not bother, then select any monospaced for programming.'''
-
-
-		self.l = tkinter.Label(self.bottomframe, text=info_text, font=('TkDefaultFont', 10), anchor="e", justify=tkinter.LEFT)
-		self.l.pack(padx=4, pady=4)
 		
 		
 		# Get current fontsize and show it in spinbox
@@ -140,7 +112,6 @@ can have little offset. If this does not bother, then select any monospaced for 
 ##		self.cb3.deselect()
 ##		self.cb4.deselect()
 		self.cb5.deselect()
-		self.cb6.deselect()
 		
 		if self.font['weight'] == 'bold': self.cb1.select()
 ##		if self.font['slant'] == 'italic': self.cb2.select()
@@ -175,9 +146,7 @@ can have little offset. If this does not bother, then select any monospaced for 
 ##					self.cb2,
 ##					self.cb3,
 ##					self.cb4,
-					self.cb5,
-					self.cb6,
-					self.l
+					self.cb5
 					]
 					
 		if self.button['text'] == 'BIG':
@@ -196,28 +165,18 @@ can have little offset. If this does not bother, then select any monospaced for 
 	
 	
 	def filter_fonts(self, event=None):
-		'''	Show all fonts, mono-spaced, constant line height, or
-			mono-spaced and constant line height depending on cb5 and cb6
-			settings.
+		'''	Show all fonts or mono-spaced,
+			depending on cb5 setting.
 		'''
 	
 		filter_mono = self.filter_mono.get()
-		filter_const_height = self.filter_const_height.get()
-
 		fonts = None
 		
-		if filter_mono and filter_const_height:
-			fonts = self.fontnames_const_line_mono
-					
-		elif filter_mono:
-			fonts = self.fontnames_mono
-			
-		elif filter_const_height:
-			fonts = self.fontnames_const_line
 		
+		if filter_mono:
+			fonts = self.fontnames_mono
 		else:
 			fonts = self.fontnames
-		
 		
 		
 		self.top.selection_clear()
@@ -318,13 +277,11 @@ can have little offset. If this does not bother, then select any monospaced for 
 			lines and lines with bold font.
 		'''
 		
-		font1 = tkinter.font.Font(family='TkDefaultFont', size=12)
-		boldfont = font1.copy()
-		boldfont.config(weight='bold')
+		font = tkinter.font.Font(family='TkDefaultFont', size=12)
 		
-		# Second test: filter out vertical fonts.
+		# Test: filter out vertical fonts.
 		def test_font(f):
-			return f in self.badfonts or f[0] == '@'
+			return f[0] == '@'
 			
 		
 		fontnames = [f for f in tkinter.font.families() if not test_font(f)]
@@ -336,44 +293,13 @@ can have little offset. If this does not bother, then select any monospaced for 
 		
 		
 		for name in fontnames:
-			font1.config(family=name)
-			boldfont.config(family=name)
-			
-			l1=font1.metrics()['linespace']
-			l2=boldfont.metrics()['linespace']
-			
-			a1=font1.metrics()['ascent']
-			a2=boldfont.metrics()['ascent']
-			
-			d1=font1.metrics()['descent']
-			d2=boldfont.metrics()['descent']
-			
-			f1=font1.metrics()['fixed']
-			f2=boldfont.metrics()['fixed']
-			
-			
-			# Give info that something is happening.
+			font.config(family=name)
+			font_is_fixed = font.metrics()['fixed']
 			self.fontnames.append(name)
 			self.lb.insert('end', name)
-			self.lb.see('end')
-			self.top.update_idletasks()
 			
-			
-			# This guarantees same lineheight between
-			# normal and bold lines. Consolas for example.
-			if l1 == l2 and a1 == a2 and d1 == d2:
-				self.fontnames_const_line.append(name)
-			
-				if f1 == True and f1 == f2:
-					self.fontnames_const_line_mono.append(name)
-			
-			
-			# Being monospaced does not guarantee same lineheight between
-			# normal and bold lines. Courier for example.
-			if f1 == True and f1 == f2:
-				self.fontnames_mono.append(name)
+			if font_is_fixed: self.fontnames_mono.append(name)
 					
-			
 
 		# Show current fontname in listbox
 		try:

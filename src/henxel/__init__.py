@@ -1082,7 +1082,7 @@ class Editor(tkinter.Toplevel):
 		self.save(forced=True)
 		self.save_config()
 		
-		# affects color, fontchoose, load:
+		# Affects color, fontchoose, load:
 		for widget in self.to_be_closed:
 			widget.destroy()
 		
@@ -1099,7 +1099,6 @@ class Editor(tkinter.Toplevel):
 			mac_term = 'Terminal'
 			
 			
-			
 			try:
 				# Giving focus back to python terminal-window is not very simple task in macOS
 				# https://apple.stackexchange.com/questions/421137
@@ -1114,8 +1113,6 @@ class Editor(tkinter.Toplevel):
 						
 					else:
 						tmp = [ 'osascript', '-e', 'tell app "%s" to set frontmost of windows whose id = %s to true' % (mac_term, win_id), '-e', 'tell app "%s" to activate' % mac_term ]
-
-
 
 
 				elif self.__class__.mac_term:
@@ -1143,7 +1140,7 @@ class Editor(tkinter.Toplevel):
 		del self.menufont
 		del self.boldfont
 		
-		# this is maybe not necessary
+		# This is maybe not necessary
 		del self.entry
 		del self.btn_open
 		del self.btn_save

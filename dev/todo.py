@@ -1,3 +1,13 @@
+fontchoose ok?
+cannot change menufont to bold ok?
+
+
+search again, when over last at first cant get back to last?
+
+
+
+
+####
 Fix this python 3.12 string escape fix, ok?
 >>> import henxel
 /Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py:467: SyntaxWarning: invalid escape sequence '\W'
