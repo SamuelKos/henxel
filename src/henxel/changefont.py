@@ -36,6 +36,7 @@ class FontChooser:
 		for font in self.fonts:
 			self.option_menu_list.append(font.name)
 		
+		self.waitvar = tkinter.IntVar()
 		self.var = tkinter.StringVar()
 		self.var.set(self.option_menu_list[0])
 		self.font = tkinter.font.nametofont(self.var.get())
@@ -272,6 +273,16 @@ class FontChooser:
 			self.tracefunc()
 
 	
+	def wait_for(self, ms):
+		self.waitvar.set(False)
+		self.top.after(ms, self.waiter)
+		self.top.wait_variable(self.waitvar)
+		
+		
+	def waiter(self):
+		self.waitvar.set(True)
+	
+	
 	def get_fonts(self):
 		'''	Return list of fonts, that have: same lineheight between normal
 			lines and lines with bold font.
@@ -297,9 +308,11 @@ class FontChooser:
 			font_is_fixed = font.metrics()['fixed']
 			self.fontnames.append(name)
 			self.lb.insert('end', name)
+			self.lb.see('end')
+			self.wait_for(12)
 			
 			if font_is_fixed: self.fontnames_mono.append(name)
-					
+			
 
 		# Show current fontname in listbox
 		try:

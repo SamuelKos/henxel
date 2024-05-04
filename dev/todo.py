@@ -1,8 +1,7 @@
 fontchoose ok?
-cannot change menufont to bold ok?
+fixed animation ok?
 
 
-search again, when over last at first cant get back to last?
 
 
 
