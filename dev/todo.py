@@ -1,30 +1,125 @@
 fontchoose ok?
 fixed animation ok?
 
-
-
-
-
-
 ####
 Fix this python 3.12 string escape fix, ok?
 >>> import henxel
 /Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py:467: SyntaxWarning: invalid escape sequence '\W'
   self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
-####
+#####
+show caps-lock state in somehere:
+textwid.bind('<KeyRelease-Caps_Lock>', mycallback2)
+	if event.state == 0:
+		caplock is off
+	
+textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
+	if event.state == 2:
+		caplock is on
+		
+cant know if caps when started Motion
+#####
+
+
+check short branch name caps lock after next commit
+#########################################################
+ctrl-c override Begin:
+self.indent_selstart = 0
+self.indent_nextline = 0
+self.indent_diff = 0
+self.flag_fix_indent = False
+			
+			
+if selstart line not empty:
+	
+	have_selection = len(self.contents.tag_ranges('sel')) > 0
+	if not have_selection:
+		break
+		
+	startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
+	endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
+	numlines = endline - startline
+	if not numlines > 1:
+		break
+	
+	# Cursor indexes when pressed return:
+	line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
+	if col == 0:
+		break
+	
+	tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
+	if tmp.isspace():
+		break
+	else:
+		self.indent_selstart = col
+
+##########
+	
+if line in two nextlines below selstart not empty:
+	
+	tmp = self.contents.get('%s.0' % str(line+1),'%s.0 lineend' % str(line+1))
+	if tmp.isspace():
+		tmp = self.contents.get('%s.0' % str(line+2),'%s.0 lineend' % str(line+2))
+		if tmp.isspace():
+			break
+		else:
+			for i in range(len(tmp)):
+				if not tmp[i].isspace():
+					self.indent_nextline = i
+	else:
+		for i in range(len(tmp)):
+			if not tmp[i].isspace():
+				self.indent_nextline = i
+
+##########
+self.indent_nextline = y
+self.indent_diff = self.indent_nextline - self.indent_selstart
+		
+if self.indent_diff > 0:
+	self.flag_fix_indent = True
+else:
+	break
+
+ctrl-c override End
+###################
 
 
 
+paste:
+if self.flag_fix_indent:
+	
+	# Cursor index:
+	line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
+	indent_cursor = col
+	indent_diff_cursor = indent_cursor - self.indent_selstart
+	
+	
+	# split selection from clipboard to list
+	tmp = self.clipboard_get().splitlines(True)
+	
+	
+	
+	# paste firstline from clipboard
+	self.contents.insert( '%d.%d' % (line, col), tmp[0])
+	tmp = tmp[1:]
+	lno = line + 1
+	
+	for line in tmp:
+		
+		if indent_diff_cursor > 0:
+			line = indent_diff_cursor*'\t' + line
+			
+		elif indent_diff_cursor < 0:
+			line = line[indent_diff_cursor:]
+			
+			
+		# paste line
+		self.contents.insert( '%d.0' % lno, line)
+		lno += 1
+
+#########################################################
 
 
 
-
-
-
-
-
-
-show caps-lock state in somehere
 
 marks?
 toggle mark

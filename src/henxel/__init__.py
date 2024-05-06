@@ -356,6 +356,20 @@ class Editor(tkinter.Toplevel):
 		
 		if self.branch:
 			branch = self.branch[:5]
+			# Set branch name lenght to 5.
+			# Reason: avoid ln_widget geometry changes
+			# when showing capslock-state in btn_git.
+			if len(branch) < 5:
+				diff = 5-len(branch)
+				t=1
+				for i in range(diff):
+					if t > 0:
+						branch += ' '
+					else:
+						s = ' ' + s
+
+					t *= -1
+
 			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0,
 						padx=0, text=branch, state='disabled')
 
@@ -758,6 +772,12 @@ class Editor(tkinter.Toplevel):
 		#######################################################
 		
 		
+		# Arrange detection of CapsLock-state.
+		self.capslock = 'init'
+		self.motion_bind = self.bind('<Motion>', self.check_caps)
+		self.bind('<KeyRelease-Caps_Lock>', self.check_caps)
+		self.bind('<KeyPress-Caps_Lock>', self.check_caps)
+		
 		self.bind( "<Control-R>", self.replace_all)
 		self.bind( "<Control-g>", self.gotoline)
 		self.bind( "<Control-r>", self.replace)
@@ -1048,6 +1068,56 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 	
 	
+	def check_caps(self, event=None):
+		'''	Check if CapsLock is on.
+		'''
+		e = event.state
+		
+		if e in [0, 2]:
+			if e == 0 and self.capslock in [True, 'init']:
+				# CapsLock is now off
+				self.capslock = False
+				#print('no caps')
+			
+				if self.branch:
+					branch = self.branch[:5]
+					# Set branch name lenght to 5.
+					# Reason: avoid ln_widget geometry changes
+					# when showing capslock-state in btn_git.
+					if len(branch) < 5:
+						diff = 5-len(branch)
+						t=1
+						for i in range(diff):
+							if t > 0:
+								branch += ' '
+							else:
+								s = ' ' + s
+
+							t *= -1
+				
+					self.btn_git.config(text=branch, disabledforeground='')
+		
+					if 'main' in self.branch or 'master' in self.branch:
+						self.btn_git.config(disabledforeground='brown1')
+		
+				else:
+					self.btn_git.config(bitmap='info')
+				
+				
+			elif e == 2 and self.capslock in [False, 'init']:
+				# CapsLock is now on
+				self.capslock = True
+				#print('caps')
+				self.btn_git.config(text="CAPS ", disabledforeground='brown1')
+				
+				# Flash text
+				for i in range(3):
+					self.wait_for(300)
+					self.btn_git.config(text="     ")
+					self.wait_for(300)
+					self.btn_git.config(text="CAPS ")
+					
+		
 	def test_bind(self, event=None):
 		print('jou')
 	
@@ -4037,7 +4107,106 @@ class Editor(tkinter.Toplevel):
 				# is empty
 				return 'break'
 		
-
+	
+##	def copy_override(self, event=None):
+##		'''
+##		'''
+##
+##		#########################################################
+##		# Ctrl-c override Begin:
+##		self.indent_selstart = 0
+##		self.indent_nextline = 0
+##		self.indent_diff = 0
+##		self.flag_fix_indent = False
+##
+##
+##		if selstart line not empty:
+##
+##			have_selection = len(self.contents.tag_ranges('sel')) > 0
+##			if not have_selection:
+##				break
+##
+##			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
+##			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
+##			numlines = endline - startline
+##			if not numlines > 1:
+##				break
+##
+##			# Cursor indexes:
+##			line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
+##			if col == 0:
+##				break
+##
+##			tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
+##			if tmp.isspace():
+##				break
+##			else:
+##				self.indent_selstart = col
+##
+##		##########
+##
+##		if line in two nextlines below selstart not empty:
+##
+##			tmp = self.contents.get('%s.0' % str(line+1),'%s.0 lineend' % str(line+1))
+##			if tmp.isspace():
+##				tmp = self.contents.get('%s.0' % str(line+2),'%s.0 lineend' % str(line+2))
+##				if tmp.isspace():
+##					break
+##			else:
+##				for i in range(len(tmp)):
+##					if not tmp[i].isspace():
+##						self.indent_nextline = i
+##
+##		##########
+##		self.indent_nextline = y
+##		self.indent_diff = self.indent_nextline - self.indent_selstart
+##
+##		if self.indent_diff > 0:
+##			self.flag_fix_indent = True
+##		else:
+##			break
+##
+##		# Ctrl-c override End
+##		###################
+		
+	
+##	def paste_override(self. event=None):
+##		'''
+##		'''
+##
+##		if not self.flag_fix_indent:
+##			break
+##
+##		# Cursor index:
+##		line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
+##		indent_cursor = col
+##		indent_diff_cursor = indent_cursor - self.indent_selstart
+##
+##
+##		# Split selection from clipboard to list
+##		tmp = self.clipboard_get().splitlines(True)
+##
+##
+##
+##		# Paste firstline from clipboard
+##		self.contents.insert( '%d.%d' % (line, col), tmp[0])
+##		tmp = tmp[1:]
+##		lno = line + 1
+##
+##		for line in tmp:
+##
+##			if indent_diff_cursor > 0:
+##				line = indent_diff_cursor*'\t' + line
+##
+##			elif indent_diff_cursor < 0:
+##				line = line[indent_diff_cursor:]
+##
+##
+##			# Paste line
+##			self.contents.insert( '%d.0' % lno, line)
+##			lno += 1
+	
+	
 	def move_line(self, event=None, direction=None):
 		''' Adjust cursor line indentation, with arrow left and right,
 			when pasting more than one line etc.
