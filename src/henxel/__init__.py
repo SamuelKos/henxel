@@ -366,7 +366,7 @@ class Editor(tkinter.Toplevel):
 					if t > 0:
 						branch += ' '
 					else:
-						s = ' ' + s
+						branch = ' ' + branch
 
 					t *= -1
 
@@ -1091,7 +1091,7 @@ class Editor(tkinter.Toplevel):
 							if t > 0:
 								branch += ' '
 							else:
-								s = ' ' + s
+								branch = ' ' + branch
 
 							t *= -1
 				

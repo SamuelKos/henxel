@@ -20,7 +20,8 @@ cant know if caps when started Motion
 #####
 
 
-check short branch name caps lock after next commit
+check short branch name caps lock after next commit, check done ok? #####
+
 #########################################################
 ctrl-c override Begin:
 self.indent_selstart = 0
