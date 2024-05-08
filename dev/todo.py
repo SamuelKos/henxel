@@ -11,7 +11,7 @@ show caps-lock state in somehere:
 textwid.bind('<KeyRelease-Caps_Lock>', mycallback2)
 	if event.state == 0:
 		caplock is off
-	
+			
 textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 	if event.state == 2:
 		caplock is on
@@ -20,8 +20,38 @@ cant know if caps when started Motion
 #####
 
 
-check short branch name caps lock after next commit, check done ok? #####
 
+check short branch name caps lock after next commit, check done ok? #####
+added little delay when select_many lines ok? ###
+
+
+move/select many lines, visibility
+bind cmd-backspace to uncomment
+e.contents.bind_class('Text')
+<Meta-Key-BackSpace>
+
+search again backwards ctrl-shift-backspace
+	
+	when at idx_linestart, PrevWord goes to indent0
+	when at idx_lineend, NextWord goes to indent0
+			
+	
+<Mod4-Key>
+<Mod1-Key>
+<Meta-Key>
+
+<<PasteSelection>>
+<<Clear>>
+<<Paste>>
+<<Copy>>
+<<Cut>>
+<<SelectNone>>
+
+when bind cmd-c, paste_override error paste.tcl
+windows copy remember
+states, widget, syntax, cursor remains at insert
+ctrl-x
+'Editor' object has no attribute 'flag_fix_indent' when paste
 #########################################################
 ctrl-c override Begin:
 self.indent_selstart = 0
@@ -41,7 +71,7 @@ if selstart line not empty:
 	numlines = endline - startline
 	if not numlines > 1:
 		break
-	
+			
 	# Cursor indexes when pressed return:
 	line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
 	if col == 0:
@@ -66,10 +96,12 @@ if line in two nextlines below selstart not empty:
 			for i in range(len(tmp)):
 				if not tmp[i].isspace():
 					self.indent_nextline = i
+					
 	else:
 		for i in range(len(tmp)):
 			if not tmp[i].isspace():
 				self.indent_nextline = i
+				
 
 ##########
 self.indent_nextline = y

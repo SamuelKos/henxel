@@ -641,7 +641,7 @@ class Editor(tkinter.Toplevel):
 			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
 			self.root.createcommand("tk::mac::Quit", self.quit_me)
 			#self.root.createcommand("tk::mac::OnHide", self.test_hide)
-				
+			
 		self.contents.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
 		
 		
@@ -810,8 +810,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-j>", self.center_view)
 		self.contents.bind( "<Control-u>", lambda event: self.center_view(event, **{'up':True}) )
 		
-		self.contents.bind( "<Return>", self.return_override)
-		
 		self.contents.bind( "<Control-d>", self.del_tab)
 		self.contents.bind( "<Control-Q>", lambda event: self.del_tab(event, **{'save':False}) )
 		
@@ -824,6 +822,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-Z>", self.redo_override)
 		self.contents.bind( "<Control-f>", self.search)
 		
+		self.contents.bind( "<Return>", self.return_override)
+		self.contents.bind( "<Mod1-Key-c>", self.copy_override) ###############
+		self.contents.bind( "<Mod1-Key-v>", self.paste_override)
 		self.contents.bind( "<BackSpace>", self.backspace_override)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
 		
@@ -1120,7 +1121,7 @@ class Editor(tkinter.Toplevel):
 		
 	def test_bind(self, event=None):
 		print('jou')
-	
+		
 	
 	def skip_bindlevel(self, event=None):
 		return 'continue'
@@ -1410,12 +1411,14 @@ class Editor(tkinter.Toplevel):
 					
 				elif event.keysym == 'Up':
 					for i in range(10):
-						self.contents.event_generate('<<SelectPrevLine>>')
-				
+						self.after(12, lambda args=['<<SelectPrevLine>>']:
+							self.contents.event_generate(*args) )
+						
 				elif event.keysym == 'Down':
 					for i in range(10):
-						self.contents.event_generate('<<SelectNextLine>>')
-					
+						self.after(12, lambda args=['<<SelectNextLine>>']:
+							self.contents.event_generate(*args) )
+						
 				else:
 					return
 			
@@ -3372,7 +3375,12 @@ class Editor(tkinter.Toplevel):
 				e = '<<PrevLine>>'
 			
 			for i in range(10):
-				self.contents.event_generate(e)
+				# Add some delay
+				if 'Select' in e:
+					self.after(12, lambda args=[e]:
+						self.contents.event_generate(*args) )
+				else:
+					self.contents.event_generate(e)
 				
 			return 'break'
 		
@@ -3383,7 +3391,12 @@ class Editor(tkinter.Toplevel):
 				e = '<<NextLine>>'
 			
 			for i in range(10):
-				self.contents.event_generate(e)
+				# Add some delay
+				if 'Select' in e:
+					self.after(12, lambda args=[e]:
+						self.contents.event_generate(*args) )
+				else:
+					self.contents.event_generate(e)
 			
 			return 'break'
 		
@@ -4108,104 +4121,162 @@ class Editor(tkinter.Toplevel):
 				return 'break'
 		
 	
-##	def copy_override(self, event=None):
-##		'''
-##		'''
-##
-##		#########################################################
-##		# Ctrl-c override Begin:
-##		self.indent_selstart = 0
-##		self.indent_nextline = 0
-##		self.indent_diff = 0
-##		self.flag_fix_indent = False
-##
-##
-##		if selstart line not empty:
-##
-##			have_selection = len(self.contents.tag_ranges('sel')) > 0
-##			if not have_selection:
-##				break
-##
-##			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
-##			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
-##			numlines = endline - startline
-##			if not numlines > 1:
-##				break
-##
-##			# Cursor indexes:
-##			line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
-##			if col == 0:
-##				break
-##
-##			tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
-##			if tmp.isspace():
-##				break
-##			else:
-##				self.indent_selstart = col
-##
-##		##########
-##
-##		if line in two nextlines below selstart not empty:
-##
-##			tmp = self.contents.get('%s.0' % str(line+1),'%s.0 lineend' % str(line+1))
-##			if tmp.isspace():
-##				tmp = self.contents.get('%s.0' % str(line+2),'%s.0 lineend' % str(line+2))
-##				if tmp.isspace():
-##					break
-##			else:
-##				for i in range(len(tmp)):
-##					if not tmp[i].isspace():
-##						self.indent_nextline = i
-##
-##		##########
-##		self.indent_nextline = y
-##		self.indent_diff = self.indent_nextline - self.indent_selstart
-##
-##		if self.indent_diff > 0:
-##			self.flag_fix_indent = True
-##		else:
-##			break
-##
-##		# Ctrl-c override End
-##		###################
+	def copy_override(self, event=None):
+		'''
+		'''
+		self.indent_selstart = 0
+		self.indent_nextline = 0
+		self.indent_diff = 0
+		self.flag_fix_indent = False
+
+
+		# Check if have_selection
+		have_selection = len(self.contents.tag_ranges('sel')) > 0
+		if not have_selection:
+			print('copy fail 1, no selection')
+			return
+
+		# Check if num selection lines > 1
+		startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
+		endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
+		numlines = endline - startline
+		if not numlines > 1:
+			print('copy fail 2, numlines not > 1')
+			return
+
+		# Check if not at indent0,
+		# Cursor indexes:
+		line, col = map(int, self.contents.index(tkinter.SEL_FIRST).split('.'))
+		if col == 0:
+			print('copy fail 3, indent0')
+			return
+		
+		self.indent_selstart = col
+		
+		# Check if selstart line not empty
+		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
+		if tmp.isspace():
+			print('copy fail 4, startline empty')
+			return
+		
+		# Check if two nextlines below selstart not empty
+		tmp = self.contents.get('%s.0' % str(line+1),'%s.0 lineend' % str(line+1))
+		if tmp.isspace():
+			if numlines > 2:
+				tmp = self.contents.get('%s.0' % str(line+2),'%s.0 lineend' % str(line+2))
+				if tmp.isspace():
+					print('copy fail 5, two nextlines empty')
+					return
+					
+			# numlines == 2:
+			else:
+				print('copy fail 6, numlines == 2, nextline is empty')
+				return
+		
+		for i in range(len(tmp)):
+			if not tmp[i].isspace():
+				self.indent_nextline = i
+
+		
+		self.indent_diff = self.indent_nextline - self.indent_selstart
+		if self.indent_diff < 0:
+			# For example:
+			#
+			#			self.indent_selstart
+			#		self.indent_nextline
+			#indent0
+			print('copy fail 7, indentation decreasing on first non empty line')
+			return
+			
+		
+		# Check if indent of any line in selection < self.indent_selstart
+		for i in range(1, numlines-1):
+		
+			tmp = self.contents.get('%s.0' % str(line+1),'%s.0 lineend' % str(line+1))
+			if tmp.isspace():
+				continue
+				
+			for j in range(len(tmp)):
+				if not tmp[j].isspace():
+					break
+			
+			if self.indent_selstart > j:
+				print('copy fail 8, indentation of line in selection < self.indent_selstart')
+				return
+
+		print('copy ok')
+		self.contents.clipboard_clear()
+		self.contents.clipboard_append(self.contents.selection_get())
+		self.flag_fix_indent = True
+		return 'break'
+		###################
 		
 	
-##	def paste_override(self. event=None):
-##		'''
-##		'''
-##
-##		if not self.flag_fix_indent:
-##			break
-##
-##		# Cursor index:
-##		line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
-##		indent_cursor = col
-##		indent_diff_cursor = indent_cursor - self.indent_selstart
-##
-##
-##		# Split selection from clipboard to list
-##		tmp = self.clipboard_get().splitlines(True)
-##
-##
-##
-##		# Paste firstline from clipboard
-##		self.contents.insert( '%d.%d' % (line, col), tmp[0])
-##		tmp = tmp[1:]
-##		lno = line + 1
-##
-##		for line in tmp:
-##
-##			if indent_diff_cursor > 0:
-##				line = indent_diff_cursor*'\t' + line
-##
-##			elif indent_diff_cursor < 0:
-##				line = line[indent_diff_cursor:]
-##
-##
-##			# Paste line
-##			self.contents.insert( '%d.0' % lno, line)
-##			lno += 1
-	
+	def paste_override(self, event=None):
+		'''
+		'''
+		
+		try:
+			tmp = self.contents.clipboard_get()
+			if len(tmp) == 0:
+				return 'break'
+				
+		# Clipboard empty
+		except tkinter.TclError:
+			return 'break'
+			
+		if not self.flag_fix_indent:
+			self.contents.insert(tkinter.INSERT, tmp)
+			self.contents.edit_separator()
+			return 'break'
+			
+		print('paste')
+		
+		# Cursor index:
+		line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
+		indent_cursor = col
+		indent_diff_cursor = indent_cursor - self.indent_selstart
+
+
+		# Split selection from clipboard to list
+		tmp = tmp.splitlines(True)
+
+
+		# Paste first line
+		self.contents.insert( '%d.%d' % (line, col), tmp[0])
+		tmp = tmp[1:]
+		lno = line + 1
+
+		for line in tmp:
+
+			if indent_diff_cursor > 0:
+				# For example:
+				#
+				#	self.indent_selstart
+				#			indent_cursor
+				#indent0
+				
+				line = indent_diff_cursor*'\t' + line
+
+			elif indent_diff_cursor < 0:
+				# For example:
+				#
+				#			self.indent_selstart
+				#		indent_cursor
+				#indent0
+				
+				# This is one reason to cancel in copy_override()
+				# if indentation of any line in selection < self.indent_selstart
+				line = line[indent_diff_cursor:]
+
+
+			# Paste line
+			self.contents.insert( '%d.0' % lno, line)
+			lno += 1
+			
+		self.contents.edit_separator()
+		return 'break'
+		
 	
 	def move_line(self, event=None, direction=None):
 		''' Adjust cursor line indentation, with arrow left and right,
