@@ -697,7 +697,9 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Alt-l>", self.toggle_ln)
 			self.contents.bind( "<Alt-x>", self.toggle_syntax)
 			self.contents.bind( "<Alt-f>", self.font_choose)
-		
+			
+			#self.contents.bind( "<Control-c>", self.copy_override) ###############
+			#self.contents.bind( "<Control-v>", self.paste_override)
 			self.contents.bind( "<Control-v>", self.paste)
 			self.contents.bind( "<Control-y>", self.yank_line)
 			
@@ -745,7 +747,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Mod1-Key-y>", self.yank_line)
 			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
 			self.contents.bind( "<Mod1-Key-f>", self.search)
-			self.contents.bind( "<Mod1-Key-v>", self.paste)
+			self.contents.bind( "<Mod1-Key-v>", self.paste_override)
 			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
 			self.contents.bind( "<Mod1-Key-g>", self.gotoline)
 			self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
@@ -824,7 +826,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.bind( "<Return>", self.return_override)
 		self.contents.bind( "<Mod1-Key-c>", self.copy_override) ###############
-		self.contents.bind( "<Mod1-Key-v>", self.paste_override)
+		#self.contents.bind( "<Mod1-Key-v>", self.paste_override)
 		self.contents.bind( "<BackSpace>", self.backspace_override)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
 		
@@ -4122,7 +4124,18 @@ class Editor(tkinter.Toplevel):
 		
 	
 	def copy_override(self, event=None):
-		'''
+		''' When selection started from start of block,
+				for example: cursor is before if-word,
+			and
+				selected at least one whole line below firsline
+				
+			Then
+				preserve indentation
+				of all lines in selection.
+				
+			This is done in paste_override()
+			if self.flag_fix_indent is True.
+			If not, paste() is used instead.
 		'''
 		self.indent_selstart = 0
 		self.indent_nextline = 0
@@ -4144,38 +4157,53 @@ class Editor(tkinter.Toplevel):
 			print('copy fail 2, numlines not > 1')
 			return
 
-		# Check if not at indent0,
 		# Cursor indexes:
 		line, col = map(int, self.contents.index(tkinter.SEL_FIRST).split('.'))
-		if col == 0:
-			print('copy fail 3, indent0')
-			return
-		
+
+
 		self.indent_selstart = col
+
 		
 		# Check if selstart line not empty
 		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
-		if tmp.isspace():
+		if len(tmp.strip()) == 0:
 			print('copy fail 4, startline empty')
+			return
+		
+		# Check if cursor not at idx_linestart
+		for i in range(len(tmp)):
+			if not tmp[i].isspace():
+				break
+		
+		if i > self.indent_selstart:
+			# Cursor is inside indentation or indent0
+			print('copy fail 3, Cursor in indentation')
+			return
+			
+		elif i < self.indent_selstart:
+			print('copy fail 3, SEL_FIRST after idx_linestart')
 			return
 		
 		# Check if two nextlines below selstart not empty
 		tmp = self.contents.get('%s.0' % str(line+1),'%s.0 lineend' % str(line+1))
-		if tmp.isspace():
+		if len(tmp.strip()) == 0:
+			
 			if numlines > 2:
 				tmp = self.contents.get('%s.0' % str(line+2),'%s.0 lineend' % str(line+2))
-				if tmp.isspace():
-					print('copy fail 5, two nextlines empty')
+				
+				if len(tmp.strip()) == 0:
+					print('copy fail 6, two nextlines empty')
 					return
 					
 			# numlines == 2:
 			else:
-				print('copy fail 6, numlines == 2, nextline is empty')
+				print('copy fail 5, numlines == 2, nextline is empty')
 				return
 		
 		for i in range(len(tmp)):
 			if not tmp[i].isspace():
 				self.indent_nextline = i
+				break
 
 		
 		self.indent_diff = self.indent_nextline - self.indent_selstart
@@ -4190,19 +4218,29 @@ class Editor(tkinter.Toplevel):
 			
 		
 		# Check if indent of any line in selection < self.indent_selstart
-		for i in range(1, numlines-1):
-		
-			tmp = self.contents.get('%s.0' % str(line+1),'%s.0 lineend' % str(line+1))
-			if tmp.isspace():
+		min_ind = self.indent_selstart
+		for i in range(startline + 1, endline + 1):
+	
+			if i == endline:
+				tmp = self.contents.get('%s.0' % str(i), tkinter.SEL_LAST)
+			else:
+				tmp = self.contents.get('%s.0' % str(i),'%s.0 lineend' % str(i))
+	
+			if len(tmp.strip()) == 0:
+				# This will skip rest of for-loop contents below
+				# and start next iteration.
 				continue
-				
+			
 			for j in range(len(tmp)):
 				if not tmp[j].isspace():
+					if j < min_ind:
+						min_ind = j
+					# This will break out from this for-loop only.
 					break
-			
-			if self.indent_selstart > j:
-				print('copy fail 8, indentation of line in selection < self.indent_selstart')
-				return
+						
+		if self.indent_selstart > min_ind:
+			print('copy fail 8, indentation of line in selection < self.indent_selstart')
+			return
 
 		print('copy ok')
 		self.contents.clipboard_clear()
@@ -4213,7 +4251,18 @@ class Editor(tkinter.Toplevel):
 		
 	
 	def paste_override(self, event=None):
-		'''
+		''' When selection started from start of block,
+				for example: cursor is before if-word,
+			and
+				selected at least one whole line below firsline
+				
+			Then
+				preserve indentation
+				of all lines in selection.
+				
+			This is done if self.flag_fix_indent is True.
+			If not, paste() is used instead.
+			self.flag_fix_indent is set in copy_override()
 		'''
 		
 		try:
@@ -4226,11 +4275,28 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 			
 		if not self.flag_fix_indent:
-			self.contents.insert(tkinter.INSERT, tmp)
+			self.paste(event=event)
 			self.contents.edit_separator()
+			print('paste norm')
 			return 'break'
 			
-		print('paste')
+		print('paste ride')
+		
+		### from paste
+		have_selection = False
+		
+		if len( self.contents.tag_ranges('sel') ) > 0:
+			selstart = self.contents.index( '%s' % tkinter.SEL_FIRST)
+			selend = self.contents.index( '%s' % tkinter.SEL_LAST)
+			
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			have_selection = True
+			
+			
+		idx_ins = self.contents.index(tkinter.INSERT)
+		###
+		
+		
 		
 		# Cursor index:
 		line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
@@ -4273,11 +4339,142 @@ class Editor(tkinter.Toplevel):
 			# Paste line
 			self.contents.insert( '%d.0' % lno, line)
 			lno += 1
+		
+		
+		# from paste
+		##########################
+		# Selected many lines or
+		# one line and cursor is not at the start of next line:
+		if len(tmp) > 1:
+		
+			s = self.contents.index( '%s linestart' % idx_ins)
+			e = self.contents.index( 'insert lineend')
+			t = self.contents.get( s, e )
 			
+			if self.tabs[self.tabindex].filepath:
+				if self.can_do_syntax():
+					self.update_tokens( start=s, end=e, line=t )
+					
+			
+			if have_selection:
+				self.contents.tag_add('sel', selstart, selend)
+				
+			else:
+				self.contents.tag_add('sel', idx_ins, tkinter.INSERT)
+				
+			self.contents.mark_set('insert', idx_ins)
+			
+			
+			self.wait_for(100)
+			self.ensure_idx_visibility(idx_ins)
+			
+			
+		# Selected one line and cursor is at the start of next line:
+		elif len(tmp) == 1 and tmp[-1][-1] == '\n':
+			s = self.contents.index( '%s linestart' % idx_ins)
+			e = self.contents.index( '%s lineend' % idx_ins)
+			t = self.contents.get( s, e )
+			
+			if self.tabs[self.tabindex].filepath:
+				if self.can_do_syntax():
+					self.update_tokens( start=s, end=e, line=t )
+					
+		#####
+		
 		self.contents.edit_separator()
 		return 'break'
-		
 	
+	
+	def paste(self, event=None):
+		'''	First line usually is in wrong place after paste
+			because of selection has not started at the beginning of the line.
+			So we put cursor at the beginning of insertion after pasting it
+			so we can start indenting it.
+		'''
+		
+		try:
+			tmp = self.clipboard_get()
+			tmp = tmp.splitlines(keepends=True)
+			
+			
+		except tkinter.TclError:
+			# is empty
+			return 'break'
+			
+		have_selection = False
+		
+		if len( self.contents.tag_ranges('sel') ) > 0:
+			selstart = self.contents.index( '%s' % tkinter.SEL_FIRST)
+			selend = self.contents.index( '%s' % tkinter.SEL_LAST)
+			
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			have_selection = True
+			
+			
+		idx_ins = self.contents.index(tkinter.INSERT)
+		self.contents.event_generate('<<Paste>>')
+		
+		
+		# Selected many lines or
+		# one line and cursor is not at the start of next line:
+		if len(tmp) > 1:
+		
+			s = self.contents.index( '%s linestart' % idx_ins)
+			e = self.contents.index( 'insert lineend')
+			t = self.contents.get( s, e )
+			
+			if self.tabs[self.tabindex].filepath:
+				if self.can_do_syntax():
+					self.update_tokens( start=s, end=e, line=t )
+					
+			
+			if have_selection:
+				self.contents.tag_add('sel', selstart, selend)
+				
+			else:
+				self.contents.tag_add('sel', idx_ins, tkinter.INSERT)
+				
+			self.contents.mark_set('insert', idx_ins)
+			
+			
+			self.wait_for(100)
+			self.ensure_idx_visibility(idx_ins)
+			
+			
+		# Selected one line and cursor is at the start of next line:
+		elif len(tmp) == 1 and tmp[-1][-1] == '\n':
+			s = self.contents.index( '%s linestart' % idx_ins)
+			e = self.contents.index( '%s lineend' % idx_ins)
+			t = self.contents.get( s, e )
+			
+			if self.tabs[self.tabindex].filepath:
+				if self.can_do_syntax():
+					self.update_tokens( start=s, end=e, line=t )
+					
+			
+			if have_selection:
+				self.contents.tag_add('sel', selstart, selend)
+				
+			else:
+				self.contents.tag_add('sel', idx_ins, tkinter.INSERT)
+				
+			self.contents.mark_set('insert', idx_ins)
+			
+					
+		else:
+			if have_selection:
+				self.contents.tag_add('sel', selstart, selend)
+				
+			else:
+				self.contents.tag_add('sel', idx_ins, tkinter.INSERT)
+				
+			self.contents.mark_set('insert', idx_ins)
+			
+					
+					
+		return 'break'
+	
+
 	def move_line(self, event=None, direction=None):
 		''' Adjust cursor line indentation, with arrow left and right,
 			when pasting more than one line etc.
@@ -4349,76 +4546,6 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 
 		return 'continue'
-	
-
-	def paste(self, event=None):
-		'''	First line usually is in wrong place after paste
-			because of selection has not started at the beginning of the line.
-			So we put cursor at the beginning of insertion after pasting it
-			so we can start indenting it.
-		'''
-		
-		try:
-			tmp = self.clipboard_get()
-			tmp = tmp.splitlines(keepends=True)
-			
-			
-		except tkinter.TclError:
-			# is empty
-			return 'break'
-			
-		have_selection = False
-		
-		if len( self.contents.tag_ranges('sel') ) > 0:
-			selstart = self.contents.index( '%s' % tkinter.SEL_FIRST)
-			selend = self.contents.index( '%s' % tkinter.SEL_LAST)
-			
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			have_selection = True
-			
-			
-		line = self.contents.index(tkinter.INSERT)
-		self.contents.event_generate('<<Paste>>')
-		
-		
-		# Selected many lines or
-		# one line and cursor is not at the start of next line:
-		if len(tmp) > 1:
-		
-			s = self.contents.index( '%s linestart' % line)
-			e = self.contents.index( 'insert lineend')
-			t = self.contents.get( s, e )
-			
-			if self.tabs[self.tabindex].filepath:
-				if self.can_do_syntax():
-					self.update_tokens( start=s, end=e, line=t )
-					
-			
-			if have_selection:
-				self.contents.tag_add('sel', selstart, selend)
-				
-			else:
-				self.contents.tag_add('sel', line, tkinter.INSERT)
-				
-			self.contents.mark_set('insert', line)
-			
-			
-			self.wait_for(100)
-			self.ensure_idx_visibility(line)
-			
-			
-		# Selected one line and cursor is at the start of next line:
-		elif len(tmp) == 1 and tmp[-1][-1] == '\n':
-			s = self.contents.index( '%s linestart' % line)
-			e = self.contents.index( '%s lineend' % line)
-			t = self.contents.get( s, e )
-			
-			if self.tabs[self.tabindex].filepath:
-				if self.can_do_syntax():
-					self.update_tokens( start=s, end=e, line=t )
-					
-					
-		return 'break'
 	
 
 	def undo_override(self, event=None):
