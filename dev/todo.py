@@ -1,5 +1,7 @@
 fontchoose ok?
 fixed animation ok?
+if uncomment fail, keep cursor pos done ok?
+
 
 ####
 Fix this python 3.12 string escape fix, ok?
@@ -15,6 +17,12 @@ textwid.bind('<KeyRelease-Caps_Lock>', mycallback2)
 textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 	if event.state == 2:
 		caplock is on
+		if event.state == 2:
+			if event.state == 2:
+				caplock is on
+				if event.state == 2:
+					caplock is on
+					
 		
 cant know if caps when started Motion
 #####
@@ -35,7 +43,7 @@ search again backwards ctrl-shift-backspace
 	when at idx_linestart, PrevWord goes to indent0
 	
 	when at idx_lineend, NextWord goes to indent0
-			
+				
 when at idx_lineend, NextWord goes to indent0
 
 	
@@ -43,10 +51,19 @@ when at idx_lineend, NextWord goes to indent0
 fix '' when expecting space or empty. 					fixed ok?
 paste() always keep selection and cursor at orig insert 	ok?
 
+call self.clipboard.get() only once
+	done copy_override check done ok?
+	done paste_override check done ok?
+
 when paste, check clipboard contents is same as self.checksum_fixindent
 and fall back to paste()	done ok?
 
 ctrl-x 	done with copy_override(flag_cut)	ok?
+
+windows copy remember done ok? not checked
+
+
+focus underlined?########
 
 
 ctrl-c override Begin
@@ -65,23 +82,19 @@ ctrl-c override Begin
 <<SelectNone>>
 
 
-call self.clipboard.get() only once#############################
-	done copy_override check
-	done paste_override check
-	
+
 	
 	
 	
 comment uncomment curline without selection?
 
 when bind cmd-c, paste_override error paste.tcl
-windows copy remember
 
 check before copy, paste:
-	states?
-	no need to check widget if bind is to self.contents
-	is selection from editor?
-	check indentation if not?
+		no need to check states?
+		no need to check widget if bind is to self.contents
+		is selection from editor?#############################
+		check indentation if not?###########
 	
 after paste_override:
 	cursor remains at insert 	done ok?
@@ -97,7 +110,7 @@ shift-backspace toggle comment?
 
 
 
-set self.flag_fix_indent and self.checksum_fixindent in init
+set self.flag_fix_indent and self.checksum_fixindent in init?
 
 ctrl-c override End
 #########################################################
