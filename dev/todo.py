@@ -40,11 +40,18 @@ when at idx_lineend, NextWord goes to indent0
 
 	
 #########################################################
-ctrl-c override:
+fix '' when expecting space or empty. 					fixed ok?
+paste() always keep selection and cursor at orig insert 	ok?
 
-fix '' when expecting space or empty line fixed ok?
+when paste, check clipboard contents is same as self.checksum_fixindent
+and fall back to paste()	done ok?
 
-paste() always keep selection and insert ok?
+ctrl-x 	done with copy_override(flag_cut)	ok?
+
+
+ctrl-c override Begin
+
+
 
 <Mod4-Key>
 <Mod1-Key>
@@ -58,31 +65,41 @@ paste() always keep selection and insert ok?
 <<SelectNone>>
 
 
-ctrl-v is already binded to self.paste()
-cmd-v is also binded to it already
-self.paste() works good?
-
+call self.clipboard.get() only once#############################
+	done copy_override check
+	done paste_override check
+	
+	
+	
+	
+comment uncomment curline without selection?
 
 when bind cmd-c, paste_override error paste.tcl
 windows copy remember
 
 check before copy, paste:
-	states, widget
+	states?
+	no need to check widget if bind is to self.contents
+	is selection from editor?
+	check indentation if not?
 	
 after paste_override:
-	cursor remains at insert
-	syntax
+	cursor remains at insert 	done ok?
+	syntax 		done ok?
+	done with copying code from paste() ok?
+
 
 use idx_linestart() in copy?
-when unset self.flag_fix_indent?
+when to unset self.flag_fix_indent?
 
 copy-block to cmd-enter? shift-enter?
 shift-backspace toggle comment?
 
-ctrl-x
-'Editor' object has no attribute 'flag_fix_indent' when paste
 
 
+set self.flag_fix_indent and self.checksum_fixindent in init
+
+ctrl-c override End
 #########################################################
 
 

@@ -748,6 +748,10 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
 			self.contents.bind( "<Mod1-Key-f>", self.search)
 			self.contents.bind( "<Mod1-Key-v>", self.paste_override)
+			
+			self.contents.bind( "<Mod1-Key-x>",
+				lambda event: self.copy_override(event, **{'flag_cut':True}) )
+			
 			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
 			self.contents.bind( "<Mod1-Key-g>", self.gotoline)
 			self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
@@ -801,8 +805,10 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-E>", self.goto_lineend)
 		
 		if self.os_type == 'windows':
-			self.entry.bind( "<Control-E>", lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
-			self.entry.bind( "<Control-A>", lambda event, arg=('<<SelectLineStart>>'): self.entry.event_generate)
+			self.entry.bind( "<Control-E>",
+				lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
+			self.entry.bind( "<Control-A>",
+				lambda event, arg=('<<SelectLineStart>>'): self.entry.event_generate)
 		
 		self.contents.bind( "<Control-i>", self.move_right)
 		self.contents.bind( "<Control-b>", self.move_left)
@@ -810,10 +816,12 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Control-p>", self.move_up)
 		
 		self.contents.bind( "<Control-j>", self.center_view)
-		self.contents.bind( "<Control-u>", lambda event: self.center_view(event, **{'up':True}) )
+		self.contents.bind( "<Control-u>",
+			lambda event: self.center_view(event, **{'up':True}) )
 		
 		self.contents.bind( "<Control-d>", self.del_tab)
-		self.contents.bind( "<Control-Q>", lambda event: self.del_tab(event, **{'save':False}) )
+		self.contents.bind( "<Control-Q>",
+			lambda event: self.del_tab(event, **{'save':False}) )
 		
 		self.contents.bind( "<Shift-Return>", self.comment)
 		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
@@ -2490,7 +2498,8 @@ class Editor(tkinter.Toplevel):
 		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
 				self.contents.bind( shortcut, self.font_choose)) )
 		
-		changefont.FontChooser( fonttop, [self.font, self.menufont], big, tracefunc=self.update_fonts, os_type=self.os_type )
+		changefont.FontChooser( fonttop, [self.font, self.menufont], big,
+			tracefunc=self.update_fonts, os_type=self.os_type )
 		self.contents.bind( shortcut, self.do_nothing)
 		self.to_be_closed.append(fonttop)
 	
@@ -3023,7 +3032,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		
-		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
+		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
+			lambda event: self.raise_popup(event))
 		self.state = 'normal'
 		self.update_title()
 		
@@ -3209,7 +3219,8 @@ class Editor(tkinter.Toplevel):
 	def stop_show_errors(self, event=None):
 		self.state = 'normal'
 		self.bind("<Escape>", self.do_nothing)
-		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
+		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
+			lambda event: self.raise_popup(event))
 		
 		self.entry.delete(0, tkinter.END)
 		
@@ -3894,7 +3905,8 @@ class Editor(tkinter.Toplevel):
 			else:
 				self.copy_windows(event=event)
 			
-			self.after(600, lambda args=['sel', '1.0', tkinter.END]: self.contents.tag_remove(*args) )
+			self.after(600, lambda args=['sel', '1.0', tkinter.END]:
+				self.contents.tag_remove(*args) )
 		
 			
 		return 'break'
@@ -4123,7 +4135,7 @@ class Editor(tkinter.Toplevel):
 				return 'break'
 		
 	
-	def copy_override(self, event=None):
+	def copy_override(self, event=None, flag_cut=False):
 		''' When selection started from start of block,
 				for example: cursor is before if-word,
 			and
@@ -4141,6 +4153,7 @@ class Editor(tkinter.Toplevel):
 		self.indent_nextline = 0
 		self.indent_diff = 0
 		self.flag_fix_indent = False
+		self.checksum_fix_indent = False
 
 
 		# Check if have_selection
@@ -4150,16 +4163,15 @@ class Editor(tkinter.Toplevel):
 			return
 
 		# Check if num selection lines > 1
-		startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
+		startline, startcol = map(int, self.contents.index(tkinter.SEL_FIRST).split(sep='.'))
 		endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
 		numlines = endline - startline
 		if not numlines > 1:
 			print('copy fail 2, numlines not > 1')
 			return
 
-		# Cursor indexes:
-		line, col = map(int, self.contents.index(tkinter.SEL_FIRST).split('.'))
-
+		# Selection start indexes:
+		line, col = startline, startcol
 
 		self.indent_selstart = col
 
@@ -4185,11 +4197,16 @@ class Editor(tkinter.Toplevel):
 			return
 		
 		# Check if two nextlines below selstart not empty
-		tmp = self.contents.get('%s.0' % str(line+1),'%s.0 lineend' % str(line+1))
+		t_orig = self.contents.selection_get()
+		t = t_orig.splitlines(keepends=True)
+##		t = self.contents.get(tkinter.SEL_FIRST, tkinter.SEL_LAST).splitlines(keepends=True)
+##		tmp = self.contents.get('%s.0' % str(line+1),'%s.0 lineend' % str(line+1))
+		tmp = t[1]
 		if len(tmp.strip()) == 0:
 			
 			if numlines > 2:
-				tmp = self.contents.get('%s.0' % str(line+2),'%s.0 lineend' % str(line+2))
+				tmp = t[2]
+##				tmp = self.contents.get('%s.0' % str(line+2),'%s.0 lineend' % str(line+2))
 				
 				if len(tmp.strip()) == 0:
 					print('copy fail 6, two nextlines empty')
@@ -4219,13 +4236,14 @@ class Editor(tkinter.Toplevel):
 		
 		# Check if indent of any line in selection < self.indent_selstart
 		min_ind = self.indent_selstart
-		for i in range(startline + 1, endline + 1):
+		for i in range(1, numlines):
 	
-			if i == endline:
-				tmp = self.contents.get('%s.0' % str(i), tkinter.SEL_LAST)
-			else:
-				tmp = self.contents.get('%s.0' % str(i),'%s.0 lineend' % str(i))
-	
+##			if i == endline:
+##				tmp = self.contents.get('%s.0' % str(i), tkinter.SEL_LAST)
+##			else:
+##				tmp = self.contents.get('%s.0' % str(i),'%s.0 lineend' % str(i))
+			
+			tmp = t[i]
 			if len(tmp.strip()) == 0:
 				# This will skip rest of for-loop contents below
 				# and start next iteration.
@@ -4243,9 +4261,15 @@ class Editor(tkinter.Toplevel):
 			return
 
 		print('copy ok')
+##		tmp = self.contents.selection_get()
 		self.contents.clipboard_clear()
-		self.contents.clipboard_append(self.contents.selection_get())
+		self.contents.clipboard_append(t_orig)
 		self.flag_fix_indent = True
+		self.checksum_fix_indent = t_orig
+		
+		if flag_cut:
+			self.contents.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
+			
 		return 'break'
 		###################
 		
@@ -4266,15 +4290,15 @@ class Editor(tkinter.Toplevel):
 		'''
 		
 		try:
-			tmp = self.contents.clipboard_get()
-			if len(tmp) == 0:
+			t = self.contents.clipboard_get()
+			if len(t) == 0:
 				return 'break'
 				
 		# Clipboard empty
 		except tkinter.TclError:
 			return 'break'
 			
-		if not self.flag_fix_indent:
+		if not self.flag_fix_indent or t != self.checksum_fix_indent:
 			self.paste(event=event)
 			self.contents.edit_separator()
 			print('paste norm')
@@ -4291,27 +4315,23 @@ class Editor(tkinter.Toplevel):
 			
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			have_selection = True
-			
-			
-		idx_ins = self.contents.index(tkinter.INSERT)
 		###
 		
 		
-		
 		# Cursor index:
-		line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
+		idx_ins, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
 		indent_cursor = col
 		indent_diff_cursor = indent_cursor - self.indent_selstart
 
 
 		# Split selection from clipboard to list
-		tmp = tmp.splitlines(True)
+		tmp = t.splitlines(keepends=True)
 
 
 		# Paste first line
-		self.contents.insert( '%d.%d' % (line, col), tmp[0])
+		self.contents.insert( '%d.%d' % (idx_ins, col), tmp[0])
 		tmp = tmp[1:]
-		lno = line + 1
+		lno = idx_ins + 1
 
 		for line in tmp:
 
@@ -4341,44 +4361,30 @@ class Editor(tkinter.Toplevel):
 			lno += 1
 		
 		
+		tmp = t.splitlines(True)
+		
 		# from paste
 		##########################
-		# Selected many lines or
-		# one line and cursor is not at the start of next line:
-		if len(tmp) > 1:
+		s = self.contents.index( '%s linestart' % idx_ins)
+		e = self.contents.index( 'insert lineend')
+		t = self.contents.get( s, e )
 		
-			s = self.contents.index( '%s linestart' % idx_ins)
-			e = self.contents.index( 'insert lineend')
-			t = self.contents.get( s, e )
-			
-			if self.tabs[self.tabindex].filepath:
-				if self.can_do_syntax():
-					self.update_tokens( start=s, end=e, line=t )
-					
-			
-			if have_selection:
-				self.contents.tag_add('sel', selstart, selend)
+		if self.tabs[self.tabindex].filepath:
+			if self.can_do_syntax():
+				self.update_tokens( start=s, end=e, line=t )
 				
-			else:
-				self.contents.tag_add('sel', idx_ins, tkinter.INSERT)
-				
-			self.contents.mark_set('insert', idx_ins)
+		
+		if have_selection:
+			self.contents.tag_add('sel', selstart, selend)
 			
+		else:
+			self.contents.tag_add('sel', idx_ins, tkinter.INSERT)
 			
-			self.wait_for(100)
-			self.ensure_idx_visibility(idx_ins)
-			
-			
-		# Selected one line and cursor is at the start of next line:
-		elif len(tmp) == 1 and tmp[-1][-1] == '\n':
-			s = self.contents.index( '%s linestart' % idx_ins)
-			e = self.contents.index( '%s lineend' % idx_ins)
-			t = self.contents.get( s, e )
-			
-			if self.tabs[self.tabindex].filepath:
-				if self.can_do_syntax():
-					self.update_tokens( start=s, end=e, line=t )
-					
+		self.contents.mark_set('insert', idx_ins)
+		
+		
+		self.wait_for(100)
+		self.ensure_idx_visibility(idx_ins)
 		#####
 		
 		self.contents.edit_separator()
@@ -4470,8 +4476,7 @@ class Editor(tkinter.Toplevel):
 				
 			self.contents.mark_set('insert', idx_ins)
 			
-					
-					
+			
 		return 'break'
 	
 
@@ -5607,7 +5612,8 @@ class Editor(tkinter.Toplevel):
 		self.avoid_viewsync_mess()
 		
 		self.bind("<Escape>", self.do_nothing)
-		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
+		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
+			lambda event: self.raise_popup(event))
 		
 		
 	def help(self, event=None):
@@ -6316,7 +6322,8 @@ class Editor(tkinter.Toplevel):
 		self.entry.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
-		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, lambda event: self.raise_popup(event))
+		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
+			lambda event: self.raise_popup(event))
 		
 		#self.wait_for(200)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
