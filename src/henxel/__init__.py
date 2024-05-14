@@ -334,6 +334,10 @@ class Editor(tkinter.Toplevel):
 		self.check_pars = False
 		self.par_err = False
 		
+		# Used in copy_override() and paste_override()
+		self.flag_fix_indent = False
+		self.checksum_fix_indent = False
+
 		self.waitvar = tkinter.IntVar()
 		self.fullscreen = False
 		self.state = 'normal'
@@ -533,6 +537,7 @@ class Editor(tkinter.Toplevel):
 		n['match'] = ['lightyellow', 'black']
 		d['focus'] = ['lightgreen', 'black']
 		n['focus'] = ['lightgreen', 'black']
+		
 		d['replaced'] = ['yellow', 'black']
 		n['replaced'] = ['yellow', 'black']
 		
@@ -912,6 +917,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('comments', font=self.boldfont)
 		self.contents.tag_config('breaks', font=self.boldfont)
 		self.contents.tag_config('calls', font=self.boldfont)
+
+		self.contents.tag_config('focus', underline=True)
 
 		# search tags have highest priority
 		self.contents.tag_raise('match')
@@ -2042,6 +2049,7 @@ class Editor(tkinter.Toplevel):
 				
 				try:
 					s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
+					# Clarify this:################################################
 					l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
 				
 					if l0 != l1:
@@ -4217,12 +4225,12 @@ class Editor(tkinter.Toplevel):
 				
 				if len(tmp.strip()) == 0:
 					print('copy fail 6, two nextlines empty')
-					return self.cancel_copy_override()
+					return self.cancel_copy_override(t_orig)
 					
 			# numlines == 2:
 			else:
 				print('copy fail 5, numlines == 2, nextline is empty')
-				return self.cancel_copy_override()
+				return self.cancel_copy_override(t_orig)
 		
 		for i in range(len(tmp)):
 			if not tmp[i].isspace():
@@ -4240,7 +4248,7 @@ class Editor(tkinter.Toplevel):
 			#		self.indent_nextline
 			#indent0
 			print('copy fail 7, indentation decreasing on first non empty line')
-			return self.cancel_copy_override()
+			return self.cancel_copy_override(t_orig)
 			
 			
 		# Check if indent of any line in selection < self.indent_selstart
@@ -4262,7 +4270,7 @@ class Editor(tkinter.Toplevel):
 						
 		if self.indent_selstart > min_ind:
 			print('copy fail 8, indentation of line in selection < self.indent_selstart')
-			return self.cancel_copy_override()
+			return self.cancel_copy_override(t_orig)
 
 		
 		if self.os_type != 'windows':
@@ -4574,7 +4582,6 @@ class Editor(tkinter.Toplevel):
 		 
 		try:
 			self.contents.edit_undo()
-			
 			
 			self.do_syntax()
 			
@@ -5881,19 +5888,19 @@ class Editor(tkinter.Toplevel):
 			
 			
 			for linenum in range(startline, endline+1):
-				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
-				self.contents.insert(tkinter.INSERT, '##')
+				self.contents.insert('%d.0' % linenum, '##')
 				
 						
 			self.update_tokens(start=startpos, end=endpos)
+
 			
-				
-			self.contents.edit_separator()
-			return "break"
-		
+		# No selection, comment curline
 		except tkinter.TclError as e:
-			print(e)
-			return "break"
+			self.contents.insert('%s linestart' % tkinter.INSERT, '##')
+		
+		
+		self.contents.edit_separator()
+		return "break"
 	
 
 	def uncomment(self, event=None):
@@ -5901,7 +5908,9 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-			
+		
+		idx_ins = self.contents.index(tkinter.INSERT)
+		
 		try:
 			s = self.contents.index(tkinter.SEL_FIRST)
 			e = self.contents.index(tkinter.SEL_LAST)
@@ -5910,29 +5919,34 @@ class Editor(tkinter.Toplevel):
 			endline = int(e.split('.')[0])
 			startpos = self.contents.index('%s linestart' % s)
 			endpos = self.contents.index('%s lineend' % e)
-			idx_ins = self.contents.index(tkinter.INSERT)
 			changed = False
 			
 			for linenum in range(startline, endline+1):
-				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
-				tmp = self.contents.get('%s.0' % linenum,'%s.0 lineend' % linenum)
+				tmp = self.contents.get('%d.0' % linenum,'%d.0 lineend' % linenum)
 				
 				if tmp.lstrip()[:2] == '##':
-					tmp = tmp.replace('##', '', 1)
-					self.contents.delete('%s.0' % linenum,'%s.0 lineend' % linenum)
-					self.contents.insert(tkinter.INSERT, tmp)
+					self.contents.delete('%d.0' % linenum,
+						'%d.0 +2c' % linenum)
+					
 					changed = True
 					
 					
 			if changed:
 				self.update_tokens(start=startpos, end=endpos)
+				self.contents.edit_separator()
+
+		
+		# No selection, uncomment curline
+		except tkinter.TclError as e:
+			tmp = self.contents.get('%s linestart' % idx_ins,
+				'%s lineend' % idx_ins)
+			
+			if tmp.lstrip()[:2] == '##':
+				self.contents.delete('%s linestart' % idx_ins,
+					'%s linestart +2c' % idx_ins)
 				
 				self.contents.edit_separator()
-			else:
-				self.contents.mark_set(tkinter.INSERT, idx_ins)
-			
-		except tkinter.TclError as e:
-			print(e)
+				
 		return "break"
 		
 ########## Indent and Comment End

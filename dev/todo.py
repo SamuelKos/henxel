@@ -1,6 +1,19 @@
 fontchoose ok?
+
 fixed animation ok?
+
 if uncomment fail, keep cursor pos done ok?
+
+focus underlined ok?
+
+check short branch name caps lock after next commit, check done ok?
+
+added little delay when select_many lines ok?
+
+cant know if caps when started until Motion
+
+comment uncomment curline without selection? done ok?
+also fix them
 
 
 ####
@@ -24,29 +37,23 @@ textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 					caplock is on
 					
 		
-cant know if caps when started Motion
 #####
 
 
 
-check short branch name caps lock after next commit, check done ok? #####
-added little delay when select_many lines ok? ###
-
 
 move/select many lines, visibility
-bind cmd-backspace to uncomment
-e.contents.bind_class('Text')
-<Meta-Key-BackSpace>
+
 
 search again backwards ctrl-shift-backspace
 	
+
 	when at idx_linestart, PrevWord goes to indent0
 	
 	when at idx_lineend, NextWord goes to indent0
 				
 when at idx_lineend, NextWord goes to indent0
 
-	
 #########################################################
 fix '' when expecting space or empty. 					fixed ok?
 paste() always keep selection and cursor at orig insert 	ok?
@@ -60,10 +67,14 @@ and fall back to paste()	done ok?
 
 ctrl-x 	done with copy_override(flag_cut)	ok?
 
-windows copy remember done ok? not checked
+set self.flag_fix_indent and self.checksum_fixindent in init ok?
 
 
-focus underlined?########
+windows copy remember done ok?
+not checked
+also move/copy many lines not checked
+
+
 
 
 ctrl-c override Begin
@@ -86,7 +97,6 @@ ctrl-c override Begin
 	
 	
 	
-comment uncomment curline without selection?
 
 when bind cmd-c, paste_override error paste.tcl
 
@@ -105,17 +115,16 @@ after paste_override:
 use idx_linestart() in copy?
 when to unset self.flag_fix_indent?
 
-copy-block to cmd-enter? shift-enter?
-shift-backspace toggle comment?
+
+focus in out bind to contents focus set?
 
 
-
-set self.flag_fix_indent and self.checksum_fixindent in init?
 
 ctrl-c override End
 #########################################################
 
 
+clarify update tokens() marked spot
 
 
 marks?
