@@ -13,7 +13,9 @@ added little delay when select_many lines ok?
 cant know if caps when started until Motion
 
 comment uncomment curline without selection? done ok?
-also fix them
+	also fixed them
+
+search again backwards ctrl-shift-backspace done ok?
 
 
 ####
@@ -42,10 +44,9 @@ textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 
 
 
-move/select many lines, visibility
+move/select many lines, ensure visibility?
 
 
-search again backwards ctrl-shift-backspace
 	
 
 	when at idx_linestart, PrevWord goes to indent0
@@ -118,14 +119,43 @@ when to unset self.flag_fix_indent?
 
 focus in out bind to contents focus set?
 
+windows copy in entry
 
 
 ctrl-c override End
 #########################################################
 
 
-clarify update tokens() marked spot
 
+unbind /give info about cmd shift A? man page
+https://intellij-support.jetbrains.com/hc/en-us/articles/360005137400-Cmd-Shift-A-hotkey-opens-Terminal-with-apropos-search-instead-of-the-Find-Action-dialog
+
+1. Open Apple menu | System Settings | Keyboard | Keyboard Shortcuts | Services
+2. Under section: Text
+3. Uncheck Search man Page Index in Terminal (or change the shortcut)
+
+
+
+list of tk::mac procs
+https://www.tcl.tk/man/tcl9.0/TkCmd/tk_mac.html
+
+
+::tk::mac::OpenApplication
+If a proc of this name is defined, this proc fill fire when your application is initially opened. It is the default Apple Event handler for kAEOpenApplication, “oapp”.
+
+::tk::mac::ReopenApplication
+If a proc of this name is defined it is the default Apple Event handler for kAEReopenApplication, “rapp”, the Apple Event sent when your application is opened when it is already running (e.g. by clicking its icon in the Dock). Here is a sample that raises a minimized window when the Dock icon is clicked:
+
+proc ::tk::mac::ReopenApplication {} {
+	if {[wm state .] eq "withdrawn"} {
+		wm state . normal
+	} else {
+		wm deiconify .
+	}
+	raise .
+}
+
+clarify update tokens() marked spot
 
 marks?
 toggle mark

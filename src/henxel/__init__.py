@@ -758,8 +758,10 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Mod1-Key-g>", self.gotoline)
 			self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
 			self.contents.bind( "<Mod1-Key-e>", self.goto_lineend)
+			
 			self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
 			self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
+			
 			self.contents.bind( "<Mod1-Key-r>", self.replace)
 			self.contents.bind( "<Mod1-Key-z>", self.undo_override)
 			self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
@@ -837,6 +839,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Return>", self.return_override)
 		self.contents.bind( "<BackSpace>", self.backspace_override)
 		self.contents.bind( "<Control-BackSpace>", self.search_next)
+		self.contents.bind( "<Control-Shift-BackSpace>",
+				lambda event: self.search_next(event, **{'back':True}) )
 		
 		
 ##		# this move_line interferes with search_next,check_nextevent, so not in use
@@ -5983,25 +5987,10 @@ class Editor(tkinter.Toplevel):
 			
 		
 		
-	def search_next(self, event=None):
-		'''	Do last search from cursor position, show and select next match.
+	def search_next(self, event=None, back=False):
+		'''	Do last search from cursor position, show and select next/previous match.
 			
-			This is for cases when you can not do replace ALL.
-			You need to choose when to insert AND insertion is not always
-			the same. But replace is too limited (can not insert, like in search).
-			So you do normal search and quit quickly. Then copy your insertion
-			'pattern' in clipboard, what you add to certain matches and then
-			maybe change something else, or you need sometimes delete match and
-			insert your clipboard 'pattern' etc...
-			
-			In short:
-			1: Do normal search
-			2: copy what you need to have in clipboard
-			3: ctrl-backspace until in right place
-			4: now easy to delete or add clipboard contents etc..
-			5: repeat 3-4
-			
-			shortcut: ctrl-backspace
+			Shortcut: Ctrl-(Shift)-Backspace
 		'''
 		
 		if self.state != 'normal' or self.old_word == '':
@@ -6011,13 +6000,22 @@ class Editor(tkinter.Toplevel):
 			
 		wordlen = len(self.old_word)
 		self.lastcursorpos = self.contents.index(tkinter.INSERT)
-		pos = self.contents.search(self.old_word, 'insert +1c', tkinter.END)
+	
+		if back:
+			pos = self.contents.search(self.old_word, 'insert', backwards=True)
+		else:
+			pos = self.contents.search(self.old_word, 'insert +1c')
 		
-		# Try again from the beginning this time:
+
+		# Try again from the beginning/end this time:
 		if not pos:
-			pos = self.contents.search(self.old_word, '1.0', tkinter.END)
+		
+			if back:
+				pos = self.contents.search(self.old_word, tkinter.END, backwards=True)
+			else:
+				pos = self.contents.search(self.old_word, '1.0')
 			
-			# no oldword in file:
+			# No oldword in file:
 			if not pos:
 				self.bell()
 				#print('no')
@@ -6033,11 +6031,11 @@ class Editor(tkinter.Toplevel):
 		self.bid_left = None
 		
 		
-		lastpos = "%s + %dc" % (pos, wordlen)
+		word_end = "%s + %dc" % (pos, wordlen)
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		self.contents.mark_set(self.anchorname, pos)
-		self.contents.tag_add('sel', pos, lastpos)
-		self.contents.mark_set('insert', lastpos)
+		self.contents.tag_add('sel', pos, word_end)
+		self.contents.mark_set('insert', word_end)
 		line = pos
 		self.ensure_idx_visibility(line)
 					
