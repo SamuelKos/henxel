@@ -3477,22 +3477,40 @@ class Editor(tkinter.Toplevel):
 		
 			
 	def idx_linestart(self):
+		'''	Returns tuple:
+			
+			pos, line_is_wrapped
+		
+			Where pos is tkinter.Text -index of linestart:
+			
+			if line is wrapped:
+				pos = start of display-line
+			else:
+				pos = end of indentation if there is such.
+				
+			If line is empty, pos = None
+			
+			Wrapped line definition:
+			Line that has not started on (display-) line with cursor
+		'''
 		
 		# In case of wrapped lines
 		y_cursor = self.contents.bbox(tkinter.INSERT)[1]
 		p = self.contents.index( '@0,%s' % y_cursor )
 		p2 = self.contents.index( '%s linestart' % p )
+		line_is_wrapped = False
 		
-		# is wrapped?
+		# Is line wrapped?
 		c1 = int(p.split('.')[1])
 		l2 = int(p2.split('.')[0])
 		
 		pos = None
-		# yes, put cursor start of line not the whole line:
+		# Yes, put cursor start of (display-) line, not the whole (=logical) line:
 		if c1 != 0:
 			pos = p
+			line_is_wrapped = True
 			
-		# no, so put cursor after indentation:
+		# No, put cursor after indentation:
 		else:
 			tmp = self.contents.get( '%s linestart' % p2, '%s lineend' % p2 )
 			if len(tmp) > 0:
@@ -3501,7 +3519,7 @@ class Editor(tkinter.Toplevel):
 					indent = tmp.index(tmp2)
 					pos = self.contents.index( '%i.%i' % (l2, indent) )
 		
-		return pos
+		return pos, line_is_wrapped
 		
 	
 
@@ -3540,7 +3558,7 @@ class Editor(tkinter.Toplevel):
 		if event.keysym == 'Right':
 			s = self.contents.index( 'insert')
 			e = self.idx_lineend()
-			idx_linestart = self.idx_linestart()
+			idx_linestart, line_is_wrapped = self.idx_linestart()
 			# empty line?
 			if not idx_linestart: return
 			t = self.contents.get(idx_linestart, e).strip()
@@ -3658,7 +3676,7 @@ class Editor(tkinter.Toplevel):
 
 
 			i_orig = s
-			i_linestart = self.idx_linestart()
+			i_linestart, line_is_wrapped = self.idx_linestart()
 			# empty line?
 			if not i_linestart: return
 			
@@ -3750,8 +3768,8 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return "break"
 			
-		idx_linestart = self.idx_linestart()
-		# empty line?
+		idx_linestart, line_is_wrapped = self.idx_linestart()
+		# Empty line?
 		if not idx_linestart: return
 		
 		
@@ -3764,38 +3782,83 @@ class Editor(tkinter.Toplevel):
 			if event.state not in [ 262156, 262148 ]: return
 			
 		
-		# Check if near lineend, so stop there
+		i_orig = self.contents.index('insert')
+		e = self.idx_lineend()
+			
+		# Check if near lineend, so stop there.
+		# Also skip over indentation.
 		if event.keysym == 'Right':
-			i_orig = self.contents.index( 'insert')
-			e = self.idx_lineend()
 			# Already at lineend, proceed over first word of next line
 			if i_orig == e: return
 			
 			self.contents.event_generate('<<NextWord>>')
-			i = self.contents.index( 'insert')
+			i = self.contents.index('insert')
 			if self.contents.compare( e, '<', i ):
 				self.contents.mark_set('insert', e)
 				
 				
-		# Check if near linestart, so stop there
+		# Check if near linestart, so stop there.
+		# Also skip over indentation.
 		elif event.keysym == 'Left':
-			i_orig = self.contents.index( 'insert')
-			self.contents.event_generate('<<PrevWord>>')
-			i_prevword = self.contents.index( 'insert')
 			
-			self.contents.mark_set('insert', i_orig)
-			self.goto_linestart(event=event)
-			i_linestart = self.contents.index( 'insert')
-			
-			# Already at linestart, proceed over last word of prev line
-			if i_orig == i_linestart: return
-			
-			if self.contents.compare( i_prevword, '<', i_linestart ):
-				self.contents.mark_set('insert', i_linestart)
-			else:
-				self.contents.mark_set('insert', i_prevword)
+			# Is cursor on such line that has not started on that (display-) line?
+			if line_is_wrapped:
+				self.contents.event_generate('<<PrevWord>>')
+							
+			############
+			# Most common scenario:
+			# Is cursor before idx_linestart?
+			# i_orig > idx_linestart
+			elif self.contents.compare( i_orig, '>', idx_linestart ):
+				print('before idx_start')
+				self.contents.event_generate('<<PrevWord>>')
 				
-
+				# Check that cursor did not go over idx_linestart
+				i_new = self.contents.index(tkinter.INSERT)
+				if self.contents.compare( i_new, '<', idx_linestart):
+					self.contents.mark_set('insert', idx_linestart)
+			
+			############
+			# At linestart
+			elif i_orig == idx_linestart:
+				
+				# No indentation?
+				if int(idx_linestart.split('.')[1]) == 0:
+					print('idx_start no ind')
+					# Go over empty space first
+					self.contents.event_generate('<<PrevWord>>')
+					
+					# And put cursor to line end
+					i_new = self.idx_lineend()
+					self.contents.mark_set('insert', i_new)
+				
+				# Cursor is at idx_linestart (end of indentation)
+				# of line that has indentation.
+				else:
+					print('idx_start with ind')
+					# Put cursor at indent0 (start of indentation)
+					self.contents.mark_set('insert', '%s linestart' % idx_linestart)
+					
+			############
+			# Cursor is not at idx_linestart (end of indentation)
+			# or at logical indent0 (line real start, start of indentation)
+			# or before idx_linestart
+			# --> cursor is in indentation
+			elif int(i_orig.split('.')[1]) == 0:
+				print('ind0 with ind')
+				# Go over empty space first
+				self.contents.event_generate('<<PrevWord>>')
+				
+				# And put cursor to line end
+				i_new = self.idx_lineend()
+				self.contents.mark_set('insert', i_new)
+			
+			else:
+				print('in ind')
+				# Put cursor at indent0
+				self.contents.mark_set('insert', '%s linestart' % idx_linestart)
+				
+				
 		return 'break'
 	
 		
@@ -3936,7 +3999,7 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 		
 		
-		idx_linestart = self.idx_linestart()
+		idx_linestart, line_is_wrapped = self.idx_linestart()
 		# Empty line?
 		if not idx_linestart: return "break"
 		
@@ -4034,7 +4097,7 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 			
 		
-		idx_linestart = self.idx_linestart()
+		idx_linestart, line_is_wrapped = self.idx_linestart()
 		# Empty line?
 		if not idx_linestart: return "break"
 		
@@ -4087,7 +4150,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.ensure_idx_visibility('insert')
 		
-		pos = self.idx_linestart()
+		pos, line_is_wrapped = self.idx_linestart()
 		
 		self.contents.see(pos)
 		self.contents.mark_set('insert', pos)
@@ -4418,10 +4481,7 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def paste(self, event=None):
-		'''	First line usually is in wrong place after paste
-			because of selection has not started at the beginning of the line.
-			So we put cursor at the beginning of insertion after pasting it
-			so we can start indenting it.
+		'''
 		'''
 		
 		try:
@@ -4496,11 +4556,7 @@ class Editor(tkinter.Toplevel):
 		else:
 			if have_selection:
 				self.contents.tag_add('sel', selstart, selend)
-				
-##			else:
-##				self.contents.tag_add('sel', idx_ins, tkinter.INSERT)
-				
-			self.contents.mark_set('insert', idx_ins)
+				self.contents.mark_set('insert', idx_ins)
 			
 			
 		return 'break'

@@ -17,7 +17,8 @@ comment uncomment curline without selection? done ok?
 
 search again backwards ctrl-shift-backspace done ok?
 
-
+paste short cursor after? done in end of paste() ok?
+	
 ####
 Fix this python 3.12 string escape fix, ok?
 >>> import henxel
@@ -27,16 +28,16 @@ Fix this python 3.12 string escape fix, ok?
 show caps-lock state in somehere:
 textwid.bind('<KeyRelease-Caps_Lock>', mycallback2)
 	if event.state == 0:
-		caplock is off
+		capslock is off
 				
 textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 	if event.state == 2:
-		caplock is on
+		capslock is on
 		if event.state == 2:
 			if event.state == 2:
-				caplock is on
+				capslock is on
 				if event.state == 2:
-					caplock is on
+					capslock is on
 					
 		
 #####
@@ -44,17 +45,42 @@ textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 
 
 
-move/select many lines, ensure visibility?
-
-
-	
-
 	when at idx_linestart, PrevWord goes to indent0
 	
 	when at idx_lineend, NextWord goes to indent0
-				
-when at idx_lineend, NextWord goes to indent0
-
+	
+	need to know if line is wrapped --> fix idx_linestartend
+		done ok?
+	
+	move by words, first check if before idx_linestart? done ok?
+	
+	
+	fix move_by_words:
+		left ok?
+		right
+		
+		
+	
+	
+	
+	if at file startend?
+	
+	
+	
+	
+	
+	fix arrow updown
+	
+	check caps --> after cancel
+	
+	check empty page moving/selection etc
+	
+	bind with eval
+	
+	tokens to list --> after cancel
+	
+	
+	
 #########################################################
 fix '' when expecting space or empty. 					fixed ok?
 paste() always keep selection and cursor at orig insert 	ok?
@@ -95,11 +121,6 @@ ctrl-c override Begin
 
 
 
-	
-	
-	
-
-when bind cmd-c, paste_override error paste.tcl
 
 check before copy, paste:
 		no need to check states?
@@ -113,11 +134,6 @@ after paste_override:
 	done with copying code from paste() ok?
 
 
-use idx_linestart() in copy?
-when to unset self.flag_fix_indent?
-
-
-focus in out bind to contents focus set?
 
 windows copy in entry
 
@@ -173,6 +189,8 @@ select_by_words: when selection closes after <<nextword>>?
 selection handling not perfect when:
 	comment
 	indent
+
+move/select many lines, ensure visibility?
 
 
 
