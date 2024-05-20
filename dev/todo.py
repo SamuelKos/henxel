@@ -60,14 +60,15 @@ textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 		right
 		
 		
+	check move_by_words wrapped lines #####################
 	
-	
+	copy paste in popup
 	
 	if at file startend?
 	
 	
-	
-	
+	if idx_linestart == idx_lineend?
+	line cannot be empty
 	
 	fix arrow updown
 	

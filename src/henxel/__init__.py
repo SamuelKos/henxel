@@ -3504,7 +3504,7 @@ class Editor(tkinter.Toplevel):
 		c1 = int(p.split('.')[1])
 		l2 = int(p2.split('.')[0])
 		
-		pos = None
+		pos = False
 		# Yes, put cursor start of (display-) line, not the whole (=logical) line:
 		if c1 != 0:
 			pos = p
@@ -3762,16 +3762,13 @@ class Editor(tkinter.Toplevel):
 	
 	def move_by_words(self, event=None):
 		'''	Pressed ctrl or Alt and arrow left or right.
-			Make <<NextWord>> and <<PrevWord>> to stop at lineends.
+			Make <<NextWord>> and <<PrevWord>> to handle lineends.
 		'''
 		if self.state not in [ 'normal', 'error', 'search', 'replace', 'replace_all' ]:
 			self.bell()
 			return "break"
 			
 		idx_linestart, line_is_wrapped = self.idx_linestart()
-		# Empty line?
-		if not idx_linestart: return
-		
 		
 		# Check if: not only ctrl down, then return
 		# MacOS event is already checked.
@@ -3783,34 +3780,120 @@ class Editor(tkinter.Toplevel):
 			
 		
 		i_orig = self.contents.index('insert')
-		e = self.idx_lineend()
 			
-		# Check if near lineend, so stop there.
-		# Also skip over indentation.
+		
 		if event.keysym == 'Right':
-			# Already at lineend, proceed over first word of next line
-			if i_orig == e: return
 			
-			self.contents.event_generate('<<NextWord>>')
-			i = self.contents.index('insert')
-			if self.contents.compare( e, '<', i ):
-				self.contents.mark_set('insert', e)
+			# Get idx_lineend of non empty line
+			if idx_linestart:
+				e = self.idx_lineend()
+			
+			# Empty line
+			if not idx_linestart:
+				# Go over empty space first
+				self.contents.event_generate('<<NextWord>>')
 				
+				# And put cursor to idx_linestart
+				i_new, line_is_wrapped = self.idx_linestart()
 				
-		# Check if near linestart, so stop there.
-		# Also skip over indentation.
+				# At fileend?
+				if i_new:
+					self.contents.mark_set('insert', i_new)
+			
+			
+			# Below this line is non empty
+			##################
+			# Cursor is at lineend, goto idx_linestart of next non empty line
+			elif i_orig == e:
+				
+				self.contents.event_generate('<<NextWord>>')
+				idx_linestart, line_is_wrapped = self.idx_linestart()
+				
+				# At fileend?
+				if idx_linestart:
+					self.contents.mark_set('insert', idx_linestart)
+
+			
+			# Below this line cursor is before line end
+			############
+			# Most common scenario
+			# Cursor is at or after idx_linestart
+			# idx_lineend > i_orig >= idx_linestart
+			elif self.contents.compare(i_orig, '>=', idx_linestart):
+
+				self.contents.event_generate('<<NextWord>>')
+				
+				# Check not over lineend
+				if self.contents.compare('insert', '>', e):
+					self.contents.mark_set('insert', e)
+			
+			
+			# Below this i_orig <= idx_linestart
+			############
+			# At idx_linestart
+			elif i_orig == idx_linestart:
+				
+				# No indentation
+				if int(idx_linestart.split('.')[1]) == 0:
+					self.contents.event_generate('<<NextWord>>')
+					
+					# Check not over lineend
+					if self.contents.compare('insert', '>', e):
+						self.contents.mark_set('insert', e)
+				
+				# End of indentation or start of wrapped line
+				else:
+					self.contents.event_generate('<<NextWord>>')
+					
+					# Check not over lineend
+					if self.contents.compare('insert', '>', e):
+						self.contents.mark_set('insert', e)
+				
+			
+			# Below this line has indentation and is not wrapped
+			# Cursor is at
+			# indent0 <= i_orig < idx_linestart
+			
+			# --> put cursor to idx_linestart
+			############
+			else:
+				self.contents.mark_set('insert', idx_linestart)
+
+			
 		elif event.keysym == 'Left':
 			
-			# Is cursor on such line that has not started on that (display-) line?
-			if line_is_wrapped:
+			# Empty line
+			if not idx_linestart:
+				# Go over empty space first
 				self.contents.event_generate('<<PrevWord>>')
-							
+				
+				# And put cursor to line end
+				i_new = self.idx_lineend()
+				self.contents.mark_set('insert', i_new)
+			
+
+			# Is cursor on such line that has not started on that (display-) line?
+			elif line_is_wrapped:
+			
+				# At indent0, put cursor to line end of previous line
+				if self.contents.compare('insert', '==', idx_linestart):
+					self.contents.event_generate('<<PrevWord>>')
+					self.contents.mark_set('insert', 'insert display lineend')
+					
+				# Not at indent0, just check cursor not go over indent0
+				else:
+					self.contents.event_generate('<<PrevWord>>')
+					if self.contents.compare('insert', '<', idx_linestart):
+						self.contents.mark_set('insert', idx_linestart)
+				
+				
+			# Below this line is non empty and not wrapped
 			############
 			# Most common scenario:
-			# Is cursor before idx_linestart?
+			# Is cursor after idx_linestart?
 			# i_orig > idx_linestart
 			elif self.contents.compare( i_orig, '>', idx_linestart ):
-				print('before idx_start')
+				#print('before idx_start')
 				self.contents.event_generate('<<PrevWord>>')
 				
 				# Check that cursor did not go over idx_linestart
@@ -3818,13 +3901,19 @@ class Editor(tkinter.Toplevel):
 				if self.contents.compare( i_new, '<', idx_linestart):
 					self.contents.mark_set('insert', idx_linestart)
 			
+			
+			## Below this i_orig <= idx_linestart
 			############
-			# At linestart
+			# At idx_linestart
 			elif i_orig == idx_linestart:
 				
 				# No indentation?
 				if int(idx_linestart.split('.')[1]) == 0:
-					print('idx_start no ind')
+					# At filestart?
+					if self.contents.compare( i_orig, '==', '1.0'):
+						return 'break'
+						
+					#print('idx_start no ind')
 					# Go over empty space first
 					self.contents.event_generate('<<PrevWord>>')
 					
@@ -3835,17 +3924,27 @@ class Editor(tkinter.Toplevel):
 				# Cursor is at idx_linestart (end of indentation)
 				# of line that has indentation.
 				else:
-					print('idx_start with ind')
+					#print('idx_start with ind')
 					# Put cursor at indent0 (start of indentation)
-					self.contents.mark_set('insert', '%s linestart' % idx_linestart)
-					
+					self.contents.mark_set('insert', 'insert linestart')
+			
+			
+			# Below this only lines that has indentation
 			############
-			# Cursor is not at idx_linestart (end of indentation)
-			# or at logical indent0 (line real start, start of indentation)
-			# or before idx_linestart
-			# --> cursor is in indentation
+			# 1: Cursor is not after idx_linestart
+			#
+			# 2: Nor at idx_linestart == end of indentation, if line has indentation
+			# 							start of line, (indent0), if line has no indentation
+			#
+			# --> Cursor is in indentation
+			
+			# At indent0 of line that has indentation
 			elif int(i_orig.split('.')[1]) == 0:
-				print('ind0 with ind')
+				# At filestart?
+				if self.contents.compare( i_orig, '==', '1.0'):
+					return 'break'
+				
+				#print('ind0 with ind')
 				# Go over empty space first
 				self.contents.event_generate('<<PrevWord>>')
 				
@@ -3854,9 +3953,9 @@ class Editor(tkinter.Toplevel):
 				self.contents.mark_set('insert', i_new)
 			
 			else:
-				print('in ind')
+				#print('in ind')
 				# Put cursor at indent0
-				self.contents.mark_set('insert', '%s linestart' % idx_linestart)
+				self.contents.mark_set('insert', 'insert linestart')
 				
 				
 		return 'break'
@@ -4241,7 +4340,7 @@ class Editor(tkinter.Toplevel):
 		# Check if have_selection
 		have_selection = len(self.contents.tag_ranges('sel')) > 0
 		if not have_selection:
-			print('copy fail 1, no selection')
+			#print('copy fail 1, no selection')
 			return 'break'
 
 
@@ -4250,7 +4349,7 @@ class Editor(tkinter.Toplevel):
 		endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
 		numlines = endline - startline
 		if not numlines > 1:
-			print('copy fail 2, numlines not > 1')
+			#print('copy fail 2, numlines not > 1')
 			return self.cancel_copy_override()
 			
 
@@ -4263,7 +4362,7 @@ class Editor(tkinter.Toplevel):
 		# Check if selstart line not empty
 		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
 		if len(tmp.strip()) == 0:
-			print('copy fail 4, startline empty')
+			#print('copy fail 4, startline empty')
 			return self.cancel_copy_override()
 		
 		# Check if cursor not at idx_linestart
@@ -4273,11 +4372,11 @@ class Editor(tkinter.Toplevel):
 		
 		if i > self.indent_selstart:
 			# Cursor is inside indentation or indent0
-			print('copy fail 3, Cursor in indentation')
+			#print('copy fail 3, Cursor in indentation')
 			return self.cancel_copy_override()
 			
 		elif i < self.indent_selstart:
-			print('copy fail 3, SEL_FIRST after idx_linestart')
+			#print('copy fail 3, SEL_FIRST after idx_linestart')
 			return self.cancel_copy_override()
 		
 		# Check if two nextlines below selstart not empty
@@ -4291,12 +4390,12 @@ class Editor(tkinter.Toplevel):
 				tmp = t[2]
 				
 				if len(tmp.strip()) == 0:
-					print('copy fail 6, two nextlines empty')
+					#print('copy fail 6, two nextlines empty')
 					return self.cancel_copy_override(t_orig)
 					
 			# numlines == 2:
 			else:
-				print('copy fail 5, numlines == 2, nextline is empty')
+				#print('copy fail 5, numlines == 2, nextline is empty')
 				return self.cancel_copy_override(t_orig)
 		
 		for i in range(len(tmp)):
@@ -4314,7 +4413,7 @@ class Editor(tkinter.Toplevel):
 			#			self.indent_selstart
 			#		self.indent_nextline
 			#indent0
-			print('copy fail 7, indentation decreasing on first non empty line')
+			#print('copy fail 7, indentation decreasing on first non empty line')
 			return self.cancel_copy_override(t_orig)
 			
 			
@@ -4336,7 +4435,7 @@ class Editor(tkinter.Toplevel):
 					break
 						
 		if self.indent_selstart > min_ind:
-			print('copy fail 8, indentation of line in selection < self.indent_selstart')
+			#print('copy fail 8, indentation of line in selection < self.indent_selstart')
 			return self.cancel_copy_override(t_orig)
 
 		
@@ -4352,7 +4451,7 @@ class Editor(tkinter.Toplevel):
 		if flag_cut:
 			self.contents.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
 		
-		print('copy ok')
+		#print('copy ok')
 		return 'break'
 		###################
 		
@@ -4384,10 +4483,10 @@ class Editor(tkinter.Toplevel):
 		if not self.flag_fix_indent or t != self.checksum_fix_indent:
 			self.paste(event=event)
 			self.contents.edit_separator()
-			print('paste norm')
+			#print('paste norm')
 			return 'break'
 			
-		print('paste ride')
+		#print('paste ride')
 		
 		### from paste
 		have_selection = False
