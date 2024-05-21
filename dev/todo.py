@@ -46,29 +46,20 @@ textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 
 
 	when at idx_linestart, PrevWord goes to indent0
-	
 	when at idx_lineend, NextWord goes to indent0
-	
 	need to know if line is wrapped --> fix idx_linestartend
 		done ok?
-	
 	move by words, first check if before idx_linestart? done ok?
+	fix move_by_words 	done ok?
 	
 	
-	fix move_by_words:
-		left ok?
-		right
-		
-		
-	check move_by_words wrapped lines #####################
+	
+	fix same way select_by_words as move_by_words?
 	
 	copy paste in popup
 	
-	if at file startend?
 	
 	
-	if idx_linestart == idx_lineend?
-	line cannot be empty
 	
 	fix arrow updown
 	
@@ -77,6 +68,15 @@ textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 	check empty page moving/selection etc
 	
 	bind with eval
+	
+	check event states of certain keys (in init?)
+		Example: arrow keys have alien states in windows,
+		so to check state of arrow-up key:
+	
+		bid_up = self.contents.bind('<Up>', self.my_event_checking_function)
+		self.contents.event_generate('<Up>')
+		self.contents.unbind('<Up>', funcid=bid_up)
+	
 	
 	tokens to list --> after cancel
 	

@@ -3760,6 +3760,179 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 	
 	
+	def move_by_words_left(self, event=None):
+		''' Returns tkinter.Text -index: pos
+			and moves cursor to it.
+		'''
+		
+		idx_linestart, line_is_wrapped = self.idx_linestart()
+		i_orig = self.contents.index('insert')
+		
+		# Empty line
+		if not idx_linestart:
+			# Go over empty space first
+			self.contents.event_generate('<<PrevWord>>')
+			
+			# And put cursor to line end
+			i_new = self.idx_lineend()
+			self.contents.mark_set('insert', i_new)
+		
+
+		# Is cursor on such line that has not started on that (display-) line?
+		elif line_is_wrapped:
+			
+			# At indent0, put cursor to line end of previous line
+			if self.contents.compare('insert', '==', idx_linestart):
+				self.contents.event_generate('<<PrevWord>>')
+				self.contents.mark_set('insert', 'insert display lineend')
+				
+			# Not at indent0, just check cursor not go over indent0
+			else:
+				self.contents.event_generate('<<PrevWord>>')
+				if self.contents.compare('insert', '<', idx_linestart):
+					self.contents.mark_set('insert', idx_linestart)
+			
+			
+		# Below this line is non empty and not wrapped
+		############
+		# Most common scenario:
+		# Is cursor after idx_linestart?
+		# i_orig > idx_linestart
+		elif self.contents.compare( i_orig, '>', idx_linestart ):
+			self.contents.event_generate('<<PrevWord>>')
+			
+			# Check that cursor did not go over idx_linestart
+			i_new = self.contents.index(tkinter.INSERT)
+			if self.contents.compare( i_new, '<', idx_linestart):
+				self.contents.mark_set('insert', idx_linestart)
+		
+		
+		## Below this i_orig <= idx_linestart
+		############
+		# At idx_linestart
+		elif i_orig == idx_linestart:
+			
+			# No indentation?
+			if int(idx_linestart.split('.')[1]) == 0:
+				# At filestart?
+				if self.contents.compare( i_orig, '==', '1.0'):
+					pos = i_orig
+					return pos
+					
+				# Go over empty space first
+				self.contents.event_generate('<<PrevWord>>')
+				
+				# And put cursor to line end
+				i_new = self.idx_lineend()
+				self.contents.mark_set('insert', i_new)
+			
+			# Cursor is at idx_linestart (end of indentation)
+			# of line that has indentation.
+			else:
+				# Put cursor at indent0 (start of indentation)
+				self.contents.mark_set('insert', 'insert linestart')
+		
+		
+		# Below this only lines that has indentation
+		############
+		# 1: Cursor is not after idx_linestart
+		#
+		# 2: Nor at idx_linestart == end of indentation, if line has indentation
+		# 							start of line, (indent0), if line has no indentation
+		#
+		# --> Cursor is in indentation
+		
+		# At indent0 of line that has indentation
+		elif int(i_orig.split('.')[1]) == 0:
+			# At filestart?
+			if self.contents.compare( i_orig, '==', '1.0'):
+				pos = i_orig
+				return pos
+			
+			# Go over empty space first
+			self.contents.event_generate('<<PrevWord>>')
+			
+			# And put cursor to line end
+			i_new = self.idx_lineend()
+			self.contents.mark_set('insert', i_new)
+		
+		else:
+			# Put cursor at indent0
+			self.contents.mark_set('insert', 'insert linestart')
+			
+		
+		pos = self.contents.index('insert')
+		return pos
+	
+	
+	def move_by_words_right(self, event=None):
+		''' Returns tkinter.Text -index: pos
+			and moves cursor to it.
+		'''
+		
+		# Get some basic indexes first
+		idx_linestart, line_is_wrapped = self.idx_linestart()
+		i_orig = self.contents.index('insert')
+		
+		# Get idx_lineend (of non empty line)
+		if idx_linestart:
+			e = self.idx_lineend()
+		
+		# Empty line
+		if not idx_linestart:
+			# Go over empty space first
+			self.contents.event_generate('<<NextWord>>')
+			
+			# And put cursor to idx_linestart
+			i_new, line_is_wrapped = self.idx_linestart()
+			
+			# Check not at fileend, if not then proceed
+			if i_new:
+				self.contents.mark_set('insert', i_new)
+				
+		
+		# Below this line is non empty
+		##################
+		# Cursor is at lineend, goto idx_linestart of next non empty line
+		elif i_orig == e:
+			
+			self.contents.event_generate('<<NextWord>>')
+			idx_linestart, line_is_wrapped = self.idx_linestart()
+			
+			# Check not at fileend, if not then proceed
+			if idx_linestart and self.contents.compare(i_orig, '<', idx_linestart):
+				self.contents.mark_set('insert', idx_linestart)
+
+		
+		# Below this line cursor is before line end
+		############
+		# Most common scenario
+		# Cursor is at or after idx_linestart
+		# idx_lineend > i_orig >= idx_linestart
+		elif self.contents.compare(i_orig, '>=', idx_linestart):
+
+			self.contents.event_generate('<<NextWord>>')
+			
+			# Check not over lineend
+			if self.contents.compare('insert', '>', e):
+				self.contents.mark_set('insert', e)
+		
+		
+		############
+		# Below this line has indentation and is not wrapped
+		# Cursor is at
+		# indent0 <= i_orig < idx_linestart
+		
+		# --> put cursor to idx_linestart
+		############
+		else:
+			self.contents.mark_set('insert', idx_linestart)
+			
+		
+		pos = self.contents.index('insert')
+		return pos
+
+		
 	def move_by_words(self, event=None):
 		'''	Pressed ctrl or Alt and arrow left or right.
 			Make <<NextWord>> and <<PrevWord>> to handle lineends.
@@ -3768,8 +3941,6 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return "break"
 			
-		idx_linestart, line_is_wrapped = self.idx_linestart()
-		
 		# Check if: not only ctrl down, then return
 		# MacOS event is already checked.
 		if self.os_type == 'linux':
@@ -3779,183 +3950,14 @@ class Editor(tkinter.Toplevel):
 			if event.state not in [ 262156, 262148 ]: return
 			
 		
-		i_orig = self.contents.index('insert')
-			
-		
 		if event.keysym == 'Right':
-			
-			# Get idx_lineend of non empty line
-			if idx_linestart:
-				e = self.idx_lineend()
-			
-			# Empty line
-			if not idx_linestart:
-				# Go over empty space first
-				self.contents.event_generate('<<NextWord>>')
-				
-				# And put cursor to idx_linestart
-				i_new, line_is_wrapped = self.idx_linestart()
-				
-				# At fileend?
-				if i_new:
-					self.contents.mark_set('insert', i_new)
-			
-			
-			# Below this line is non empty
-			##################
-			# Cursor is at lineend, goto idx_linestart of next non empty line
-			elif i_orig == e:
-				
-				self.contents.event_generate('<<NextWord>>')
-				idx_linestart, line_is_wrapped = self.idx_linestart()
-				
-				# At fileend?
-				if idx_linestart:
-					self.contents.mark_set('insert', idx_linestart)
-
-			
-			# Below this line cursor is before line end
-			############
-			# Most common scenario
-			# Cursor is at or after idx_linestart
-			# idx_lineend > i_orig >= idx_linestart
-			elif self.contents.compare(i_orig, '>=', idx_linestart):
-
-				self.contents.event_generate('<<NextWord>>')
-				
-				# Check not over lineend
-				if self.contents.compare('insert', '>', e):
-					self.contents.mark_set('insert', e)
-			
-			
-			# Below this i_orig <= idx_linestart
-			############
-			# At idx_linestart
-			elif i_orig == idx_linestart:
-				
-				# No indentation
-				if int(idx_linestart.split('.')[1]) == 0:
-					self.contents.event_generate('<<NextWord>>')
-					
-					# Check not over lineend
-					if self.contents.compare('insert', '>', e):
-						self.contents.mark_set('insert', e)
-				
-				# End of indentation or start of wrapped line
-				else:
-					self.contents.event_generate('<<NextWord>>')
-					
-					# Check not over lineend
-					if self.contents.compare('insert', '>', e):
-						self.contents.mark_set('insert', e)
-				
-			
-			# Below this line has indentation and is not wrapped
-			# Cursor is at
-			# indent0 <= i_orig < idx_linestart
-			
-			# --> put cursor to idx_linestart
-			############
-			else:
-				self.contents.mark_set('insert', idx_linestart)
-
+			pos = self.move_by_words_right(event=event)
 			
 		elif event.keysym == 'Left':
+			pos = self.move_by_words_left(event=event)
 			
-			# Empty line
-			if not idx_linestart:
-				# Go over empty space first
-				self.contents.event_generate('<<PrevWord>>')
-				
-				# And put cursor to line end
-				i_new = self.idx_lineend()
-				self.contents.mark_set('insert', i_new)
-			
-
-			# Is cursor on such line that has not started on that (display-) line?
-			elif line_is_wrapped:
-			
-				# At indent0, put cursor to line end of previous line
-				if self.contents.compare('insert', '==', idx_linestart):
-					self.contents.event_generate('<<PrevWord>>')
-					self.contents.mark_set('insert', 'insert display lineend')
-					
-				# Not at indent0, just check cursor not go over indent0
-				else:
-					self.contents.event_generate('<<PrevWord>>')
-					if self.contents.compare('insert', '<', idx_linestart):
-						self.contents.mark_set('insert', idx_linestart)
-				
-				
-			# Below this line is non empty and not wrapped
-			############
-			# Most common scenario:
-			# Is cursor after idx_linestart?
-			# i_orig > idx_linestart
-			elif self.contents.compare( i_orig, '>', idx_linestart ):
-				#print('before idx_start')
-				self.contents.event_generate('<<PrevWord>>')
-				
-				# Check that cursor did not go over idx_linestart
-				i_new = self.contents.index(tkinter.INSERT)
-				if self.contents.compare( i_new, '<', idx_linestart):
-					self.contents.mark_set('insert', idx_linestart)
-			
-			
-			## Below this i_orig <= idx_linestart
-			############
-			# At idx_linestart
-			elif i_orig == idx_linestart:
-				
-				# No indentation?
-				if int(idx_linestart.split('.')[1]) == 0:
-					# At filestart?
-					if self.contents.compare( i_orig, '==', '1.0'):
-						return 'break'
-						
-					#print('idx_start no ind')
-					# Go over empty space first
-					self.contents.event_generate('<<PrevWord>>')
-					
-					# And put cursor to line end
-					i_new = self.idx_lineend()
-					self.contents.mark_set('insert', i_new)
-				
-				# Cursor is at idx_linestart (end of indentation)
-				# of line that has indentation.
-				else:
-					#print('idx_start with ind')
-					# Put cursor at indent0 (start of indentation)
-					self.contents.mark_set('insert', 'insert linestart')
-			
-			
-			# Below this only lines that has indentation
-			############
-			# 1: Cursor is not after idx_linestart
-			#
-			# 2: Nor at idx_linestart == end of indentation, if line has indentation
-			# 							start of line, (indent0), if line has no indentation
-			#
-			# --> Cursor is in indentation
-			
-			# At indent0 of line that has indentation
-			elif int(i_orig.split('.')[1]) == 0:
-				# At filestart?
-				if self.contents.compare( i_orig, '==', '1.0'):
-					return 'break'
-				
-				#print('ind0 with ind')
-				# Go over empty space first
-				self.contents.event_generate('<<PrevWord>>')
-				
-				# And put cursor to line end
-				i_new = self.idx_lineend()
-				self.contents.mark_set('insert', i_new)
-			
-			else:
-				#print('in ind')
-				# Put cursor at indent0
-				self.contents.mark_set('insert', 'insert linestart')
+		else:
+			return
 				
 				
 		return 'break'
@@ -3966,7 +3968,7 @@ class Editor(tkinter.Toplevel):
 			If have selection, put cursor on the wanted side of selection.
 		'''
 		
-		if self.state in  [ 'filedialog' ]:
+		if self.state in [ 'filedialog' ]:
 			self.bell()
 			return "break"
 	
