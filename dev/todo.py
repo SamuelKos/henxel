@@ -18,6 +18,10 @@ comment uncomment curline without selection? done ok?
 search again backwards ctrl-shift-backspace done ok?
 
 paste short cursor after? done in end of paste() ok?
+
+fixed paste_override(), it did not select correctly like paste(), ok?
+	still need to set self.anchor?
+
 	
 ####
 Fix this python 3.12 string escape fix, ok?
@@ -58,10 +62,17 @@ textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 	
 	copy paste in popup
 	
+	in show errors, check linenum?
 	
 	
+	search again, if have selection, use it as search word instead of clipboard
+	
+	search, if previously have deleted suggestion from clipboard,
+	do not suggest from clipboard again if it is the same.
 	
 	fix arrow updown
+	
+	
 	
 	check caps --> after cancel
 	

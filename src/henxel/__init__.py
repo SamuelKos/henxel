@@ -3522,7 +3522,7 @@ class Editor(tkinter.Toplevel):
 		return pos, line_is_wrapped
 		
 	
-
+	
 	def select_by_words(self, event=None):
 		'''	Pressed ctrl or Alt + shift and arrow left or right.
 			Make <<SelectNextWord>> and <<SelectPrevWord>> to stop at lineends.
@@ -3561,7 +3561,7 @@ class Editor(tkinter.Toplevel):
 			idx_linestart, line_is_wrapped = self.idx_linestart()
 			# empty line?
 			if not idx_linestart: return
-			t = self.contents.get(idx_linestart, e).strip()
+			#t = self.contents.get(idx_linestart, e).strip()
 
 			
 			# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
@@ -3581,6 +3581,13 @@ class Editor(tkinter.Toplevel):
 			
 			
 			##################### Right Real start:
+			
+			
+			pos = self.move_by_words_right()
+			
+			
+			
+			
 			
 			
 			self.contents.event_generate('<<NextWord>>')
@@ -3760,7 +3767,7 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 	
 	
-	def move_by_words_left(self, event=None):
+	def move_by_words_left(self):
 		''' Returns tkinter.Text -index: pos
 			and moves cursor to it.
 		'''
@@ -3865,7 +3872,7 @@ class Editor(tkinter.Toplevel):
 		return pos
 	
 	
-	def move_by_words_right(self, event=None):
+	def move_by_words_right(self):
 		''' Returns tkinter.Text -index: pos
 			and moves cursor to it.
 		'''
@@ -3951,10 +3958,10 @@ class Editor(tkinter.Toplevel):
 			
 		
 		if event.keysym == 'Right':
-			pos = self.move_by_words_right(event=event)
+			pos = self.move_by_words_right()
 			
 		elif event.keysym == 'Left':
-			pos = self.move_by_words_left(event=event)
+			pos = self.move_by_words_left()
 			
 		else:
 			return
@@ -4342,7 +4349,7 @@ class Editor(tkinter.Toplevel):
 		# Check if have_selection
 		have_selection = len(self.contents.tag_ranges('sel')) > 0
 		if not have_selection:
-			#print('copy fail 1, no selection')
+			print('copy fail 1, no selection')
 			return 'break'
 
 
@@ -4351,7 +4358,7 @@ class Editor(tkinter.Toplevel):
 		endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
 		numlines = endline - startline
 		if not numlines > 1:
-			#print('copy fail 2, numlines not > 1')
+			print('copy fail 2, numlines not > 1')
 			return self.cancel_copy_override()
 			
 
@@ -4364,7 +4371,7 @@ class Editor(tkinter.Toplevel):
 		# Check if selstart line not empty
 		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
 		if len(tmp.strip()) == 0:
-			#print('copy fail 4, startline empty')
+			print('copy fail 4, startline empty')
 			return self.cancel_copy_override()
 		
 		# Check if cursor not at idx_linestart
@@ -4374,11 +4381,11 @@ class Editor(tkinter.Toplevel):
 		
 		if i > self.indent_selstart:
 			# Cursor is inside indentation or indent0
-			#print('copy fail 3, Cursor in indentation')
+			print('copy fail 3, Cursor in indentation')
 			return self.cancel_copy_override()
 			
 		elif i < self.indent_selstart:
-			#print('copy fail 3, SEL_FIRST after idx_linestart')
+			print('copy fail 3, SEL_FIRST after idx_linestart')
 			return self.cancel_copy_override()
 		
 		# Check if two nextlines below selstart not empty
@@ -4392,12 +4399,12 @@ class Editor(tkinter.Toplevel):
 				tmp = t[2]
 				
 				if len(tmp.strip()) == 0:
-					#print('copy fail 6, two nextlines empty')
+					print('copy fail 6, two nextlines empty')
 					return self.cancel_copy_override(t_orig)
 					
 			# numlines == 2:
 			else:
-				#print('copy fail 5, numlines == 2, nextline is empty')
+				print('copy fail 5, numlines == 2, nextline is empty')
 				return self.cancel_copy_override(t_orig)
 		
 		for i in range(len(tmp)):
@@ -4415,7 +4422,7 @@ class Editor(tkinter.Toplevel):
 			#			self.indent_selstart
 			#		self.indent_nextline
 			#indent0
-			#print('copy fail 7, indentation decreasing on first non empty line')
+			print('copy fail 7, indentation decreasing on first non empty line')
 			return self.cancel_copy_override(t_orig)
 			
 			
@@ -4437,7 +4444,7 @@ class Editor(tkinter.Toplevel):
 					break
 						
 		if self.indent_selstart > min_ind:
-			#print('copy fail 8, indentation of line in selection < self.indent_selstart')
+			print('copy fail 8, indentation of line in selection < self.indent_selstart')
 			return self.cancel_copy_override(t_orig)
 
 		
@@ -4453,7 +4460,7 @@ class Editor(tkinter.Toplevel):
 		if flag_cut:
 			self.contents.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
 		
-		#print('copy ok')
+		print('copy ok')
 		return 'break'
 		###################
 		
@@ -4485,10 +4492,10 @@ class Editor(tkinter.Toplevel):
 		if not self.flag_fix_indent or t != self.checksum_fix_indent:
 			self.paste(event=event)
 			self.contents.edit_separator()
-			#print('paste norm')
+			print('paste norm')
 			return 'break'
 			
-		#print('paste ride')
+		print('paste ride')
 		
 		### from paste
 		have_selection = False
@@ -4550,13 +4557,18 @@ class Editor(tkinter.Toplevel):
 			self.contents.insert( '%d.0' % lno, line)
 			lno += 1
 		
-		
+
+		lastline = lno - 1
+		len_lastline = len(tmp[-1])
+		idx_insert_after = self.contents.index(
+			'%d.0 +%d chars' % (lastline, len_lastline) )
+			
 		tmp = t.splitlines(True)
 		
 		# from paste
 		##########################
-		s = self.contents.index( '%d.0 linestart' % idx_ins)
-		e = self.contents.index( 'insert lineend')
+		s = self.contents.index( '%s linestart' % idx_insert_orig)
+		e = self.contents.index( '%d.0 lineend' % lastline )
 		t = self.contents.get( s, e )
 		
 		if self.tabs[self.tabindex].filepath:
@@ -4568,8 +4580,8 @@ class Editor(tkinter.Toplevel):
 			self.contents.tag_add('sel', selstart, selend)
 			
 		else:
-			self.contents.tag_add('sel', idx_insert_orig, tkinter.INSERT)
-
+			self.contents.tag_add('sel', idx_insert_orig, idx_insert_after)
+			
 		self.contents.mark_set('insert', idx_insert_orig)
 		
 		
@@ -4582,7 +4594,7 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def paste(self, event=None):
-		'''
+		''' Fallback from paste_override
 		'''
 		
 		try:
