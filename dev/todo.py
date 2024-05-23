@@ -57,28 +57,58 @@ textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 	fix move_by_words 	done ok?
 	
 	
+	######################
+	fix search etc: after giving search word, quickly pressing return and esc
+	state is locked to search
+		after 600 works?
+	
+		Clean solution:
+		example in search():
+			bind return(start_search) to list with:
+				lambda event: after_idle(callback)
+		
+				bind esc to:
+				lambda event: after_cancel from this list
+	
+		or basic one:
+		set flag whenever calling something that can be escaped from
+			esc_not_safe = True
+			and check it in esc-binded callback
+	#######################
+	
+	
+	
+	
+	check is it necessary to check event.state in select_by_words etc
+	
+	
+	check does esc exit fullscreen normally in macos?
+	
 	
 	fix same way select_by_words as move_by_words?
 	
+	
+	save ostype and some keys to conf?
+	
+	check syntax before quit?
+
 	copy paste in popup
-	
-	in show errors, check linenum?
-	
 	
 	search again, if have selection, use it as search word instead of clipboard
 	
 	search, if previously have deleted suggestion from clipboard,
 	do not suggest from clipboard again if it is the same.
 	
-	fix arrow updown
 	
-	
+	fix arrow updown (put cursor to same col_nextline or
+		lineend if nextline is shorter than col_curline)
 	
 	check caps --> after cancel
 	
 	check empty page moving/selection etc
 	
 	bind with eval
+	
 	
 	check event states of certain keys (in init?)
 		Example: arrow keys have alien states in windows,
@@ -87,8 +117,12 @@ textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 		bid_up = self.contents.bind('<Up>', self.my_event_checking_function)
 		self.contents.event_generate('<Up>')
 		self.contents.unbind('<Up>', funcid=bid_up)
+		
+		remove some magic numbers this way from
+		move_by_words and select_by_words etc.
 	
 	
+
 	tokens to list --> after cancel
 	
 	

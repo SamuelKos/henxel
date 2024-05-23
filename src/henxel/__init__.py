@@ -3522,7 +3522,6 @@ class Editor(tkinter.Toplevel):
 		return pos, line_is_wrapped
 		
 	
-	
 	def select_by_words(self, event=None):
 		'''	Pressed ctrl or Alt + shift and arrow left or right.
 			Make <<SelectNextWord>> and <<SelectPrevWord>> to stop at lineends.
@@ -3557,12 +3556,6 @@ class Editor(tkinter.Toplevel):
 		
 		if event.keysym == 'Right':
 			s = self.contents.index( 'insert')
-			e = self.idx_lineend()
-			idx_linestart, line_is_wrapped = self.idx_linestart()
-			# empty line?
-			if not idx_linestart: return
-			#t = self.contents.get(idx_linestart, e).strip()
-
 			
 			# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
 			# no matter if selection started from top or bottom:
@@ -3585,86 +3578,41 @@ class Editor(tkinter.Toplevel):
 			
 			pos = self.move_by_words_right()
 			
-			
-			
-			
-			
-			
-			self.contents.event_generate('<<NextWord>>')
-			i = self.contents.index( 'insert')
-
-			# Already at lineend, proceed to next line
-			if s == e:
-				if have_selection:
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
-
-					if selection_started_from_top:
-						self.contents.mark_set(self.anchorname, sel_start)
-						self.contents.tag_add('sel', sel_start, i)
-					else:
-						self.contents.mark_set(self.anchorname, sel_end)
-						self.contents.tag_add('sel', i, sel_end)
-						
-				# No selection,
-				# no need to check direction of selection:
-				else:
-					self.contents.mark_set(self.anchorname, s)
-					self.contents.tag_add('sel', s, i)
-					
-				self.contents.mark_set('insert', i)
-
-			
-			# if i is over lineend:
-			# 	stop at lineend == e
-			elif self.contents.compare( e,'<',i ):
+			# Check if pos did not change
+			if self.contents.compare( s, '==' , pos ):
+				return 'break'
 				
-				if have_selection:
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
+			
+			if have_selection:
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
 
-					if selection_started_from_top:
-						self.contents.mark_set(self.anchorname, sel_start)
-						self.contents.tag_add('sel', sel_start, e)
-					else:
-						self.contents.mark_set(self.anchorname, sel_end)
-						self.contents.tag_add('sel', e, sel_end)
-						
-				# No selection,
-				# no need to check direction of selection:
-				else:
-					self.contents.mark_set(self.anchorname, s)
-					self.contents.tag_add('sel', s, e)
+				if selection_started_from_top:
+					self.contents.mark_set(self.anchorname, sel_start)
+					self.contents.tag_add('sel', sel_start, pos)
 					
-				self.contents.mark_set('insert', e)
+				else:
+					# Check if selection is about to be closed
+					# (selecting towards selection-start)
+					# to avoid one char selection -leftovers.
+					if self.contents.compare( '%s +1 chars' % pos, '>=' , sel_end ):
+						
+						self.contents.mark_set('insert', sel_end)
+						self.contents.mark_set(self.anchorname, sel_end)
+						return 'break'
+					
+					self.contents.mark_set(self.anchorname, sel_end)
+					self.contents.tag_add('sel', pos, sel_end)
 
-
-			# i is on the current line:
-			# 	stop at i == nextword
+			# No selection,
+			# no need to check direction of selection:
 			else:
-				
-				if have_selection:
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
+				self.contents.mark_set(self.anchorname, s)
+				self.contents.tag_add('sel', s, pos)
 
-					if selection_started_from_top:
-						self.contents.mark_set(self.anchorname, sel_start)
-						self.contents.tag_add('sel', sel_start, i)
-						
-					else:
-						self.contents.mark_set(self.anchorname, sel_end)
-						self.contents.tag_add('sel', i, sel_end)
-						
-						
-				# No selection,
-				# no need to check direction of selection:
-				else:
-					self.contents.mark_set(self.anchorname, s)
-					self.contents.tag_add('sel', s, i)
-					
-					
-				self.contents.mark_set('insert', i)
-				
-				
+
 
 		elif event.keysym == 'Left':
+				
 			s = self.contents.index( 'insert')
 			
 			# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
@@ -3682,88 +3630,46 @@ class Editor(tkinter.Toplevel):
 				sel_end = s
 
 
-			i_orig = s
-			i_linestart, line_is_wrapped = self.idx_linestart()
-			# empty line?
-			if not i_linestart: return
-			
-			
 			
 			##################### Left Real start:
 			
 			
-			self.contents.event_generate('<<PrevWord>>')
-			i_prevword = self.contents.index( 'insert')
+			pos = self.move_by_words_left()
 			
+			# Check if pos did not change
+			if self.contents.compare( s, '==' , pos ):
+				return 'break'
+			
+			
+			if have_selection:
+				
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
 
-			# Already at linestart, proceed over last word of prev line.
-			if i_orig == i_linestart:
-
-				if have_selection:
-					
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
-
-					if selection_started_from_top:
-						self.contents.mark_set(self.anchorname, sel_start)
-						self.contents.tag_add('sel', sel_start, i_prevword)
-					else:
-						self.contents.mark_set(self.anchorname, sel_end)
-						self.contents.tag_add('sel', i_prevword, sel_end)
+				if selection_started_from_top:
+					# Check if selection is about to be closed
+					# (selecting towards selection-start)
+					# to avoid one char selection -leftovers.
+					if self.contents.compare( '%s -1 chars' % pos, '<=' , sel_start ):
 						
-				# No selection,
-				# no need to check direction of selection:
-				else:
-					self.contents.mark_set(self.anchorname, s)
-					self.contents.tag_add('sel', i_prevword, s)
+						self.contents.mark_set('insert', sel_start)
+						self.contents.mark_set(self.anchorname, sel_start)
+						return 'break'
 					
-				self.contents.mark_set('insert', i_prevword)
-
-			
-			# if i_prevword is over(before) linestart:
-			# 	stop at linestart == i_linestart
-			elif self.contents.compare( i_prevword, '<', i_linestart):
-
-				if have_selection:
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
-
-					if selection_started_from_top:
-						self.contents.mark_set(self.anchorname, sel_start)
-						self.contents.tag_add('sel', sel_start, i_linestart)
-					else:
-						self.contents.mark_set(self.anchorname, sel_end)
-						self.contents.tag_add('sel', i_linestart, sel_end)
-								
-				# No selection,
-				# no need to check direction of selection:
+					self.contents.mark_set(self.anchorname, sel_start)
+					self.contents.tag_add('sel', sel_start, pos)
+				
 				else:
-					self.contents.mark_set(self.anchorname, s)
-					self.contents.tag_add('sel', i_linestart, s)
-
-				self.contents.mark_set('insert', i_linestart)
-
-
-			# i_prevword is on the current line:
-			# 	stop at i_prevword
+					self.contents.mark_set(self.anchorname, sel_end)
+					self.contents.tag_add('sel', pos, sel_end)
+				
+								
+			# No selection,
+			# no need to check direction of selection:
 			else:
-				if have_selection:
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
-
-					if selection_started_from_top:
-						self.contents.mark_set(self.anchorname, sel_start)
-						self.contents.tag_add('sel', sel_start, i_prevword)
-					else:
-						self.contents.mark_set(self.anchorname, sel_end)
-						self.contents.tag_add('sel', i_prevword, sel_end)
-								
-				# No selection,
-				# no need to check direction of selection:
-				else:
-					self.contents.mark_set(self.anchorname, s)
-					self.contents.tag_add('sel', i_prevword, s)
-
-				self.contents.mark_set('insert', i_prevword)
-
-
+				self.contents.mark_set(self.anchorname, s)
+				self.contents.tag_add('sel', pos, s)
+			
+			
 		return 'break'
 	
 	
@@ -6612,7 +6518,8 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 		self.entry.bind("<Return>", self.start_search)
-		self.bind("<Escape>", self.stop_search)
+		self.bind("<Escape>", lambda event: self.after(600, self.stop_search))
+		#self.bind("<Escape>", self.stop_search)
 		
 		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
 		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
