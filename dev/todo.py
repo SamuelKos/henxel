@@ -22,14 +22,19 @@ paste short cursor after? done in end of paste() ok?
 fixed paste_override(), it did not select correctly like paste(), ok?
 	still need to set self.anchor?
 
-	
+removed check: if pos was not changed, in select_by_words
+reason: to keep selection when at filestartend 	ok?
+
+ctrl tab --> insert tab
+self.insert_tab		ok?
+
 ####
 Fix this python 3.12 string escape fix, ok?
 >>> import henxel
 /Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py:467: SyntaxWarning: invalid escape sequence '\W'
   self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
 #####
-show caps-lock state in somehere:
+show caps-lock state in btn_git:
 textwid.bind('<KeyRelease-Caps_Lock>', mycallback2)
 	if event.state == 0:
 		capslock is off
@@ -37,94 +42,77 @@ textwid.bind('<KeyRelease-Caps_Lock>', mycallback2)
 textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
 	if event.state == 2:
 		capslock is on
-		if event.state == 2:
-			if event.state == 2:
-				capslock is on
-				if event.state == 2:
-					capslock is on
-					
 		
 #####
+when at idx_linestart, PrevWord goes to indent0
+when at idx_lineend, NextWord goes to indent0
+need to know if line is wrapped --> fix idx_linestartend
+	done ok?
+move by words, first check if before idx_linestart? done ok?
+fix move_by_words 	done ok?
 
 
 
 
-	when at idx_linestart, PrevWord goes to indent0
-	when at idx_lineend, NextWord goes to indent0
-	need to know if line is wrapped --> fix idx_linestartend
-		done ok?
-	move by words, first check if before idx_linestart? done ok?
-	fix move_by_words 	done ok?
-	
-	
-	######################
-	fix search etc: after giving search word, quickly pressing return and esc
-	state is locked to search
-		after 600 works?
-	
-		Clean solution:
-		example in search():
-			bind return(start_search) to list with:
-				lambda event: after_idle(callback)
+Below this not ok?
+######################
+fix search etc: after giving search word, quickly pressing return and esc
+state is locked to search
 		
-				bind esc to:
-				lambda event: after_cancel from this list
-	
-		or basic one:
-		set flag whenever calling something that can be escaped from
-			esc_not_safe = True
-			and check it in esc-binded callback
-	#######################
-	
-	
-	
-	
-	check is it necessary to check event.state in select_by_words etc
-	
-	
-	check does esc exit fullscreen normally in macos?
-	
-	
-	fix same way select_by_words as move_by_words?
-	
-	
-	save ostype and some keys to conf?
-	
-	check syntax before quit?
-
-	copy paste in popup
-	
-	search again, if have selection, use it as search word instead of clipboard
-	
-	search, if previously have deleted suggestion from clipboard,
-	do not suggest from clipboard again if it is the same.
-	
-	
-	fix arrow updown (put cursor to same col_nextline or
-		lineend if nextline is shorter than col_curline)
-	
-	check caps --> after cancel
-	
-	check empty page moving/selection etc
-	
-	bind with eval
-	
-	
-	check event states of certain keys (in init?)
-		Example: arrow keys have alien states in windows,
-		so to check state of arrow-up key:
-	
-		bid_up = self.contents.bind('<Up>', self.my_event_checking_function)
-		self.contents.event_generate('<Up>')
-		self.contents.unbind('<Up>', funcid=bid_up)
 		
-		remove some magic numbers this way from
-		move_by_words and select_by_words etc.
-	
-	
+FIXED with checking if state is waiting in stop_search
 
-	tokens to list --> after cancel
+check other escapable callbacks?
+#######################
+
+
+
+check is it necessary to check event.state in select_by_words etc
+
+
+check does esc exit fullscreen normally in macos?
+
+
+fix same way select_by_words as move_by_words?
+
+
+save ostype and some keys to conf?
+
+check syntax before quit?
+
+copy paste in popup
+
+search again, if have selection, use it as search word instead of clipboard
+
+search, if previously have deleted suggestion from clipboard,
+do not suggest from clipboard again if it is the same.
+
+
+fix arrow updown (put cursor to same col_nextline or
+	lineend if nextline is shorter than col_curline)
+
+check caps --> after cancel
+
+check empty page moving/selection etc
+
+bind with eval
+
+
+check event states of certain keys (in init?)
+	Example: arrow keys have alien states in windows,
+	so to check state of arrow-up key:
+
+	bid_up = self.contents.bind('<Up>', self.my_event_checking_function)
+	self.contents.event_generate('<Up>')
+	self.contents.unbind('<Up>', funcid=bid_up)
 	
+	remove some magic numbers this way from
+	move_by_words and select_by_words etc.
+
+
+
+tokens to list --> after cancel
+
 	
 	
 #########################################################

@@ -385,7 +385,7 @@ class Editor(tkinter.Toplevel):
 						padx=0, bitmap='info', state='disabled')
 
 		
-		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0)
+		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, takefocus=0)
 		if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
 		self.entry.bind("<Return>", self.load)
 		
@@ -426,7 +426,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents = tkinter.Text(self, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
 		
-		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, command = self.contents.yview)
+		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, takefocus=0, command = self.contents.yview)
 
 		# tab-completion, used in tab_override()
 		self.expander = wordexpand.ExpandWord(self.contents)
@@ -830,6 +830,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Shift-Return>", self.comment)
 		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
 		self.contents.bind( "<Tab>", self.tab_override)
+		self.contents.bind( "<Control-Tab>", self.insert_tab)
 		
 		self.contents.bind( "<Control-t>", self.tabify_lines)
 		self.contents.bind( "<Control-z>", self.undo_override)
@@ -3578,10 +3579,6 @@ class Editor(tkinter.Toplevel):
 			
 			pos = self.move_by_words_right()
 			
-			# Check if pos did not change
-			if self.contents.compare( s, '==' , pos ):
-				return 'break'
-				
 			
 			if have_selection:
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
@@ -3635,10 +3632,6 @@ class Editor(tkinter.Toplevel):
 			
 			
 			pos = self.move_by_words_left()
-			
-			# Check if pos did not change
-			if self.contents.compare( s, '==' , pos ):
-				return 'break'
 			
 			
 			if have_selection:
@@ -3808,12 +3801,16 @@ class Editor(tkinter.Toplevel):
 		##################
 		# Cursor is at lineend, goto idx_linestart of next non empty line
 		elif i_orig == e:
+		
+			# Check if at fileend
+			if self.contents.compare('%s +1 chars' % i_orig, '==', tkinter.END):
+				pos = i_orig
+				return pos
 			
 			self.contents.event_generate('<<NextWord>>')
 			idx_linestart, line_is_wrapped = self.idx_linestart()
 			
-			# Check not at fileend, if not then proceed
-			if idx_linestart and self.contents.compare(i_orig, '<', idx_linestart):
+			if idx_linestart:
 				self.contents.mark_set('insert', idx_linestart)
 
 		
@@ -4705,6 +4702,18 @@ class Editor(tkinter.Toplevel):
 		# self.search_idx marks range of focus-tag:
 		self.save_pos = self.search_idx[1]
 		self.stop_search()
+		
+		return 'break'
+	
+	
+	def insert_tab(self, event):
+		'''	Used to insert tab
+		'''
+		
+		if self.state in [ 'search', 'replace', 'replace_all' ]:
+			return 'break'
+			
+		self.contents.insert(tkinter.INSERT, '\t')
 		
 		return 'break'
 	
@@ -6420,6 +6429,9 @@ class Editor(tkinter.Toplevel):
 		
 	
 	def stop_search(self, event=None):
+		if self.state == 'waiting':
+			return 'break'
+			
 		self.contents.config(state='normal')
 		self.entry.config(state='normal')
 		self.btn_open.config(state='normal')
@@ -6518,8 +6530,7 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 		self.entry.bind("<Return>", self.start_search)
-		self.bind("<Escape>", lambda event: self.after(600, self.stop_search))
-		#self.bind("<Escape>", self.stop_search)
+		self.bind("<Escape>", self.stop_search)
 		
 		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
 		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
