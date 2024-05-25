@@ -31,6 +31,7 @@ reason: keep selection when at file-startend 	ok?
 ctrl tab --> insert tab
 self.insert_tab		ok?
 
+
 ####
 Fix this python 3.12 string escape fix, ok?
 >>> import henxel
@@ -78,7 +79,7 @@ yank line sel --> custom tag
 save file when pressing save, update help
 
 
-tuple after_cancel: (from_who, after_call)
+tuple after_cancel: (from_who, after_object_id)
 
 
 check is it necessary to check event.state in select_by_words etc
@@ -92,13 +93,12 @@ python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
 # https://stackoverflow.com/questions/4284313
 Use tokenizer instead?
 
-copy paste in popup
-
 
 search again, if have selection, use it as search word instead of clipboard
 
 search, if previously have deleted suggestion from clipboard,
 do not suggest from clipboard again if it is the same.
+also check if multiline, then not suggest at search
 
 
 fix arrow updown (put cursor to same col_nextline or
@@ -143,10 +143,12 @@ ctrl-x 	done with copy_override(flag_cut)	ok?
 
 set self.flag_fix_indent and self.checksum_fixindent in init ok?
 
+copy paste in popup done ok?
 
+windows copy in entry done ok?
 windows copy remember done ok?
-not checked
-also move/copy many lines not checked
+	not checked
+	also move/copy many lines not checked
 
 
 
@@ -156,10 +158,10 @@ ctrl-c override Begin
 
 
 check before copy, paste:
-		no need to check states?
-		no need to check widget if bind is to self.contents
-		is selection from editor?#############################
-		check indentation if not?###########
+	no need to check states?
+	no need to check widget if bind is to self.contents
+	is selection from editor?#############################
+	check indentation if not?###########
 	
 after paste_override:
 	cursor remains at insert 	done ok?
@@ -168,8 +170,9 @@ after paste_override:
 
 
 
-windows copy in entry
-ctrl-c (copy) override?
+
+
+remove move updown etc?
 
 
 ctrl-c override End

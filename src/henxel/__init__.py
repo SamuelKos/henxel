@@ -816,7 +816,12 @@ class Editor(tkinter.Toplevel):
 				lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
 			self.entry.bind( "<Control-A>",
 				lambda event, arg=('<<SelectLineStart>>'): self.entry.event_generate)
-		
+			
+			self.entry.bind( "<Control-c>", self.copy_windows)
+			self.entry.bind( "<Control-x>",
+				lambda event: self.copy_windows(event, **{'flag_cut':True}) )
+			
+			
 		self.contents.bind( "<Control-i>", self.move_right)
 		self.contents.bind( "<Control-b>", self.move_left)
 		self.contents.bind( "<Control-n>", self.move_down)
@@ -1029,15 +1034,31 @@ class Editor(tkinter.Toplevel):
 		self.update_linenums()
 		
 	
-	def copy_windows(self, input=None):
+	def copy_windows(self, event=None, selection=None, flag_cut=False):
 		
 		try:
 			#self.clipboard_clear()
 			# From copy():
-			if input:
-				tmp = input
+			if selection:
+				tmp = selection
 			else:
 				tmp = self.selection_get()
+			
+			
+			if flag_cut:
+				w = self.contents
+				
+				# In entry
+				if event:
+					w = event.widget
+					
+					all_text_in_entry = w.get()
+					idx_s = all_text_in_entry.rindex(tmp)
+					idx_e = idx_s + len(tmp)
+					w.delete(idx_s, idx_e)
+					
+				
+				w.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
 			
 			
 			# https://stackoverflow.com/questions/51921386
@@ -4004,7 +4025,7 @@ class Editor(tkinter.Toplevel):
 			if self.os_type != 'windows':
 				self.contents.clipboard_append(tmp)
 			else:
-				self.copy_windows(event=event)
+				self.copy_windows(selection=tmp)
 			
 			self.after(600, lambda args=['sel', '1.0', tkinter.END]:
 					self.contents.tag_remove(*args) )
@@ -4221,37 +4242,24 @@ class Editor(tkinter.Toplevel):
 		self.popup.unpost()
 	
 	
-	def copy_old(self):
-		''' When copy is selected from popup-menu
-		'''
+	def copy_fallback(self, selection=None, flag_cut=False):
+		
 		if self.os_type == 'windows':
-			self.copy_windows()
+			self.copy_windows(selection=selection, flag_cut=flag_cut)
 		
 		else:
 			try:
 				self.clipboard_clear()
 				self.clipboard_append(self.selection_get())
-			except tkinter.TclError:
-				# is empty
-				return 'break'
-		
-	
-	def copy_fallback(self, selection=None):
-		
-		if self.os_type == 'windows':
-			self.copy_windows(selection)
-		
-		else:
-			try:
-				self.clipboard_clear()
-				self.clipboard_append(self.selection_get())
+				if flag_cut:
+					self.contents.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
+				
 			except tkinter.TclError:
 				# is empty
 				pass
 		
 		return 'break'
 		
-			
 	
 	def copy(self, event=None, flag_cut=False):
 		''' When selection started from start of block,
@@ -4281,13 +4289,16 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 
 		
+		t_orig = self.contents.selection_get()
+		
+		
 		# Check if num selection lines > 1
 		startline, startcol = map(int, self.contents.index(tkinter.SEL_FIRST).split(sep='.'))
 		endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
 		numlines = endline - startline
 		if not numlines > 1:
 			print('copy fail 2, numlines not > 1')
-			return self.copy_fallback()
+			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
 			
 
 		# Selection start indexes:
@@ -4300,7 +4311,7 @@ class Editor(tkinter.Toplevel):
 		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
 		if len(tmp.strip()) == 0:
 			print('copy fail 4, startline empty')
-			return self.copy_fallback()
+			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
 		
 		# Check if cursor not at idx_linestart
 		for i in range(len(tmp)):
@@ -4310,14 +4321,13 @@ class Editor(tkinter.Toplevel):
 		if i > self.indent_selstart:
 			# Cursor is inside indentation or indent0
 			print('copy fail 3, Cursor in indentation')
-			return self.copy_fallback()
+			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
 			
 		elif i < self.indent_selstart:
 			print('copy fail 3, SEL_FIRST after idx_linestart')
-			return self.copy_fallback()
+			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
 		
 		# Check if two nextlines below selstart not empty
-		t_orig = self.contents.selection_get()
 		t = t_orig.splitlines(keepends=True)
 		tmp = t[1]
 		
@@ -4328,12 +4338,12 @@ class Editor(tkinter.Toplevel):
 				
 				if len(tmp.strip()) == 0:
 					print('copy fail 6, two nextlines empty')
-					return self.copy_fallback(t_orig)
+					return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
 					
 			# numlines == 2:
 			else:
 				print('copy fail 5, numlines == 2, nextline is empty')
-				return self.copy_fallback(t_orig)
+				return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
 		
 		for i in range(len(tmp)):
 			if not tmp[i].isspace():
@@ -4351,7 +4361,7 @@ class Editor(tkinter.Toplevel):
 			#		self.indent_nextline
 			#indent0
 			print('copy fail 7, indentation decreasing on first non empty line')
-			return self.copy_fallback(t_orig)
+			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
 			
 			
 		# Check if indent of any line in selection < self.indent_selstart
@@ -4373,14 +4383,14 @@ class Editor(tkinter.Toplevel):
 						
 		if self.indent_selstart > min_ind:
 			print('copy fail 8, indentation of line in selection < self.indent_selstart')
-			return self.copy_fallback(t_orig)
+			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
 
 		
 		if self.os_type != 'windows':
 			self.contents.clipboard_clear()
 			self.contents.clipboard_append(t_orig)
 		else:
-			self.copy_windows(t_orig)
+			self.copy_windows(selection=t_orig, flag_cut=flag_cut)
 			
 		self.flag_fix_indent = True
 		self.checksum_fix_indent = t_orig
