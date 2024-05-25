@@ -1,29 +1,32 @@
 fontchoose ok?
-
 fixed animation ok?
 
-if uncomment fail, keep cursor pos done ok?
+if uncomment fail, keep cursor pos, done ok?
 
-focus underlined ok?
+focus-tag underlined ok?
 
-check short branch name caps lock after next commit, check done ok?
+short branch-name works (no width changes in ln_widget)
+and if showing caps-lock-state	ok?
 
 added little delay when select_many lines ok?
 
-cant know if caps when started until Motion
+cant know if caps-lock is on when started editor until Motion-event is occured
+binded to motion	ok?
 
 comment uncomment curline without selection? done ok?
-	also fixed them
+	also done some fixing in comment uncomment
 
-search again backwards ctrl-shift-backspace done ok?
+search again backwards ctrl-shift-backspace ok?
+still back to previous with arrow left	ok?
 
-paste short cursor after? done in end of paste() ok?
+when doing short paste, put cursor after paste	ok?
+done in end of paste()
 
 fixed paste_override(), it did not select correctly like paste(), ok?
 	still need to set self.anchor?
 
 removed check: if pos was not changed, in select_by_words
-reason: to keep selection when at filestartend 	ok?
+reason: keep selection when at file-startend 	ok?
 
 ctrl tab --> insert tab
 self.insert_tab		ok?
@@ -50,6 +53,9 @@ need to know if line is wrapped --> fix idx_linestartend
 	done ok?
 move by words, first check if before idx_linestart? done ok?
 fix move_by_words 	done ok?
+fix same way select_by_words as move_by_words? done ok?
+check empty page moving/selection etc done ok?
+select_by_words: when selection closes after <<nextword>> done ok?
 
 
 
@@ -66,6 +72,14 @@ check other escapable callbacks?
 #######################
 
 
+yank line sel --> custom tag
+
+
+save file when pressing save, update help
+
+
+tuple after_cancel: (from_who, after_call)
+
 
 check is it necessary to check event.state in select_by_words etc
 
@@ -73,14 +87,13 @@ check is it necessary to check event.state in select_by_words etc
 check does esc exit fullscreen normally in macos?
 
 
-fix same way select_by_words as move_by_words?
-
-
-save ostype and some keys to conf?
-
 check syntax before quit?
+python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
+# https://stackoverflow.com/questions/4284313
+Use tokenizer instead?
 
 copy paste in popup
+
 
 search again, if have selection, use it as search word instead of clipboard
 
@@ -93,11 +106,11 @@ fix arrow updown (put cursor to same col_nextline or
 
 check caps --> after cancel
 
-check empty page moving/selection etc
 
-bind with eval
+bind with eval from dict --> customisable binds
 
 
+save ostype and some keys to conf?
 check event states of certain keys (in init?)
 	Example: arrow keys have alien states in windows,
 	so to check state of arrow-up key:
@@ -142,20 +155,6 @@ ctrl-c override Begin
 
 
 
-<Mod4-Key>
-<Mod1-Key>
-<Meta-Key>
-
-<<PasteSelection>>
-<<Clear>>
-<<Paste>>
-<<Copy>>
-<<Cut>>
-<<SelectNone>>
-
-
-
-
 check before copy, paste:
 		no need to check states?
 		no need to check widget if bind is to self.contents
@@ -170,6 +169,7 @@ after paste_override:
 
 
 windows copy in entry
+ctrl-c (copy) override?
 
 
 ctrl-c override End
@@ -186,9 +186,9 @@ https://intellij-support.jetbrains.com/hc/en-us/articles/360005137400-Cmd-Shift-
 
 
 
+######################
 list of tk::mac procs
 https://www.tcl.tk/man/tcl9.0/TkCmd/tk_mac.html
-
 
 ::tk::mac::OpenApplication
 If a proc of this name is defined, this proc fill fire when your application is initially opened. It is the default Apple Event handler for kAEOpenApplication, “oapp”.
@@ -204,6 +204,8 @@ proc ::tk::mac::ReopenApplication {} {
 	}
 	raise .
 }
+#######################
+
 
 clarify update tokens() marked spot
 
@@ -212,19 +214,15 @@ toggle mark
 
 unbind ctrl-v macOS
 
-ctrl-c (copy) override?
-
 tab-comp in entry?
 
 search in help?
 
-select_by_words: when selection closes after <<nextword>>?
 
 selection handling not perfect when:
 	comment
 	indent
 
-move/select many lines, ensure visibility?
 
 
 

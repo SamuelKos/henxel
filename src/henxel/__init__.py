@@ -281,8 +281,11 @@ class Editor(tkinter.Toplevel):
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		
 		
-		# other widgets
+		# Other widgets
 		self.to_be_closed = list()
+		
+		# Used in check_caps
+		self.to_be_cancelled = list()
 		
 		self.ln_string = ''
 		self.want_ln = True
@@ -334,7 +337,7 @@ class Editor(tkinter.Toplevel):
 		self.check_pars = False
 		self.par_err = False
 		
-		# Used in copy_override() and paste_override()
+		# Used in copy() and paste()
 		self.flag_fix_indent = False
 		self.checksum_fix_indent = False
 
@@ -697,10 +700,10 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Alt-x>", self.toggle_syntax)
 			self.contents.bind( "<Alt-f>", self.font_choose)
 			
-			self.contents.bind( "<Control-c>", self.copy_override)
-			self.contents.bind( "<Control-v>", self.paste_override)
+			self.contents.bind( "<Control-c>", self.copy)
+			self.contents.bind( "<Control-v>", self.paste)
 			self.contents.bind( "<Control-x>",
-				lambda event: self.copy_override(event, **{'flag_cut':True}) )
+				lambda event: self.copy(event, **{'flag_cut':True}) )
 			
 			self.contents.bind( "<Control-y>", self.yank_line)
 			
@@ -749,10 +752,10 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
 			self.contents.bind( "<Mod1-Key-f>", self.search)
 			
-			self.contents.bind( "<Mod1-Key-c>", self.copy_override)
-			self.contents.bind( "<Mod1-Key-v>", self.paste_override)
+			self.contents.bind( "<Mod1-Key-c>", self.copy)
+			self.contents.bind( "<Mod1-Key-v>", self.paste)
 			self.contents.bind( "<Mod1-Key-x>",
-				lambda event: self.copy_override(event, **{'flag_cut':True}) )
+				lambda event: self.copy(event, **{'flag_cut':True}) )
 			
 			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
 			self.contents.bind( "<Mod1-Key-g>", self.gotoline)
@@ -1030,7 +1033,7 @@ class Editor(tkinter.Toplevel):
 		
 		try:
 			#self.clipboard_clear()
-			# From copy_override():
+			# From copy():
 			if input:
 				tmp = input
 			else:
@@ -1094,11 +1097,20 @@ class Editor(tkinter.Toplevel):
 		e = event.state
 		
 		if e in [0, 2]:
-			if e == 0 and self.capslock in [True, 'init']:
-				# CapsLock is now off
-				self.capslock = False
-				#print('no caps')
 			
+			# CapsLock is being turned off
+			if e == 0 and self.capslock in [True, 'init']:
+				self.capslock = False
+				
+				# If quickly pressed CapsLock off,
+				# cancel flashing started at the end of this callback.
+				for i in range(len(self.to_be_cancelled)-1, -1, -1):
+					item = self.to_be_cancelled[i]
+					self.after_cancel(item)
+					self.to_be_cancelled.pop(i)
+					
+					
+				# Put Git-branch name back if on one
 				if self.branch:
 					branch = self.branch[:5]
 					# Set branch name lenght to 5.
@@ -1124,18 +1136,29 @@ class Editor(tkinter.Toplevel):
 					self.btn_git.config(bitmap='info')
 				
 				
+			# CapsLock is being turned on
 			elif e == 2 and self.capslock in [False, 'init']:
-				# CapsLock is now on
 				self.capslock = True
-				#print('caps')
-				self.btn_git.config(text="CAPS ", disabledforeground='brown1')
 				
-				# Flash text
-				for i in range(3):
-					self.wait_for(300)
-					self.btn_git.config(text="     ")
-					self.wait_for(300)
-					self.btn_git.config(text="CAPS ")
+				self.btn_git.config(text="CAPS ", disabledforeground='brown1')
+					
+				# Flash text and enable canceling flashing later.
+				#
+				# For two times, i=1,2:
+				#	wait 300
+				# 	change btn_git text to spaces
+				# 	again wait 300
+				# 	change btn_git text to CAPS
+				for i in range(1,3):
+					self.to_be_cancelled.append(
+						self.after((2*i-1)*300, lambda kwargs={'text': 5*' '}:
+							self.btn_git.config(**kwargs) )
+					)
+					
+					self.to_be_cancelled.append(
+						self.after(2*i*300, lambda kwargs={'text': 'CAPS '}:
+							self.btn_git.config(**kwargs) )
+					)
 					
 		
 	def test_bind(self, event=None):
@@ -2524,15 +2547,12 @@ class Editor(tkinter.Toplevel):
 		
 		t = wid.textwid
 		
-##		wid.after(200, lambda kwargs={'cursor':'hand2'}: t.config(**kwargs) )
-##
-		
-		
+		# Maybe left as lambda-example?
+		#wid.after(200, lambda kwargs={'cursor':'hand2'}: t.config(**kwargs) )
+
 		t.config(cursor="hand2")
 		wid.after(50, lambda args=[tagname],
 				kwargs={'underline':1, 'font':self.boldfont}: t.tag_config(*args, **kwargs) )
-		
-		#t.tag_config(tagname, underline=1, font=self.boldfont)
 		
 		
 	def leave2(self, args, event=None):
@@ -2546,8 +2566,6 @@ class Editor(tkinter.Toplevel):
 		t.config(cursor=self.name_of_cursor_in_text_widget)
 		wid.after(50, lambda args=[tagname],
 				kwargs={'underline':0, 'font':self.menufont}: t.tag_config(*args, **kwargs) )
-		
-		#t.tag_config(tagname, underline=0, font=self.menufont)
 		
 		
 	def lclick2(self, args, event=None):
@@ -3989,8 +4007,8 @@ class Editor(tkinter.Toplevel):
 				self.copy_windows(event=event)
 			
 			self.after(600, lambda args=['sel', '1.0', tkinter.END]:
-				self.contents.tag_remove(*args) )
-		
+					self.contents.tag_remove(*args) )
+			
 			
 		return 'break'
 		
@@ -4203,7 +4221,7 @@ class Editor(tkinter.Toplevel):
 		self.popup.unpost()
 	
 	
-	def copy(self):
+	def copy_old(self):
 		''' When copy is selected from popup-menu
 		'''
 		if self.os_type == 'windows':
@@ -4218,17 +4236,24 @@ class Editor(tkinter.Toplevel):
 				return 'break'
 		
 	
-	def cancel_copy_override(self, selection=None):
+	def copy_fallback(self, selection=None):
 		
 		if self.os_type == 'windows':
 			self.copy_windows(selection)
-			return 'break'
 		
 		else:
-			return
+			try:
+				self.clipboard_clear()
+				self.clipboard_append(self.selection_get())
+			except tkinter.TclError:
+				# is empty
+				pass
+		
+		return 'break'
+		
+			
 	
-	
-	def copy_override(self, event=None, flag_cut=False):
+	def copy(self, event=None, flag_cut=False):
 		''' When selection started from start of block,
 				for example: cursor is before if-word,
 			and
@@ -4238,9 +4263,9 @@ class Editor(tkinter.Toplevel):
 				preserve indentation
 				of all lines in selection.
 				
-			This is done in paste_override()
+			This is done in paste()
 			if self.flag_fix_indent is True.
-			If not, paste() is used instead.
+			If not, paste_fallback() is used instead.
 		'''
 		self.indent_selstart = 0
 		self.indent_nextline = 0
@@ -4255,14 +4280,14 @@ class Editor(tkinter.Toplevel):
 			print('copy fail 1, no selection')
 			return 'break'
 
-
+		
 		# Check if num selection lines > 1
 		startline, startcol = map(int, self.contents.index(tkinter.SEL_FIRST).split(sep='.'))
 		endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
 		numlines = endline - startline
 		if not numlines > 1:
 			print('copy fail 2, numlines not > 1')
-			return self.cancel_copy_override()
+			return self.copy_fallback()
 			
 
 		# Selection start indexes:
@@ -4275,7 +4300,7 @@ class Editor(tkinter.Toplevel):
 		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
 		if len(tmp.strip()) == 0:
 			print('copy fail 4, startline empty')
-			return self.cancel_copy_override()
+			return self.copy_fallback()
 		
 		# Check if cursor not at idx_linestart
 		for i in range(len(tmp)):
@@ -4285,11 +4310,11 @@ class Editor(tkinter.Toplevel):
 		if i > self.indent_selstart:
 			# Cursor is inside indentation or indent0
 			print('copy fail 3, Cursor in indentation')
-			return self.cancel_copy_override()
+			return self.copy_fallback()
 			
 		elif i < self.indent_selstart:
 			print('copy fail 3, SEL_FIRST after idx_linestart')
-			return self.cancel_copy_override()
+			return self.copy_fallback()
 		
 		# Check if two nextlines below selstart not empty
 		t_orig = self.contents.selection_get()
@@ -4303,12 +4328,12 @@ class Editor(tkinter.Toplevel):
 				
 				if len(tmp.strip()) == 0:
 					print('copy fail 6, two nextlines empty')
-					return self.cancel_copy_override(t_orig)
+					return self.copy_fallback(t_orig)
 					
 			# numlines == 2:
 			else:
 				print('copy fail 5, numlines == 2, nextline is empty')
-				return self.cancel_copy_override(t_orig)
+				return self.copy_fallback(t_orig)
 		
 		for i in range(len(tmp)):
 			if not tmp[i].isspace():
@@ -4326,7 +4351,7 @@ class Editor(tkinter.Toplevel):
 			#		self.indent_nextline
 			#indent0
 			print('copy fail 7, indentation decreasing on first non empty line')
-			return self.cancel_copy_override(t_orig)
+			return self.copy_fallback(t_orig)
 			
 			
 		# Check if indent of any line in selection < self.indent_selstart
@@ -4348,7 +4373,7 @@ class Editor(tkinter.Toplevel):
 						
 		if self.indent_selstart > min_ind:
 			print('copy fail 8, indentation of line in selection < self.indent_selstart')
-			return self.cancel_copy_override(t_orig)
+			return self.copy_fallback(t_orig)
 
 		
 		if self.os_type != 'windows':
@@ -4368,7 +4393,7 @@ class Editor(tkinter.Toplevel):
 		###################
 		
 	
-	def paste_override(self, event=None):
+	def paste(self, event=None):
 		''' When selection started from start of block,
 				for example: cursor is before if-word,
 			and
@@ -4379,8 +4404,8 @@ class Editor(tkinter.Toplevel):
 				of all lines in selection.
 				
 			This is done if self.flag_fix_indent is True.
-			If not, paste() is used instead.
-			self.flag_fix_indent is set in copy_override()
+			If not, paste_fallback() is used instead.
+			self.flag_fix_indent is set in copy()
 		'''
 		
 		try:
@@ -4393,7 +4418,7 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 			
 		if not self.flag_fix_indent or t != self.checksum_fix_indent:
-			self.paste(event=event)
+			self.paste_fallback(event=event)
 			self.contents.edit_separator()
 			print('paste norm')
 			return 'break'
@@ -4446,7 +4471,7 @@ class Editor(tkinter.Toplevel):
 				#		indent_cursor
 				#indent0
 				
-				# This is one reason to cancel in copy_override()
+				# This is one reason to cancel in copy()
 				# if indentation of any line in selection < self.indent_selstart
 				line = line[-1*indent_diff_cursor:]
 				
@@ -4468,7 +4493,7 @@ class Editor(tkinter.Toplevel):
 			
 		tmp = t.splitlines(True)
 		
-		# from paste
+		# Taken from paste_fallback
 		##########################
 		s = self.contents.index( '%s linestart' % idx_insert_orig)
 		e = self.contents.index( '%d.0 lineend' % lastline )
@@ -4496,8 +4521,8 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 	
 	
-	def paste(self, event=None):
-		''' Fallback from paste_override
+	def paste_fallback(self, event=None):
+		''' Fallback from paste
 		'''
 		
 		try:
