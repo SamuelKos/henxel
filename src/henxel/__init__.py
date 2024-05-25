@@ -822,11 +822,6 @@ class Editor(tkinter.Toplevel):
 				lambda event: self.copy_windows(event, **{'flag_cut':True}) )
 			
 			
-		self.contents.bind( "<Control-i>", self.move_right)
-		self.contents.bind( "<Control-b>", self.move_left)
-		self.contents.bind( "<Control-n>", self.move_down)
-		self.contents.bind( "<Control-p>", self.move_up)
-		
 		self.contents.bind( "<Control-j>", self.center_view)
 		self.contents.bind( "<Control-u>",
 			lambda event: self.center_view(event, **{'up':True}) )
@@ -1052,12 +1047,6 @@ class Editor(tkinter.Toplevel):
 				if event:
 					w = event.widget
 					
-					all_text_in_entry = w.get()
-					idx_s = all_text_in_entry.rindex(tmp)
-					idx_e = idx_s + len(tmp)
-					w.delete(idx_s, idx_e)
-					
-				
 				w.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
 			
 			
@@ -3299,62 +3288,7 @@ class Editor(tkinter.Toplevel):
 ########## Run file Related End
 ########## Select and move Begin
 
-	def move_right(self, event=None):
-		''' move cursor right with
-			ctrl-i
-		'''
-		
-		if self.state not in  [ 'normal', 'error' ]:
-			self.bell()
-			return "break"
-			
-		self.contents.event_generate('<<NextChar>>')
-		
-		return "break"
-		
-		
-	def move_left(self, event=None):
-		''' move cursor left with
-			ctrl-b
-		'''
-		
-		if self.state not in  [ 'normal', 'error' ]:
-			self.bell()
-			return "break"
-			
-		self.contents.event_generate('<<PrevChar>>')
-		
-		return "break"
-		
-		
-	def move_up(self, event=None):
-		''' move cursor up with
-			ctrl-p
-		'''
-		
-		if self.state not in  [ 'normal', 'error' ]:
-			self.bell()
-			return "break"
-			
-		self.contents.event_generate('<<PrevLine>>')
-		
-		return "break"
-		
-		
-	def move_down(self, event=None):
-		''' move cursor down with
-			ctrl-n
-		'''
-		
-		if self.state not in  [ 'normal', 'error' ]:
-			self.bell()
-			return "break"
-	
-		self.contents.event_generate('<<NextLine>>')
-		
-		return "break"
-	
-	
+
 ##	def updown_override(self, event=None, direction=None):
 ##		''' up-down override, to expand possibly incorrect indentation
 ##		'''
@@ -6514,8 +6448,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.unbind( "<Control-p>", funcid=self.bid2 )
 		self.contents.unbind( "<Double-Button-1>", funcid=self.bid3 )
 		self.contents.unbind( "<space>", funcid=self.bid4 )
-		self.contents.bind( "<Control-n>", self.move_down)
-		self.contents.bind( "<Control-p>", self.move_up)
 		self.contents.bind("<Return>", self.return_override)
 		self.entry.bind("<Control-n>", self.do_nothing_without_bell)
 		self.entry.bind("<Control-p>", self.do_nothing_without_bell)

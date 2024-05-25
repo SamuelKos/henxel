@@ -73,15 +73,7 @@
 		
 		Ctrl-t  	Change indentation of selected lines to current setting
 		
-		Ctrl-i  Move cursor right
-		Ctrl-b  Move cursor left
-		Ctrl-n  Move cursor down
-		Ctrl-p  Move cursor up
 		
-		Ctrl-k  Remove from cursor to lineend
-		Ctrl-o  Insert linebreak at cursor
-		
-
 		While searching:
 			Ctrl-n  Next match
 			Ctrl-p  Prev match

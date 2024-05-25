@@ -10,9 +10,6 @@ and if showing caps-lock-state	ok?
 
 added little delay when select_many lines ok?
 
-cant know if caps-lock is on when started editor until Motion-event is occured
-binded to motion	ok?
-
 comment uncomment curline without selection? done ok?
 	also done some fixing in comment uncomment
 
@@ -31,6 +28,8 @@ reason: keep selection when at file-startend 	ok?
 ctrl tab --> insert tab
 self.insert_tab		ok?
 
+remove move updownleftright done ok?
+	and kill line, add linebreak, updated help
 
 ####
 Fix this python 3.12 string escape fix, ok?
@@ -38,7 +37,13 @@ Fix this python 3.12 string escape fix, ok?
 /Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py:467: SyntaxWarning: invalid escape sequence '\W'
   self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
 #####
-show caps-lock state in btn_git:
+show caps-lock state in btn_git:	done ok?
+
+cant know if caps-lock is on when started editor until Motion-event is occured
+binded to motion	ok?
+
+check caps --> after cancel
+
 textwid.bind('<KeyRelease-Caps_Lock>', mycallback2)
 	if event.state == 0:
 		capslock is off
@@ -88,11 +93,6 @@ check is it necessary to check event.state in select_by_words etc
 check does esc exit fullscreen normally in macos?
 
 
-check syntax before quit?
-python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
-# https://stackoverflow.com/questions/4284313
-Use tokenizer instead?
-
 
 search again, if have selection, use it as search word instead of clipboard
 
@@ -104,7 +104,7 @@ also check if multiline, then not suggest at search
 fix arrow updown (put cursor to same col_nextline or
 	lineend if nextline is shorter than col_curline)
 
-check caps --> after cancel
+
 
 
 bind with eval from dict --> customisable binds
@@ -124,7 +124,15 @@ check event states of certain keys (in init?)
 
 
 
+
+syntax highlight need check
 tokens to list --> after cancel
+clarify update_tokens marked spot
+
+check syntax before quit?
+python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
+# https://stackoverflow.com/questions/4284313
+Use tokenizer instead?
 
 	
 	
@@ -170,11 +178,6 @@ after paste_override:
 
 
 
-
-
-remove move updown etc?
-
-
 ctrl-c override End
 #########################################################
 
@@ -210,7 +213,6 @@ proc ::tk::mac::ReopenApplication {} {
 #######################
 
 
-clarify update tokens() marked spot
 
 marks?
 toggle mark
