@@ -2,6 +2,7 @@
 GUI-editor for Python development. Tested to work with Debian 12, Windows 10 and 11 and macOS 12.
 
 ![editor_mac](pics/editor_macOS.png)
+
 ![editor_linux](pics/editor_linux.png)
 
 # Featuring
@@ -96,8 +97,8 @@ myproject> env\launch_ed.bat
 
 
 # Prerequisites in macOS and venv-creation
-Python installation (you may need to install newer version of python from python.org)
-should already include tkinter. There currently is no mkvenv script for macOS,
+You will need to install newer version of python with Homebrew. Look info on the ARR-repository
+about how to do that. There currently is no mkvenv script for macOS,
 but making venv is quite same as in Linux. It seems to be enough to make venv
 and then install henxel to it without anything else.
 
@@ -157,9 +158,11 @@ Files are in src/henxel/
 
 
 # More resources
-[Tcl/Tk](https://tcl.tk/man/tcl9.0/TkCmd/index.html)
-[Python/Tkinter](https://docs.python.org/3/library/tkinter.html)
-[Changelog](https://github.com/SamuelKos/henxel/blob/main/CHANGELOG)
+* [Tcl/Tk](https://tcl.tk/man/tcl9.0/TkCmd/index.html)
+
+* [Python/Tkinter](https://docs.python.org/3/library/tkinter.html)
+
+* [Changelog](https://github.com/SamuelKos/henxel/blob/main/CHANGELOG)
 
 # Licence
 This project is licensed under the terms of the GNU General Public License v3.0.
