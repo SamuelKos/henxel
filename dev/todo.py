@@ -31,6 +31,10 @@ self.insert_tab		ok?
 remove move updownleftright done ok?
 	and kill line, add linebreak, updated help
 
+	
+check if multiline, then not suggest at search ok?
+
+
 ####
 Fix this python 3.12 string escape fix, ok?
 >>> import henxel
@@ -64,9 +68,6 @@ check empty page moving/selection etc done ok?
 select_by_words: when selection closes after <<nextword>> done ok?
 
 
-
-
-Below this not ok?
 ######################
 fix search etc: after giving search word, quickly pressing return and esc
 state is locked to search
@@ -75,7 +76,54 @@ state is locked to search
 FIXED with checking if state is waiting in stop_search
 
 check other escapable callbacks?
-#######################
+	
+#########################################################
+fix '' when expecting space or empty. 					fixed ok?
+paste() always keep selection and cursor at orig insert 	ok?
+
+call self.clipboard.get() only once
+	done copy_override check done ok?
+	done paste_override check done ok?
+
+when paste, check clipboard contents is same as self.checksum_fixindent
+and fall back to paste()	done ok?
+
+ctrl-x 	done with copy_override(flag_cut)	ok?
+
+
+set self.flag_fix_indent and self.checksum_fixindent in init ok?
+
+copy paste in popup done ok?
+
+windows copy in entry done ok?
+windows copy remember done ok?
+	not checked
+	also move/copy many lines not checked
+
+
+ctrl-c override Begin
+
+
+check before copy, paste:
+	no need to check states?
+	no need to check widget if bind is to self.contents
+	is selection from editor?
+	check indentation if not?
+	
+after paste_override:
+	cursor remains at insert 	done ok?
+	syntax 		done ok?
+	done with copying code from paste() ok?
+
+
+
+ctrl-c override End
+#################################
+
+
+
+marks?
+toggle mark
 
 
 yank line sel --> custom tag
@@ -93,21 +141,34 @@ check is it necessary to check event.state in select_by_words etc
 check does esc exit fullscreen normally in macos?
 
 
+search_next, if have selection, use it as search word instead of clipboard
+	note there is already selection if done search_next
+check_next event left no work if right then left
+it should be unbinded when pressed other than left.
 
-search again, if have selection, use it as search word instead of clipboard
 
 search, if previously have deleted suggestion from clipboard,
 do not suggest from clipboard again if it is the same.
-also check if multiline, then not suggest at search
 
+
+syntax highlight often slow, needs check
+tokens to list --> after cancel
+clarify update_tokens marked spot
+
+check syntax before quit?
+python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
+# https://stackoverflow.com/questions/4284313
+Use tokenizer instead?
+
+	
 
 fix arrow updown (put cursor to same col_nextline or
 	lineend if nextline is shorter than col_curline)
 
 
 
-
 bind with eval from dict --> customisable binds
+
 
 
 save ostype and some keys to conf?
@@ -123,62 +184,29 @@ check event states of certain keys (in init?)
 	move_by_words and select_by_words etc.
 
 
+#################
+fix search etc: after giving search word, quickly pressing return and esc
+state is locked to search
+		
+		
+FIXED with checking if state is waiting in stop_search
 
-
-syntax highlight need check
-tokens to list --> after cancel
-clarify update_tokens marked spot
-
-check syntax before quit?
-python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
-# https://stackoverflow.com/questions/4284313
-Use tokenizer instead?
-
-	
-	
-#########################################################
-fix '' when expecting space or empty. 					fixed ok?
-paste() always keep selection and cursor at orig insert 	ok?
-
-call self.clipboard.get() only once
-	done copy_override check done ok?
-	done paste_override check done ok?
-
-when paste, check clipboard contents is same as self.checksum_fixindent
-and fall back to paste()	done ok?
-
-ctrl-x 	done with copy_override(flag_cut)	ok?
-
-set self.flag_fix_indent and self.checksum_fixindent in init ok?
-
-copy paste in popup done ok?
-
-windows copy in entry done ok?
-windows copy remember done ok?
-	not checked
-	also move/copy many lines not checked
-
-
-
-
-ctrl-c override Begin
-
+check other escapable callbacks?
+#################
 
 
 check before copy, paste:
-	no need to check states?
-	no need to check widget if bind is to self.contents
-	is selection from editor?#############################
-	check indentation if not?###########
-	
-after paste_override:
-	cursor remains at insert 	done ok?
-	syntax 		done ok?
-	done with copying code from paste() ok?
+	is selection from editor?
+	check indentation if not?
 
+tab-comp in entry?
 
+search in help?
 
-ctrl-c override End
+selection handling not perfect when:
+	comment
+	indent
+
 #########################################################
 
 
@@ -214,19 +242,21 @@ proc ::tk::mac::ReopenApplication {} {
 
 
 
-marks?
-toggle mark
-
-unbind ctrl-v macOS
-
-tab-comp in entry?
-
-search in help?
 
 
-selection handling not perfect when:
-	comment
-	indent
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
