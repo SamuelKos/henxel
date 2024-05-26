@@ -11,6 +11,9 @@
 		Ctrl-BackSpace  Show and select next occurence of last search.
 						If got too far, press arrowleft to go to last
 						cursor position. Search again in short.
+						To search backwards press
+						Ctrl-Shift-BackSpace
+						
 		Ctrl-f  Search
 		Ctrl-r  Replace
 		Ctrl-R  Replace all
@@ -18,6 +21,7 @@
 							-20 goes to 20 lines before file-end etc.
 		Shift-Tab  Unindent
 		Tab        Indent, complete word
+		Ctrl-Tab   Insert Tab
 		
 		Shift-Return	Comment
 		Shift-BackSpace	Uncomment

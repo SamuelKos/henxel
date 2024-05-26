@@ -1,127 +1,34 @@
-fontchoose ok?
-fixed animation ok?
-
-if uncomment fail, keep cursor pos, done ok?
-
-focus-tag underlined ok?
-
-short branch-name works (no width changes in ln_widget)
-and if showing caps-lock-state	ok?
-
-added little delay when select_many lines ok?
-
-comment uncomment curline without selection? done ok?
-	also done some fixing in comment uncomment
-
-search again backwards ctrl-shift-backspace ok?
-still back to previous with arrow left	ok?
-
-when doing short paste, put cursor after paste	ok?
-done in end of paste()
-
-fixed paste_override(), it did not select correctly like paste(), ok?
-	still need to set self.anchor?
-
-removed check: if pos was not changed, in select_by_words
-reason: keep selection when at file-startend 	ok?
-
-ctrl tab --> insert tab
-self.insert_tab		ok?
-
-remove move updownleftright done ok?
-	and kill line, add linebreak, updated help
-
-	
-check if multiline, then not suggest at search ok?
-
-
-####
-Fix this python 3.12 string escape fix, ok?
->>> import henxel
-/Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py:467: SyntaxWarning: invalid escape sequence '\W'
-  self.tk.eval('set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
-#####
-show caps-lock state in btn_git:	done ok?
-
-cant know if caps-lock is on when started editor until Motion-event is occured
-binded to motion	ok?
-
-check caps --> after cancel
-
-textwid.bind('<KeyRelease-Caps_Lock>', mycallback2)
-	if event.state == 0:
-		capslock is off
-				
-textwid.bind('<KeyPress-Caps_Lock>', mycallback2)
-	if event.state == 2:
-		capslock is on
-		
-#####
-when at idx_linestart, PrevWord goes to indent0
-when at idx_lineend, NextWord goes to indent0
-need to know if line is wrapped --> fix idx_linestartend
-	done ok?
-move by words, first check if before idx_linestart? done ok?
-fix move_by_words 	done ok?
-fix same way select_by_words as move_by_words? done ok?
-check empty page moving/selection etc done ok?
-select_by_words: when selection closes after <<nextword>> done ok?
-
-
-######################
-fix search etc: after giving search word, quickly pressing return and esc
-state is locked to search
-		
-		
-FIXED with checking if state is waiting in stop_search
-
-check other escapable callbacks?
-	
-#########################################################
-fix '' when expecting space or empty. 					fixed ok?
-paste() always keep selection and cursor at orig insert 	ok?
-
-call self.clipboard.get() only once
-	done copy_override check done ok?
-	done paste_override check done ok?
-
-when paste, check clipboard contents is same as self.checksum_fixindent
-and fall back to paste()	done ok?
-
-ctrl-x 	done with copy_override(flag_cut)	ok?
-
-
-set self.flag_fix_indent and self.checksum_fixindent in init ok?
-
-copy paste in popup done ok?
-
-windows copy in entry done ok?
-windows copy remember done ok?
-	not checked
-	also move/copy many lines not checked
-
-
-ctrl-c override Begin
-
-
-check before copy, paste:
-	no need to check states?
-	no need to check widget if bind is to self.contents
-	is selection from editor?
-	check indentation if not?
-	
-after paste_override:
-	cursor remains at insert 	done ok?
-	syntax 		done ok?
-	done with copying code from paste() ok?
 
 
 
-ctrl-c override End
-#################################
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###########################
 marks?
 toggle mark
 
@@ -143,7 +50,7 @@ check does esc exit fullscreen normally in macos?
 
 search_next, if have selection, use it as search word instead of clipboard
 	note there is already selection if done search_next
-check_next event left no work if right then left
+check_next event: no work if right then left
 it should be unbinded when pressed other than left.
 
 

@@ -1,7 +1,47 @@
 # Changelog
-* To version: 	0.3.1
+* To version: 	0.3.2
 * From version:	0.0.3
 
+
+# 0.3.2
+- Fixed fontchooser, for example the animation should work again
+
+- If uncomment fails, cursor should now keep original position
+
+- 'focus'-tag is now underlined
+
+- Some fixing in comment and uncomment like comment or uncomment curline
+	without selection
+
+- Search again backwards --> ctrl-shift-backspace,
+	still back to previous with arrow left but it has some
+	yet to be fixed issues likely to do something with check_sel
+
+- Ctrl-Tab --> insert Tab
+
+- Removed move _updownleftright() as unused and updated help
+
+- When search, multilines (> 2 lines) are not autofilled as suggested search word
+
+- Fix for: 'SyntaxWarning: invalid escape sequence' for one string in init.
+	due to 'new' string escaping rules in python 3.12
+
+- Caps-Lock state(if on) is now showed in btn_git
+	It needed among other things bind to Motion to work
+
+- There was issue: When search: after giving search word, then quickly pressing return and esc
+	--> state of editor locked to search.
+	This was fixed with checking if state is waiting in stop_search
+	This kind of issues should be also checked on other escapable callbacks
+	in the future.
+		
+- move_by_words and select_by_words now handle line ends better.
+
+- Renamed copying and pasteing functions more clearly
+
+- Copying now checks if user wants to copy a block and tries to keep
+	its shape when doing paste. This is in 'alpha' -condition
+	
 
 # 0.3.1
 - Keywords for syntax highlighting are now from: import keyword.
