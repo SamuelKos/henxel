@@ -72,6 +72,14 @@ class Tab:
 	'''
 	
 	def __init__(self, **entries):
+		''' active		Bool
+			filepath	pathlib.Path
+			
+			(contents,
+			oldcontents,
+			position,
+			type)		String
+		'''
 		self.active = True
 		self.filepath = None
 		self.contents = ''
@@ -5170,7 +5178,8 @@ class Editor(tkinter.Toplevel):
 		
 			
 	def loadfile(self, filepath):
-		''' filepath is tkinter.pathlib.Path
+		''' filepath is pathlib.Path
+			If filepath is python-file, convert indentation to tabs.
 		'''
 
 		filename = filepath
@@ -5204,7 +5213,7 @@ class Editor(tkinter.Toplevel):
 					indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
 					
 					if indentation_is_alien:
-						# Assuming user wants self.ind_depth, change it without notice:
+						# Assuming user wants self.ind_depth
 						tmp = self.tabs[self.tabindex].oldcontents.splitlines(True)
 						tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 						tmp = ''.join(tmp)
@@ -5307,6 +5316,8 @@ class Editor(tkinter.Toplevel):
 	def save(self, activetab=False, forced=False):
 		''' forced when run() or quit_me()
 			activetab=True from load() and del_tab()
+			
+			If python-file, convert indentation to tabs.
 		'''
 		
 		if forced:
@@ -5331,11 +5342,14 @@ class Editor(tkinter.Toplevel):
 			for tab in self.tabs:
 				if tab.type == 'normal':
 					
-					# Check indent (tabify) and rstrip:
-					tmp = tab.contents.splitlines(True)
-					tmp[:] = [self.tabify(line) for line in tmp]
-					tmp = ''.join(tmp)
-					
+					if '.py' in tab.filepath.suffix:
+						# Check indent (tabify) and rstrip:
+						tmp = tab.contents.splitlines(True)
+						tmp[:] = [self.tabify(line) for line in tmp]
+						tmp = ''.join(tmp)
+					else:
+						tmp = tab.contents
+						
 					if tab.active == True:
 						tmp = tmp[:-1]
 					
@@ -5495,12 +5509,15 @@ class Editor(tkinter.Toplevel):
 				return
 
 			# if closing tab or loading file:
-		
-			# Check indent (tabify) and rstrip:
-			tmp = self.tabs[self.tabindex].contents.splitlines(True)
-			tmp[:] = [self.tabify(line) for line in tmp]
-			tmp = ''.join(tmp)[:-1]
-			
+			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				# Check indent (tabify) and rstrip:
+				tmp = self.tabs[self.tabindex].contents.splitlines(True)
+				tmp[:] = [self.tabify(line) for line in tmp]
+				tmp = ''.join(tmp)[:-1]
+			else:
+				tmp = self.tabs[self.tabindex].contents
+				tmp = tmp[:-1]
+				
 			if self.tabs[self.tabindex].contents == self.tabs[self.tabindex].oldcontents:
 				return
 				

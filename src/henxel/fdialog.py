@@ -103,6 +103,8 @@ class FDialog:
 		self.files.bind('<Return>', self.selectfile)
 		self.files.bind('<Double-ButtonRelease-1>', self.selectfile)
 		
+		#self.entry.bind('<Return>', self.selectfile)######################
+		
 		self.top.bind('<Escape>', self.quit_me)
 		self.top.protocol("WM_DELETE_WINDOW", self.quit_me)
 		
@@ -228,25 +230,37 @@ class FDialog:
 		self.filelist.clear()
 		self.dotfilelist.clear()
 		
-		
-		for item in self.path.iterdir():
-			
-			if item.is_file():
-				name = item.stem + item.suffix
-			
-				if name[0] == '.':
-					self.dotfilelist.append(name)
-				else:
-					self.filelist.append(name)
-					
-			elif item.is_dir():
-			
-				if item.name[0] == '.':
-					self.dotdirlist.append(item.name + '/')
-				else:
-					self.dirlist.append(item.name + '/')
+		try:
+			for item in self.path.iterdir():
 				
+				if item.is_file():
+					name = item.stem + item.suffix
+				
+					if name[0] == '.':
+						self.dotfilelist.append(name)
+					else:
+						self.filelist.append(name)
+						
+				elif item.is_dir():
+				
+					if item.name[0] == '.':
+						self.dotdirlist.append(item.name + '/')
+					else:
+						self.dirlist.append(item.name + '/')
 		
+		
+		# For example, if no access to some folder
+		except EnvironmentError as e:
+			err = e.__str__()
+			
+			# Change relative pathname in traceback to absolute
+			if '..' in e.filename:
+				abs_fpath = self.path.resolve().__str__()
+				err = err.replace(e.filename, abs_fpath)
+							
+			print(err)
+
+			
 		# __pycache__/ etc last:
 		self.dirlist.sort(reverse=True)
 		self.dotdirlist.sort()

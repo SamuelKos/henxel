@@ -1,13 +1,35 @@
+#######################
+macos when trying to open: /home
+
+	PermissionError: [Errno 1] Operation not permitted: '/usr/bin/../../home'
+
+fixed ok?
+###########
+check if other than py-files are tabified
+	done they now are not tabified
+	update help?
+###########
+
+fdialog.py
+	filter in entry:
+	entry bind return:
+	sorted(pathlib.Path().glob("*AD*"))
+	sorted(pathlib.Path().glob("normal filename"))
+	empty list on fail
+
+######################
 
 
 
+goto def cmd-g, without selection?
+cmd-l gotoline
+
+search: no strip searchword
+regexp?
+search, show function name in entry? when show_next prev
 
 
-
-
-
-
-
+toggle tabs --> space?
 
 
 
@@ -116,6 +138,25 @@ selection handling not perfect when:
 
 #########################################################
 
+guides?
+on mouseover guideline: show startline of block
+
+
+
+toggle clipboard (10 newest items) dropdown in git_btn,
+on click put to first?
+
+
+padx font measure
+cont, ln_wid
+
+padx = self.tab_width // self.ind_depth // 3
+pady = padx
+in init apply conf and update fonts
+
+
+flash after view change?
+
 
 
 unbind /give info about cmd shift A? man page
@@ -178,28 +219,6 @@ e.entry.winfo_atomname(81)
 'bg'
 e.entry.winfo_atomname(82)
 'fg'
-
-
-
-
-guides?
-on mouseover guideline: show startline of block
-
-
-
-
-
-padx font measure
-cont, ln_wid
-
-padx = self.tab_width // self.ind_depth // 3
-pady = padx
-in init apply conf and update fonts
-
-
-flash after view change?
-
-
 
 
 
@@ -302,9 +321,6 @@ made quick fix
 
 
 
-after font change re-grid?
-
-
 
 
 ###################################
@@ -327,21 +343,16 @@ where ^R is two characters, not the single character CTRL-R.
 
 
 
-
+mac_os:
+When in fullscreen, other toplevels go to their own tab.
+If fullscreen when fontchoose might press wrong close button.
 
 if menufont is 14 buttons are mac buttons
 if bigger they are basic buttons
 
 
-mac_os:
-When in fullscreen, other toplevels go to their own tab.
-If fullscreen when fontchoose might press wrong close button.
-
-fn-f now works
-
-# fullscreen
-# fn f
 # self.tk.eval('wm attributes .!editor -fullscreen 1')
+
 # get tcl name of widget
 str(e.nametowidget(e.entry))
 e.contents.winfo_name()
@@ -356,63 +367,12 @@ e.tk.eval('trace add variable myvar write myproc')
 
 
 
-
 e.tk.eval('proc myproc {args} {puts AAA}')
 e.tk.eval('trace add execution .!editor.!entry enter myproc')
 
 
 
-
 e.tk.eval('set myvar B')
-
-
-
-
-
-
-
-
-ctrl c override:
-self.indent_selstart = 0
-self.indent_nextline = 0
-self.indent_diff = 0
-self.flag_fix_indent = False
-			
-if selstart line not empty:
-	
-	if line in two nextlines below selstart not empty:
-
-		self.indent_selstart = x
-		self.indent_nextline = y
-		self.indent_diff = y-x
-		
-		if self.indent_diff > 0:
-			self.flag_fix_indent = True
-			
-			
-when paste:
-
-if self.flag_fix_indent:
-	
-	indent_cursor = x
-	indent_diff_cursor = indent_cursor - self.indent_selstart
-	
-	paste firstline from clipboard
-	
-	for line in clipboard[1:]:
-		
-		if indent_diff_cursor > 0:
-			line.indent += indent_diff_cursor
-			
-		elif indent_diff_cursor < 0:
-			line.indent -= indent_diff_cursor
-			
-		paste line
-			
-
-toggle clipboard (10 newest items) dropdown in git_btn,
-on click put to first?
-
 
 
 
