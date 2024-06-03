@@ -367,34 +367,9 @@ class Editor(tkinter.Toplevel):
 		
 		# Initiate widgets
 		####################################
-		self.btn_git = tkinter.Button(self, takefocus=0)
-		
-		if self.branch:
-			branch = self.branch[:5]
-			# Set branch name lenght to 5.
-			# Reason: avoid ln_widget geometry changes
-			# when showing capslock-state in btn_git.
-			if len(branch) < 5:
-				diff = 5-len(branch)
-				t=1
-				for i in range(diff):
-					if t > 0:
-						branch += ' '
-					else:
-						branch = ' ' + branch
-
-					t *= -1
-
-			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0,
-						padx=0, text=branch, state='disabled')
-
-			if 'main' in self.branch or 'master' in self.branch:
-				self.btn_git.config(disabledforeground='brown1')
-
-		else:
-			self.btn_git.config(font=self.menufont, relief='flat', highlightthickness=0,
-						padx=0, bitmap='info', state='disabled')
-
+		self.btn_git = tkinter.Button(self, takefocus=0, font=self.menufont, relief='flat', highlightthickness=0, padx=0, state='disabled')
+		# Put branch name, if on one
+		self.restore_btn_git()
 		
 		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, takefocus=0)
 		if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
@@ -796,8 +771,12 @@ class Editor(tkinter.Toplevel):
 		# Arrange detection of CapsLock-state.
 		self.capslock = 'init'
 		self.motion_bind = self.bind('<Motion>', self.check_caps)
-		self.bind('<KeyRelease-Caps_Lock>', self.check_caps)
-		self.bind('<KeyPress-Caps_Lock>', self.check_caps)
+		if self.os_type != 'mac_os':
+			self.bind('<Caps_Lock>', self.check_caps)
+		else:
+			self.bind('<KeyPress-Caps_Lock>', self.check_caps)
+			self.bind('<KeyRelease-Caps_Lock>', self.check_caps)
+	
 		
 		self.bind( "<Control-R>", self.replace_all)
 		self.bind( "<Control-g>", self.gotoline)
@@ -1108,76 +1087,6 @@ class Editor(tkinter.Toplevel):
 	def do_nothing_without_bell(self, event=None):
 		return 'break'
 	
-	
-	def check_caps(self, event=None):
-		'''	Check if CapsLock is on.
-		'''
-		e = event.state
-		
-		if e in [0, 2]:
-			
-			# CapsLock is being turned off
-			if e == 0 and self.capslock in [True, 'init']:
-				self.capslock = False
-				
-				# If quickly pressed CapsLock off,
-				# cancel flashing started at the end of this callback.
-				for i in range(len(self.to_be_cancelled)-1, -1, -1):
-					item = self.to_be_cancelled[i]
-					self.after_cancel(item)
-					self.to_be_cancelled.pop(i)
-					
-					
-				# Put Git-branch name back if on one
-				if self.branch:
-					branch = self.branch[:5]
-					# Set branch name lenght to 5.
-					# Reason: avoid ln_widget geometry changes
-					# when showing capslock-state in btn_git.
-					if len(branch) < 5:
-						diff = 5-len(branch)
-						t=1
-						for i in range(diff):
-							if t > 0:
-								branch += ' '
-							else:
-								branch = ' ' + branch
-
-							t *= -1
-				
-					self.btn_git.config(text=branch, disabledforeground='')
-		
-					if 'main' in self.branch or 'master' in self.branch:
-						self.btn_git.config(disabledforeground='brown1')
-		
-				else:
-					self.btn_git.config(bitmap='info')
-				
-				
-			# CapsLock is being turned on
-			elif e == 2 and self.capslock in [False, 'init']:
-				self.capslock = True
-				
-				self.btn_git.config(text="CAPS ", disabledforeground='brown1')
-					
-				# Flash text and enable canceling flashing later.
-				#
-				# For two times, i=1,2:
-				#	wait 300
-				# 	change btn_git text to spaces
-				# 	again wait 300
-				# 	change btn_git text to CAPS
-				for i in range(1,3):
-					self.to_be_cancelled.append(
-						self.after((2*i-1)*300, lambda kwargs={'text': 5*' '}:
-							self.btn_git.config(**kwargs) )
-					)
-					
-					self.to_be_cancelled.append(
-						self.after(2*i*300, lambda kwargs={'text': 'CAPS '}:
-							self.btn_git.config(**kwargs) )
-					)
-					
 		
 	def test_bind(self, event=None):
 		print('jou')
@@ -4953,7 +4862,7 @@ class Editor(tkinter.Toplevel):
 						indentation_is_alien, indent_depth = self.check_indent_depth(fcontents)
 						
 						if indentation_is_alien:
-							# Assuming user wants self.ind_depth, change it without notice:
+							# Assuming user wants self.ind_depth
 							tmp = fcontents.splitlines(True)
 							tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 							tmp = ''.join(tmp)
@@ -5016,7 +4925,7 @@ class Editor(tkinter.Toplevel):
 				indentation_is_alien, indent_depth = self.check_indent_depth(t)
 				
 				if indentation_is_alien:
-					# Assuming user wants self.ind_depth, change it without notice:
+					# Assuming user wants self.ind_depth
 					tmp = t.splitlines(True)
 					tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 					tmp = ''.join(tmp)
@@ -5046,7 +4955,7 @@ class Editor(tkinter.Toplevel):
 				
 				return 'break'
 			
-			# from .rindex()
+			# from rindex()
 			except ValueError:
 				self.bell()
 				return 'break'
@@ -5141,7 +5050,131 @@ class Editor(tkinter.Toplevel):
 		return tabified_line
 	
 	
+	def restore_btn_git(self):
+		''' Put Git-branch name back if on one
+		'''
+		
+		if self.branch:
+			branch = self.branch[:5]
+			# Set branch name lenght to 5.
+			# Reason: avoid ln_widget geometry changes
+			# when showing capslock-state in btn_git.
+			if len(branch) < 5:
+				diff = 5-len(branch)
+				t=1
+				for i in range(diff):
+					if t > 0:
+						branch += ' '
+					else:
+						branch = ' ' + branch
+					t *= -1
+		
+			self.btn_git.config(text=branch, disabledforeground='')
 
+			if 'main' in self.branch or 'master' in self.branch:
+				self.btn_git.config(disabledforeground='brown1')
+
+		else:
+			self.btn_git.config(bitmap='info', disabledforeground='')
+			
+	
+	def flash_btn_git(self):
+		''' Flash text and enable canceling flashing later.
+		'''
+		
+		self.btn_git.config(bitmap='')
+
+##		For two times, i=1,2:
+##			wait 300
+##		 	change btn_git text to spaces
+##		 	again wait 300
+##		 	change btn_git text to CAPS
+
+		for i in range(1,3):
+			t1 = (2 * i-1) * 300
+			t2 = 2 * i * 300
+			l1 = lambda kwargs={'text': 5*' ', 'disabledforeground': 'brown1'}: self.btn_git.config(**kwargs)
+			l2 = lambda kwargs={'text': 'CAPS '}: self.btn_git.config(**kwargs)
+			c1 = self.after(t1, l1)
+			c2 = self.after(t2, l2)
+			self.to_be_cancelled.append(c1)
+			self.to_be_cancelled.append(c2)
+	
+		
+	def check_caps(self, event=None):
+		'''	Check if CapsLock is on.
+		'''
+		e = event.state
+		# 0,2 macos, linux
+		# 8, 10 win11
+		
+		#print(event.keysym)
+		# event.keysym == Motion
+		# Bind to Motion is for: checking CapsLock -state when starting editor,
+		# (this assumes user moves mouse)
+		# and checking if CapsLock -state changes when focus is not in editor
+		if event.keysym != 'Caps_Lock':
+			
+			# CapsLock is on but self.capslock is not True:
+			if e in [2, 10] and self.capslock in [False, 'init']:
+				self.capslock = True
+				#print('motion YES')
+				
+				self.flash_btn_git()
+				
+				
+			# CapsLock is off but self.capslock is True:
+			elif e in [0, 8] and self.capslock in [True, 'init']:
+				self.capslock = False
+				#print('motion NO')
+				
+				# If quickly pressed CapsLock off,
+				# cancel flashing started at the end of this callback.
+				for i in range(len(self.to_be_cancelled)-1, -1, -1):
+					item = self.to_be_cancelled[i]
+					self.after_cancel(item)
+					self.to_be_cancelled.pop(i)
+					
+					
+				# Put Git-branch name back if on one
+				self.restore_btn_git()
+				
+		
+		# event.keysym == Caps_Lock
+		# Check if CapsLock -state changes when focus is in editor
+		else:
+			#print(event.keysym)
+			# CapsLock is being turned off
+			# macOS -state
+			event_state = 0
+			
+			if self.os_type == 'linux': event_state = 2
+			
+			if e in [event_state, 10]:
+				self.capslock = False
+				#print('CAPS NO')
+				
+				# If quickly pressed CapsLock off,
+				# cancel flashing started at the end of this callback.
+				for i in range(len(self.to_be_cancelled)-1, -1, -1):
+					item = self.to_be_cancelled[i]
+					self.after_cancel(item)
+					self.to_be_cancelled.pop(i)
+					
+					
+				# Put Git-branch name back if on one
+				self.restore_btn_git()
+			
+
+			# CapsLock is being turned on
+			else:
+				self.capslock = True
+				#print('CAPS YES')
+				
+				self.flash_btn_git()
+				
+		return 'break'
+	
 ########## Utilities End
 ########## Save and Load Begin
 

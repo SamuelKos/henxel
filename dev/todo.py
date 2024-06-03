@@ -18,7 +18,13 @@ fdialog.py
 	empty list on fail
 
 ######################
+fixed capslock macos linux windows ok?
+########
 
+macos sometimes when pic-in-pic safari video etc,
+clicked editor to get focus, cursor is not there:
+pressing left right no cursor
+bind to focus-in?
 
 
 goto def cmd-g, without selection?
@@ -31,10 +37,20 @@ search, show function name in entry? when show_next prev
 
 toggle tabs --> space?
 
+####### do this
+1 check is it necessary to check event.state in select_by_words etc
+2 cmd -a on empty line to indent0
 
+fix arrow updown (put cursor to same col_nextline or
+	lineend if nextline is shorter than col_curline)
 
+bind with eval from dict --> customisable binds
 
+#######
 
+bitmap check ensure width?
+
+automate exit editor, check syntax, reopen python and editor
 
 
 
@@ -64,9 +80,6 @@ save file when pressing save, update help
 tuple after_cancel: (from_who, after_object_id)
 
 
-check is it necessary to check event.state in select_by_words etc
-
-
 check does esc exit fullscreen normally in macos?
 
 
@@ -91,28 +104,8 @@ Use tokenizer instead?
 
 	
 
-fix arrow updown (put cursor to same col_nextline or
-	lineend if nextline is shorter than col_curline)
 
-
-
-bind with eval from dict --> customisable binds
-
-
-
-save ostype and some keys to conf?
-check event states of certain keys (in init?)
-	Example: arrow keys have alien states in windows,
-	so to check state of arrow-up key:
-
-	bid_up = self.contents.bind('<Up>', self.my_event_checking_function)
-	self.contents.event_generate('<Up>')
-	self.contents.unbind('<Up>', funcid=bid_up)
 	
-	remove some magic numbers this way from
-	move_by_words and select_by_words etc.
-
-
 #################
 fix search etc: after giving search word, quickly pressing return and esc
 state is locked to search
