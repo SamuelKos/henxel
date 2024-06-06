@@ -30,12 +30,14 @@ bind to focus-in?
 goto def cmd-g, without selection?
 cmd-l gotoline
 
+
 search: no strip searchword
 regexp?
 search, show function name in entry? when show_next prev
 
 
 toggle tabs --> space?
+
 
 ####### do this
 1 check is it necessary to check event.state in select_by_words etc
@@ -53,8 +55,7 @@ bitmap check ensure width?
 automate exit editor, check syntax, reopen python and editor
 
 
-
-
+check is it necessary to set insert mark before ensure_idx_visibility?
 
 
 

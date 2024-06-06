@@ -672,6 +672,10 @@ class Editor(tkinter.Toplevel):
 			
 			self.bind( "<Alt-n>", self.new_tab)
 			self.bind( "<Control-q>", self.quit_me)
+			
+			self.bind( "<Control-l>", self.gotoline)
+			self.bind( "<Control-g>", self.goto_def)
+			
 			self.contents.bind( "<Alt-s>", self.color_choose)
 			self.contents.bind( "<Alt-t>", self.toggle_color)
 			
@@ -733,22 +737,24 @@ class Editor(tkinter.Toplevel):
 			
 			self.contents.bind( "<Mod1-Key-y>", self.yank_line)
 			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
+			
 			self.contents.bind( "<Mod1-Key-f>", self.search)
+			self.contents.bind( "<Mod1-Key-r>", self.replace)
+			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
 			
 			self.contents.bind( "<Mod1-Key-c>", self.copy)
 			self.contents.bind( "<Mod1-Key-v>", self.paste)
 			self.contents.bind( "<Mod1-Key-x>",
 				lambda event: self.copy(event, **{'flag_cut':True}) )
 			
-			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
-			self.contents.bind( "<Mod1-Key-g>", self.gotoline)
+			self.contents.bind( "<Mod1-Key-g>", self.goto_def)
+			self.contents.bind( "<Mod1-Key-l>", self.gotoline)
 			self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
 			self.contents.bind( "<Mod1-Key-e>", self.goto_lineend)
 			
 			self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
 			self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
 			
-			self.contents.bind( "<Mod1-Key-r>", self.replace)
 			self.contents.bind( "<Mod1-Key-z>", self.undo_override)
 			self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
 			
@@ -779,7 +785,6 @@ class Editor(tkinter.Toplevel):
 	
 		
 		self.bind( "<Control-R>", self.replace_all)
-		self.bind( "<Control-g>", self.gotoline)
 		self.bind( "<Control-r>", self.replace)
 
 		self.bind( "<Escape>", self.do_nothing )
@@ -5591,33 +5596,23 @@ class Editor(tkinter.Toplevel):
 			
 			elif '-' not in tmp:
 				line = tmp + '.0'
+			
+			elif tmp[0] == '-' and '-' not in tmp[1:] and len(tmp) > 1:
 				
-			elif tmp[0] == '-' and '-' not in tmp[1:]:
 				if int(tmp[1:]) < int(self.entry.endline):
 					line = self.entry.endline + '.0 -%s lines' % tmp[1:]
 				else:
 					line = tkinter.END
-			
 			else:
 				line = tkinter.INSERT
 				
-			self.contents.focus_set()
-			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
+			self.tabs[self.tabindex].position = line
 			
-			
-			try:
-				pos = self.contents.index(tkinter.INSERT)
-			except tkinter.TclError:
-				pos = '1.0'
-				
-			self.tabs[self.tabindex].position = pos
-			self.stop_gotoline()
-			
+		
 		except tkinter.TclError as e:
 			print(e)
-			self.stop_gotoline()
-			
+		
+		self.stop_gotoline()
 		return "break"
 		
 	
@@ -5773,6 +5768,39 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 		self.bind("<Escape>", self.stop_help)
+		
+	
+	def goto_def(self, event=None):
+		''' Get word under cursor and
+			go to function definition
+		'''
+		
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
+		word_at_cursor = self.contents.get('insert wordstart', 'insert wordend')
+		word_at_cursor = word_at_cursor.strip()
+		
+		if word_at_cursor == '':
+			return 'break'
+	
+		#print(word_at_cursor)
+		# https://www.tcl.tk/man/tcl9.0/TclCmd/re_syntax.html#M31
+		search_word = r'^#*[[:blank:]]*def[[:blank:]]+' + word_at_cursor + r'\('
+		
+		try:
+			pos = self.contents.search(search_word, '1.0', regexp=True)
+			
+		except tkinter.TclError as e:
+			return 'break'
+			
+		if pos:
+			self.contents.focus_set()
+			self.ensure_idx_visibility(pos)
+			
+		return 'break'
+	
 			
 ########## Gotoline and Help End
 ########## Indent and Comment Begin
