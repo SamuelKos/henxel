@@ -3810,23 +3810,31 @@ class Editor(tkinter.Toplevel):
 			
 			# Leave cursor where it is if have selected all
 			if s == self.contents.index('1.0') and e == self.contents.index(tkinter.END):
-				return
-			
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			#self.wid.see('1.0')
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
 			
 			
-			if event.keysym == 'Right':
+			# When long selection == index not visible:
+			# at first keypress, show wanted end of selection
+			elif event.keysym == 'Right':
+				if self.contents.dlineinfo(e):
+					self.contents.tag_remove('sel', '1.0', tkinter.END)
+
 				self.contents.mark_set('insert', e)
 				self.ensure_idx_visibility(e)
+
 				
 			elif event.keysym == 'Left':
+
+				if self.contents.dlineinfo(s):
+					self.contents.tag_remove('sel', '1.0', tkinter.END)
+
 				self.contents.mark_set('insert', s)
 				self.ensure_idx_visibility(s)
-				
+
 			else:
 				return
-			
+					
+					
 				
 		if wid == self.entry:
 			self.entry.selection_clear()

@@ -9,26 +9,42 @@ check if other than py-files are tabified
 	done they now are not tabified
 	update help?
 ###########
-
-fdialog.py
-	filter in entry:
-	entry bind return:
-	sorted(pathlib.Path().glob("*AD*"))
-	sorted(pathlib.Path().glob("normal filename"))
-	empty list on fail
-
-######################
 fixed capslock macos linux windows ok?
 ########
+cmd/ctrl-g --> goto_def, without selection? done ok?
+cmd/ctrl-l --> gotoline
+########
+long selection: if index not visible, show wanted side of selection at first keypress
+done ok?
+########
 
-macos sometimes when pic-in-pic safari video etc,
-clicked editor to get focus, cursor is not there:
-pressing left right no cursor
-bind to focus-in?
 
 
-goto def cmd-g, without selection?
-cmd-l gotoline
+fdialog.py
+	filter:
+	sorted(pathlib.Path().glob("*AD*"))
+	sorted(pathlib.Path().glob("normal filename"))
+	two entries for setting filter at bottom,
+	one for dirs, one for files: *.* as default
+	
+	
+marks:
+tab.position = list() ?
+
+cmd-b --> go previous position/mark
+cmd-g --> go next position/mark, if selection use it, else oldword
+
+Control-n --> search next, if selection use it, else oldword
+Control-p --> search next backwards, if selection use it, else oldword
+also in errors, help
+
+cmd-d --> goto_def, if selection use it
+Control-d?
+
+
+
+after paste:
+selend is before real pasted text end
 
 
 search: no strip searchword
@@ -46,7 +62,7 @@ toggle tabs --> space?
 fix arrow updown (put cursor to same col_nextline or
 	lineend if nextline is shorter than col_curline)
 
-bind with eval from dict --> customisable binds
+bind with eval from dict --> user editable binds
 
 #######
 
@@ -62,6 +78,9 @@ check is it necessary to set insert mark before ensure_idx_visibility?
 
 
 
+self.contents.bind( "<<TkWorldChanged>>", self.test_bind)
+	then: self.menufont.configure(underline=1)
+	works on macos
 
 
 
