@@ -172,10 +172,10 @@ class Editor(tkinter.Toplevel):
 		# Used to give focus back to it when closing editor, in quit_me()
 		
 		# This have to be before tkinter.tk()
-		# or we get 'Python' as appname.
+		# or appname is set to 'Python'
 		try:
 			
-##			# With this method we get appname with single run but is still slower
+##			# With this method one can get appname with single run but is still slower
 ##			# than the two run method used earlier and now below:
 ##			tmp = ['lsappinfo', 'metainfo']
 ##			tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
@@ -936,7 +936,7 @@ class Editor(tkinter.Toplevel):
 			
 		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 		# Viewsync-event does not trigger at window size changes,
-		# to get linenumbers right, we bind to this:
+		# to get linenumbers right, one binds to this:
 		self.contents.bind("<Configure>", self.handle_configure)
 		
 		
@@ -1334,7 +1334,7 @@ class Editor(tkinter.Toplevel):
 			
 			y_offset *= -1
 			
-			#if self.y_extra_offset > 0, we need this:
+			# if self.y_extra_offset > 0, this is needed:
 			if y_offset != 0:
 				y_offset += self.y_extra_offset
 				
@@ -3003,7 +3003,7 @@ class Editor(tkinter.Toplevel):
 			those exceptions that are catched. Like:
 			
 			try:
-				code we know sometimes failing with SomeError
+				code known sometimes failing with SomeError
 				(but might also fail with other error-type)
 			except SomeError:
 				some other code but no raising error
@@ -3097,7 +3097,7 @@ class Editor(tkinter.Toplevel):
 					
 					# Make look bit nicer:
 					if self.syntax:
-						# -1 lines because we have added linebreak already.
+						# -1 lines because linebreak has been added already
 						start = self.contents.index('insert -1 lines linestart')
 						end = self.contents.index('insert -1 lines lineend')
 						
@@ -3168,7 +3168,7 @@ class Editor(tkinter.Toplevel):
 					
 					# Make look bit nicer:
 					if self.syntax:
-						# -1 lines because we have added linebreak already.
+						# -1 lines because linebreak has been added already
 						start = self.contents.index('insert -1 lines linestart')
 						end = self.contents.index('insert -1 lines lineend')
 						
@@ -4623,9 +4623,9 @@ class Editor(tkinter.Toplevel):
 		if self.state in [ 'search', 'replace', 'replace_all' ]:
 			return 'break'
 		
-		# In Windows, Tab-key-event has state 8 and shift+Tab has state 9,
-		# so because shift-tab is unbinded if in Windows, we check that here
-		# and unindent if it is the state.
+		# In Windows, Tab-key-event has state 8 and shift+Tab has state 9.
+		# Because shift-tab is unbinded if in Windows(why?), state-check is needed
+		# for unindent to work.
 		if hasattr(event, 'state'):
 			
 			if self.os_type == 'windows':
@@ -5187,6 +5187,106 @@ class Editor(tkinter.Toplevel):
 				self.flash_btn_git()
 				
 		return 'break'
+		
+
+	def show_scope(self, index):
+		''' Show function/class context in entry
+			when searching
+		'''
+		pos, scope_name = self.get_scope(index)
+		
+		if pos:
+			
+			if scope_name != '__main__':
+				
+				patt_end = ':'
+				patt_start = 'class'
+
+				if '(' in scope_name: patt_end = '('
+
+				if scope_name.strip()[:3] == 'def': patt_start = 'def'
+
+				s = scope_name.index(patt_start)
+				e = scope_name.index(patt_end)
+				
+				scope_name = ' @' + scope_name[s:e] + ' @'
+			
+			else:
+				scope_name = ' @' + '__main__' + ' @'
+				
+			
+		entry_contents = self.entry.get()
+		#if self.state != 'search':
+		#	i = tmp.index(' Re')
+		#else:
+		
+		idx_e = entry_contents.index(' Se')
+		idx_0 = entry_contents.index('/')
+		idx_s = entry_contents.index(' ', idx_0)
+		
+		self.entry.delete(idx_s, idx_e)
+		
+		if scope_name:
+			tmp = self.entry.get()
+			i = tmp.index(' Se')
+			self.entry.insert(i, scope_name)
+		
+		
+	def get_scope(self, index):
+		''' Index is tkinter.Text -index
+			
+			Search backwards from index and
+			get index of first def/class line and function/class name.
+			
+			returns (index, name)
+		'''
+		
+		search_word = r'^[[:blank:]]*((?:def)|(?:class)){1}[[:blank:]]+[[:alnum:]_]+(?:\()?(?::)?'
+		pos = index
+		
+		index_line_contents = self.contents.get( '%s linestart' % pos,
+			'%s display lineend' % pos )
+		
+		ind_index_line = 0
+		def_word = ''
+			
+		for char in index_line_contents:
+			if char in ['\t']: ind_index_line += 1
+			else: break
+		
+		if ind_index_line == 0:
+			def_word = '__main__'
+			
+			return pos, def_word
+			
+		
+		while pos:
+			
+			try:
+				pos = self.contents.search(search_word, pos, stopindex='1.0',
+					regexp=True, backwards=True)
+					
+			except tkinter.TclError as e:
+				break
+						
+			if not pos: break
+				
+			# Function/Class definition line
+			def_line_contents = self.contents.get( pos, '%s display lineend' % pos )
+			ind_def_line = 0
+				
+			for char in def_line_contents:
+				if char in ['\t']: ind_def_line += 1
+				else: break
+		
+			
+			# Check scope-level:
+			# Find previous def-line that has smaller indentation than index-line
+			if ind_index_line > ind_def_line:
+				return pos, def_line_contents
+				
+				
+		return (False, False)
 	
 ########## Utilities End
 ########## Save and Load Begin
@@ -6201,6 +6301,68 @@ class Editor(tkinter.Toplevel):
 		self.search_idx = self.contents.tag_nextrange('match', self.search_idx[1])
 		line = self.search_idx[0]
 		
+		
+		
+		
+		
+		
+		
+		ref = self.search_idx[0]
+		
+		for idx in range(self.search_matches):
+			tmp = match_ranges[idx*2]
+			if self.contents.compare(ref, '==', tmp): break
+		
+		
+		#if self.entry.flag_start:
+		#	self.entry.flag_start = False
+		
+		#else:######## --> indent
+		lenght_of_search_position_index = len(str(idx+1))
+		lenght_of_search_matches = len(str(self.search_matches))
+		diff = lenght_of_search_matches - lenght_of_search_position_index
+		
+		self.entry.config(validate='none')
+			
+
+		if self.state != 'search':
+		
+			patt = f'{diff*" "}{idx+1}/{self.search_matches}'
+			tmp = self.entry.get()
+			idx_0 = tmp.index('/')
+			idx = tmp.index(' ', idx_0)
+			self.entry.delete(0, idx)
+			
+		else:
+			if self.entry.flag_start:
+				tmp = self.entry.get()
+				lenght_of_search_matches = len(str(self.search_matches))
+				diff = lenght_of_search_matches - 1
+				patt = f'{diff*" "}1/{self.search_matches} '
+				self.entry.insert(0, patt)
+				
+			else:
+				patt = f'{diff*" "}{idx+1}'
+				self.entry.delete(0, lenght_of_search_matches)
+			
+
+		# Now prompt == ' Search:' or something like that.
+		# Search backwards first def/class line and get function/class name.
+		if '.py' in self.tabs[self.tabindex].filepath.suffix:
+			self.show_scope(ref)
+			
+		##########
+		if not self.entry.flag_start:
+			self.entry.insert(0, patt)
+	
+		
+		
+		
+		
+		
+		
+		
+		
 		# Is it viewable?
 		if not self.contents.bbox(line):
 			self.wait_for(100)
@@ -6214,6 +6376,7 @@ class Editor(tkinter.Toplevel):
 				bg, fg = self.themes[self.curtheme]['match'][:]
 				self.contents.tag_config('match', background=bg, foreground=fg)
 			self.wait_for(200)
+			self.entry.flag_start = False   ######################################################
 			
 		
 		# Change color
@@ -6221,55 +6384,52 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
 		# Compare above range of focus-tag to match_ranges to get current
-		# index position among all current matches. Like if we now have 10 matches left,
+		# index position among all current matches. For example: If now have 10 matches left,
 		# and last position was 1/11, but then one match got replaced,
-		# so we now are at 1/10 and after this show next-call we should be at 2/10.
-		ref = self.contents.tag_ranges('focus')[0]
+		# so focus is now at 1/10 and after this show next-call it should be at 2/10.
+		#ref = self.contents.tag_ranges('focus')[0]
+
+##		ref = self.contents.search_idx[0][0]
+##
+##		for idx in range(self.search_matches):
+##			tmp = match_ranges[idx*2]
+##			if self.contents.compare(ref, '==', tmp): break
+##
+##
+##		if self.entry.flag_start:
+##			self.entry.flag_start = False
+##
+##		#else:######## --> indent
+##		lenght_of_search_position_index = len(str(idx+1))
+##		lenght_of_search_matches = len(str(self.search_matches))
+##		diff = lenght_of_search_matches - lenght_of_search_position_index
+##
+##		self.entry.config(validate='none')
+##
+##
+##		if self.state != 'search':
+##
+##			patt = f'{diff*" "}{idx+1}/{self.search_matches}'
+##			tmp = self.entry.get()
+##			idx_0 = tmp.index('/')
+##			idx = tmp.index(' ', idx_0)
+##			self.entry.delete(0, idx)
+##
+##		else:
+##			patt = f'{diff*" "}{idx+1}'
+##			self.entry.delete(0, lenght_of_search_matches)
+##
+##
+##		# Now prompt == ' Search:' or something like that.
+##		# Search backwards first def/class line and get function/class name.
+##		if '.py' in self.tabs[self.tabindex].filepath.suffix:
+##			self.show_scope(ref)
+##
+##		##########
+##		self.entry.insert(0, patt)
+	
 		
-		for idx in range(self.search_matches):
-			tmp = match_ranges[idx*2]
-			if self.contents.compare(ref, '==', tmp): break
-		
-		
-		if self.state != 'search':
-			
-			if self.entry.flag_start:
-				self.entry.flag_start = False
-				self.entry.config(validate='key')
-				
-			else:
-				lenght_of_search_position_index = len(str(idx+1))
-				lenght_of_search_matches = len(str(self.search_matches))
-				diff = lenght_of_search_matches - lenght_of_search_position_index
-				patt = f'{diff*" "}{idx+1}/{self.search_matches}'
-				
-				self.entry.config(validate='none')
-				tmp = self.entry.get()
-				idx_0 = tmp.index('/')
-				idx = tmp.index(' ', idx_0)
-				self.entry.delete(0, idx)
-				self.entry.insert(0, patt)
-				self.entry.config(validate='key')
-				
-			
-		else:
-			if self.entry.flag_start:
-				self.entry.flag_start = False
-				self.entry.config(validate='key')
-				
-			else:
-				
-				lenght_of_search_position_index = len(str(idx+1))
-				lenght_of_search_matches = len(str(self.search_matches))
-				diff = lenght_of_search_matches - lenght_of_search_position_index
-				patt = f'{diff*" "}{idx+1}'
-				
-				self.entry.config(validate='none')
-				self.entry.delete(0, lenght_of_search_matches)
-				self.entry.insert(0, patt)
-				self.entry.config(validate='key')
-				
-			
+		self.entry.config(validate='key')
 		
 		if self.search_matches == 1:
 			self.bind("<Control-n>", self.do_nothing)
@@ -6317,9 +6477,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
 		# Compare above range of focus-tag to match_ranges to get current
-		# index position among all current matches. Like if we now have 11 matches left,
+		# index position among all current matches. For example: If now have 11 matches left,
 		# and last position was 2/12, but then one match got replaced,
-		# so we now are at say 2/11 and after this show prev-call we should be at 1/11.
+		# so focus is now at say 2/11 and after this show prev-call it should be at 1/11.
 		ref = self.contents.tag_ranges('focus')[0]
 		
 		for idx in range(self.search_matches):
@@ -6327,33 +6487,29 @@ class Editor(tkinter.Toplevel):
 			if self.contents.compare(ref, '==', tmp): break
 			
 		
+		lenght_of_search_position_index = len(str(idx+1))
+		lenght_of_search_matches = len(str(self.search_matches))
+		diff = lenght_of_search_matches - lenght_of_search_position_index
+
+		self.entry.config(validate='none')
+
+			
 		if self.state != 'search':
 			
-			lenght_of_search_position_index = len(str(idx+1))
-			lenght_of_search_matches = len(str(self.search_matches))
-			diff = lenght_of_search_matches - lenght_of_search_position_index
 			patt = f'{diff*" "}{idx+1}/{self.search_matches}'
 			
-			self.entry.config(validate='none')
 			tmp = self.entry.get()
 			idx_0 = tmp.index('/')
 			idx = tmp.index(' ', idx_0)
 			self.entry.delete(0, idx)
-			self.entry.insert(0, patt)
-			self.entry.config(validate='key')
-			
-			
+		
 		else:
-			
-			lenght_of_search_position_index = len(str(idx+1))
-			lenght_of_search_matches = len(str(self.search_matches))
-			diff = lenght_of_search_matches - lenght_of_search_position_index
 			patt = f'{diff*" "}{idx+1}'
-			
-			self.entry.config(validate='none')
 			self.entry.delete(0, lenght_of_search_matches)
-			self.entry.insert(0, patt)
-			self.entry.config(validate='key')
+		
+
+		self.entry.insert(0, patt)
+		self.entry.config(validate='key')
 			
 			
 		if self.search_matches == 1:
@@ -6372,7 +6528,7 @@ class Editor(tkinter.Toplevel):
 		tmp_orig = self.entry.get()
 		
 		idx = tmp_orig.index(':') + 2
-		tmp = tmp_orig[idx:].strip()
+		tmp = tmp_orig[idx:]
 		
 		if len(tmp) == 0 or tmp == self.old_word:
 			self.bell()
@@ -6408,12 +6564,12 @@ class Editor(tkinter.Toplevel):
 				self.bind("<Control-p>", self.show_prev)
 				
 				
-				lenght_of_search_matches = len(str(self.search_matches))
-				diff = lenght_of_search_matches - 1
-				patt = f'{diff*" "}1/{self.search_matches} '
-				idx = tmp_orig.index('Sea')
-				self.entry.delete(0, idx)
-				self.entry.insert(0, patt)
+##				lenght_of_search_matches = len(str(self.search_matches))
+##				diff = lenght_of_search_matches - 1
+##				patt = f'{diff*" "}1/{self.search_matches} '
+##				idx = tmp_orig.index('Sea')
+##				self.entry.delete(0, idx)
+##				self.entry.insert(0, patt)
 				self.entry.flag_start = True
 				
 				

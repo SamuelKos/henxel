@@ -18,6 +18,26 @@ long selection: if index not visible, show wanted side of selection at first key
 done ok?
 ########
 
+		
+self.entry.flag_start, show_next, entry handling to function
+update entry fast when start search
+
+
+select to linestartend when empty line no work
+
+
+tab_override():
+shift-tab is unbinded if in Windows(why?)
+
+
+in macos
+if toggled terminal to fullscreen, after doing one dir(),
+then switch to non fullscreen editor, editor is freezed.
+pressing return in terminal and then switching back to editor
+unfreezes editor.
+If both are fullscreen, there is no freezing.
+This is little similar to win11-behaviour when not using idle-shell
+
 
 
 fdialog.py
@@ -27,6 +47,7 @@ fdialog.py
 	two entries for setting filter at bottom,
 	one for dirs, one for files: *.* as default
 	
+
 	
 marks:
 tab.position = list() ?
@@ -47,9 +68,12 @@ after paste:
 selend is before real pasted text end
 
 
-search: no strip searchword
+search: no strip searchword		done, ok? ####
 regexp?
+
+
 search, show function name in entry? when show_next prev
+@@ update_linenums()
 
 
 toggle tabs --> space?
@@ -98,9 +122,6 @@ save file when pressing save, update help
 
 
 tuple after_cancel: (from_who, after_object_id)
-
-
-check does esc exit fullscreen normally in macos?
 
 
 search_next, if have selection, use it as search word instead of clipboard
