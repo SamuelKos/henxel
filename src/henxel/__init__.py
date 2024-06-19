@@ -673,8 +673,9 @@ class Editor(tkinter.Toplevel):
 			self.bind( "<Alt-n>", self.new_tab)
 			self.bind( "<Control-q>", self.quit_me)
 			
-			self.bind( "<Control-l>", self.gotoline)
-			self.bind( "<Control-g>", self.goto_def)
+			self.contents.bind( "<Control-b>", self.go_back)
+			self.contents.bind( "<Control-l>", self.gotoline)
+			self.contents.bind( "<Control-g>", self.goto_def)
 			
 			self.contents.bind( "<Alt-s>", self.color_choose)
 			self.contents.bind( "<Alt-t>", self.toggle_color)
@@ -747,6 +748,8 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Mod1-Key-x>",
 				lambda event: self.copy(event, **{'flag_cut':True}) )
 			
+			self.contents.bind( "<Mod1-Key-b>", self.go_back)
+			self.contents.bind( "<Mod1-Key-p>", self.save_curpos)
 			self.contents.bind( "<Mod1-Key-g>", self.goto_def)
 			self.contents.bind( "<Mod1-Key-l>", self.gotoline)
 			self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
@@ -5204,7 +5207,8 @@ class Editor(tkinter.Toplevel):
 
 				if '(' in scope_name: patt_end = '('
 
-				if scope_name.strip()[:3] == 'def': patt_start = 'def'
+				if scope_name.strip()[:5] == 'async': patt_start = 'async'
+				elif scope_name.strip()[:3] == 'def': patt_start = 'def'
 
 				s = scope_name.index(patt_start)
 				e = scope_name.index(patt_end)
@@ -5235,13 +5239,25 @@ class Editor(tkinter.Toplevel):
 	def get_scope(self, index):
 		''' Index is tkinter.Text -index
 			
-			Search backwards from index and
+			Search backwards from index until match or filestart and
 			get index of first def/class line and function/class name.
+			
+			name is one of:
+			__main__, async def funcname, def funcname, class classname
+			
 			
 			returns (index, name)
 		'''
 		
-		search_word = r'^[[:blank:]]*((?:def)|(?:class)){1}[[:blank:]]+[[:alnum:]_]+(?:\()?(?::)?'
+		patt_indent = r'^[[:blank:]]*'
+		# or symbol | accepts matchs in every branch so this matches
+		# also strings like: async def class
+		patt_keywords = r'((?:async[[:blank:]]+def)|(?:def)|(?:class)){1}'
+		patt_space = r'[[:blank:]]+'
+		patt_name = r'[[:alnum:]_]+(?:\()?(?::)?'
+		
+		search_word = patt_indent + patt_keywords + patt_space + patt_name
+		
 		pos = index
 		
 		index_line_contents = self.contents.get( '%s linestart' % pos,
@@ -5878,6 +5894,54 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Escape>", self.stop_help)
 		
 	
+	def save_curpos(self, event=None):
+		''' Save cursor position
+		
+			One can return to position
+			with cmd-b later.
+		'''
+		
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+		
+		
+		# Save cursor position
+		try:
+			pos = self.contents.index(tkinter.INSERT)
+			
+		except tkinter.TclError:
+			pos = '1.0'
+		
+		
+		self.tabs[self.tabindex].position = pos
+		
+		return "break"
+	
+	
+	def go_back(self, event=None):
+		''' Go to saved cursor position
+		'''
+		
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+		
+		# Set cursor position
+		line = self.tabs[self.tabindex].position
+		
+		try:
+			self.contents.mark_set('insert', line)
+			self.ensure_idx_visibility(line)
+			
+		except tkinter.TclError:
+			self.contents.mark_set('insert', '1.0')
+			self.tabs[self.tabindex].position = '1.0'
+			self.contents.see('1.0')
+		
+		return "break"
+		
+		
 	def goto_def(self, event=None):
 		''' Get word under cursor and
 			go to function definition
@@ -5892,10 +5956,12 @@ class Editor(tkinter.Toplevel):
 		
 		if word_at_cursor == '':
 			return 'break'
-	
+		
 		#print(word_at_cursor)
 		# https://www.tcl.tk/man/tcl9.0/TclCmd/re_syntax.html#M31
-		search_word = r'^#*[[:blank:]]*def[[:blank:]]+' + word_at_cursor + r'\('
+		patt_indent = r'^#*[[:blank:]]*'
+		patt_keywords = r'(?:async[[:blank:]]+)?def[[:blank:]]+'
+		search_word = patt_indent + patt_keywords + word_at_cursor + r'\('
 		
 		try:
 			pos = self.contents.search(search_word, '1.0', regexp=True)
@@ -5904,6 +5970,7 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 			
 		if pos:
+			self.contents.mark_set('insert', 'insert')
 			self.contents.focus_set()
 			self.ensure_idx_visibility(pos)
 			
@@ -6309,15 +6376,17 @@ class Editor(tkinter.Toplevel):
 		
 		ref = self.search_idx[0]
 		
+		# Compare above range of focus-tag to match_ranges to get current
+		# index position among all current matches. For example: If now have 10 matches left,
+		# and last position was 1/11, but then one match got replaced,
+		# so focus is now at 1/10 and after this show next-call it should be at 2/10.
+		#ref = self.contents.tag_ranges('focus')[0]
+				
 		for idx in range(self.search_matches):
 			tmp = match_ranges[idx*2]
 			if self.contents.compare(ref, '==', tmp): break
 		
 		
-		#if self.entry.flag_start:
-		#	self.entry.flag_start = False
-		
-		#else:######## --> indent
 		lenght_of_search_position_index = len(str(idx+1))
 		lenght_of_search_matches = len(str(self.search_matches))
 		diff = lenght_of_search_matches - lenght_of_search_position_index
@@ -6348,10 +6417,10 @@ class Editor(tkinter.Toplevel):
 
 		# Now prompt == ' Search:' or something like that.
 		# Search backwards first def/class line and get function/class name.
-		if '.py' in self.tabs[self.tabindex].filepath.suffix:
-			self.show_scope(ref)
+		if self.tabs[self.tabindex].filepath:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				self.show_scope(ref)
 			
-		##########
 		if not self.entry.flag_start:
 			self.entry.insert(0, patt)
 	
@@ -6383,51 +6452,6 @@ class Editor(tkinter.Toplevel):
 		# self.search_idx marks range of focus-tag. Here focus-tag is changed.
 		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
 		
-		# Compare above range of focus-tag to match_ranges to get current
-		# index position among all current matches. For example: If now have 10 matches left,
-		# and last position was 1/11, but then one match got replaced,
-		# so focus is now at 1/10 and after this show next-call it should be at 2/10.
-		#ref = self.contents.tag_ranges('focus')[0]
-
-##		ref = self.contents.search_idx[0][0]
-##
-##		for idx in range(self.search_matches):
-##			tmp = match_ranges[idx*2]
-##			if self.contents.compare(ref, '==', tmp): break
-##
-##
-##		if self.entry.flag_start:
-##			self.entry.flag_start = False
-##
-##		#else:######## --> indent
-##		lenght_of_search_position_index = len(str(idx+1))
-##		lenght_of_search_matches = len(str(self.search_matches))
-##		diff = lenght_of_search_matches - lenght_of_search_position_index
-##
-##		self.entry.config(validate='none')
-##
-##
-##		if self.state != 'search':
-##
-##			patt = f'{diff*" "}{idx+1}/{self.search_matches}'
-##			tmp = self.entry.get()
-##			idx_0 = tmp.index('/')
-##			idx = tmp.index(' ', idx_0)
-##			self.entry.delete(0, idx)
-##
-##		else:
-##			patt = f'{diff*" "}{idx+1}'
-##			self.entry.delete(0, lenght_of_search_matches)
-##
-##
-##		# Now prompt == ' Search:' or something like that.
-##		# Search backwards first def/class line and get function/class name.
-##		if '.py' in self.tabs[self.tabindex].filepath.suffix:
-##			self.show_scope(ref)
-##
-##		##########
-##		self.entry.insert(0, patt)
-	
 		
 		self.entry.config(validate='key')
 		

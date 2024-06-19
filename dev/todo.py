@@ -1,3 +1,10 @@
+added get_scope show_scope save_curpos go_back
+doing show_next/prev
+
+add self.set_curpos(index)?
+self.tabs[self.tabindex].position --> self.tabs[self.tabindex].position[0]?
+save_curpos --> self.tabs[self.tabindex].position[1]?
+
 #######################
 macos when trying to open: /home
 
@@ -17,17 +24,18 @@ cmd/ctrl-l --> gotoline
 long selection: if index not visible, show wanted side of selection at first keypress
 done ok?
 ########
+async can be before def  done in get_scope ok?
 
-		
 self.entry.flag_start, show_next, entry handling to function
 update entry fast when start search
 
 
+
+double-shift --> cursor idx_linestart
+
 select to linestartend when empty line no work
 
 
-tab_override():
-shift-tab is unbinded if in Windows(why?)
 
 
 in macos
@@ -48,19 +56,24 @@ fdialog.py
 	one for dirs, one for files: *.* as default
 	
 
+when creating for example new function newname(),
+how to ensure newname has not already been reserved?
+
 	
 marks:
 tab.position = list() ?
 
-cmd-b --> go previous position/mark
+
+cmd-p save cursor position, so one can go back to it with cmd-b
+cmd/Control-b --> go saved tab.position done ok? ######
 cmd-g --> go next position/mark, if selection use it, else oldword
 
 Control-n --> search next, if selection use it, else oldword
 Control-p --> search next backwards, if selection use it, else oldword
 also in errors, help
 
-cmd-d --> goto_def, if selection use it
-Control-d?
+cmd/ctrl-d --> goto_def, if selection use it
+Control-d --> Control-q (close_tab)
 
 
 
@@ -98,6 +111,8 @@ automate exit editor, check syntax, reopen python and editor
 check is it necessary to set insert mark before ensure_idx_visibility?
 
 
+tab_override():
+shift-tab is unbinded if in Windows(why?)
 
 
 
