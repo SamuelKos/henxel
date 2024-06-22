@@ -1,6 +1,21 @@
 added get_scope show_scope save_curpos go_back
 doing show_next/prev
 
+add waiting to go_back show_scope
+
+seach_next show scope
+
+clear sel goto_def etc
+self.entry.flag check replace_all
+
+check validate_search when replacing
+
+
+
+
+when return to pos with go_back, position can be changed like lines added etc
+
+
 add self.set_curpos(index)?
 self.tabs[self.tabindex].position --> self.tabs[self.tabindex].position[0]?
 save_curpos --> self.tabs[self.tabindex].position[1]?
