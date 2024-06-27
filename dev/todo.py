@@ -1,20 +1,47 @@
 added get_scope show_scope save_curpos go_back
 doing show_next/prev
 
+unbind these:
+	self.bind("<Control-n>", self.show_next)
+	self.bind("<Control-p>", self.show_prev)	done ok?
+
+
+main can be in indentated block					done ok?
+if no def_word add space						done ok?
+
+
+show: Class.method instead of just: def method	done ok?
+
+show scope when inspect
+	tab.inspected, no alt-s toggle scope instead
+search import in:
+	tkinter
+	now works
+	inspect auto spaces --> tabs
+#####
+
+when show_prev etc where direction is from bottom to up:
+	ensure_visibility should handle direction better when coming
+	from bottom?
+
+
 add waiting to go_back show_scope
 
-seach_next show scope
+seach_next: dont go over filestartend
 
 clear sel goto_def etc
 self.entry.flag check replace_all
 
-check validate_search when replacing
 
+check validate_search when replacing not done
 
+	
+dump these:
+	self.entry.len_prompt
+	self.entry.flag
 
-
-when return to pos with go_back, position can be changed like lines added etc
-
+when return to pos with go_back, position could have been changed: lines added etc
+save whole line and search when go_back?
 
 add self.set_curpos(index)?
 self.tabs[self.tabindex].position --> self.tabs[self.tabindex].position[0]?

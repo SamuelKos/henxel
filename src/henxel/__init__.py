@@ -795,9 +795,6 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
 		self.bind( "<Control-plus>", self.increase_scrollbar_width)
 		
-		# If accidentally pressed too early when searching:
-		self.entry.bind("<Control-n>", self.do_nothing_without_bell)
-		self.entry.bind("<Control-p>", self.do_nothing_without_bell)
 		self.ln_widget.bind("<Control-n>", self.do_nothing_without_bell)
 		self.ln_widget.bind("<Control-p>", self.do_nothing_without_bell)
 		
@@ -4867,7 +4864,7 @@ class Editor(tkinter.Toplevel):
 			filepath = inspect.getsourcefile(mod)
 			
 			if not filepath:
-				# for example: readline
+				# For example: readline
 				self.bell()
 				print('Could not inspect:', target, '\nimport and use help()')
 				return 'break'
@@ -4875,21 +4872,18 @@ class Editor(tkinter.Toplevel):
 			try:
 				with open(filepath, 'r', encoding='utf-8') as f:
 					fcontents = f.read()
+					
 					self.new_tab()
 					
-					# just in case:
+					
 					if '.py' in filepath:
 						indentation_is_alien, indent_depth = self.check_indent_depth(fcontents)
 						
-						if indentation_is_alien:
-							# Assuming user wants self.ind_depth
-							tmp = fcontents.splitlines(True)
-							tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
-							tmp = ''.join(tmp)
-							self.tabs[self.tabindex].contents = tmp
-				
-						else:
-							self.tabs[self.tabindex].contents = fcontents
+						tmp = fcontents.splitlines(True)
+						tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
+						tmp = ''.join(tmp)
+						self.tabs[self.tabindex].contents = tmp
+					
 					else:
 						self.tabs[self.tabindex].contents = fcontents
 				
@@ -4908,11 +4902,13 @@ class Editor(tkinter.Toplevel):
 					else:
 						self.token_can_update = False
 						
-						
+					# This flag is used in handle_search_entry()
+					self.tabs[self.tabindex].inspected = True
 					self.contents.edit_reset()
 					self.contents.edit_modified(0)
 					
 					return 'break'
+					
 					
 			except (EnvironmentError, UnicodeDecodeError) as e:
 				print(e.__str__())
@@ -4941,19 +4937,14 @@ class Editor(tkinter.Toplevel):
 				
 				self.new_tab()
 				
-				# just in case:
+				
 				indentation_is_alien, indent_depth = self.check_indent_depth(t)
 				
-				if indentation_is_alien:
-					# Assuming user wants self.ind_depth
-					tmp = t.splitlines(True)
-					tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
-					tmp = ''.join(tmp)
-					self.tabs[self.tabindex].contents = tmp
+				tmp = t.splitlines(True)
+				tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
+				tmp = ''.join(tmp)
+				self.tabs[self.tabindex].contents = tmp
 					
-				else:
-					self.tabs[self.tabindex].contents = t
-				
 				
 				self.tabs[self.tabindex].position = '1.0'
 				self.contents.focus_set()
@@ -4969,11 +4960,13 @@ class Editor(tkinter.Toplevel):
 				else:
 					self.token_can_update = False
 				
-											
+				# This flag is used in handle_search_entry()
+				self.tabs[self.tabindex].inspected = True
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 				
 				return 'break'
+			
 			
 			# from rindex()
 			except ValueError:
@@ -5222,16 +5215,25 @@ class Editor(tkinter.Toplevel):
 		
 		
 		# 2. Build string to be inserted in the beginning of entry
-		patt = ''
-		
 		# a: Add scopename
 		# Search backwards first def/class line and get function/class name.
+		patt = ' '
+		flag_scope = False
+		
 		if self.tabs[self.tabindex].filepath:
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				pos, scope_name, _ = self.get_scope(index)
+				flag_scope = True
+		
+		# This flag is set in insert_inspected()
+		elif self.tabs[self.tabindex].inspected:
+			flag_scope = True
+			
+
+		if flag_scope:
+			pos, scope_name, _ = self.get_scope(index)
 				
-				if pos:
-					patt = ' @' + scope_name + ' @'
+			if pos:
+				patt = ' @' + scope_name + ' @'
 				
 		# b: Add search position
 		idx = search_pos
@@ -5246,32 +5248,6 @@ class Editor(tkinter.Toplevel):
 		# 3. Insert string
 		self.entry.insert(0, patt)
 
-		
-	def show_scope(self, index):
-		''' Show function/class context in entry
-			when searching
-		'''
-		pos, scope_name, scope_line_contents = self.get_scope(index)
-		
-		if pos:
-			scope_name = ' @' + scope_name + ' @'
-				
-			
-		entry_contents = self.entry.get()
-		patt_e = ' Re'
-		if self.state == 'search': patt_e = ' Se'
-		
-		idx_e = entry_contents.index(patt_e)
-		idx_0 = entry_contents.index('/')
-		idx_s = entry_contents.index(' ', idx_0)
-		
-		self.entry.delete(idx_s, idx_e)
-		
-		if scope_name:
-			tmp = self.entry.get()
-			i = tmp.index(patt_e)
-			self.entry.insert(i, scope_name)
-			
 		
 	def get_scope(self, index):
 		''' Index is tkinter.Text -index
@@ -5310,19 +5286,26 @@ class Editor(tkinter.Toplevel):
 		if ind_index_line == 0:
 			def_word = '__main__'
 			
-			return pos, def_word, False
+			return True, def_word, False
 			
 		
+		
+		ind_ref_line = ind_index_line
+		def_word = ''
+		
 		while pos:
-			
+		
 			try:
 				pos = self.contents.search(search_word, pos, stopindex='1.0',
 					regexp=True, backwards=True)
 					
 			except tkinter.TclError as e:
-				break
+				print(e)
+				return (False, False, False)
 						
-			if not pos: break
+			if not pos:
+				break
+				
 				
 			# Function/Class definition line
 			def_line_contents = cont = self.contents.get( pos, '%s display lineend' % pos )
@@ -5334,24 +5317,38 @@ class Editor(tkinter.Toplevel):
 		
 			
 			# Check scope-level:
-			# Find previous def-line that has smaller indentation than index-line
-			if ind_index_line > ind_def_line:
+			# Find previous def-line that has smaller indentation than index/ref-line
+			if ind_ref_line > ind_def_line:
 				patt_end = ':'
 				patt_start = 'class'
-
+	
 				if '(' in cont: patt_end = '('
-
+	
 				if cont.strip()[:5] == 'async': patt_start = 'async'
 				elif cont.strip()[:3] == 'def': patt_start = 'def'
-
-				s = cont.index(patt_start)
+	
+				s0 = cont.index(patt_start)
+				s = s0 + len(patt_start)
 				e = cont.index(patt_end)
-				def_word = cont[s:e]
 				
-				return pos, def_word, cont
+				tmp = cont[s:e].strip()
 				
+				if def_word != '':
+					def_word = tmp +'.'+ def_word
+				else:
+					def_word = tmp
 				
-		return (False, False, False)
+				# update indentation of current scope
+				ind_ref_line = ind_def_line
+				#return pos, def_word, cont
+				
+		
+		if def_word == '':
+			def_word = '__main__'
+			return True, def_word, False
+	
+		else:
+			return (True, def_word, True)
 	
 ########## Utilities End
 ########## Save and Load Begin
@@ -6571,8 +6568,8 @@ class Editor(tkinter.Toplevel):
 			self.entry.config(validate='none')
 				
 			if self.state == 'search':
-				self.bind("<Control-n>", self.show_next)
-				self.bind("<Control-p>", self.show_prev)
+				self.bid_show_next = self.bind("<Control-n>", self.show_next)
+				self.bid_show_prev = self.bind("<Control-p>", self.show_prev)
 				
 				self.entry.flag_start = True
 				
@@ -6684,6 +6681,13 @@ class Editor(tkinter.Toplevel):
 				
 				
 		self.state = 'normal'
+		
+		if self.bid_show_next:
+			self.unbind( "<Control-n>", funcid=self.bid_show_next )
+			self.unbind( "<Control-p>", funcid=self.bid_show_prev )
+			self.bid_show_next = None
+			self.bid_show_prev = None
+		
 		self.contents.unbind( "<Control-n>", funcid=self.bid1 )
 		self.contents.unbind( "<Control-p>", funcid=self.bid2 )
 		self.contents.unbind( "<Double-Button-1>", funcid=self.bid3 )
@@ -6743,7 +6747,8 @@ class Editor(tkinter.Toplevel):
 		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
 		self.entry.bind("<Control-n>", self.skip_bindlevel)
 		self.entry.bind("<Control-p>", self.skip_bindlevel)
-		
+		self.bid_show_next = None
+		self.bid_show_prev = None
 		
 		self.bid3 = self.contents.bind("<Double-Button-1>",
 			func=lambda event: self.update_curpos(event, **{'doubleclick':True}), add=True )
@@ -6792,8 +6797,8 @@ class Editor(tkinter.Toplevel):
 		# 'focusout'
 		
 		idx = s.index(':') + 2
-			
-		if int(i) < idx or self.entry.flag == 'replace_all':
+		
+		if int(i) < idx:
 			self.entry.selection_clear()
 			self.entry.icursor(idx)
 			
@@ -6831,6 +6836,8 @@ class Editor(tkinter.Toplevel):
 		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
 		self.entry.bind("<Control-n>", self.skip_bindlevel)
 		self.entry.bind("<Control-p>", self.skip_bindlevel)
+		self.bid_show_next = None
+		self.bid_show_prev = None
 		
 		
 		self.bid3 = self.contents.bind("<Double-Button-1>",
@@ -7010,8 +7017,8 @@ class Editor(tkinter.Toplevel):
 		self.show_next()
 		
 		
-		self.bind("<Control-n>", self.show_next)
-		self.bind("<Control-p>", self.show_prev)
+		self.bid_show_next = self.bind("<Control-n>", self.show_next)
+		self.bid_show_prev = self.bind("<Control-p>", self.show_prev)
 		self.entry.bind("<Return>", self.skip_bindlevel)
 		self.contents.bind("<Return>", self.skip_bindlevel)
 		self.focus_set()
