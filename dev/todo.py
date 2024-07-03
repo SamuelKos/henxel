@@ -1,52 +1,3 @@
-added get_scope show_scope save_curpos go_back
-doing show_next/prev
-
-unbind these:
-	self.bind("<Control-n>", self.show_next)
-	self.bind("<Control-p>", self.show_prev)	done ok?
-
-
-main can be in indentated block					done ok?
-if no def_word add space						done ok?
-
-
-show: Class.method instead of just: def method	done ok?
-
-show scope when inspect
-	tab.inspected, no alt-s toggle scope instead
-search import in:
-	tkinter
-	now works
-	inspect auto spaces --> tabs
-#####
-
-when show_prev etc where direction is from bottom to up:
-	ensure_visibility should handle direction better when coming
-	from bottom?
-
-
-add waiting to go_back show_scope
-
-seach_next: dont go over filestartend
-
-clear sel goto_def etc
-self.entry.flag check replace_all
-
-
-check validate_search when replacing not done
-
-	
-dump these:
-	self.entry.len_prompt
-	self.entry.flag
-
-when return to pos with go_back, position could have been changed: lines added etc
-save whole line and search when go_back?
-
-add self.set_curpos(index)?
-self.tabs[self.tabindex].position --> self.tabs[self.tabindex].position[0]?
-save_curpos --> self.tabs[self.tabindex].position[1]?
-
 #######################
 macos when trying to open: /home
 
@@ -63,13 +14,75 @@ fixed capslock macos linux windows ok?
 cmd/ctrl-g --> goto_def, without selection? done ok?
 cmd/ctrl-l --> gotoline
 ########
-long selection: if index not visible, show wanted side of selection at first keypress
-done ok?
+long selection: if index not visible,
+show wanted side of selection at first keypress done ok?
 ########
 async can be before def  done in get_scope ok?
+async await orange?
 
-self.entry.flag_start, show_next, entry handling to function
-update entry fast when start search
+added get_scope, save_curpos, go_back
+doing show_next/prev
+
+unbind these:
+	self.bind("<Control-n>", self.show_next)
+	self.bind("<Control-p>", self.show_prev)	done ok?
+
+
+main can be in indentated block					done ok?
+if no def_word add space						done ok?
+
+
+
+renamed get_scope --> get_scope_path				ok?
+
+
+show: Class.method instead of just: def method	done ok?
+	async def done ok?
+
+	while get_scope()?
+
+show scope when inspect
+	tab.inspected, no alt-s toggle scope instead?
+search import in:
+	tkinter
+	now works
+	inspect auto spaces --> tabs
+	
+
+search: no strip searchword		done, ok? ####
+regexp?
+
+search, show scope in entry when show_next prev done, ok? ####
+show_next/prev: entry handling to function done, ok? ####
+#########
+
+
+when show_prev etc where direction is from bottom to up:
+	ensure_visibility should handle direction better when coming
+	from bottom?
+
+
+add waiting to: go_back, show_scope etc?
+clear sel goto_def etc
+fix get_scope docstring
+
+
+save_curpos: add tag, go_back to tag not position, invisible tag
+
+seach_next: dont go over filestartend
+
+
+
+
+inspect syntax?
+tab.can_do_syntax?
+
+replace space to exit?
+
+
+
+
+
 
 
 
@@ -123,12 +136,6 @@ after paste:
 selend is before real pasted text end
 
 
-search: no strip searchword		done, ok? ####
-regexp?
-
-
-search, show function name in entry? when show_next prev
-@@ update_linenums()
 
 
 toggle tabs --> space?
@@ -137,6 +144,7 @@ toggle tabs --> space?
 ####### do this
 1 check is it necessary to check event.state in select_by_words etc
 2 cmd -a on empty line to indent0
+3 tab on empty line, if at indent0, to same indent than prevline?
 
 fix arrow updown (put cursor to same col_nextline or
 	lineend if nextline is shorter than col_curline)
@@ -179,6 +187,9 @@ save file when pressing save, update help
 
 
 tuple after_cancel: (from_who, after_object_id)
+
+
+class/method browser-view with taglinks
 
 
 search_next, if have selection, use it as search word instead of clipboard

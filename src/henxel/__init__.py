@@ -5230,7 +5230,7 @@ class Editor(tkinter.Toplevel):
 			
 
 		if flag_scope:
-			pos, scope_name, _ = self.get_scope(index)
+			pos, scope_name, _ = self.get_scope_path(index)
 				
 			if pos:
 				patt = ' @' + scope_name + ' @'
@@ -5249,17 +5249,14 @@ class Editor(tkinter.Toplevel):
 		self.entry.insert(0, patt)
 
 		
-	def get_scope(self, index):
+	def get_scope_path(self, index):
 		''' Index is tkinter.Text -index
 			
-			Search backwards from index until match or filestart and
-			get position of first def/class line and name of that function/class.
-			
-			name is one of:
-			__main__, async def funcname, def funcname, class classname
+			Search backwards from index up to filestart and build scope-path
+			of current position: index.
 			
 			
-			returns (position, name, def_line_contents)
+			returns (position, scope_path, def_line_contents)
 		'''
 		
 		patt_indent = r'^[[:blank:]]*'
@@ -5277,21 +5274,21 @@ class Editor(tkinter.Toplevel):
 			'%s display lineend' % pos )
 		
 		ind_index_line = 0
-		def_word = ''
+		scope_path = ''
 			
 		for char in index_line_contents:
 			if char in ['\t']: ind_index_line += 1
 			else: break
 		
 		if ind_index_line == 0:
-			def_word = '__main__'
+			scope_path = '__main__()'
 			
-			return True, def_word, False
+			return True, scope_path, False
 			
 		
 		
 		ind_ref_line = ind_index_line
-		def_word = ''
+		scope_path = ''
 		
 		while pos:
 		
@@ -5319,36 +5316,44 @@ class Editor(tkinter.Toplevel):
 			# Check scope-level:
 			# Find previous def-line that has smaller indentation than index/ref-line
 			if ind_ref_line > ind_def_line:
+				
+				cont = cont.strip()
+				
 				patt_end = ':'
-				patt_start = 'class'
-	
 				if '(' in cont: patt_end = '('
 	
-				if cont.strip()[:5] == 'async': patt_start = 'async'
-				elif cont.strip()[:3] == 'def': patt_start = 'def'
-	
-				s0 = cont.index(patt_start)
-				s = s0 + len(patt_start)
+
+				if cont[:5] == 'async':
+					cont = cont[5:].strip()
+					
+				if cont[:3] == 'def':
+					cont = cont[3:].strip()
+				
+				if cont[:5] == 'class':
+					cont = cont[5:].strip()
+					
+
 				e = cont.index(patt_end)
+				cont = cont[:e]
 				
-				tmp = cont[s:e].strip()
-				
-				if def_word != '':
-					def_word = tmp +'.'+ def_word
+				if scope_path != '':
+					scope_path = cont +'.'+ scope_path
 				else:
-					def_word = tmp
+					scope_path = cont
 				
 				# update indentation of current scope
 				ind_ref_line = ind_def_line
-				#return pos, def_word, cont
+				
+				# at __main__:
+				if ind_ref_line == 0: break
 				
 		
-		if def_word == '':
-			def_word = '__main__'
-			return True, def_word, False
+		if scope_path == '':
+			scope_path = '__main__()'
+			return True, scope_path, False
 	
 		else:
-			return (True, def_word, True)
+			return (True, scope_path + '()', True)
 	
 ########## Utilities End
 ########## Save and Load Begin
@@ -6658,7 +6663,6 @@ class Editor(tkinter.Toplevel):
 			
 		
 		self.entry.config(validate='none')
-		self.entry.flag = None
 		
 		
 		self.entry.bind("<Return>", self.load)
@@ -6774,9 +6778,7 @@ class Editor(tkinter.Toplevel):
 			pass
 			
 		
-		self.entry.flag = None
 		patt = 'Search: '
-		self.entry.len_prompt = len(patt)
 		self.entry.insert(0, patt)
 		self.entry.config(validate='key', validatecommand=self.validate_search)
 		
@@ -6862,10 +6864,7 @@ class Editor(tkinter.Toplevel):
 			pass
 			
 		
-		self.entry.flag = None
-		
 		patt = 'Replace this: '
-		self.entry.len_prompt = len(patt)
 		self.entry.insert(0, patt)
 		self.entry.config(validate='key', validatecommand=self.validate_search)
 		
@@ -7007,7 +7006,6 @@ class Editor(tkinter.Toplevel):
 			
 		if self.state == 'replace_all':
 			patt = f'{diff*" "}1/{self.search_matches} Replace ALL with'
-			self.entry.flag = 'replace_all'
 			
 		self.entry.insert(0, patt)
 		
