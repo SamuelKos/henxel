@@ -919,7 +919,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('calls', font=self.boldfont)
 
 		self.contents.tag_config('focus', underline=True)
-
+		self.contents.tag_config('save_curpos')
+		
 		# search tags have highest priority
 		self.contents.tag_raise('match')
 		self.contents.tag_raise('replaced')
@@ -5964,8 +5965,8 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			pos = '1.0'
 		
-		
-		self.tabs[self.tabindex].position = pos
+		self.contents.tag_remove( 'save_curpos', '1.0', tkinter.END )
+		self.contents.tag_add( 'save_curpos', pos, '%s +1 chars' % pos )
 		
 		return "break"
 	
@@ -5979,11 +5980,15 @@ class Editor(tkinter.Toplevel):
 			return "break"
 		
 		# Set cursor position
-		line = self.tabs[self.tabindex].position
+		if len(self.contents.tag_ranges('save_curpos')) > 0:
+			# Convert tag_ranges result to text-index
+			pos = self.contents.index(self.contents.tag_ranges('save_curpos')[0])
+		else:
+			pos = self.tabs[self.tabindex].position
 		
 		try:
-			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
+			self.contents.mark_set('insert', pos)
+			self.ensure_idx_visibility(pos)
 			
 		except tkinter.TclError:
 			self.contents.mark_set('insert', '1.0')

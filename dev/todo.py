@@ -19,10 +19,11 @@ show wanted side of selection at first keypress done ok?
 ########
 async can be before def  done in get_scope ok?
 async await orange?
-
-added get_scope, save_curpos, go_back
-doing show_next/prev
-
+##########
+added get_scope_path, save_curpos, go_back
+#############
+save_curpos: add tag, go_back to tag/position	done ok?
+#############
 unbind these:
 	self.bind("<Control-n>", self.show_next)
 	self.bind("<Control-p>", self.show_prev)	done ok?
@@ -33,12 +34,7 @@ if no def_word add space						done ok?
 
 
 
-renamed get_scope --> get_scope_path				ok?
-
-
 show: Class.method instead of just: def method	done ok?
-	async def done ok?
-
 	while get_scope()?
 
 show scope when inspect
@@ -52,8 +48,8 @@ search import in:
 search: no strip searchword		done, ok? ####
 regexp?
 
-search, show scope in entry when show_next prev done, ok? ####
-show_next/prev: entry handling to function done, ok? ####
+search, show scope in entry when show_next prev	done, ok? ####
+show_next/prev: entry handling to function		done, ok? ####
 #########
 
 
@@ -67,7 +63,6 @@ clear sel goto_def etc
 fix get_scope docstring
 
 
-save_curpos: add tag, go_back to tag not position, invisible tag
 
 seach_next: dont go over filestartend
 
