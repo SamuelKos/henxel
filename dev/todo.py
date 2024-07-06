@@ -1,3 +1,13 @@
+# ^/\|-_+:,.;'"*%?=!@&()[]{}~<>
+###############################
+add waiting to: go_back, goto_def, gotoline		done, ok? ####
+#####
+fixed yank_line no longer set insert mark ok?
+#####
+clear sel goto_def done ok?
+#####
+after paste:
+selend is before real pasted text end	fixed ok?
 #######################
 macos when trying to open: /home
 
@@ -29,59 +39,42 @@ unbind these:
 	self.bind("<Control-p>", self.show_prev)	done ok?
 
 
-main can be in indentated block					done ok?
-if no def_word add space						done ok?
-
-
 
 show: Class.method instead of just: def method	done ok?
-	while get_scope()?
+	while get_scope() && fix get_scope docstring?
 
 show scope when inspect
-	tab.inspected, no alt-s toggle scope instead?
-search import in:
-	tkinter
-	now works
-	inspect auto spaces --> tabs
+	tab.inspected set in insert_inspected()
+	used only in handle_search_entry()
+	could be used to:
+		preserve syntax in inspected over things like walk_tab etc
+	
 	
 
 search: no strip searchword		done, ok? ####
-regexp?
 
 search, show scope in entry when show_next prev	done, ok? ####
 show_next/prev: entry handling to function		done, ok? ####
 #########
 
 
-when show_prev etc where direction is from bottom to up:
-	ensure_visibility should handle direction better when coming
-	from bottom?
-
-
-add waiting to: go_back, show_scope etc?
-clear sel goto_def etc
-fix get_scope docstring
 
 
 
-seach_next: dont go over filestartend
+check syntax before quit?
+python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
+# https://stackoverflow.com/questions/4284313
+Use tokenizer instead?
+
+no just: import filename
+	
 
 
 
-
-inspect syntax?
-tab.can_do_syntax?
-
-replace space to exit?
+replace: space to exit?
 
 
 
-
-
-
-
-
-double-shift --> cursor idx_linestart
 
 select to linestartend when empty line no work
 
@@ -127,10 +120,12 @@ Control-d --> Control-q (close_tab)
 
 
 
-after paste:
-selend is before real pasted text end
 
+when paste multiline, if cursor is at idx_linestart of non empty line, and copied text
+lastline is indentation only, indentation shape of following lines should be preserved when paste
 
+when paste multiline, then undo that, then paste again same thing, then again undo:
+	there can be something leftovers from paste?
 
 
 toggle tabs --> space?
@@ -149,6 +144,7 @@ bind with eval from dict --> user editable binds
 #######
 
 bitmap check ensure width?
+
 
 automate exit editor, check syntax, reopen python and editor
 
@@ -195,16 +191,12 @@ it should be unbinded when pressed other than left.
 
 search, if previously have deleted suggestion from clipboard,
 do not suggest from clipboard again if it is the same.
-
+search: regexp?
 
 syntax highlight often slow, needs check
 tokens to list --> after cancel
 clarify update_tokens marked spot
 
-check syntax before quit?
-python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
-# https://stackoverflow.com/questions/4284313
-Use tokenizer instead?
 
 	
 
@@ -424,13 +416,13 @@ made quick fix
 ctrl-r no work in python console
 https://bugs.python.org/issue38995
 
-Most likely what is happening is that the two Python instances you are using are linked to different versions of the external readline library.  From the version information, it's clear that you are using the Python 3.8.0 from the python.org macOS installer.  That Python uses the macOS-supplied BSD editline (AKA libedit) for readline functionality.  The Python 3.7.3 you have is not from python.org and based on the prompt it looks like it was linked with a version of GNU readline which probably does bind ^R to the reverse search function by default.  As described in the Python Library Reference page for readline (https://docs.python.org/3/library/readline.html), both GNU readline and BSD editline can be tailored via configuration files; GNU readline uses ~/.inputrc while BSD editline uses ~/.editrc.
+Most likely what is happening is that the two Python instances you are using are linked to different versions of the external readline library.  From the version information, its clear that you are using the Python 3.8.0 from the python.org macOS installer.  That Python uses the macOS-supplied BSD editline (AKA libedit) for readline functionality.  The Python 3.7.3 you have is not from python.org and based on the prompt it looks like it was linked with a version of GNU readline which probably does bind ^R to the reverse search function by default.  As described in the Python Library Reference page for readline (https://docs.python.org/3/library/readline.html), both GNU readline and BSD editline can be tailored via configuration files; GNU readline uses ~/.inputrc while BSD editline uses ~/.editrc.
 
 On macOS, the available configuration commands for editline are described in the man page for editrc:
 
 man 5 editrc
 
-In particular, you should be able to enable editline's reverse search functionality by adding the following line to ~/.editrc:
+In particular, you should be able to enable editlines reverse search functionality by adding the following line to ~/.editrc:
 
 bind ^R em-inc-search-prev
 

@@ -2662,22 +2662,24 @@ class Editor(tkinter.Toplevel):
 				
 		elif tagname in savetags:
 			
+			t = wid.textwid
+			
 			if tagname == 'Save_TMP':
 				wid.tmp_theme = copy.deepcopy(self.themes)
 				wid.flag_tmp = True
-				self.flash_tag(wid, tagname)
+				self.flash_tag(t, tagname)
 				
 			elif tagname == 'TMP' and wid.flag_tmp:
 				self.themes = copy.deepcopy(wid.tmp_theme)
-				self.flash_tag(wid, tagname)
+				self.flash_tag(t, tagname)
 				
 			elif tagname == 'Start':
 				self.themes = copy.deepcopy(wid.start_theme)
-				self.flash_tag(wid, tagname)
+				self.flash_tag(t, tagname)
 				
 			elif tagname == 'Defaults':
 				self.themes = copy.deepcopy(self.default_themes)
-				self.flash_tag(wid, tagname)
+				self.flash_tag(t, tagname)
 				
 				
 			if (tagname in ['Defaults', 'Start']) or (tagname == 'TMP' and wid.flag_tmp):
@@ -2692,16 +2694,17 @@ class Editor(tkinter.Toplevel):
 		wid.focus_set()
 				
 				
-	def flash_tag(self, wid, tagname):
+	def flash_tag(self, widget, tagname):
 		''' Flash save_tag when clicked in colorchooser.
+			widget is tkinter.Text -widget
 		'''
-		t = wid.textwid
+		w = widget
 		
-		wid.after(50, lambda args=[tagname],
-				kwargs={'background':'green'}: t.tag_config(*args, **kwargs) )
+		w.after(50, lambda args=[tagname],
+				kwargs={'background':'green'}: w.tag_config(*args, **kwargs) )
 					
-		wid.after(600, lambda args=[tagname],
-				kwargs={'background':t.cget('background')}: t.tag_config(*args, **kwargs) )
+		w.after(600, lambda args=[tagname],
+				kwargs={'background':w.cget('background')}: w.tag_config(*args, **kwargs) )
 					
 	
 	def color_choose(self, event=None):
@@ -3873,18 +3876,14 @@ class Editor(tkinter.Toplevel):
 			return "break"
 			
 			
-		curpos = self.contents.index(tkinter.INSERT)
-		t = self.contents.get('%s linestart' % curpos, '%s lineend' % curpos)
+		i = self.contents.index(tkinter.INSERT)
+		t = self.contents.get('%s display linestart' % i, '%s display lineend' % i)
 		
 		
 		if t.strip() != '':
-			self.goto_linestart(event=event)
-			s = self.contents.index( 'insert' )
-			e = self.contents.index( '%s lineend' % curpos )
+			s,_ = self.idx_linestart()
+			e = self.idx_lineend()
 			
-			# return cursor back to original place
-			self.contents.mark_set('insert', curpos)
-		
 			tmp = self.contents.get(s,e)
 			self.contents.clipboard_clear()
 			
@@ -4363,7 +4362,7 @@ class Editor(tkinter.Toplevel):
 		# Do paste string
 		self.contents.insert(idx_insert_orig, s)
 		lastline = lno - 1
-		len_lastline = len(tmp_orig[-1])
+		len_lastline = len(line)
 		idx_insert_after = self.contents.index(
 			'%d.0 +%d chars' % (lastline, len_lastline) )
 		
@@ -5800,6 +5799,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
+		
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
@@ -5810,8 +5810,12 @@ class Editor(tkinter.Toplevel):
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
+			self.wait_for(100)
 			self.ensure_idx_visibility(line)
-		
+			
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			
+			
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'
 		
@@ -5962,6 +5966,19 @@ class Editor(tkinter.Toplevel):
 		try:
 			pos = self.contents.index(tkinter.INSERT)
 			
+			# Flash line
+			t = self.contents.get('%s display linestart' % pos, '%s display lineend' % pos)
+			
+			if t.strip() != '':
+				s,_ = self.idx_linestart()
+				e = self.idx_lineend()
+				
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
+				self.contents.tag_add('sel', s, e)
+				self.after(600, lambda args=['sel', '1.0', tkinter.END]:
+						self.contents.tag_remove(*args) )
+				
+			
 		except tkinter.TclError:
 			pos = '1.0'
 		
@@ -5988,6 +6005,7 @@ class Editor(tkinter.Toplevel):
 		
 		try:
 			self.contents.mark_set('insert', pos)
+			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
 			
 		except tkinter.TclError:
@@ -6028,13 +6046,17 @@ class Editor(tkinter.Toplevel):
 		try:
 			pos = self.contents.search(search_word, '1.0', regexp=True)
 			
-		except tkinter.TclError as e:
+		except tkinter.TclError:
 			return 'break'
 			
 		if pos:
 			self.contents.mark_set('insert', 'insert')
 			self.contents.focus_set()
+			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
+			
+			if have_selection:
+				self.contents.tag_remove( 'sel', '1.0', tkinter.END )
 		else:
 			self.bell()
 			
