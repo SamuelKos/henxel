@@ -839,15 +839,6 @@ class Editor(tkinter.Toplevel):
 				lambda event: self.search_next(event, **{'back':True}) )
 		
 		
-##		# this move_line interferes with search_next,check_nextevent, so not in use
-##		self.contents.bind("<Left>", lambda event: self.move_line(event, **{'direction':'left'} ))
-##		self.contents.bind("<Right>", lambda event: self.move_line(event, **{'direction':'right'} ))
-##
-##		# updown_override not in use
-##		self.contents.bind("<Up>", lambda event: self.updown_override(event, **{'direction':'up'} ))
-##		self.contents.bind("<Down>", lambda event: self.updown_override(event, **{'direction':'down'} ))
-		
-		
 		# Unbind some default bindings
 		# Paragraph-bindings: too easy to press by accident
 		self.contents.unbind_class('Text', '<<NextPara>>')
@@ -3217,56 +3208,6 @@ class Editor(tkinter.Toplevel):
 		
 ########## Run file Related End
 ########## Select and move Begin
-
-
-##	def updown_override(self, event=None, direction=None):
-##		''' up-down override, to expand possibly incorrect indentation
-##		'''
-##
-##		if self.state != 'normal':
-##			return "continue"
-##
-##		oldpos = self.contents.index(tkinter.INSERT)
-##
-##
-##		if direction == 'down':
-##			newpos = self.contents.index( '%s + 1lines' % tkinter.INSERT)
-##
-##		# direction == 'up'
-##		else:
-##			newpos = self.contents.index( '%s - 1lines' % tkinter.INSERT)
-##
-##
-##		oldline = self.contents.get( '%s linestart' % oldpos, '%s lineend' % oldpos)
-##		newline = self.contents.get( '%s linestart' % newpos, '%s lineend' % newpos)
-##
-##
-##		if newline.isspace() or newline == '':
-##
-##			if oldline == '':
-##				return 'continue'
-##
-##			if not oldline.isspace():
-##
-##				tmp = oldline.lstrip()
-##				oldindent = oldline.index(tmp)
-##
-##				if oldindent == 0:
-##					return 'continue'
-##
-##				self.contents.delete('%s linestart' % newpos,'%s lineend' % newpos)
-##				self.contents.insert('%s linestart' % newpos, oldindent * '\t')
-##				return 'continue'
-##
-##			# coming from empty line:
-##			else:
-##				self.contents.delete('%s linestart' % newpos,'%s lineend' % newpos)
-##				self.contents.insert('%s linestart' % newpos, len(oldline) * '\t')
-##				return 'continue'
-##
-##		else:
-##			return 'continue'
-	
 	
 	def move_many_lines(self, event=None):
 		''' Move or select 10 lines from cursor.
@@ -3917,11 +3858,6 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 		
 		
-		idx_linestart, line_is_wrapped = self.idx_linestart()
-		# Empty line?
-		if not idx_linestart: return "break"
-		
-		
 		have_selection = False
 		want_selection = False
 		
@@ -4015,11 +3951,6 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 			
 		
-		idx_linestart, line_is_wrapped = self.idx_linestart()
-		# Empty line?
-		if not idx_linestart: return "break"
-		
-		
 		have_selection = False
 		want_selection = False
 		
@@ -4069,7 +4000,9 @@ class Editor(tkinter.Toplevel):
 		self.ensure_idx_visibility('insert')
 		
 		pos, line_is_wrapped = self.idx_linestart()
-		
+		if not pos:
+			pos = self.contents.index( 'insert display linestart' )
+
 		self.contents.see(pos)
 		self.contents.mark_set('insert', pos)
 	
@@ -4478,79 +4411,6 @@ class Editor(tkinter.Toplevel):
 			
 			
 		return 'break'
-	
-
-	def move_line(self, event=None, direction=None):
-		''' Adjust cursor line indentation, with arrow left and right,
-			when pasting more than one line etc.
-		'''
-		
-		# currently this interferes with backspace_override
-		
-		# Enable continue adjusting selection area.
-		# 262152 is state when pressing arrow left-right in Win11, 262144 in Win10
-		if self.state != 'normal' or event.state not in [0, 262152, 262144 ]:
-			return 'continue'
-			
-			
-		if len(self.contents.tag_ranges('sel')) > 0:
-			insert_at_selstart = False
-			
-			s = self.contents.index(tkinter.SEL_FIRST)
-			e = self.contents.index(tkinter.SEL_LAST)
-			i = self.contents.index(tkinter.INSERT)
-			# contents of line with cursor:
-			t = self.contents.get('%s linestart' % i, '%s lineend' % i)
-			
-			if i == s:
-				insert_at_selstart = True
-			
-			# else: insert at selend
-			
-			line_s = s.split('.')[0]
-			line_e = e.split('.')[0]
-			
-			# One line only:
-			if line_s == line_e: 	return 'continue'
-
-			# cursor line is empty:
-			if len(t.strip()) == 0: return 'continue'
-
-
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			self.contents.tag_add('sel', '%s linestart' % i, '%s lineend' % i)
-
-
-			if direction == 'left':
-
-				# Cursor at the start of the line, or there is no indentation left:
-				if i.split('.')[1] == 0 or not t[0].isspace():
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
-					self.contents.tag_add('sel', s, e)
-					return 'break'
-
-				self.unindent()
-				self.contents.tag_remove('sel', '1.0', tkinter.END)
-
-				if insert_at_selstart:
-					self.contents.tag_add('sel',  '%s -1c' % s, e)
-				else:
-					self.contents.tag_add('sel', s, '%s -1c' % e)
-
-			# right
-			else:
-				self.indent()
-				self.contents.tag_remove('sel', '1.0', tkinter.END)
-
-				if insert_at_selstart:
-					self.contents.tag_add('sel',  '%s +1c' % s, e)
-				else:
-					self.contents.tag_add('sel', s, '%s +1c' % e)
-					
-
-			return 'break'
-
-		return 'continue'
 	
 
 	def undo_override(self, event=None):

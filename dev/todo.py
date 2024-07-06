@@ -1,10 +1,14 @@
 # ^/\|-_+:,.;'"*%?=!@&()[]{}~<>
 ###############################
+select/move to linestartend when empty line no work, fixed, ok?
+#####
 add waiting to: go_back, goto_def, gotoline		done, ok? ####
 #####
 fixed yank_line no longer set insert mark ok?
 #####
 clear sel goto_def done ok?
+#####
+removed unused move_line and updown_override
 #####
 after paste:
 selend is before real pasted text end	fixed ok?
@@ -63,9 +67,10 @@ show_next/prev: entry handling to function		done, ok? ####
 
 check syntax before quit?
 python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
+does not tell if there is for example line:
+a
+and a is not defined
 # https://stackoverflow.com/questions/4284313
-Use tokenizer instead?
-
 no just: import filename
 	
 
@@ -75,8 +80,6 @@ replace: space to exit?
 
 
 
-
-select to linestartend when empty line no work
 
 
 
