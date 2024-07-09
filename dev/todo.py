@@ -1,8 +1,15 @@
 # ^/\|-_+:,.;'"*%?=!@&()[]{}~<>
 ###############################
+cmd/Alt-p		save cursor position, so one can go back to it with cmd-b
+cmd/Control-b	walk saved cursor positions
+cmd/ctrl-g		goto_def, if selection use it
+#####
+replace: space to exit?
+fixed in start_replace() self.focus_set() --> self.contents.focus_set()
+#####
 select/move to linestartend when empty line no work, fixed, ok?
 #####
-add waiting to: go_back, goto_def, gotoline		done, ok? ####
+add waiting to: goto_bookmark, goto_def, gotoline		done, ok? ####
 #####
 fixed yank_line no longer set insert mark ok?
 #####
@@ -34,14 +41,13 @@ show wanted side of selection at first keypress done ok?
 async can be before def  done in get_scope ok?
 async await orange?
 ##########
-added get_scope_path, save_curpos, go_back
+added get_scope_path, add_bookmark, goto_bookmark
 #############
-save_curpos: add tag, go_back to tag/position	done ok?
+add_bookmark: add tag, goto_bookmark to tag/position	done ok?
 #############
 unbind these:
 	self.bind("<Control-n>", self.show_next)
 	self.bind("<Control-p>", self.show_prev)	done ok?
-
 
 
 show: Class.method instead of just: def method	done ok?
@@ -54,16 +60,96 @@ show scope when inspect
 		preserve syntax in inspected over things like walk_tab etc
 	
 	
-
-search: no strip searchword		done, ok? ####
-
+search: no strip searchword						done, ok? ####
 search, show scope in entry when show_next prev	done, ok? ####
 show_next/prev: entry handling to function		done, ok? ####
 #########
 
+macos
+ctrl-d --> ctrl-q
+
+
+when view changes, before close curtab:
+	tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
+	
+	done ok?
+
+cmd t newtab  n next mark p prev mark
+tag_link/loadfile error handling bookmarks etc.
+
+when view changes, after open tab:
+	restore_bookmarks()
+	# Restore bookmarks
+	for i, pos in enumerate(self.tabs[self.tabindex].bookmarks):
+		self.contents.mark_set('bookmark%d' % i, pos)
+		
+	self.tabs[self.tabindex].bookmarks.clear()
+	
+	for mark in self.contents.mark_names():
+		if 'bookmark' in mark:
+			self.tabs[self.tabindex].bookmarks.append(mark)
+
+view changes, after open tab, restore_bookmarks() is used in:
+	walk_tab
+	del_tab
+	new_tab
+	tag_link
+	stop_show_errors
+	loadfile
+	stop_help
+	
+	
+	done ok?
+	
+	
+
+
+add_bookmark, goto_bookmark forth back do, delete_bookmark do
 
 
 
+	
+	
+	
+	
+
+
+mac_cmd_overr etc --> overrides section done ok?
+
+bookmarks: partly done with add_bookmark(), remove_bookmarks()
+toggle mark
+
+cmd/Alt-(Shift)-p add/(remove) mark to cursor:
+when add/walk/remove mark, populate whole line with space if necessary
+then flash line: de/select char by char/flash line
+
+
+# This is not exact, gives less chars than in reality can fit line:
+num_chars = self.contents.winfo_width() // self.font.measure('A')
+for example:
+= 81
+wanted_num_chars = num_chars // 2
+pos = idx_lineend()
+
+# If not over half screen width
+if pos < wanted_num_chars:
+	# Add some space so we can tag more estate from line
+	self.contents.insert(pos, wanted_num_chars*' ')
+
+undo pause ##############################################
+
+tab.bookmarks = list()
+add_bookmark --> tab.bookmarks.append(pos)
+used only to save pos over view changes
+must be updated before view change etc
+have to use real marks because of empty lines
+show mark in linenums
+currently marks persist in conf, have to load on start
+
+
+#######################################
+# Below this, not essential but wanted
+#######################################
 
 check syntax before quit?
 python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
@@ -74,14 +160,10 @@ and a is not defined
 no just: import filename
 	
 
-
-
-replace: space to exit?
-
-
-
-
-
+at start of search/replace: insert window in start of entry:
+	dropdown:
+		1 use regexp
+		2 start from filestart/cursor
 
 
 in macos
@@ -91,7 +173,6 @@ pressing return in terminal and then switching back to editor
 unfreezes editor.
 If both are fullscreen, there is no freezing.
 This is little similar to win11-behaviour when not using idle-shell
-
 
 
 fdialog.py
@@ -105,24 +186,6 @@ fdialog.py
 when creating for example new function newname(),
 how to ensure newname has not already been reserved?
 
-	
-marks:
-tab.position = list() ?
-
-
-cmd-p save cursor position, so one can go back to it with cmd-b
-cmd/Control-b --> go saved tab.position done ok? ######
-cmd-g --> go next position/mark, if selection use it, else oldword
-
-Control-n --> search next, if selection use it, else oldword
-Control-p --> search next backwards, if selection use it, else oldword
-also in errors, help
-
-cmd/ctrl-d --> goto_def, if selection use it
-Control-d --> Control-q (close_tab)
-
-
-
 
 when paste multiline, if cursor is at idx_linestart of non empty line, and copied text
 lastline is indentation only, indentation shape of following lines should be preserved when paste
@@ -131,25 +194,17 @@ when paste multiline, then undo that, then paste again same thing, then again un
 	there can be something leftovers from paste?
 
 
-toggle tabs --> space?
+check is it necessary to check event.state in select_by_words etc
 
 
-####### do this
-1 check is it necessary to check event.state in select_by_words etc
-2 cmd -a on empty line to indent0
-3 tab on empty line, if at indent0, to same indent than prevline?
+tab on empty line, if at indent0, to same indent than prevline?
+
 
 fix arrow updown (put cursor to same col_nextline or
 	lineend if nextline is shorter than col_curline)
 
-bind with eval from dict --> user editable binds
-
-#######
 
 bitmap check ensure width?
-
-
-automate exit editor, check syntax, reopen python and editor
 
 
 check is it necessary to set insert mark before ensure_idx_visibility?
@@ -159,19 +214,21 @@ tab_override():
 shift-tab is unbinded if in Windows(why?)
 
 
-
-
 self.contents.bind( "<<TkWorldChanged>>", self.test_bind)
 	then: self.menufont.configure(underline=1)
 	works on macos
 
 
+search/next also in errors, help
 
 
+toggle tabs --> space?
 
-###########################
-marks?
-toggle mark
+
+automate exit editor, check syntax, reopen python and editor
+
+
+bind with eval from dict --> user editable binds
 
 
 yank line sel --> custom tag
@@ -183,7 +240,7 @@ save file when pressing save, update help
 tuple after_cancel: (from_who, after_object_id)
 
 
-class/method browser-view with taglinks
+structure-viewer with taglinks
 
 
 search_next, if have selection, use it as search word instead of clipboard
