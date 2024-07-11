@@ -103,14 +103,33 @@ view changes, after open tab, restore_bookmarks() is used in:
 	
 	
 
+line_is_bookmarked()
 
-add_bookmark, goto_bookmark forth back do, delete_bookmark do
+add_bookmark
+goto_bookmark forth back		do
+delete_bookmark				do
+delete_all_bookmarks		do
 
 
+type(self).__name__
 
+
+search next, count from start, count from cursor --> show position
+if count <= 1: bell
+if selection, use it, else oldword.
+search_next: enter search mode from cursor
+
+search(start=index)
+
+Control-np search_next
+show scope always,
+update scope path after:
+	walk_tab etc
+	fname.Class.method()
 	
-	
-	
+unbind load() Return
+
+
 	
 
 

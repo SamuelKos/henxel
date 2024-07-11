@@ -5549,7 +5549,7 @@ class Editor(tkinter.Toplevel):
 				
 				self.contents.delete('1.0', tkinter.END)
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-				self.remove_bookmarks()
+				self.remove_bookmarks(all_tabs=False)
 				
 				self.do_syntax(everything=True)
 				
@@ -5858,10 +5858,57 @@ class Editor(tkinter.Toplevel):
 		print(tab.bookmarks)
 	
 	
-	def remove_bookmarks(self):
+	def line_is_bookmarked(self, index):
+		''' mark_name is tkinter.Text -index
+		'''
+		
+		# Find first mark in line
+		s = self.contents.index('%s display linestart' % index)
+		mark_name = self.contents.mark_next(s)
+		
+		# Find first bookmark after s
+		while mark_name:
+			if 'bookmark' not in mark_name:
+				mark_name = self.contents.mark_next(mark_name)
+			else:
+				break
+				
+		if mark_name:
+			if 'bookmark' in mark_name:
+				mark_line = self.contents.index(mark_name).split('.')[0]
+				pos_line = s.split('.')[0]
+			
+			if mark_line == pos_line:
+				return mark_name
+		
+		return False
+		
+		
+	def remove_single_bookmark(self):
+		pos_cursor = self.contents.index(tkinter.INSERT)
+		
+		if mark_name := self.line_is_bookmarked(pos_cursor):
+			
+			self.contents.mark_unset(mark_name)
+			tab = self.tabs[self.tabindex]
+			tab.bookmarks.remove(mark_name)
+		
+		else:
+			self.bell()
+			return "break"
+			
+	
+	def remove_bookmarks(self, all_tabs=True):
+		''' Removes bookmarks from current tab
+			or from all tabs.
+		'''
 		self.clear_bookmarks()
-		tab = self.tabs[self.tabindex]
-		tab.bookmarks.clear()
+		
+		tabs = (self.tabs[self.tabindex])
+		if all_tabs: tabs = self.tabs
+		
+		for tab in tabs:
+			tab.bookmarks.clear()
 	
 	
 	def clear_bookmarks(self):
@@ -5891,44 +5938,29 @@ class Editor(tkinter.Toplevel):
 				
 	def add_bookmark(self, event=None):
 		''' Save cursor position
-		
-			One can return to position
-			with cmd-b later.
 		'''
 		
 		if self.state != 'normal':
 			self.bell()
 			return "break"
 		
+		pos_cursor = self.contents.index(tkinter.INSERT)
+		s = self.contents.index('%s display linestart' % tkinter.INSERT)
 		
-		pos = self.contents.index(tkinter.INSERT)
-		s = self.contents.index('%s display linestart' % pos)
-		
-		# Check if line is already bookmarked
-		mark_name = self.contents.mark_next(s)
-
-		# Check if at start of empty line, so go over insert-mark
-		while mark_name:
-			print(mark_name)
-			if 'bookmark' not in mark_name:
-				print('checking after %s' % mark_name)
-				mark_name = self.contents.mark_next(mark_name)
-			else:
-				break
-				
-		if mark_name:
-			print('checking', mark_name)
-			mark_pos_line = self.contents.index(mark_name).split('.')[0]
-			pos_line = pos.split('.')[0]
-			
-			if mark_pos_line == pos_line:
-				print('already marked')
-				return "break"
+		if self.line_is_bookmarked(pos_cursor):
+			print('already marked')
+			self.bell()
+			return "break"
 	
-
+		
 		
 		self.contents.edit_separator()
 		
+		new_mark = 'bookmark' + str(len(self.tabs[self.tabindex].bookmarks))
+		self.contents.mark_set( new_mark, s )
+		self.tabs[self.tabindex].bookmarks.append(new_mark)
+		
+
 		# Save cursor position
 		try:
 			e0 = self.idx_lineend()
@@ -5972,15 +6004,11 @@ class Editor(tkinter.Toplevel):
 						self.contents.delete(*args) )
 				
 			
-			new_mark = 'bookmark' + str(len(self.tabs[self.tabindex].bookmarks))
-			self.contents.mark_set( new_mark, s )
-			self.tabs[self.tabindex].bookmarks.append(new_mark)
-			
-			self.contents.edit_separator()
-			
-			
 		except tkinter.TclError as ee:
 			print(ee)
+		
+		
+		self.contents.edit_separator()
 		
 		return "break"
 		
