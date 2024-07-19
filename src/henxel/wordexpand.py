@@ -1,16 +1,16 @@
-'''Complete the current word before the cursor with words in the editor.
+'''Complete current word before cursor with words in editor.
 
 This file is taken from Python:idlelib -github-page:
 https://github.com/python/cpython/tree/3.11/Lib/idlelib/
 
 Each call to expand_word() replaces the word with a
-different word with the same prefix. The search for matches begins
-before the target and moves toward the top of the editor. It then starts
-after the cursor and moves down. It then returns to the original word and
-the cycle starts again.
+different word with same prefix. Search starts from cursor and
+moves towards filestart. It then starts again from cursor and
+moves towards fileend. It then returns to original word and
+cycle starts again.
 
-Changing the current text line or leaving the cursor in a different
-place before requesting the next selection causes ExpandWord to reset
+Changing current text line or leaving cursor in a different
+place before requesting next selection causes ExpandWord to reset
 its state.
 '''
 

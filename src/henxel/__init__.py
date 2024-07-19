@@ -677,6 +677,7 @@ class Editor(tkinter.Toplevel):
 			self.bind( "<Control-q>", self.quit_me)
 			
 			self.contents.bind( "<Control-b>", self.goto_bookmark)
+			#self.contents.bind( "<Alt-q>", lambda event: self.goto_bookmark(event, **{'back':True}) )
 			self.contents.bind( "<Control-l>", self.gotoline)
 			self.contents.bind( "<Control-g>", self.goto_def)
 			self.contents.bind( "<Alt-p>", self.add_bookmark)
@@ -741,7 +742,7 @@ class Editor(tkinter.Toplevel):
 			
 			
 			self.contents.bind( "<Mod1-Key-y>", self.yank_line)
-			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
+			self.contents.bind( "<Mod1-Key-t>", self.new_tab)
 			
 			self.contents.bind( "<Mod1-Key-f>", self.search)
 			self.contents.bind( "<Mod1-Key-r>", self.replace)
@@ -753,6 +754,7 @@ class Editor(tkinter.Toplevel):
 				lambda event: self.copy(event, **{'flag_cut':True}) )
 			
 			self.contents.bind( "<Mod1-Key-b>", self.goto_bookmark)
+			#self.contents.bind( "<Alt-q>", lambda event: self.goto_bookmark(event, **{'back':True
 			self.contents.bind( "<Mod1-Key-p>", self.add_bookmark)
 			self.contents.bind( "<Mod1-Key-g>", self.goto_def)
 			self.contents.bind( "<Mod1-Key-l>", self.gotoline)
@@ -5003,11 +5005,11 @@ class Editor(tkinter.Toplevel):
 	def check_caps(self, event=None):
 		'''	Check if CapsLock is on.
 		'''
-		e = event.state
-		# 0,2 macos, linux
-		# 8, 10 win11
 		
-		#print(event.keysym)
+		e = event.state
+		# 0,2	macos, linux
+		# 8,10	win11
+		
 		# event.keysym == Motion
 		# Bind to Motion is for: checking CapsLock -state when starting editor,
 		# (this assumes user moves mouse)
@@ -5017,15 +5019,13 @@ class Editor(tkinter.Toplevel):
 			# CapsLock is on but self.capslock is not True:
 			if e in [2, 10] and self.capslock in [False, 'init']:
 				self.capslock = True
-				#print('motion YES')
-				
+				self.bell()
 				self.flash_btn_git()
 				
 				
 			# CapsLock is off but self.capslock is True:
 			elif e in [0, 8] and self.capslock in [True, 'init']:
 				self.capslock = False
-				#print('motion NO')
 				
 				# If quickly pressed CapsLock off,
 				# cancel flashing started at the end of this callback.
@@ -5042,7 +5042,6 @@ class Editor(tkinter.Toplevel):
 		# event.keysym == Caps_Lock
 		# Check if CapsLock -state changes when focus is in editor
 		else:
-			#print(event.keysym)
 			# CapsLock is being turned off
 			# macOS -state
 			event_state = 0
@@ -5051,7 +5050,6 @@ class Editor(tkinter.Toplevel):
 			
 			if e in [event_state, 10]:
 				self.capslock = False
-				#print('CAPS NO')
 				
 				# If quickly pressed CapsLock off,
 				# cancel flashing started at the end of this callback.
@@ -5068,8 +5066,7 @@ class Editor(tkinter.Toplevel):
 			# CapsLock is being turned on
 			else:
 				self.capslock = True
-				#print('CAPS YES')
-				
+				self.bell()
 				self.flash_btn_git()
 				
 		return 'break'
@@ -5904,7 +5901,7 @@ class Editor(tkinter.Toplevel):
 		'''
 		self.clear_bookmarks()
 		
-		tabs = (self.tabs[self.tabindex])
+		tabs = [self.tabs[self.tabindex]]
 		if all_tabs: tabs = self.tabs
 		
 		for tab in tabs:
@@ -5966,29 +5963,59 @@ class Editor(tkinter.Toplevel):
 			e0 = self.idx_lineend()
 			col = int(e0.split('.')[1])
 			
-			# This is not exact, gives less chars than in reality can fit line:
-			num_chars = self.contents.winfo_width() // self.font.measure('A')
-			wanted_num_chars = num_chars // 2
+			
+			# Time to spend with marking-animation on line
+			time_wanted = 400
+			# Time to spend with marking-animation on char
+			step = 8
+			
+			# Want to animate on this many chars
+			wanted_num_chars = want = time_wanted // step
+			
+			# Check not over screen width 1
+			width_char = self.font.measure('A')
+			width_scr = self.contents.winfo_width()
+			num_chars = width_scr // width_char
+			
+			if wanted_num_chars > num_chars:
+				wanted_num_chars = want = num_chars
+			
+			
+			
 			flag_added_space = False
 			
-			# If not over half screen width
-			if col < wanted_num_chars:
-				# Add some space so we can tag more estate from line.
-				# It is later removed.
-				flag_added_space = True
-				self.contents.insert(e0, wanted_num_chars * ' ')
+			# If line has not enough characters
+			if (diff := want - col) > 0:
+				
+				# Check not over screen width 2
+				if (self.contents.bbox(e0)[0] + diff * width_char) < (width_scr - width_char):
+					
+					# Add some space so we can tag more estate from line. It is later removed.
+					flag_added_space = True
+					self.contents.insert(e0, diff * ' ')
+					
+				
+				# Some deep indentation and small screen size combo
+				# --> Line has enough characters, just update step
+				else:
+					wanted_num_chars = 0
+					t = self.contents.get(s, e0)
+					for char in t:
+						wanted_num_chars += 1
+						
+					# Recalculate step
+					step = time_wanted // wanted_num_chars
+					want = wanted_num_chars
 
+					
 			
 			e = self.idx_lineend()
 			
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			
-			t = self.contents.get(s,e)
-			# Time to spend on marking-animation
-			time_wanted = 400
-			step = time_wanted // len(t)
 			
-			for i in range(len(t)):
+			
+			for i in range(wanted_num_chars):
 				p0 = '%s +%d chars' % (s, i)
 				p1 = '%s +%d chars' % (s, i+1)
 				
@@ -5996,11 +6023,11 @@ class Editor(tkinter.Toplevel):
 						self.contents.tag_add(*args) )
 						
 			
-			self.after( (len(t)*step+300), lambda args=['sel', '1.0', tkinter.END]:
+			self.after( (time_wanted + 300), lambda args=['sel', '1.0', tkinter.END]:
 					self.contents.tag_remove(*args) )
 					
 			if flag_added_space:
-				self.after((len(t)*step+400), lambda args=[e0, '%s display lineend' % e0]:
+				self.after((time_wanted + 400), lambda args=[e0, '%s display lineend' % e0]:
 						self.contents.delete(*args) )
 				
 			

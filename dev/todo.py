@@ -69,12 +69,25 @@ macos
 ctrl-d --> ctrl-q
 
 
+
+
+
+
+
+
+
+#################
+bookmark
+
 when view changes, before close curtab:
 	tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
 	
 	done ok?
 
-cmd t newtab  n next mark p prev mark
+cmd t newtab done, ok?
+
+cmd n next mark p prev mark, no
+
 tag_link/loadfile error handling bookmarks etc.
 
 when view changes, after open tab:
@@ -97,24 +110,35 @@ view changes, after open tab, restore_bookmarks() is used in:
 	stop_show_errors
 	loadfile
 	stop_help
-	
-	
+																			
 	done ok?
 	
 	
-
-line_is_bookmarked()
-
 add_bookmark
 goto_bookmark forth back		do
 delete_bookmark				do
 delete_all_bookmarks		do
 
 
-type(self).__name__
+cmd/Alt-(Shift)-p add/(remove) mark to cursor:
 
 
-search next, count from start, count from cursor --> show position
+tab.bookmarks = list()
+add_bookmark --> tab.bookmarks.append(pos)
+must be updated before view change etc
+have to use real marks because of empty lines
+show mark in linenums, no use custom tag, with high priority
+currently marks persist in conf
+####################
+
+
+
+
+
+#####
+search next
+
+, count from start, count from cursor --> show position
 if count <= 1: bell
 if selection, use it, else oldword.
 search_next: enter search mode from cursor
@@ -128,42 +152,25 @@ update scope path after:
 	fname.Class.method()
 	
 unbind load() Return
-
+#####
 
 	
 
 
-mac_cmd_overr etc --> overrides section done ok?
-
-bookmarks: partly done with add_bookmark(), remove_bookmarks()
-toggle mark
-
-cmd/Alt-(Shift)-p add/(remove) mark to cursor:
-when add/walk/remove mark, populate whole line with space if necessary
-then flash line: de/select char by char/flash line
 
 
-# This is not exact, gives less chars than in reality can fit line:
-num_chars = self.contents.winfo_width() // self.font.measure('A')
-for example:
-= 81
-wanted_num_chars = num_chars // 2
-pos = idx_lineend()
 
-# If not over half screen width
-if pos < wanted_num_chars:
-	# Add some space so we can tag more estate from line
-	self.contents.insert(pos, wanted_num_chars*' ')
 
-undo pause ##############################################
 
-tab.bookmarks = list()
-add_bookmark --> tab.bookmarks.append(pos)
-used only to save pos over view changes
-must be updated before view change etc
-have to use real marks because of empty lines
-show mark in linenums
-currently marks persist in conf, have to load on start
+
+
+
+
+
+
+
+
+
 
 
 #######################################
@@ -224,6 +231,14 @@ fix arrow updown (put cursor to same col_nextline or
 
 
 bitmap check ensure width?
+
+
+type(self).__name__
+
+
+undo pause, check what is difference when in callback:
+	only one edit_separator
+	two edit_separators
 
 
 check is it necessary to set insert mark before ensure_idx_visibility?
