@@ -51,8 +51,7 @@ unbind these:
 
 
 show: Class.method instead of just: def method	done ok?
-	while get_scope() && fix get_scope docstring?
-
+	
 show scope when inspect
 	tab.inspected set in insert_inspected()
 	used only in handle_search_entry()
@@ -64,15 +63,28 @@ search: no strip searchword						done, ok? ####
 search, show scope in entry when show_next prev	done, ok? ####
 show_next/prev: entry handling to function		done, ok? ####
 #########
+macos: esc should exit fullscreen, done with esc_override()	ok?
+#########
+save() now generates esc in while-loop and returns False if save fails	ok?
+save is too big: splitted to save_forced/save
+#########
+removed no copy ln --> do_nothing_without_bell ok
+#########
 
-macos
-ctrl-d --> ctrl-q
+macos:
+ctrl-d --> ctrl-q/cmd-w ?
+
+
+while get_scope()?
+fix get_scope docstring
 
 
 
 
 
-
+github:
+fixed tag config -under --> -underline
+2tkcon.tcl
 
 
 
@@ -84,11 +96,12 @@ when view changes, before close curtab:
 	
 	done ok?
 
-cmd t newtab done, ok?
 
-cmd n next mark p prev mark, no
+
 
 tag_link/loadfile error handling bookmarks etc.
+
+
 
 when view changes, after open tab:
 	restore_bookmarks()
@@ -120,7 +133,23 @@ delete_bookmark				do
 delete_all_bookmarks		do
 
 
+
+
+
+what shortcuts manage bookmarks?
+	add_bookmark
+	goto_bookmark forth back		do
+	delete_bookmark				do
+	delete_all_bookmarks		do
+	
+	
+	
+	
+	
+	
+	
 cmd/Alt-(Shift)-p add/(remove) mark to cursor:
+cmd t newtab done, ok? not ok
 
 
 tab.bookmarks = list()
@@ -136,17 +165,18 @@ currently marks persist in conf
 
 
 #####
-search next
+search, search_next
+Control/Cmd np
 
-, count from start, count from cursor --> show position
+count from start, count from cursor --> show position
 if count <= 1: bell
 if selection, use it, else oldword.
-search_next: enter search mode from cursor
+search_next: enter search mode, start search from cursor
 
 search(start=index)
 
-Control-np search_next
-show scope always,
+
+show scope always
 update scope path after:
 	walk_tab etc
 	fname.Class.method()
@@ -192,13 +222,16 @@ at start of search/replace: insert window in start of entry:
 		2 start from filestart/cursor
 
 
-in macos
+macos:
 if toggled terminal to fullscreen, after doing one dir(),
 then switch to non fullscreen editor, editor is freezed.
 pressing return in terminal and then switching back to editor
 unfreezes editor.
 If both are fullscreen, there is no freezing.
 This is little similar to win11-behaviour when not using idle-shell
+
+
+macos: sometimes closing in fullscreen no get focus back terminal
 
 
 fdialog.py
@@ -231,6 +264,13 @@ fix arrow updown (put cursor to same col_nextline or
 
 
 bitmap check ensure width?
+
+
+save(): escape generate is necessary?
+save is too big
+
+
+todo: tagging system like in youversion
 
 
 type(self).__name__

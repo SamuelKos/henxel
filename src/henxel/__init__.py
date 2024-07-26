@@ -411,7 +411,7 @@ class Editor(tkinter.Toplevel):
 		# disable copying linenumbers:
 		shortcut = '<Mod1-Key-c>'
 		if self.os_type != 'mac_os': shortcut = '<Control-c>'
-		self.ln_widget.bind(shortcut, self.no_copy_ln)
+		self.ln_widget.bind(shortcut, self.do_nothing_without_bell)
 		
 		self.contents = tkinter.Text(self, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
 		
@@ -796,7 +796,7 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Control-R>", self.replace_all)
 		self.bind( "<Control-r>", self.replace)
 
-		self.bind( "<Escape>", self.do_nothing )
+		self.bind( "<Escape>", self.esc_override )
 		self.bind( "<Return>", self.do_nothing)
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
 		self.bind( "<Control-plus>", self.increase_scrollbar_width)
@@ -1121,11 +1121,14 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def quit_me(self, event=None):
-	
+		
+		if not self.save_forced():
+			self.bell()
+			return 'break'
+		
 		tab = self.tabs[self.tabindex]
 		tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
 		
-		self.save(forced=True)
 		self.save_config()
 		
 		# Affects color, fontchoose, load:
@@ -1252,10 +1255,6 @@ class Editor(tkinter.Toplevel):
 
 ############## Linenumbers Begin
 
-	def no_copy_ln(self, event=None):
-		return 'break'
-		
-	
 	def toggle_ln(self, event=None):
 		
 		# if dont want linenumbers:
@@ -1421,8 +1420,10 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 
 		if self.tabs[self.tabindex].type == 'normal' and save:
-			self.save(activetab=True)
-			
+			if not self.save(activetab=True):
+				self.bell()
+				return 'break'
+	
 		self.tabs.pop(self.tabindex)
 			
 		if (len(self.tabs) == 0):
@@ -2859,8 +2860,10 @@ class Editor(tkinter.Toplevel):
 		if (self.state != 'normal') or (self.tabs[self.tabindex].type == 'newtab'):
 			self.bell()
 			return 'break'
-			
-		self.save(forced=True)
+		
+		if not self.save_forced():
+			self.bell()
+			return 'break'
 		
 		# https://docs.python.org/3/library/subprocess.html
 
@@ -3024,7 +3027,7 @@ class Editor(tkinter.Toplevel):
 									
 	def stop_show_errors(self, event=None):
 		self.state = 'normal'
-		self.bind("<Escape>", self.do_nothing)
+		self.bind("<Escape>", self.esc_override)
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 		
@@ -4483,6 +4486,18 @@ class Editor(tkinter.Toplevel):
 		return "break"
 	
 	
+	def esc_override(self, event):
+		'''	Enable exit fullscreen with Esc when in macOS.
+		'''
+		
+		if self.state == 'normal' and self.fullscreen and self.os_type == 'mac_os':
+			self.wm_attributes('-fullscreen', 0)
+			return 'break'
+		
+		self.bell()
+		return 'break'
+	
+	
 	def space_override(self, event):
 		'''	Used to bind Space-key when searching or replacing.
 		'''
@@ -5369,7 +5384,7 @@ class Editor(tkinter.Toplevel):
 	
 	def stop_gotoline(self, event=None):
 		self.state = 'normal'
-		self.bind("<Escape>", self.do_nothing)
+		self.bind("<Escape>", self.esc_override)
 		
 		self.entry.config(validate='none')
 		
@@ -5512,8 +5527,11 @@ class Editor(tkinter.Toplevel):
 			return
 		
 		if self.tabs[self.tabindex].type == 'normal':
-			self.save(activetab=True)
-		
+			if not self.save(activetab=True):
+				self.bell()
+				return 'break'
+	
+	
 		# Using same tab:
 		try:
 			with open(filename, 'r', encoding='utf-8') as f:
@@ -5623,72 +5641,109 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 
 					
-	def save(self, activetab=False, forced=False):
-		''' forced when run() or quit_me()
+	def save_forced(self):
+		''' Called from run() or quit_me()
+			
+			If python-file, convert indentation to tabs.
+		'''
+		# Dont want contents to be replaced with errorlines or help.
+		last_state = self.state
+
+		while self.state != 'normal':
+			self.contents.event_generate('<Escape>')
+			
+			# Is state actually changing, or is it stuck == there is a bug
+			# --> cancel
+			if self.state == last_state:
+				print(r'\nState is not changing, currenty: ', self.state)
+				
+				return False
+				
+			last_state = self.state
+
+		
+		# Update active tab first
+		try:
+			pos = self.contents.index(tkinter.INSERT)
+		except tkinter.TclError:
+			pos = '1.0'
+			
+		tmp = self.contents.get('1.0', tkinter.END)
+
+		self.tabs[self.tabindex].position = pos
+		self.tabs[self.tabindex].contents = tmp
+		
+		
+		# Then save tabs to disk
+		for tab in self.tabs:
+			if tab.type == 'normal':
+				
+				if '.py' in tab.filepath.suffix:
+					# Check indent (tabify) and rstrip:
+					tmp = tab.contents.splitlines(True)
+					tmp[:] = [self.tabify(line) for line in tmp]
+					tmp = ''.join(tmp)
+				else:
+					tmp = tab.contents
+					
+				if tab.active == True:
+					tmp = tmp[:-1]
+				
+				tab.contents = tmp
+				
+				if tab.contents == tab.oldcontents:
+					continue
+				
+				try:
+					with open(tab.filepath, 'w', encoding='utf-8') as f:
+						f.write(tab.contents)
+						tab.oldcontents = tab.contents
+						
+				except EnvironmentError as e:
+					print(e.__str__())
+					print(f'\n Could not save file: {tab.filepath}')
+					return False
+			else:
+				tab.position = '1.0'
+				
+	
+		return True
+		
+		
+	
+	def save(self, activetab=False):
+		''' Called when pressed Save-button.
+		
 			activetab=True from load() and del_tab()
 			
 			If python-file, convert indentation to tabs.
 		'''
 		
-		if forced:
+		# Used below
+		def del_ins_move():
+			self.entry.delete(0, tkinter.END)
+			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+			self.entry.xview_moveto(1.0)
 			
-			# Dont want contents to be replaced with errorlines or help.
-			if self.state != 'normal':
-				self.contents.event_generate('<Escape>')
-			
-			# Update active tab first
+		
+		def set_cursor_pos():
 			try:
-				pos = self.contents.index(tkinter.INSERT)
-			except tkinter.TclError:
-				pos = '1.0'
+				line = self.tabs[self.tabindex].position
+				self.contents.focus_set()
+				self.contents.mark_set('insert', line)
+				self.ensure_idx_visibility(line)
 				
-			tmp = self.contents.get('1.0', tkinter.END)
-	
-			self.tabs[self.tabindex].position = pos
-			self.tabs[self.tabindex].contents = tmp
+			except tkinter.TclError:
+				self.tabs[self.tabindex].position = '1.0'
 			
+		
 			
-			# Then save tabs to disk
-			for tab in self.tabs:
-				if tab.type == 'normal':
-					
-					if '.py' in tab.filepath.suffix:
-						# Check indent (tabify) and rstrip:
-						tmp = tab.contents.splitlines(True)
-						tmp[:] = [self.tabify(line) for line in tmp]
-						tmp = ''.join(tmp)
-					else:
-						tmp = tab.contents
-						
-					if tab.active == True:
-						tmp = tmp[:-1]
-					
-					tab.contents = tmp
-					
-					if tab.contents == tab.oldcontents:
-						continue
-					
-					try:
-						with open(tab.filepath, 'w', encoding='utf-8') as f:
-							f.write(tab.contents)
-							tab.oldcontents = tab.contents
-							
-					except EnvironmentError as e:
-						print(e.__str__())
-						print(f'\n Could not save file: {tab.filepath}')
-				else:
-					tab.position = '1.0'
-					
-			return
-
-		# if not forced (Pressed Save-button):
-
 		tmp = self.entry.get().strip()
 		
 		if not isinstance(tmp, str) or tmp.isspace():
 			print('Give a valid filename')
 			self.bell()
-			return
+			return False
 		
 		fpath_in_entry = pathlib.Path().cwd() / tmp
 		
@@ -5705,30 +5760,26 @@ class Editor(tkinter.Toplevel):
 		openfiles = [tab.filepath for tab in self.tabs]
 		
 		
-		# creating new file
+		# Creating a new file
 		if fpath_in_entry != self.tabs[self.tabindex].filepath and not activetab:
 		
 			if fpath_in_entry in openfiles:
 				self.bell()
 				print(f'\nFile: {fpath_in_entry} already opened')
-				self.entry.delete(0, tkinter.END)
-			
+				
 				if self.tabs[self.tabindex].filepath != None:
-					self.entry.insert(0, self.tabs[self.tabindex].filepath)
-					self.entry.xview_moveto(1.0)
-					
-				return
+					del_ins_move()
+
+				return False
 				
 			if fpath_in_entry.exists():
 				self.bell()
 				print(f'\nCan not overwrite file: {fpath_in_entry}')
-				self.entry.delete(0, tkinter.END)
-			
+				
 				if self.tabs[self.tabindex].filepath != None:
-					self.entry.insert(0, self.tabs[self.tabindex].filepath)
-					self.entry.xview_moveto(1.0)
+					del_ins_move()
 					
-				return
+				return False
 			
 			if self.tabs[self.tabindex].type == 'newtab':
 			
@@ -5740,30 +5791,18 @@ class Editor(tkinter.Toplevel):
 				except EnvironmentError as e:
 					print(e.__str__())
 					print(f'\n Could not save file: {fpath_in_entry}')
-					return
+					return False
 				
 				if self.tabs[self.tabindex].filepath != None:
-					self.entry.delete(0, tkinter.END)
-					self.entry.insert(0, self.tabs[self.tabindex].filepath)
-					self.entry.xview_moveto(1.0)
+					del_ins_move()
 					
 					self.do_syntax()
+								
+				set_cursor_pos()
 			
-				
-				# Set cursor pos
-				try:
-					line = self.tabs[self.tabindex].position
-					self.contents.focus_set()
-					self.contents.mark_set('insert', line)
-					self.ensure_idx_visibility(line)
-					
-				except tkinter.TclError:
-					self.tabs[self.tabindex].position = '1.0'
-				
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
-				
-					
+									
 				
 			# Want to create new file with same contents:
 			else:
@@ -5773,13 +5812,11 @@ class Editor(tkinter.Toplevel):
 				except EnvironmentError as e:
 					print(e.__str__())
 					print(f'\n Could not save file: {fpath_in_entry}')
-					self.entry.delete(0, tkinter.END)
-			
+					
 					if self.tabs[self.tabindex].filepath != None:
-						self.entry.insert(0, self.tabs[self.tabindex].filepath)
-						self.entry.xview_moveto(1.0)
+						del_ins_move()
 						
-					return
+					return False
 					
 				self.new_tab()
 				self.tabs[self.tabindex].filepath = fpath_in_entry
@@ -5787,38 +5824,24 @@ class Editor(tkinter.Toplevel):
 				self.tabs[self.tabindex].position = pos
 				self.tabs[self.tabindex].type = 'normal'
 				
-				self.entry.delete(0, tkinter.END)
-				self.entry.insert(0, self.tabs[self.tabindex].filepath)
-				self.entry.xview_moveto(1.0)
-				
+				del_ins_move()
 			
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				
-				
 				self.do_syntax(everything=True)
 				
-				
-				# Set cursor pos
-				try:
-					line = self.tabs[self.tabindex].position
-					self.contents.focus_set()
-					self.contents.mark_set('insert', line)
-					self.ensure_idx_visibility(line)
-					
-				except tkinter.TclError:
-					self.tabs[self.tabindex].position = '1.0'
-				
+				set_cursor_pos()
 				
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 				
 				
 		else:
-			# skip unnecessary disk-writing silently
+			# Skip unnecessary disk-writing
 			if not activetab:
-				return
+				return True
 
-			# if closing tab or loading file:
+			# If closing tab or loading file:
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
 				# Check indent (tabify) and rstrip:
 				tmp = self.tabs[self.tabindex].contents.splitlines(True)
@@ -5829,7 +5852,7 @@ class Editor(tkinter.Toplevel):
 				tmp = tmp[:-1]
 				
 			if self.tabs[self.tabindex].contents == self.tabs[self.tabindex].oldcontents:
-				return
+				return True
 				
 			try:
 				with open(self.tabs[self.tabindex].filepath, 'w', encoding='utf-8') as f:
@@ -5838,8 +5861,10 @@ class Editor(tkinter.Toplevel):
 			except EnvironmentError as e:
 				print(e.__str__())
 				print(f'\n Could not save file: {self.tabs[self.tabindex].filepath}')
-				return
-				
+				return False
+		
+			
+		return True
 		############# Save End #######################################
 	
 ########## Save and Load End
@@ -6077,7 +6102,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.edit_modified(0)
 		self.avoid_viewsync_mess()
 		
-		self.bind("<Escape>", self.do_nothing)
+		self.bind("<Escape>", self.esc_override)
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 		
@@ -6716,7 +6741,7 @@ class Editor(tkinter.Toplevel):
 			return "break"
 			
 		self.contents.tag_remove('replaced', '1.0', tkinter.END)
-		self.bind("<Escape>", self.do_nothing)
+		self.bind("<Escape>", self.esc_override)
 		
 	
 	def stop_search(self, event=None):
@@ -6739,7 +6764,7 @@ class Editor(tkinter.Toplevel):
 		if len(self.contents.tag_ranges('replaced')) > 0:
 			self.bind("<Escape>", self.clear_search_tags)
 		else:
-			self.bind("<Escape>", self.do_nothing)
+			self.bind("<Escape>", self.esc_override)
 			
 		
 		self.entry.config(validate='none')
