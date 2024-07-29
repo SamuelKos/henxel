@@ -150,8 +150,12 @@ fix macos topbar menus?
 
 check use of token can update
 
-
+####
 check open encoding
+removed encoding='utf-8'
+and added t for ensure textmode 'r' --> 'rt'		ok?
+check this in windows
+####
 
 
 chek move many lines() mac
