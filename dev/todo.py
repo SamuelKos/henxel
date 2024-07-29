@@ -3,7 +3,56 @@
 cmd/Alt-p		save cursor position, so one can go back to it with cmd-b
 cmd/Control-b	walk saved cursor positions
 cmd/ctrl-g		goto_def, if selection use it
-#####
+###############################################
+bookmark Begin
+
+when view changes, before close curtab:
+	tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
+
+
+when view changes, after open tab:
+	restore_bookmarks()
+	# Restore bookmarks
+	for i, pos in enumerate(self.tabs[self.tabindex].bookmarks):
+		self.contents.mark_set('bookmark%d' % i, pos)
+		
+	self.tabs[self.tabindex].bookmarks.clear()
+	
+	for mark in self.contents.mark_names():
+		if 'bookmark' in mark:
+			self.tabs[self.tabindex].bookmarks.append(mark)
+
+view changes, after open tab, restore_bookmarks() is used in:
+	walk_tab
+	del_tab
+	new_tab
+	tag_link
+	stop_show_errors
+	loadfile
+	stop_help
+																			
+	done ok?
+	
+
+animate add/remove bookmark		done ok?
+
+toggle bookmark cmd/alt-p		done ok?
+walk bookmarks cmd/Control-bB	done ok?
+cmd t newtab					done ok?
+
+
+delete_all_bookmarks		no shortcut
+print_bookmarks				no shortcut
+	
+
+tab.bookmarks = list()
+add_bookmark --> tab.bookmarks.append(pos)
+must be updated before view change etc
+have to use real marks because of empty lines
+currently marks persist in conf
+
+bookmark End
+############################################################
 replace: space to exit?
 fixed in start_replace() self.focus_set() --> self.contents.focus_set()
 #####
@@ -70,6 +119,23 @@ save is too big: splitted to save_forced/save
 #########
 removed no copy ln --> do_nothing_without_bell ok
 #########
+added state check in save() ok?
+#########
+tag_link/loadfile error handling bookmarks etc.
+tag_link new_tab after f.read ok?
+save, called from deltab: check done ok?
+save, called from loadfile: check done ok?
+#########
+
+
+
+
+
+
+
+
+
+
 
 macos:
 ctrl-d --> ctrl-q/cmd-w ?
@@ -79,6 +145,21 @@ while get_scope()?
 fix get_scope docstring
 
 
+fix macos topbar menus?
+
+
+check use of token can update
+
+
+check open encoding
+
+
+chek move many lines() mac
+after
+
+
+update help
+
 
 
 
@@ -87,78 +168,6 @@ fixed tag config -under --> -underline
 2tkcon.tcl
 
 
-
-#################
-bookmark
-
-when view changes, before close curtab:
-	tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
-	
-	done ok?
-
-
-
-
-tag_link/loadfile error handling bookmarks etc.
-
-
-
-when view changes, after open tab:
-	restore_bookmarks()
-	# Restore bookmarks
-	for i, pos in enumerate(self.tabs[self.tabindex].bookmarks):
-		self.contents.mark_set('bookmark%d' % i, pos)
-		
-	self.tabs[self.tabindex].bookmarks.clear()
-	
-	for mark in self.contents.mark_names():
-		if 'bookmark' in mark:
-			self.tabs[self.tabindex].bookmarks.append(mark)
-
-view changes, after open tab, restore_bookmarks() is used in:
-	walk_tab
-	del_tab
-	new_tab
-	tag_link
-	stop_show_errors
-	loadfile
-	stop_help
-																			
-	done ok?
-	
-	
-add_bookmark
-goto_bookmark forth back		do
-delete_bookmark				do
-delete_all_bookmarks		do
-
-
-
-
-
-what shortcuts manage bookmarks?
-	add_bookmark
-	goto_bookmark forth back		do
-	delete_bookmark				do
-	delete_all_bookmarks		do
-	
-	
-	
-	
-	
-	
-	
-cmd/Alt-(Shift)-p add/(remove) mark to cursor:
-cmd t newtab done, ok? not ok
-
-
-tab.bookmarks = list()
-add_bookmark --> tab.bookmarks.append(pos)
-must be updated before view change etc
-have to use real marks because of empty lines
-show mark in linenums, no use custom tag, with high priority
-currently marks persist in conf
-####################
 
 
 
@@ -266,6 +275,9 @@ fix arrow updown (put cursor to same col_nextline or
 bitmap check ensure width?
 
 
+animate walk_tab, save etc?
+
+
 save(): escape generate is necessary?
 save is too big
 
@@ -308,7 +320,7 @@ bind with eval from dict --> user editable binds
 yank line sel --> custom tag
 
 
-save file when pressing save, update help
+save file when pressing save
 
 
 tuple after_cancel: (from_who, after_object_id)
@@ -326,6 +338,7 @@ it should be unbinded when pressed other than left.
 search, if previously have deleted suggestion from clipboard,
 do not suggest from clipboard again if it is the same.
 search: regexp?
+
 
 syntax highlight often slow, needs check
 tokens to list --> after cancel

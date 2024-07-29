@@ -677,10 +677,12 @@ class Editor(tkinter.Toplevel):
 			self.bind( "<Control-q>", self.quit_me)
 			
 			self.contents.bind( "<Control-b>", self.goto_bookmark)
-			#self.contents.bind( "<Alt-q>", lambda event: self.goto_bookmark(event, **{'back':True}) )
+			self.contents.bind( "<Control-B>",
+				lambda event: self.goto_bookmark(event, **{'back':True}) )
+			
 			self.contents.bind( "<Control-l>", self.gotoline)
 			self.contents.bind( "<Control-g>", self.goto_def)
-			self.contents.bind( "<Alt-p>", self.add_bookmark)
+			self.contents.bind( "<Alt-p>", self.toggle_bookmark)
 			
 			self.contents.bind( "<Alt-s>", self.color_choose)
 			self.contents.bind( "<Alt-t>", self.toggle_color)
@@ -754,8 +756,10 @@ class Editor(tkinter.Toplevel):
 				lambda event: self.copy(event, **{'flag_cut':True}) )
 			
 			self.contents.bind( "<Mod1-Key-b>", self.goto_bookmark)
-			#self.contents.bind( "<Alt-q>", lambda event: self.goto_bookmark(event, **{'back':True
-			self.contents.bind( "<Mod1-Key-p>", self.add_bookmark)
+			self.contents.bind( "<Mod1-Key-B>",
+				lambda event: self.goto_bookmark(event, **{'back':True}) )
+				
+			self.contents.bind( "<Mod1-Key-p>", self.toggle_bookmark)
 			self.contents.bind( "<Mod1-Key-g>", self.goto_def)
 			self.contents.bind( "<Mod1-Key-l>", self.gotoline)
 			self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
@@ -1407,6 +1411,8 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def del_tab(self, event=None, save=True):
+		''' save=False from cmd/Control-Q
+		'''
 
 		if self.state != 'normal':
 			self.bell()
@@ -2740,7 +2746,7 @@ class Editor(tkinter.Toplevel):
 			and function (self.taglink) as value.
 		'''
 		
-		# passing tagname-string as argument to function self.taglink()
+		# Passing tagname-string as argument to function self.taglink()
 		# which in turn is a value of tagname-key in dictionary taglinks:
 		self.taglinks[tagname](tagname)
 		
@@ -2772,8 +2778,8 @@ class Editor(tkinter.Toplevel):
 		else:
 			try:
 				with open(filepath, 'r', encoding='utf-8') as f:
-					self.new_tab(error=True)
 					tmp = f.read()
+					self.new_tab(error=True)
 					self.tabs[self.tabindex].oldcontents = tmp
 					
 					if '.py' in filepath.suffix:
@@ -2823,7 +2829,7 @@ class Editor(tkinter.Toplevel):
 			self.token_can_update = True
 		
 		
-		# set cursor pos
+		# Set cursor pos
 		line = errline + '.0'
 		self.contents.focus_set()
 		self.contents.mark_set('insert', line)
@@ -5303,8 +5309,8 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 	
 	
-	def goto_bookmark(self, event=None):
-		''' Go to saved cursor position
+	def goto_bookmark(self, event=None, back=False):
+		''' Walk bookmarks
 		'''
 		
 		if self.state != 'normal':
@@ -5312,21 +5318,40 @@ class Editor(tkinter.Toplevel):
 			return "break"
 		
 		
-		pos = False
-		mark_name = self.contents.mark_next('insert')
-		
-		while mark_name:
-			if 'bookmark' in mark_name:
-				pos_mark = self.contents.index(mark_name)
-				if self.contents.compare(pos_mark, '!=', 'insert' ):
-					pos = pos_mark
-					break
-				
-			mark_name = self.contents.mark_next(mark_name)
+		def get_mark(start_idx, markfunc):
+			pos = False
+			mark_name = markfunc(start_idx)
 			
+			while mark_name:
+				if 'bookmark' in mark_name:
+					pos_mark = self.contents.index(mark_name)
+					if self.contents.compare(pos_mark, '!=', 'insert' ):
+						pos = pos_mark
+						break
+					
+				mark_name = markfunc(mark_name)
+				
+			return pos
+			
+		# Start
+		mark_func = self.contents.mark_next
+		
+		if back:
+			mark_func = self.contents.mark_previous
+			
+		pos = get_mark('insert', mark_func)
+		
+		# At file_startend, try again from beginning of other end
+		if not pos:
+			start = '1.0'
+			if back: start = tkinter.END
+			pos = get_mark(start, mark_func)
+		
+		# No bookmarks in this tab
 		if not pos:
 			self.bell()
 			return "break"
+			
 		
 		try:
 			self.contents.mark_set('insert', pos)
@@ -5674,6 +5699,8 @@ class Editor(tkinter.Toplevel):
 		self.tabs[self.tabindex].contents = tmp
 		
 		
+		res = True
+		
 		# Then save tabs to disk
 		for tab in self.tabs:
 			if tab.type == 'normal':
@@ -5702,23 +5729,26 @@ class Editor(tkinter.Toplevel):
 				except EnvironmentError as e:
 					print(e.__str__())
 					print(f'\n Could not save file: {tab.filepath}')
-					return False
+					res = False
 			else:
 				tab.position = '1.0'
 				
 	
-		return True
+		return res
 		
 		
 	
 	def save(self, activetab=False):
-		''' Called when pressed Save-button.
+		''' Called for example when pressed Save-button.
 		
 			activetab=True from load() and del_tab()
 			
 			If python-file, convert indentation to tabs.
 		'''
-		
+		if self.state != 'normal':
+			self.bell()
+			return 'break'
+				
 		# Used below
 		def del_ins_move():
 			self.entry.delete(0, tkinter.END)
@@ -5905,34 +5935,7 @@ class Editor(tkinter.Toplevel):
 		
 		return False
 		
-		
-	def remove_single_bookmark(self):
-		pos_cursor = self.contents.index(tkinter.INSERT)
-		
-		if mark_name := self.line_is_bookmarked(pos_cursor):
 			
-			self.contents.mark_unset(mark_name)
-			tab = self.tabs[self.tabindex]
-			tab.bookmarks.remove(mark_name)
-		
-		else:
-			self.bell()
-			return "break"
-			
-	
-	def remove_bookmarks(self, all_tabs=True):
-		''' Removes bookmarks from current tab
-			or from all tabs.
-		'''
-		self.clear_bookmarks()
-		
-		tabs = [self.tabs[self.tabindex]]
-		if all_tabs: tabs = self.tabs
-		
-		for tab in tabs:
-			tab.bookmarks.clear()
-	
-	
 	def clear_bookmarks(self):
 		for mark in self.contents.mark_names():
 			if 'bookmark' in mark:
@@ -5957,33 +5960,47 @@ class Editor(tkinter.Toplevel):
 			if 'bookmark' in mark:
 				tab.bookmarks.append(mark)
 				
-				
-	def add_bookmark(self, event=None):
-		''' Save cursor position
+	
+	def remove_bookmarks(self, all_tabs=True):
+		''' Removes bookmarks from current tab
+			or from all tabs.
+		'''
+		self.clear_bookmarks()
+		
+		tabs = [self.tabs[self.tabindex]]
+		if all_tabs: tabs = self.tabs
+		
+		for tab in tabs:
+			tab.bookmarks.clear()
+	
+
+	def remove_single_bookmark(self):
+		pos_cursor = self.contents.index(tkinter.INSERT)
+		
+		if mark_name := self.line_is_bookmarked(pos_cursor):
+			
+			self.contents.mark_unset(mark_name)
+			tab = self.tabs[self.tabindex]
+			tab.bookmarks.remove(mark_name)
+			
+			# Fix naming of bookmarks in tab.bookmarks
+			tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
+			self.restore_bookmarks()
+			
+			return True
+		
+		else:
+			return False
+			
+	
+	def bookmark_animate(self, idx_linestart, remove=False):
+		''' Animate on Add/Remove bookmark
 		'''
 		
-		if self.state != 'normal':
-			self.bell()
-			return "break"
-		
-		pos_cursor = self.contents.index(tkinter.INSERT)
-		s = self.contents.index('%s display linestart' % tkinter.INSERT)
-		
-		if self.line_is_bookmarked(pos_cursor):
-			print('already marked')
-			self.bell()
-			return "break"
-	
-		
+		s = idx_linestart
 		
 		self.contents.edit_separator()
 		
-		new_mark = 'bookmark' + str(len(self.tabs[self.tabindex].bookmarks))
-		self.contents.mark_set( new_mark, s )
-		self.tabs[self.tabindex].bookmarks.append(new_mark)
-		
-
-		# Save cursor position
 		try:
 			e0 = self.idx_lineend()
 			col = int(e0.split('.')[1])
@@ -5994,6 +6011,11 @@ class Editor(tkinter.Toplevel):
 			# Time to spend with marking-animation on char
 			step = 8
 			
+			# Removing animation is 'doubled' --> need to reduce time
+			if remove:
+				time_wanted = 300
+				step = 6
+				
 			# Want to animate on this many chars
 			wanted_num_chars = want = time_wanted // step
 			
@@ -6038,22 +6060,47 @@ class Editor(tkinter.Toplevel):
 			
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			
-			
-			
-			for i in range(wanted_num_chars):
-				p0 = '%s +%d chars' % (s, i)
-				p1 = '%s +%d chars' % (s, i+1)
+			# Animate removing bookmark
+			if remove:
+				#self.contents.tag_add('sel', s, '%s +%d chars' % (s, wanted_num_chars) )
 				
-				self.after( (i+1)*step, lambda args=['sel', p0, p1]:
-						self.contents.tag_add(*args) )
+				for i in range(wanted_num_chars):
+					p0 = '%s +%d chars' % (s, wanted_num_chars - i-1 )
+					p1 = '%s +%d chars' % (s, wanted_num_chars - i )
+					
+					self.after( (i+1)*step, lambda args=['sel', p0, p1]:
+							self.contents.tag_add(*args) )
+				
+				for i in range(wanted_num_chars):
+					p0 = '%s +%d chars' % (s, wanted_num_chars - i-1 )
+					p1 = '%s +%d chars' % (s, wanted_num_chars - i )
+					
+					self.after( ( time_wanted + (i+1)*step ), lambda args=['sel', p0, p1]:
+							self.contents.tag_remove(*args) )
+				
+				
+				if flag_added_space:
+					self.after((2*time_wanted + 50), lambda args=[e0, '%s display lineend' % e0]:
+							self.contents.delete(*args) )
+			
+			
+			# Animate adding bookmark
+			else:
+				for i in range(wanted_num_chars):
+					p0 = '%s +%d chars' % (s, i)
+					p1 = '%s +%d chars' % (s, i+1)
+					
+					self.after( (i+1)*step, lambda args=['sel', p0, p1]:
+							self.contents.tag_add(*args) )
 						
 			
-			self.after( (time_wanted + 300), lambda args=['sel', '1.0', tkinter.END]:
-					self.contents.tag_remove(*args) )
-					
-			if flag_added_space:
-				self.after((time_wanted + 400), lambda args=[e0, '%s display lineend' % e0]:
-						self.contents.delete(*args) )
+				self.after( (time_wanted + 300), lambda args=['sel', '1.0', tkinter.END]:
+						self.contents.tag_remove(*args) )
+				
+				
+				if flag_added_space:
+					self.after( (time_wanted + 400), lambda args=[e0, '%s display lineend' % e0]:
+							self.contents.delete(*args) )
 				
 			
 		except tkinter.TclError as ee:
@@ -6061,10 +6108,34 @@ class Editor(tkinter.Toplevel):
 		
 		
 		self.contents.edit_separator()
+
+		######## bookmark_animate End #######
+	
+	
+	def toggle_bookmark(self, event=None):
+		''' Add/Remove bookmark at cursor position
+		'''
 		
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+		
+		
+		pos_cursor = self.contents.index(tkinter.INSERT)
+		s = self.contents.index('%s display linestart' % tkinter.INSERT)
+		
+		# If there is bookmark, remove it
+		if self.remove_single_bookmark():
+			self.bookmark_animate(s, remove=True)
+			return "break"
+	
+		
+		new_mark = 'bookmark' + str(len(self.tabs[self.tabindex].bookmarks))
+		self.contents.mark_set( new_mark, s )
+		self.tabs[self.tabindex].bookmarks.append(new_mark)
+		
+		self.bookmark_animate(s)
 		return "break"
-		
-		###### add_bookmark End ###############
 		
 	
 	def stop_help(self, event=None):
