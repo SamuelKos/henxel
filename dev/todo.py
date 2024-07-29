@@ -154,8 +154,21 @@ check use of token can update
 check open encoding
 removed encoding='utf-8'
 and added t for ensure textmode 'r' --> 'rt'		ok?
-check this in windows
+check this in windows, todo.py not open codec charmap  not ok
 ####
+
+when completing with tab word1_word2 at word1 and:
+	pressing shift down to enter dash and fast pressing tab after that
+	shift might still be pressed --> word1_ and dedent line but no completion
+
+
+search open() in save, get wrong scope:
+	if indent of index_line > 1:
+	must keep track of:
+	min_indent of all lines after index_line and before next def_line:
+	if indent of next def_line >= min_indent:
+		def_line is not added to scope_path
+
 
 
 chek move many lines() mac

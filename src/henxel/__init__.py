@@ -391,7 +391,7 @@ class Editor(tkinter.Toplevel):
 		
 		if self.env and p.exists():
 			try:
-				with open(p, 'rt') as f:
+				with open(p, 'r', encoding='utf-8') as f:
 					string_representation = f.read()
 					data = json.loads(string_representation)
 						
@@ -1564,7 +1564,7 @@ class Editor(tkinter.Toplevel):
 		if self.env:
 			p = pathlib.Path(self.env) / CONFPATH
 			try:
-				with open(p, 'wt') as f:
+				with open(p, 'w', encoding='utf-8') as f:
 					f.write(string_representation)
 			except EnvironmentError as e:
 				print(e.__str__())
@@ -1708,7 +1708,7 @@ class Editor(tkinter.Toplevel):
 			
 			if tab.type == 'normal':
 				try:
-					with open(tab.filepath, 'rt') as f:
+					with open(tab.filepath, 'r', encoding='utf-8') as f:
 						tmp = f.read()
 						tab.contents = tmp
 						tab.oldcontents = tab.contents
@@ -2777,7 +2777,7 @@ class Editor(tkinter.Toplevel):
 		# else: open file in newtab
 		else:
 			try:
-				with open(filepath, 'rt') as f:
+				with open(filepath, 'r', encoding='utf-8') as f:
 					tmp = f.read()
 					self.new_tab(error=True)
 					self.tabs[self.tabindex].oldcontents = tmp
@@ -4780,7 +4780,7 @@ class Editor(tkinter.Toplevel):
 				return 'break'
 			
 			try:
-				with open(filepath, 'rt') as f:
+				with open(filepath, 'r', encoding='utf-8') as f:
 					fcontents = f.read()
 					
 					self.new_tab()
@@ -5559,7 +5559,7 @@ class Editor(tkinter.Toplevel):
 	
 		# Using same tab:
 		try:
-			with open(filename, 'rt') as f:
+			with open(filename, 'r', encoding='utf-8') as f:
 				tmp = f.read()
 				self.tabs[self.tabindex].oldcontents = tmp
 				
@@ -5722,7 +5722,7 @@ class Editor(tkinter.Toplevel):
 					continue
 				
 				try:
-					with open(tab.filepath, 'wt') as f:
+					with open(tab.filepath, 'w', encoding='utf-8') as f:
 						f.write(tab.contents)
 						tab.oldcontents = tab.contents
 						
@@ -5815,7 +5815,7 @@ class Editor(tkinter.Toplevel):
 			
 				# Avoiding disk-writes, just checking filepath:
 				try:
-					with open(fpath_in_entry, 'wt') as f:
+					with open(fpath_in_entry, 'w', encoding='utf-8') as f:
 						self.tabs[self.tabindex].filepath = fpath_in_entry
 						self.tabs[self.tabindex].type = 'normal'
 				except EnvironmentError as e:
@@ -5837,7 +5837,7 @@ class Editor(tkinter.Toplevel):
 			# Want to create new file with same contents:
 			else:
 				try:
-					with open(fpath_in_entry, 'wt') as f:
+					with open(fpath_in_entry, 'w', encoding='utf-8') as f:
 						pass
 				except EnvironmentError as e:
 					print(e.__str__())
@@ -5885,7 +5885,7 @@ class Editor(tkinter.Toplevel):
 				return True
 				
 			try:
-				with open(self.tabs[self.tabindex].filepath, 'wt') as f:
+				with open(self.tabs[self.tabindex].filepath, 'w', encoding='utf-8') as f:
 					f.write(tmp)
 					
 			except EnvironmentError as e:
