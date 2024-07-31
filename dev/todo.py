@@ -126,6 +126,24 @@ tag_link new_tab after f.read ok?
 save, called from deltab: check done ok?
 save, called from loadfile: check done ok?
 #########
+search open() in save, get wrong scope:
+	patt indent-1
+	if indent of index_line > 1:
+	must keep track of:
+	min_indent of all lines after index_line and before next def_line:
+	if indent of next def_line >= min_indent:
+		def_line is not added to scope_path
+	fixed in get_scope_path
+	done, ok?
+
+	contents.search searches logical lines, not display lines, so no need
+	to check for wrapped lines
+######
+check open() without encoding
+tried, removed encoding='utf-8'
+and added t for ensure textmode 'r' --> 'rt'	ok?, not ok
+checked this in windows, todo.py does not open, codec charmap error, not ok
+######
 
 
 
@@ -150,25 +168,20 @@ fix macos topbar menus?
 
 check use of token can update
 
-####
-check open encoding
-removed encoding='utf-8'
-and added t for ensure textmode 'r' --> 'rt'		ok?
-check this in windows, todo.py not open codec charmap  not ok
-####
 
 when completing with tab word1_word2 at word1 and:
 	pressing shift down to enter dash and fast pressing tab after that
 	shift might still be pressed --> word1_ and dedent line but no completion
 
+delete cmd a comment linestart no syntax
 
-search open() in save, get wrong scope:
-	if indent of index_line > 1:
-	must keep track of:
-	min_indent of all lines after index_line and before next def_line:
-	if indent of next def_line >= min_indent:
-		def_line is not added to scope_path
+uncomment must be at indent0 --> help?
 
+
+
+
+handle fullscreen check if have attribute fullscreen?
+fullscreen windows
 
 
 chek move many lines() mac

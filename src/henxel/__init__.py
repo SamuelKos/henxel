@@ -5132,11 +5132,8 @@ class Editor(tkinter.Toplevel):
 		elif self.tabs[self.tabindex].inspected:
 			flag_scope = True
 			
-
 		if flag_scope:
-			pos, scope_name, _ = self.get_scope_path(index)
-				
-			if pos:
+			if scope_name := self.get_scope_path(index):
 				patt = ' @' + scope_name + ' @'
 				
 		# b: Add search position
@@ -5152,77 +5149,80 @@ class Editor(tkinter.Toplevel):
 		# 3. Insert string
 		self.entry.insert(0, patt)
 
-		
+	
 	def get_scope_path(self, index):
 		''' Index is tkinter.Text -index
 			
 			Search backwards from index up to filestart and build scope-path
 			of current position: index.
 			
-			
-			returns (position, scope_path, def_line_contents)
+			on success:
+				returns string: scope_path
+			else:
+				returns False
 		'''
-		
-		patt_indent = r'^[[:blank:]]*'
-		# or symbol | accepts matchs in every branch so this matches
-		# also strings like: async def class
-		patt_keywords = r'((?:async[[:blank:]]+def)|(?:def)|(?:class)){1}'
-		patt_space = r'[[:blank:]]+'
-		patt_name = r'[[:alnum:]_]+(?:\()?(?::)?'
-		
-		search_word = patt_indent + patt_keywords + patt_space + patt_name
+		# Used before, left as tk text regexp-example
+##		patt_indent = r'^[[:blank:]]*'
+##		# or symbol | accepts matchs in every branch so this matches
+##		# also strings like: async def class
+##		patt_keywords = r'((?:async[[:blank:]]+def)|(?:def)|(?:class)){1}'
+##		patt_space = r'[[:blank:]]+'
+##		patt_name = r'[[:alnum:]_]+(?:\()?(?::)?'
+##
+##		search_word = patt_indent + patt_keywords + patt_space + patt_name
 		
 		pos = index
 		
 		index_line_contents = self.contents.get( '%s linestart' % pos,
 			'%s display lineend' % pos )
 		
-		ind_index_line = 0
+		# Indentation of pos line
+		ind_pos_line = 0
 		scope_path = ''
 			
 		for char in index_line_contents:
-			if char in ['\t']: ind_index_line += 1
+			if char in ['\t']: ind_pos_line += 1
 			else: break
 		
-		if ind_index_line == 0:
+		
+		if ind_pos_line == 0:
 			scope_path = '__main__()'
 			
-			return True, scope_path, False
-			
+			return scope_path
+
+
+		if ind_pos_line > 1:
+			patt = r'^[[:blank:]]{%d}[^[:blank:]#]' % (ind_pos_line-1)
+
+		# ind_pos_line == 1
+		# Find first line that has indent0 and is not comment.
+		else:
+			patt = r'^[^[:blank:]#]'
 		
-		
-		ind_ref_line = ind_index_line
-		scope_path = ''
 		
 		while pos:
 		
 			try:
-				pos = self.contents.search(search_word, pos, stopindex='1.0',
+				pos = self.contents.search(patt, pos, stopindex='1.0',
 					regexp=True, backwards=True)
 					
 			except tkinter.TclError as e:
 				print(e)
-				return (False, False, False)
-						
+				return False
+			
+			# Should not happen
 			if not pos:
 				break
-				
-				
-			# Function/Class definition line
-			def_line_contents = cont = self.contents.get( pos, '%s display lineend' % pos )
-			ind_def_line = 0
-				
-			for char in cont:
-				if char in ['\t']: ind_def_line += 1
-				else: break
-		
 			
-			# Check scope-level:
-			# Find previous def-line that has smaller indentation than index/ref-line
-			if ind_ref_line > ind_def_line:
-				
-				cont = cont.strip()
-				
+			#print(pos)
+			# Find previous line that:
+			# Has one indentation level smaller indentation than pos line
+			# If it also is definition line --> add to scopepath
+			def_line_contents = cont = self.contents.get( pos, '%s display lineend' % pos )
+			cont = cont.strip()
+			
+			if cont[:5] in [ 'async', 'class' ] or cont[:3] == 'def':
+				# Add to scopepath
 				patt_end = ':'
 				if '(' in cont: patt_end = '('
 	
@@ -5245,19 +5245,25 @@ class Editor(tkinter.Toplevel):
 				else:
 					scope_path = cont
 				
-				# update indentation of current scope
-				ind_ref_line = ind_def_line
-				
-				# at __main__:
-				if ind_ref_line == 0: break
+			
+			# Update search pattern and indentation of pos line
+			ind_pos_line -= 1
+			if ind_pos_line == 0: break
+			elif ind_pos_line > 1:
+				patt = r'^[[:blank:]]{%d}[^[:blank:]#]' % (ind_pos_line-1)
+
+			# ind_pos_line == 1
+			# Find first line that has indent0 and is not comment.
+			else:
+				patt = r'^[^[:blank:]#]'
 				
 		
 		if scope_path == '':
 			scope_path = '__main__()'
-			return True, scope_path, False
+			return scope_path
 	
 		else:
-			return (True, scope_path + '()', True)
+			return scope_path + '()'
 	
 ########## Utilities End
 ########## Gotoline etc Begin
