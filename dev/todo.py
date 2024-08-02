@@ -100,13 +100,12 @@ unbind these:
 
 
 show: Class.method instead of just: def method	done ok?
-	
 show scope when inspect
 	tab.inspected set in insert_inspected()
 	used only in handle_search_entry()
 	could be used to:
 		preserve syntax in inspected over things like walk_tab etc
-	
+						
 	
 search: no strip searchword						done, ok? ####
 search, show scope in entry when show_next prev	done, ok? ####
@@ -127,13 +126,8 @@ save, called from deltab: check done ok?
 save, called from loadfile: check done ok?
 #########
 search open() in save, get wrong scope:
-	patt indent-1
-	if indent of index_line > 1:
-	must keep track of:
-	min_indent of all lines after index_line and before next def_line:
-	if indent of next def_line >= min_indent:
-		def_line is not added to scope_path
-	fixed in get_scope_path
+	fixed get_scope_path()
+	-count varName self.search_count_var = tkinter.IntVar()
 	done, ok?
 
 	contents.search searches logical lines, not display lines, so no need
@@ -149,35 +143,13 @@ checked this in windows, todo.py does not open, codec charmap error, not ok
 
 
 
-
-
-
-
-
-
 macos:
 ctrl-d --> ctrl-q/cmd-w ?
 
 
-while get_scope()?
-fix get_scope docstring
 
 
-fix macos topbar menus?
-
-
-check use of token can update
-
-
-when completing with tab word1_word2 at word1 and:
-	pressing shift down to enter dash and fast pressing tab after that
-	shift might still be pressed --> word1_ and dedent line but no completion
-
-delete cmd a comment linestart no syntax
-
-uncomment must be at indent0 --> help?
-
-
+delete, cmd a, comment at linestart, no syntax
 
 
 handle fullscreen check if have attribute fullscreen?
@@ -189,8 +161,13 @@ after
 
 
 update help
+uncomment must be at indent0 --> help?
 
 
+fix macos topbar menus?
+
+
+check use of token can update
 
 
 github:
@@ -198,9 +175,10 @@ fixed tag config -under --> -underline
 2tkcon.tcl
 
 
-
-
-
+when completing with tab word1_word2 at word1 and:
+	pressing shift down to enter dash and fast pressing tab after that
+	shift might still be pressed --> word1_ and dedent line but no completion
+	dedent one line only from index <= idx_linestart
 
 
 #####

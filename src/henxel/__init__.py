@@ -333,6 +333,8 @@ class Editor(tkinter.Toplevel):
 		self.search_matches = 0
 		self.old_word = ''
 		self.new_word = ''
+		# Used in get_scope_path()
+		self.search_count_var = tkinter.IntVar()
 		
 		self.errlines = list()
 		
@@ -340,7 +342,7 @@ class Editor(tkinter.Toplevel):
 		# to set cursor position to that position clicked.
 		self.save_pos = None
 		
-		# used in load()
+		# Used in load()
 		self.tracevar_filename = tkinter.StringVar()
 		self.tracefunc_name = None
 		self.lastdir = None
@@ -5161,7 +5163,7 @@ class Editor(tkinter.Toplevel):
 			else:
 				returns False
 		'''
-		# Used before, left as tk text regexp-example
+		# Used before, left as Tcl/Tk regexp-example
 ##		patt_indent = r'^[[:blank:]]*'
 ##		# or symbol | accepts matchs in every branch so this matches
 ##		# also strings like: async def class
@@ -5177,85 +5179,113 @@ class Editor(tkinter.Toplevel):
 			'%s display lineend' % pos )
 		
 		# Indentation of pos line
-		ind_pos_line = 0
+		ind_last_line = 0
 		scope_path = ''
 			
 		for char in index_line_contents:
-			if char in ['\t']: ind_pos_line += 1
+			if char in ['\t']: ind_last_line += 1
 			else: break
 		
 		
-		if ind_pos_line == 0:
+		if ind_last_line == 0:
 			scope_path = '__main__()'
 			
 			return scope_path
 
+		
+		flag_finish = False
+		
+		if ind_last_line > 1:
+			# Why: [^[:blank:]#] instead of: [acd], as from: (a)sync, (c)lass, (d)ef?
+			# Reason: need to update indentation level of pos line or else path
+			# would be corrupted by possible nested function definitions (function in function).
+			patt = r'^[[:blank:]]{1,%d}[^[:blank:]#]' % (ind_last_line-1)
 
-		if ind_pos_line > 1:
-			patt = r'^[[:blank:]]{%d}[^[:blank:]#]' % (ind_pos_line-1)
-
-		# ind_pos_line == 1
-		# Find first line that has indent0 and is not comment.
+		# ind_last_line == 1
+		# No need to update indentation level of pos line anymore.
 		else:
-			patt = r'^[^[:blank:]#]'
+			# Left as example of: from start of line, not blank and not #
+			#patt = r'^[^[:blank:]#]'
+			
+			# Can now change pattern to:
+			# From start of line, [acd], as from: (a)sync, (c)lass or (d)ef
+			patt = r'^[acd]'
+			flag_finish = True
+			
 		
 		
 		while pos:
 		
 			try:
+				# Count is tkinter.IntVar which is used to
+				# count indentation level of matched line.
 				pos = self.contents.search(patt, pos, stopindex='1.0',
-					regexp=True, backwards=True)
+					regexp=True, backwards=True, count=self.search_count_var)
 					
 			except tkinter.TclError as e:
 				print(e)
 				return False
 			
-			# Should not happen
 			if not pos:
 				break
 			
-			#print(pos)
-			# Find previous line that:
-			# Has one indentation level smaller indentation than pos line
-			# If it also is definition line --> add to scopepath
-			def_line_contents = cont = self.contents.get( pos, '%s display lineend' % pos )
-			cont = cont.strip()
+			# -1: remove terminating char(not blank not #) from matched char count
+			# Check patt if interested.
+			ind_curline = self.search_count_var.get() - 1
 			
-			if cont[:5] in [ 'async', 'class' ] or cont[:3] == 'def':
+			#print(pos, ind_curline, ind_last_line, flag_finish)
+			
+			# Find previous line that:
+			# Has one (or more) indentation level smaller indentation than ind_last_line
+			# 	Then if it also is definition line --> add to scopepath
+			# 	update ind_last_line
+			def_line_contents = tmp = self.contents.get( pos, '%s display lineend' % pos )
+			tmp = tmp.strip()
+			
+			if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
 				# Add to scopepath
 				patt_end = ':'
-				if '(' in cont: patt_end = '('
+				if '(' in tmp: patt_end = '('
 	
 
-				if cont[:5] == 'async':
-					cont = cont[5:].strip()
+				if tmp[:5] == 'async':
+					tmp = tmp[5:].strip()
 					
-				if cont[:3] == 'def':
-					cont = cont[3:].strip()
+				if tmp[:3] == 'def':
+					tmp = tmp[3:].strip()
 				
-				if cont[:5] == 'class':
-					cont = cont[5:].strip()
+				if tmp[:5] == 'class':
+					tmp = tmp[5:].strip()
 					
-
-				e = cont.index(patt_end)
-				cont = cont[:e]
+				try:
+					e = tmp.index(patt_end)
+				except ValueError:
+					print('Error message from: get_scope_path() ', pos)
+					return scope_path
+					
+				
+				tmp = tmp[:e]
 				
 				if scope_path != '':
-					scope_path = cont +'.'+ scope_path
+					scope_path = tmp +'.'+ scope_path
 				else:
-					scope_path = cont
-				
+					scope_path = tmp
+					
+					
+				if flag_finish: break
+					
+			# Update search pattern and indentation of matched pos line
+			if not flag_finish: ind_last_line = ind_curline
 			
-			# Update search pattern and indentation of pos line
-			ind_pos_line -= 1
-			if ind_pos_line == 0: break
-			elif ind_pos_line > 1:
-				patt = r'^[[:blank:]]{%d}[^[:blank:]#]' % (ind_pos_line-1)
+			if ind_last_line > 1:
+				patt = r'^[[:blank:]]{1,%d}[^[:blank:]#]' % (ind_last_line-1)
 
-			# ind_pos_line == 1
-			# Find first line that has indent0 and is not comment.
+			# ind_last_line == 1
+			# No need to update indentation level of pos line anymore.
 			else:
-				patt = r'^[^[:blank:]#]'
+				patt = r'^[acd]'
+				flag_finish = True
+				
 				
 		
 		if scope_path == '':
