@@ -803,7 +803,7 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Control-r>", self.replace)
 
 		self.bind( "<Escape>", self.esc_override )
-		self.bind( "<Return>", self.do_nothing)
+		self.bind( "<Return>", self.do_nothing_without_bell)
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
 		self.bind( "<Control-plus>", self.increase_scrollbar_width)
 		
@@ -5227,6 +5227,15 @@ class Editor(tkinter.Toplevel):
 				return False
 			
 			if not pos:
+				print('not pos')
+				# For example, if first line of next list assignment
+				# would be at indent0 and searching bbb, cursor being inside this list.
+##				l = [
+##						aaa,
+##						bbb,
+##						ccc
+##						]
+
 				break
 			
 			# -1: remove terminating char(not blank not #) from matched char count
@@ -5260,7 +5269,7 @@ class Editor(tkinter.Toplevel):
 				try:
 					e = tmp.index(patt_end)
 				except ValueError:
-					print('Error message from: get_scope_path() ', pos)
+					print('Error message from get_scope_path(): ', pos)
 					return scope_path
 					
 				
@@ -5535,7 +5544,7 @@ class Editor(tkinter.Toplevel):
 
 	def trace_filename(self, *args):
 		
-		# canceled
+		# Canceled
 		if self.tracevar_filename.get() == '':
 			self.entry.delete(0, tkinter.END)
 			
@@ -5662,7 +5671,7 @@ class Editor(tkinter.Toplevel):
 		
 		# Pressed Open-button
 		if event == None:
-		
+			
 			self.state = 'filedialog'
 			self.contents.bind( "<Alt-Return>", self.do_nothing)
 			

@@ -141,15 +141,16 @@ checked this in windows, todo.py does not open, codec charmap error, not ok
 
 
 
-
-
 macos:
 ctrl-d --> ctrl-q/cmd-w ?
 
 
+with tab py file open another py file get bell
+	also another file than py
 
+load():
+self.contents.bind( "<Alt-Return>", self.do_nothing)
 
-delete, cmd a, comment at linestart, no syntax
 
 
 handle fullscreen check if have attribute fullscreen?
@@ -350,6 +351,7 @@ search: regexp?
 
 syntax highlight often slow, needs check
 tokens to list --> after cancel
+delete, cmd a, comment at linestart, no syntax
 clarify update_tokens marked spot
 
 
@@ -386,7 +388,6 @@ guides?
 on mouseover guideline: show startline of block
 
 
-
 toggle clipboard (10 newest items) dropdown in git_btn,
 on click put to first?
 
@@ -399,17 +400,12 @@ pady = padx
 in init apply conf and update fonts
 
 
-flash after view change?
-
-
-
 unbind /give info about cmd shift A? man page
 https://intellij-support.jetbrains.com/hc/en-us/articles/360005137400-Cmd-Shift-A-hotkey-opens-Terminal-with-apropos-search-instead-of-the-Find-Action-dialog
 
 1. Open Apple menu | System Settings | Keyboard | Keyboard Shortcuts | Services
 2. Under section: Text
 3. Uncheck Search man Page Index in Terminal (or change the shortcut)
-
 
 
 ######################
@@ -520,10 +516,6 @@ ctrl -leftright  switch apps?
 all alt shortcuts makes some special char
 have to bind to symbol name to get alt-shorcuts work in macOS
 self.contents.bind( "<function>", self.mac_cmd_overrides)
-
-
-
-cmd-w  to closetab?
 
 
 
