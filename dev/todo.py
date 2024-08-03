@@ -138,19 +138,25 @@ tried, removed encoding='utf-8'
 and added t for ensure textmode 'r' --> 'rt'	ok?, not ok
 checked this in windows, todo.py does not open, codec charmap error, not ok
 ######
+open file, get bell:
+reason is in commit 4bf261d435e21
+in save():
+	if self.state != 'normal':
+		self.bell()
+		return 'break'
+--> now:
+	if self.state != 'normal' and not activetab:
+	done ok?
+
+also when load():
+check when binding Return if in macOS,
+done ok?
+####
 
 
 
 macos:
 ctrl-d --> ctrl-q/cmd-w ?
-
-
-with tab py file open another py file get bell
-	also another file than py
-
-load():
-self.contents.bind( "<Alt-Return>", self.do_nothing)
-
 
 
 handle fullscreen check if have attribute fullscreen?

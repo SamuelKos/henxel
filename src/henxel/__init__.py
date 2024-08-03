@@ -5562,7 +5562,11 @@ class Editor(tkinter.Toplevel):
 		
 		self.tracevar_filename.trace_remove('write', self.tracefunc_name)
 		self.tracefunc_name = None
-		self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
+		
+		if self.os_type == 'mac_os':
+			self.contents.bind( "<Return>", self.return_override)
+		else:
+			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
 		
 		self.state = 'normal'
 		
@@ -5673,7 +5677,12 @@ class Editor(tkinter.Toplevel):
 		if event == None:
 			
 			self.state = 'filedialog'
-			self.contents.bind( "<Alt-Return>", self.do_nothing)
+			
+			shortcut = "<Return>"
+			if self.os_type != 'mac_os':
+				shortcut = "<Alt-Return>"
+				
+			self.contents.bind( shortcut, self.do_nothing_without_bell)
 			
 			for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
 				widget.config(state='disabled')
@@ -5790,7 +5799,9 @@ class Editor(tkinter.Toplevel):
 			
 			If python-file, convert indentation to tabs.
 		'''
-		if self.state != 'normal':
+		# Have to check if activetab because
+		# state is filedialog in loadfile()
+		if self.state != 'normal' and not activetab:
 			self.bell()
 			return 'break'
 				
