@@ -151,16 +151,29 @@ in save():
 also when load():
 check when binding Return if in macOS,
 done ok?
-####
+######################
+esc_override(): Enable toggle fullscreen with Esc.
+handle_config --> handle_window_resize
+######################
+removed tab_override()
+can_expand_word() before indent, unindent
+Reason:
+when completing with Tab word1_word2 at word1 and:
+	pressing Shift down to enter underscore '_' and fast pressing tab after that,
+	Shift might still be pressed --> word1_ and dedent line happened but no completion
+	
+	Want: indent, unindent one line (no selection) only when: cursor_index <= idx_linestart
+
+
+--> Now Tab-completion also with Shift-Tab, which is intended to help tab-completing
+	with slow/lazy fingers
+######################
 
 
 
-macos:
-ctrl-d --> ctrl-q/cmd-w ?
 
 
-handle fullscreen check if have attribute fullscreen?
-fullscreen windows
+check shift-tab unindent in windows
 
 
 chek move many lines() mac
@@ -171,9 +184,6 @@ update help
 uncomment must be at indent0 --> help?
 
 
-fix macos topbar menus?
-
-
 check use of token can update
 
 
@@ -182,11 +192,10 @@ fixed tag config -under --> -underline
 2tkcon.tcl
 
 
-when completing with tab word1_word2 at word1 and:
-	pressing shift down to enter dash and fast pressing tab after that
-	shift might still be pressed --> word1_ and dedent line but no completion
-	dedent one line only from index <= idx_linestart
+show closing paren
 
+	
+bookmark in search?
 
 #####
 search, search_next
@@ -301,6 +310,13 @@ todo: tagging system like in youversion
 
 
 type(self).__name__
+
+
+macos:
+ctrl-d --> ctrl-q/cmd-w ?
+
+
+fix macos topbar menus?
 
 
 undo pause, check what is difference when in callback:

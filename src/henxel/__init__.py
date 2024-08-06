@@ -419,7 +419,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, takefocus=0, command = self.contents.yview)
 
-		# tab-completion, used in tab_override()
+		# Tab-completion, used in indent() and unindent()
 		self.expander = wordexpand.ExpandWord(self.contents)
 		
 		
@@ -642,6 +642,8 @@ class Editor(tkinter.Toplevel):
 		
 		if self.os_type == 'linux':
 			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
+		else:
+			self.contents.bind( "<Shift-Tab>", self.unindent)
 		
 		
 		############################################################
@@ -777,8 +779,6 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Control-l>", self.toggle_ln)
 			self.contents.bind( "<Control-x>", self.toggle_syntax)
 			
-			self.contents.bind( "<Shift-Tab>", self.unindent)
-			
 			# have to bind to symbol name to get Alt-shorcuts work in macOS
 			# This is: Alt-f
 			self.contents.bind( "<function>", self.font_choose)		# Alt-f
@@ -836,7 +836,8 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.bind( "<Shift-Return>", self.comment)
 		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
-		self.contents.bind( "<Tab>", self.tab_override)
+		self.contents.bind( "<Tab>", self.indent)
+		
 		self.contents.bind( "<Control-Tab>", self.insert_tab)
 		
 		self.contents.bind( "<Control-t>", self.tabify_lines)
@@ -941,7 +942,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 		# Viewsync-event does not trigger at window size changes,
 		# to get linenumbers right, one binds to this:
-		self.contents.bind("<Configure>", self.handle_configure)
+		self.contents.bind("<Configure>", self.handle_window_resize)
 		
 		
 		####  Syntax-highlight End  ######################################
@@ -1004,21 +1005,25 @@ class Editor(tkinter.Toplevel):
 		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
 		
 	
-	def handle_configure(self, event=None):
+	def handle_window_resize(self, event=None):
 		'''	In case of size change, like maximize etc. viewsync-event is not
 			generated in such situation so need to bind to <Configure>-event.
+			
+			Just update self.fullscreen here, not actually setting fullscreen,
+			which is done in esc_override
 		'''
 		# Handle fullscreen toggles
 		self.update_idletasks()
 		
-		if self.wm_attributes('-fullscreen') == 1:
-			if self.fullscreen == False:
-				#print('normal --> full  config')
-				self.fullscreen = True
-		else:
-			if self.fullscreen == True:
-				#print('full --> normal  config')
-				self.fullscreen = False
+		# Check if setting attribute '-fullscreen' is supported
+		# type(self.wm_attributes()) == tuple
+		if self.wm_attributes().count('-fullscreen') != 0:
+			if self.wm_attributes('-fullscreen') == 1:
+				if self.fullscreen == False:
+					self.fullscreen = True
+			else:
+				if self.fullscreen == True:
+					self.fullscreen = False
 				
 		
 		self.text_widget_height = self.scrollbar.winfo_height()
@@ -3191,7 +3196,7 @@ class Editor(tkinter.Toplevel):
 			else:
 				pos = end of indentation if there is such.
 				
-			If line is empty, pos = None
+			If line is empty, pos = False
 			
 			Wrapped line definition:
 			Line that has not started on (display-) line with cursor
@@ -4495,12 +4500,16 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def esc_override(self, event):
-		'''	Enable exit fullscreen with Esc when in macOS.
+		'''	Enable toggle fullscreen with Esc.
 		'''
-		
-		if self.state == 'normal' and self.fullscreen and self.os_type == 'mac_os':
-			self.wm_attributes('-fullscreen', 0)
-			return 'break'
+		if self.wm_attributes().count('-fullscreen') != 0:
+			if self.state == 'normal':
+				if self.fullscreen:
+					self.wm_attributes('-fullscreen', 0)
+				else:
+					self.wm_attributes('-fullscreen', 1)
+				
+				return 'break'
 		
 		self.bell()
 		return 'break'
@@ -4532,75 +4541,32 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 	
 	
-	def tab_override(self, event):
-		'''	Used to bind Tab-key with indent() and expander.expand_word()
+	def can_expand_word(self):
+		'''	Called from indent() and unindent()
 		'''
+		ins = tkinter.INSERT
 		
-		if self.state in [ 'search', 'replace', 'replace_all' ]:
-			return 'break'
+		# There should not be selection, checked before call in caller.
 		
-		# In Windows, Tab-key-event has state 8 and shift+Tab has state 9.
-		# Because shift-tab is unbinded if in Windows(why?), state-check is needed
-		# for unindent to work.
-		if hasattr(event, 'state'):
-			
-			if self.os_type == 'windows':
+		# Check if cursor not in indentation or not empty line
+		idx_s, _ = self.idx_linestart()
+		# Line is not empty
+		if idx_s:
+		
+			# Cursor is after indentation
+			if self.contents.compare(idx_s, '<', ins):
 				
-				if event.state == 9:
-					self.unindent()
-					return 'break'
+				# Check previous char
+				idx = self.contents.index(ins)
+				col = int(idx.split(sep='.')[1])
+				if col > 1:
+					prev_char = self.contents.get( ('%s -1 char') % ins, '%s' % ins )
+				
+					if prev_char in self.expander.wordchars:
+						return True
 					
-				if event.state not in [8, 0]:
-					return
+		return False
 			
-			elif event.state != 0:
-				return
-				
-		# Fix for tab-key not working sometimes.
-		# This happens because os-clipboard content is (automatically)
-		# added to selection content of a Text widget, and since there is no
-		# actual selection (clipboard-text is outside from Text-widget),
-		# tab_override() gets quite broken.
-		
-		if len(self.contents.tag_ranges('sel')) == 0:
-			
-			# Expand word Begin
-			pos = self.contents.index(tkinter.INSERT)
-			lineend = '%s lineend' % pos
-			linestart = '%s linestart' % pos
-			tmp = self.contents.get( linestart, lineend )
-			startline, startcol = map(int, pos.split(sep='.') )
-			
-			prev_char = None
-			next_char = None
-			
-			
-			# Check not at the indent 0:
-			if startcol > 0:
-				prev_char = tmp[startcol-1:startcol]
-				
-			else:
-				return
-			
-			
-			if prev_char and ( prev_char in self.expander.wordchars ):
-				self.expander.expand_word()
-				return 'break'
-				
-			else:
-				return
-				
-			# Expand word End
-			
-		try:
-			tmp = self.contents.selection_get()
-			self.indent(event)
-			return 'break'
-			
-		except tkinter.TclError:
-			# No selection
-			return
-
 	
 	def backspace_override(self, event):
 		""" for syntax highlight
@@ -6355,9 +6321,17 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def indent(self, event=None):
-		if self.state != 'normal':
-			self.bell()
-			
+		if self.state in [ 'search', 'replace', 'replace_all' ]:
+			return 'break'
+		
+		
+		if len(self.contents.tag_ranges('sel')) == 0:
+			if self.can_expand_word():
+				self.expander.expand_word()
+				return 'break'
+			else:
+				return
+				
 		try:
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
@@ -6397,16 +6371,22 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			pass
 			
+		return 'break'
+			
 
 	def unindent(self, event=None):
-		if self.state != 'normal':
-			self.bell()
-			return "break"
+		if self.state in [ 'search', 'replace', 'replace_all' ]:
+			return 'break'
+		
+			
+		if len(self.contents.tag_ranges('sel')) == 0:
+			if self.can_expand_word():
+				self.expander.expand_word()
+				return 'break'
 			
 		try:
-			# unindenting curline only:
+			# Unindenting curline only:
 			if len(self.contents.tag_ranges('sel')) == 0:
-			
 				startline = int(self.contents.index(tkinter.INSERT).split(sep='.')[0])
 				endline = startline
 				
@@ -6465,7 +6445,7 @@ class Editor(tkinter.Toplevel):
 					
 				self.contents.edit_separator()
 		
-		except tkinter.TclError as e:
+		except tkinter.TclError:
 			pass
 			
 		return "break"
