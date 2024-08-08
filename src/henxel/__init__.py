@@ -748,7 +748,7 @@ class Editor(tkinter.Toplevel):
 			
 			
 			self.contents.bind( "<Mod1-Key-y>", self.yank_line)
-			self.contents.bind( "<Mod1-Key-t>", self.new_tab)
+			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
 			
 			self.contents.bind( "<Mod1-Key-f>", self.search)
 			self.contents.bind( "<Mod1-Key-r>", self.replace)
@@ -5193,15 +5193,6 @@ class Editor(tkinter.Toplevel):
 				return False
 			
 			if not pos:
-				print('not pos')
-				# For example, if first line of next list assignment
-				# would be at indent0 and searching bbb, cursor being inside this list.
-##				l = [
-##						aaa,
-##						bbb,
-##						ccc
-##						]
-
 				break
 			
 			# -1: remove terminating char(not blank not #) from matched char count
@@ -5235,7 +5226,8 @@ class Editor(tkinter.Toplevel):
 				try:
 					e = tmp.index(patt_end)
 				except ValueError:
-					print('Error message from get_scope_path(): ', pos)
+					# Found line starting with keyword, but no patt_end
+					#print('Error message from get_scope_path(): ', pos)
 					return scope_path
 					
 				
@@ -6052,6 +6044,7 @@ class Editor(tkinter.Toplevel):
 			
 			
 			flag_added_space = False
+			flag_changed_contents_state = False
 			
 			# If line has not enough characters
 			if (diff := want - col) > 0:
@@ -6061,6 +6054,12 @@ class Editor(tkinter.Toplevel):
 					
 					# Add some space so we can tag more estate from line. It is later removed.
 					flag_added_space = True
+					
+					# Searching, Replacing
+					if self.contents.cget('state') == 'disabled':
+						self.contents.config(state='normal')
+						flag_changed_contents_state = True
+						
 					self.contents.insert(e0, diff * ' ')
 					
 				
@@ -6104,6 +6103,11 @@ class Editor(tkinter.Toplevel):
 				if flag_added_space:
 					self.after((2*time_wanted + 50), lambda args=[e0, '%s display lineend' % e0]:
 							self.contents.delete(*args) )
+							
+					if flag_changed_contents_state:
+						self.after((2*time_wanted + 60), lambda kwargs={'state':'normal'}:
+								self.contents.config(**kwargs) )
+							
 			
 			
 			# Animate adding bookmark
@@ -6123,6 +6127,11 @@ class Editor(tkinter.Toplevel):
 				if flag_added_space:
 					self.after( (time_wanted + 400), lambda args=[e0, '%s display lineend' % e0]:
 							self.contents.delete(*args) )
+							
+					if flag_changed_contents_state:
+						self.after((time_wanted + 450), lambda kwargs={'state':'normal'}:
+								self.contents.config(**kwargs) )
+					
 				
 			
 		except tkinter.TclError as ee:
@@ -6138,13 +6147,17 @@ class Editor(tkinter.Toplevel):
 		''' Add/Remove bookmark at cursor position
 		'''
 		
-		if self.state != 'normal':
+		if self.state not in [ 'normal', 'search', 'replace' ]:
 			self.bell()
 			return "break"
 		
+		pos = tkinter.INSERT
+		if self.state != 'normal':
+			# 'focus'
+			pos = self.search_idx[0]
 		
-		pos_cursor = self.contents.index(tkinter.INSERT)
-		s = self.contents.index('%s display linestart' % tkinter.INSERT)
+			
+		s = self.contents.index('%s display linestart' % pos)
 		
 		# If there is bookmark, remove it
 		if self.remove_single_bookmark():
@@ -6328,6 +6341,24 @@ class Editor(tkinter.Toplevel):
 		if len(self.contents.tag_ranges('sel')) == 0:
 			if self.can_expand_word():
 				self.expander.expand_word()
+				
+				# can_expand_word called before indent and unindent
+				
+				# Reason is that before commit 5300449a75c4826
+				# when completing with Tab word1_word2 at word1:
+				# first, pressing Shift down to enter underscore '_'
+				# then fast pressing Tab after that.
+				
+				# Now, Shift might still be pressed down
+				# --> get: word1_ and unindent line but no completion
+				
+				# Want: indent, unindent one line (no selection) only when:
+				# cursor_index <= idx_linestart
+				
+				# Solution
+				# Tab-completion also with Shift-Tab,
+				# which is intended to help tab-completing with slow/lazy fingers
+
 				return 'break'
 			else:
 				return
@@ -6382,6 +6413,23 @@ class Editor(tkinter.Toplevel):
 		if len(self.contents.tag_ranges('sel')) == 0:
 			if self.can_expand_word():
 				self.expander.expand_word()
+				# can_expand_word called before indent and unindent
+				
+				# Reason is that before commit 5300449a75c4826
+				# when completing with Tab word1_word2 at word1:
+				# first, pressing Shift down to enter underscore '_'
+				# then fast pressing Tab after that.
+				
+				# Now, Shift might still be pressed down
+				# --> get: word1_ and unindent line but no completion
+				
+				# Want: indent, unindent one line (no selection) only when:
+				# cursor_index <= idx_linestart
+				
+				# Solution
+				# Tab-completion also with Shift-Tab,
+				# which is intended to help tab-completing with slow/lazy fingers
+
 				return 'break'
 			
 		try:

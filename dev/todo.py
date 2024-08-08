@@ -38,8 +38,6 @@ animate add/remove bookmark		done ok?
 
 toggle bookmark cmd/alt-p		done ok?
 walk bookmarks cmd/Control-bB	done ok?
-cmd t newtab					done ok?
-
 
 delete_all_bookmarks		no shortcut
 print_bookmarks				no shortcut
@@ -90,7 +88,8 @@ show wanted side of selection at first keypress done ok?
 async can be before def  done in get_scope ok?
 async await orange?
 ##########
-added get_scope_path, add_bookmark, goto_bookmark
+added get_scope_path
+, add_bookmark, goto_bookmark
 #############
 add_bookmark: add tag, goto_bookmark to tag/position	done ok?
 #############
@@ -156,19 +155,43 @@ esc_override(): Enable toggle fullscreen with Esc.
 handle_config --> handle_window_resize
 ######################
 removed tab_override()
-can_expand_word() before indent, unindent
-Reason:
-when completing with Tab word1_word2 at word1 and:
-	pressing Shift down to enter underscore '_' and fast pressing tab after that,
-	Shift might still be pressed --> word1_ and dedent line happened but no completion
-	
-	Want: indent, unindent one line (no selection) only when: cursor_index <= idx_linestart
+# can_expand_word called before indent and unindent
 
+# Reason is that before commit 5300449a75c4826
+# when completing with Tab word1_word2 at word1:
+# first, pressing Shift down to enter underscore '_'
+# then fast pressing Tab after that.
 
---> Now Tab-completion also with Shift-Tab, which is intended to help tab-completing
-	with slow/lazy fingers
+# Now, Shift might still be pressed down
+# --> get: word1_ and unindent line but no completion
+
+# Want: indent, unindent one line (no selection) only when:
+# cursor_index <= idx_linestart
+
+# Solution
+# Tab-completion also with Shift-Tab,
+# which is intended to help tab-completing with slow/lazy fingers
+
 ######################
+cmd-t, newtab
+	back to cmd-n	done ok?
+####################
+bookmark while searching, replacing		done ok?
+#####################
 
+
+
+###################
+search, search_next
+Control-np
+
+count from start, count from cursor --> show position
+if count <= 1: bell
+if selection, use it, else oldword.
+search_next: enter search mode, start search from cursor
+
+search(start=index)
+###################
 
 
 
@@ -181,7 +204,7 @@ after
 
 
 update help
-uncomment must be at indent0 --> help?
+uncomment '##' must be at indent0 or it can not be removed --> help?
 
 
 check use of token can update
@@ -194,28 +217,15 @@ fixed tag config -under --> -underline
 
 show closing paren
 
-	
-bookmark in search?
-
-#####
-search, search_next
-Control/Cmd np
-
-count from start, count from cursor --> show position
-if count <= 1: bell
-if selection, use it, else oldword.
-search_next: enter search mode, start search from cursor
-
-search(start=index)
 
 
 show scope always
 update scope path after:
 	walk_tab etc
-	fname.Class.method()
+	in fname.py @Class.method()
 	
 unbind load() Return
-#####
+#############
 
 	
 
