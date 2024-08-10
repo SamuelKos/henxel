@@ -6046,6 +6046,7 @@ class Editor(tkinter.Toplevel):
 			flag_added_space = False
 			flag_changed_contents_state = False
 			
+			
 			# If line has not enough characters
 			if (diff := want - col) > 0:
 				
@@ -6057,6 +6058,7 @@ class Editor(tkinter.Toplevel):
 					
 					# Searching, Replacing
 					if self.contents.cget('state') == 'disabled':
+						
 						self.contents.config(state='normal')
 						flag_changed_contents_state = True
 						
@@ -6080,10 +6082,13 @@ class Editor(tkinter.Toplevel):
 			e = self.idx_lineend()
 			
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.contents.tag_raise('sel')
 			
 			# Animate removing bookmark
 			if remove:
-				#self.contents.tag_add('sel', s, '%s +%d chars' % (s, wanted_num_chars) )
+				# 1: Tag wanted_num_chars from start. In effect this, but in loop
+				# to enable use of after(), to get animating effect.
+				# self.contents.tag_add('sel', s, '%s +%d chars' % (s, wanted_num_chars) )
 				
 				for i in range(wanted_num_chars):
 					p0 = '%s +%d chars' % (s, wanted_num_chars - i-1 )
@@ -6092,6 +6097,7 @@ class Editor(tkinter.Toplevel):
 					self.after( (i+1)*step, lambda args=['sel', p0, p1]:
 							self.contents.tag_add(*args) )
 				
+				# 2: Same story as when adding, just note some time has passed
 				for i in range(wanted_num_chars):
 					p0 = '%s +%d chars' % (s, wanted_num_chars - i-1 )
 					p1 = '%s +%d chars' % (s, wanted_num_chars - i )
@@ -6100,18 +6106,26 @@ class Editor(tkinter.Toplevel):
 							self.contents.tag_remove(*args) )
 				
 				
+				self.after( (2*time_wanted + 20), lambda args=['focus']:
+						self.contents.tag_raise(*args) )
+				
+				
 				if flag_added_space:
-					self.after((2*time_wanted + 50), lambda args=[e0, '%s display lineend' % e0]:
+					self.after( (2*time_wanted + 30), lambda args=[e0, '%s display lineend' % e0]:
 							self.contents.delete(*args) )
 							
 					if flag_changed_contents_state:
-						self.after((2*time_wanted + 60), lambda kwargs={'state':'normal'}:
+						self.after( (2*time_wanted + 40), lambda kwargs={'state':'disabled'}:
 								self.contents.config(**kwargs) )
+								
+				
+							
 							
 			
 			
 			# Animate adding bookmark
 			else:
+				# Info is in remove-section above
 				for i in range(wanted_num_chars):
 					p0 = '%s +%d chars' % (s, i)
 					p1 = '%s +%d chars' % (s, i+1)
@@ -6124,13 +6138,19 @@ class Editor(tkinter.Toplevel):
 						self.contents.tag_remove(*args) )
 				
 				
+				self.after( (time_wanted + 320), lambda args=['focus']:
+						self.contents.tag_raise(*args) )
+				
+				
 				if flag_added_space:
-					self.after( (time_wanted + 400), lambda args=[e0, '%s display lineend' % e0]:
+					self.after( (time_wanted + 330), lambda args=[e0, '%s display lineend' % e0]:
 							self.contents.delete(*args) )
 							
 					if flag_changed_contents_state:
-						self.after((time_wanted + 450), lambda kwargs={'state':'normal'}:
+						self.after( (time_wanted + 340), lambda kwargs={'state':'disabled'}:
 								self.contents.config(**kwargs) )
+								
+						
 					
 				
 			
@@ -6612,28 +6632,62 @@ class Editor(tkinter.Toplevel):
 			
 			Shortcut: Ctrl-(Shift)-Backspace
 		'''
+		search_word = False
 		
-		if self.state != 'normal' or self.old_word == '':
-			self.bell()
-			return "break"
+		if self.state == 'normal':
+		
+			# No selection
+			if len(self.contents.tag_ranges('sel')) == 0:
+				
+				# No search history
+				if self.old_word == '':
+					self.bell()
+					return "break"
+				
+				else:
+					# Use old_word
+					search_word = self.old_word
 			
+			# Use selection
+			else:
+				tmp = self.selection_get()
+				
+				# Allow one linebreak
+				if 80 > len(tmp) > 0 and len(tmp.splitlines()) < 3:
+					search_word = tmp
+				
+				# Too large selection
+				else:
+					
+					# No search history
+					if self.old_word == '':
+						self.bell()
+						return "break"
+					
+					else:
+						# Use old_word
+						search_word = self.old_word
 			
-		wordlen = len(self.old_word)
+		# search(search_next)
+		# start_search(search_next)
+		# show_next(search_next)
+		
+		wordlen = len(search_word)
 		self.lastcursorpos = self.contents.index(tkinter.INSERT)
 	
 		if back:
-			pos = self.contents.search(self.old_word, 'insert', backwards=True)
+			pos = self.contents.search(search_word, 'insert', backwards=True)
 		else:
-			pos = self.contents.search(self.old_word, 'insert +1c')
+			pos = self.contents.search(search_word, 'insert +1c')
 		
 
 		# Try again from the beginning/end this time:
 		if not pos:
 		
 			if back:
-				pos = self.contents.search(self.old_word, tkinter.END, backwards=True)
+				pos = self.contents.search(search_word, tkinter.END, backwards=True)
 			else:
-				pos = self.contents.search(self.old_word, '1.0')
+				pos = self.contents.search(search_word, '1.0')
 			
 			# No oldword in file:
 			if not pos:

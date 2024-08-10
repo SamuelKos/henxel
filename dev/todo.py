@@ -179,7 +179,7 @@ cmd-t, newtab
 bookmark while searching, replacing		done ok?
 #####################
 
-
+cmd-ae in python shell in macos?
 
 ###################
 search, search_next
@@ -192,8 +192,14 @@ search_next: enter search mode, start search from cursor
 
 search(start=index)
 ###################
+search_next, if have selection, use it as search word instead of clipboard
+	note there is already selection if done search_next
+check_next event: no work if right then left
+it should be unbinded when pressed other than left.
 
 
+
+replaced less yellow
 
 
 check shift-tab unindent in windows
@@ -259,7 +265,11 @@ and a is not defined
 no just: import filename
 	
 
-at start of search/replace: insert window in start of entry:
+search, if previously have deleted suggestion from clipboard,
+do not suggest from clipboard again if it is the same.
+search: regexp?
+
+start of search/replace: insert window in start of entry:
 	dropdown:
 		1 use regexp
 		2 start from filestart/cursor
@@ -337,10 +347,6 @@ undo pause, check what is difference when in callback:
 check is it necessary to set insert mark before ensure_idx_visibility?
 
 
-tab_override():
-shift-tab is unbinded if in Windows(why?)
-
-
 self.contents.bind( "<<TkWorldChanged>>", self.test_bind)
 	then: self.menufont.configure(underline=1)
 	works on macos
@@ -349,7 +355,7 @@ self.contents.bind( "<<TkWorldChanged>>", self.test_bind)
 search/next also in errors, help
 
 
-toggle tabs --> space?
+toggle indent with tabs --> space?
 
 
 automate exit editor, check syntax, reopen python and editor
@@ -358,10 +364,10 @@ automate exit editor, check syntax, reopen python and editor
 bind with eval from dict --> user editable binds
 
 
-yank line sel --> custom tag
+yank_line etc. not ideal usage of tag 'sel' --> custom tag
 
 
-save file when pressing save
+save file to disk when pressing save
 
 
 tuple after_cancel: (from_who, after_object_id)
@@ -370,27 +376,33 @@ tuple after_cancel: (from_who, after_object_id)
 structure-viewer with taglinks
 
 
-search_next, if have selection, use it as search word instead of clipboard
-	note there is already selection if done search_next
-check_next event: no work if right then left
-it should be unbinded when pressed other than left.
-
-
-search, if previously have deleted suggestion from clipboard,
-do not suggest from clipboard again if it is the same.
-search: regexp?
-
-
 syntax highlight often slow, needs check
 tokens to list --> after cancel
 delete, cmd a, comment at linestart, no syntax
 clarify update_tokens marked spot
 
-
 	
+check before copy, paste:
+	is selection from editor?
+	check indentation if not?
 
 
-	
+tab-comp in entry?
+
+
+selection handling not perfect when:
+	comment
+	indent
+
+
+guides ?
+	on mouseover guideline: show startline of block
+
+
+toggle clipboard (10 newest items) dropdown in git_btn
+	on click put to first?
+
+
 #################
 fix search etc: after giving search word, quickly pressing return and esc
 state is locked to search
@@ -402,34 +414,17 @@ check other escapable callbacks?
 #################
 
 
-check before copy, paste:
-	is selection from editor?
-	check indentation if not?
-
-tab-comp in entry?
-
-search in help?
-
-selection handling not perfect when:
-	comment
-	indent
-
-#########################################################
-
-guides?
-on mouseover guideline: show startline of block
-
-
-toggle clipboard (10 newest items) dropdown in git_btn,
-on click put to first?
-
-
 padx font measure
 cont, ln_wid
 
 padx = self.tab_width // self.ind_depth // 3
 pady = padx
 in init apply conf and update fonts
+
+############################################
+# Not essential End
+############################################
+# Below this, notes
 
 
 unbind /give info about cmd shift A? man page
