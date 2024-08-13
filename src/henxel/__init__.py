@@ -6857,32 +6857,34 @@ class Editor(tkinter.Toplevel):
 		idx = tmp_orig.index(':') + 2
 		tmp = tmp_orig[idx:]
 		
-		if len(tmp) == 0 or tmp == self.old_word:
+		if len(tmp) == 0:
 			self.bell()
 			return 'break'
 		
-		self.old_word = tmp
+		search_word = tmp
 		
 		self.contents.tag_remove('match', '1.0', tkinter.END)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.search_idx = ('1.0', '1.0')
 		self.search_matches = 0
 		
-		if len(self.old_word) != 0:
-			pos = '1.0'
-			wordlen = len(self.old_word)
-			self.contents.tag_config('match', background='', foreground='')
-			
-			while True:
-				pos = self.contents.search(self.old_word, pos, tkinter.END)
-				if not pos: break
-				self.search_matches += 1
-				lastpos = "%s + %dc" % (pos, wordlen)
-				self.contents.tag_add('match', pos, lastpos)
-				pos = "%s + %dc" % (pos, wordlen+1)
+		pos = '1.0'
+		wordlen = len(search_word)
+		self.contents.tag_config('match', background='', foreground='')
+		
+		while True:
+			pos = self.contents.search(search_word, pos, tkinter.END)
+			if not pos: break
+			self.search_matches += 1
+			lastpos = "%s + %dc" % (pos, wordlen)
+			self.contents.tag_add('match', pos, lastpos)
+			pos = "%s + %dc" % (pos, wordlen+1)
 				
 				
 		if self.search_matches > 0:
+		
+			self.old_word = search_word
+		
 			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.entry.config(validate='none')
 				
@@ -7055,7 +7057,6 @@ class Editor(tkinter.Toplevel):
 			pass
 			
 		self.state = 'search'
-		self.old_word = ''
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 		self.entry.bind("<Return>", self.start_search)
@@ -7077,19 +7078,29 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		
 		
-		# Autofill from clipboard
+		tmp = False
+
+		# Suggest selection as search_word if appropiate, else old_word.
 		try:
-			tmp = self.clipboard_get()
+			tmp = self.selection_get()
+
 			# Allow one linebreak
-			if 80 > len(tmp) > 0 and len(tmp.splitlines()) < 3:
-				self.entry.insert(tkinter.END, tmp)
-				self.entry.xview_moveto(1.0)
-				self.entry.select_to(tkinter.END)
-				self.entry.icursor(tkinter.END)
+			if not (80 > len(tmp) > 0 and len(tmp.splitlines()) < 3):
+				tmp = False
+				raise tkinter.TclError
 				
-		# Empty clipboard
+		# No selection
 		except tkinter.TclError:
-			pass
+			
+			if 80 > len(self.old_word) > 0 and len(self.old_word.splitlines()) < 3:
+				tmp = self.old_word
+				
+		if tmp:
+			self.entry.insert(tkinter.END, tmp)
+			self.entry.xview_moveto(1.0)
+			self.entry.select_to(tkinter.END)
+			self.entry.icursor(tkinter.END)
+				
 			
 		
 		patt = 'Search: '
@@ -7107,10 +7118,6 @@ class Editor(tkinter.Toplevel):
 			s is string before action,
 			S is new string to be validated
 		'''
-		
-		#print(i,s,S)
-		# 'focusin'
-		# 'focusout'
 		
 		idx = s.index(':') + 2
 		
@@ -7143,7 +7150,6 @@ class Editor(tkinter.Toplevel):
 			pass
 		
 		self.state = state
-		self.old_word = ''
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 		self.entry.bind("<Return>", self.start_search)
@@ -7165,17 +7171,26 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		
 		
-		# Autofill from clipboard
+		tmp = False
+		# Suggest selection as search_word if appropiate, else old_word.
 		try:
-			tmp = self.clipboard_get()
-			if 80 > len(tmp) > 0:
-				self.entry.insert(tkinter.END, tmp)
-				self.entry.xview_moveto(1.0)
-				self.entry.select_to(tkinter.END)
-				self.entry.icursor(tkinter.END)
-	
+			tmp = self.selection_get()
+			
+			if not (80 > len(tmp) > 0):
+				tmp = False
+				raise tkinter.TclError
+				
+		# No selection
 		except tkinter.TclError:
-			pass
+		
+			if self.old_word and (80 > len(self.old_word) > 0):
+				tmp = self.old_word
+				
+		if tmp:
+			self.entry.insert(tkinter.END, tmp)
+			self.entry.xview_moveto(1.0)
+			self.entry.select_to(tkinter.END)
+			self.entry.icursor(tkinter.END)
 			
 		
 		patt = 'Replace this: '

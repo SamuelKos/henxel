@@ -174,16 +174,28 @@ removed tab_override()
 
 ######################
 cmd-t, newtab
-	back to cmd-n	done ok?
+	back to cmd-n	done ok? not ok?########################################
 ####################
 bookmark while searching, replacing		done ok?
 #####################
+search, replace:
+search_word:
+	suggest
+	1: selection if short enough, update oldword if found
+	2: old_word
+	done ok?
+#####################
+
+
+
 
 cmd-ae in python shell in macos?
 
 ###################
 search, search_next
-Control-np
+Cmd/Control-np
+
+
 
 count from start, count from cursor --> show position
 if count <= 1: bell
@@ -193,7 +205,7 @@ search_next: enter search mode, start search from cursor
 search(start=index)
 ###################
 search_next, if have selection, use it as search word instead of clipboard
-	note there is already selection if done search_next
+
 check_next event: no work if right then left
 it should be unbinded when pressed other than left.
 
