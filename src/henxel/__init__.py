@@ -972,14 +972,13 @@ class Editor(tkinter.Toplevel):
 		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 
 		
-		# set cursor pos:
+		# Set cursor pos:
 		line = self.tabs[self.tabindex].position
 		
 		if self.os_type == 'windows':
 			self.contents.focus_force()
 		else:
 			self.contents.focus_set()
-		
 		
 		try:
 			self.contents.mark_set('insert', line)
@@ -991,6 +990,11 @@ class Editor(tkinter.Toplevel):
 			self.contents.see('1.0')
 				
 		
+		# Sticky top right corner, to get some space for console on left
+		# Next line seems not to work in macos12
+		# self.geometry('-0+0')
+		self.geometry('%d+0' % (self.winfo_screenwidth()-2*self.winfo_width()) )
+
 		self.avoid_viewsync_mess()
 		self.update_idletasks()
 		self.viewsync()
@@ -7087,14 +7091,14 @@ class Editor(tkinter.Toplevel):
 			# Allow one linebreak
 			if not (80 > len(tmp) > 0 and len(tmp.splitlines()) < 3):
 				tmp = False
+				
 				raise tkinter.TclError
 				
 		# No selection
 		except tkinter.TclError:
+			tmp = self.old_word
 			
-			if 80 > len(self.old_word) > 0 and len(self.old_word.splitlines()) < 3:
-				tmp = self.old_word
-				
+			
 		if tmp:
 			self.entry.insert(tkinter.END, tmp)
 			self.entry.xview_moveto(1.0)
@@ -7178,14 +7182,14 @@ class Editor(tkinter.Toplevel):
 			
 			if not (80 > len(tmp) > 0):
 				tmp = False
+				
 				raise tkinter.TclError
 				
 		# No selection
 		except tkinter.TclError:
-		
-			if self.old_word and (80 > len(self.old_word) > 0):
-				tmp = self.old_word
-				
+			tmp = self.old_word
+			
+			
 		if tmp:
 			self.entry.insert(tkinter.END, tmp)
 			self.entry.xview_moveto(1.0)

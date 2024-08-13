@@ -188,6 +188,11 @@ search_word:
 
 
 
+editor init geometry sticky right, console
+test in linux windows
+# sticky top right corner no work?
+self.geometry('-0+0')
+
 
 cmd-ae in python shell in macos?
 
@@ -208,6 +213,7 @@ search_next, if have selection, use it as search word instead of clipboard
 
 check_next event: no work if right then left
 it should be unbinded when pressed other than left.
+remove when search_next ready
 
 
 
@@ -225,7 +231,7 @@ update help
 uncomment '##' must be at indent0 or it can not be removed --> help?
 
 
-check use of token can update
+check use of token_can_update
 
 
 github:
@@ -242,7 +248,8 @@ update scope path after:
 	walk_tab etc
 	in fname.py @Class.method()
 	
-unbind load() Return
+unbind load() Return?
+focusin focusout show full path?
 #############
 
 	
@@ -270,17 +277,9 @@ unbind load() Return
 
 check syntax before quit?
 python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
-does not tell if there is for example line:
-a
-and a is not defined
-# https://stackoverflow.com/questions/4284313
-no just: import filename
 	
 
-search, if previously have deleted suggestion from clipboard,
-do not suggest from clipboard again if it is the same.
 search: regexp?
-
 start of search/replace: insert window in start of entry:
 	dropdown:
 		1 use regexp
