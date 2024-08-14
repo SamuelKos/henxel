@@ -188,17 +188,23 @@ search_word:
 
 
 
+
+
+
+####
 editor init geometry sticky right, console
 test in linux windows
 # sticky top right corner no work?
 self.geometry('-0+0')
+self.geometry('%d+0' % (self.winfo_screenwidth()-2*self.winfo_width()) )
+####
 
 
 cmd-ae in python shell in macos?
 
 ###################
 search, search_next
-Cmd/Control-np
+Control-np
 
 
 

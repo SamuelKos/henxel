@@ -716,22 +716,16 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Control-Shift-Up>", self.move_many_lines)
 			self.contents.bind( "<Control-Shift-Down>", self.move_many_lines)
 			
-			# Used in check_next_event
-			self.bid_left = self.contents.bind("<Left>", self.check_sel)
-			
+			self.contents.bind("<Left>", self.check_sel)
 			self.contents.bind("<Right>", self.check_sel)
 			self.entry.bind("<Left>", self.check_sel)
 			self.entry.bind("<Right>", self.check_sel)
 		
 		
-		#self.os_type == 'mac_os':
+		# self.os_type == 'mac_os':
 		else:
-			# Used in check_next_event
-			self.bid_left = self.contents.bind( "<Left>", self.mac_cmd_overrides)
-			
+			self.contents.bind( "<Left>", self.mac_cmd_overrides)
 			self.contents.bind( "<Right>", self.mac_cmd_overrides)
-			
-			
 			self.contents.bind( "<Up>", self.mac_cmd_overrides)
 			self.contents.bind( "<Down>", self.mac_cmd_overrides)
 			
@@ -6604,33 +6598,6 @@ class Editor(tkinter.Toplevel):
 ########## Indent and Comment End
 ################ Search Begin
 	
-	def check_next_event(self, event=None):
-		
-		if event.keysym == 'Left':
-			line = self.lastcursorpos
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
-			
-			self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
-			self.contents.unbind("<Any-Button>", funcid=self.anybutid)
-			
-			f = self.check_sel
-			if self.os_type == 'mac_os': f = self.mac_cmd_overrides
-			
-			self.bid_left = self.contents.bind("<Left>", f )
-			return 'break'
-			
-		else:
-			self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
-			self.contents.unbind("<Any-Button>", funcid=self.anybutid)
-			
-			f = self.check_sel
-			if self.os_type == 'mac_os': f = self.mac_cmd_overrides
-			self.bid_left = self.contents.bind("<Left>", f )
-			return
-			
-		
 	def search_next(self, event=None, back=False):
 		'''	Do last search from cursor position, show and select next/previous match.
 			
@@ -6699,10 +6666,7 @@ class Editor(tkinter.Toplevel):
 				return "break"
 		
 				
-		# Go back to last place with arrow left
-		self.anykeyid = self.contents.bind( "<Any-Key>", self.check_next_event)
-		self.anybutid = self.contents.bind( "<Any-Button>", self.check_next_event)
-
+		
 		# Without this one can not search by holding ctrl down and
 		# pressing and releasing repeatedly backspace only:
 		if self.bid_left: self.contents.unbind("<Left>", funcid=self.bid_left)
