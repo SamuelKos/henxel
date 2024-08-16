@@ -985,9 +985,12 @@ class Editor(tkinter.Toplevel):
 				
 		
 		# Sticky top right corner, to get some space for console on left
-		# Next line seems not to work in macos12
-		# self.geometry('-0+0')
-		self.geometry('%d+0' % (self.winfo_screenwidth()-2*self.winfo_width()) )
+		# Next line seems not to work in macos12 consistently.
+		#self.geometry('-0+0')
+		diff = self.winfo_screenwidth() - self.winfo_width()
+		if diff > 0:
+			self.geometry('+%d+0' % diff )
+
 
 		self.avoid_viewsync_mess()
 		self.update_idletasks()

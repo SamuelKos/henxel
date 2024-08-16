@@ -185,19 +185,39 @@ search_word:
 	2: old_word
 	done ok?
 #####################
+Sticky top right corner, to get some space for console on left
+Next line seems not to work in macos12 consistently.
+#self.geometry('-0+0')
+diff = self.winfo_screenwidth() - self.winfo_width()
+if diff > 0:
+	self.geometry('+%d+0' % diff )
 
 
-
-
-
-
-####
-editor init geometry sticky right, console
 test in linux windows
-# sticky top right corner no work?
-self.geometry('-0+0')
-self.geometry('%d+0' % (self.winfo_screenwidth()-2*self.winfo_width()) )
-####
+
+
+A geometry string is a standard way of describing the size and location of a top-level window
+on a desktop. A geometry string has this general form:
+	'wxh±x±y' where:
+	The w and h parts give the window width and height in pixels.
+	They are separated by the character 'x'.
+	
+If the next part has the form +x,
+it specifies that the left side of the window should be x pixels from the left side of the desktop.
+If it has the form -x,
+the right side of the window is x pixels from the right side of the desktop.
+
+If the next part has the form +y,
+it specifies that the top of the window should be y pixels below the top of the desktop.
+If it has the form -y,
+the bottom of the window will be y pixels above the bottom edge of the desktop.
+#####################
+
+
+
+
+
+
 
 
 cmd-ae in python shell in macos?
