@@ -333,6 +333,8 @@ class Editor(tkinter.Toplevel):
 		self.search_matches = 0
 		self.old_word = ''
 		self.new_word = ''
+		self.match_lenghts = tkinter.StringVar()
+		
 		# Used in get_scope_path()
 		self.search_count_var = tkinter.IntVar()
 		
@@ -842,8 +844,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Return>", self.return_override)
 		self.contents.bind( "<BackSpace>", self.backspace_override)
 		
-		self.contents.bind( "<Control-BackSpace>", self.search_next)
-		self.contents.bind( "<Control-Shift-BackSpace>",
+		self.contents.bind( "<Control-n>", self.search_next)
+		self.contents.bind( "<Control-p>",
 				lambda event: self.search_next(event, **{'back':True}) )
 		
 		
@@ -6602,87 +6604,76 @@ class Editor(tkinter.Toplevel):
 ################ Search Begin
 	
 	def search_next(self, event=None, back=False):
-		'''	Do last search from cursor position, show and select next/previous match.
+		'''	Search with selection from cursor position,
+			show and select next/previous match.
 			
-			Shortcut: Ctrl-(Shift)-Backspace
+			Shortcut: Ctrl-np
 		'''
 		search_word = False
 		
-		if self.state == 'normal':
+		if self.state not in ['normal', 'error', 'help']:
+			self.bell()
+			return 'break'
 		
-			# No selection
-			if len(self.contents.tag_ranges('sel')) == 0:
-				
-				# No search history
-				if self.old_word == '':
-					self.bell()
-					return "break"
-				
-				else:
-					# Use old_word
-					search_word = self.old_word
-			
-			# Use selection
-			else:
-				tmp = self.selection_get()
-				
-				# Allow one linebreak
-				if 80 > len(tmp) > 0 and len(tmp.splitlines()) < 3:
-					search_word = tmp
-				
-				# Too large selection
-				else:
-					
-					# No search history
-					if self.old_word == '':
-						self.bell()
-						return "break"
-					
-					else:
-						# Use old_word
-						search_word = self.old_word
-			
-		# search(search_next)
-		# start_search(search_next)
-		# show_next(search_next)
+		# No selection
+		elif len(self.contents.tag_ranges('sel')) == 0:
+			self.bell()
+			return 'break'
 		
-		wordlen = len(search_word)
-		self.lastcursorpos = self.contents.index(tkinter.INSERT)
-	
-		if back:
-			pos = self.contents.search(search_word, 'insert', backwards=True)
 		else:
-			pos = self.contents.search(search_word, 'insert +1c')
-		
-
-		# Try again from the beginning/end this time:
-		if not pos:
-		
-			if back:
-				pos = self.contents.search(search_word, tkinter.END, backwards=True)
-			else:
-				pos = self.contents.search(search_word, '1.0')
+			tmp = self.selection_get()
 			
-			# No oldword in file:
-			if not pos:
+			# Allow one linebreak
+			if 80 > len(tmp) > 0 and len(tmp.splitlines()) < 3:
+				search_word = tmp
+			
+			# Too large selection
+			else:
 				self.bell()
 				return "break"
-		
 				
 		
-		# Without this one can not search by holding ctrl down and
-		# pressing and releasing repeatedly backspace only:
-		if self.bid_left: self.contents.unbind("<Left>", funcid=self.bid_left)
-		self.bid_left = None
-
+		# Info: search 'def search(' in module: tkinter
+		search_args = [ self.contents._w, 'search', '-all', search_word, '1.0' ]
+		res = self.tk.call(tuple(search_args))
 		
+		# Start-indexes of matches
+		m = [ str(x) for x in res ]
+		
+		num_all_matches = len(m)
+		
+		if num_all_matches == 1:
+			self.bell()
+			return "break"
+				
+		
+		# Current index
+		sel_start = self.contents.index(tkinter.SEL_FIRST)
+		idx = m.index(sel_start)
+		
+		# Update index with limit check
+		if back:
+			if idx == 0:
+				idx = len(m)
+			idx -= 1
+			
+		else:
+			if idx == len(m) - 1:
+				idx = -1
+			idx += 1
+		
+		
+		pos = m[idx]
+		
+		
+		wordlen = len(search_word)
 		word_end = "%s + %dc" % (pos, wordlen)
+		
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		self.contents.mark_set(self.anchorname, pos)
 		self.contents.tag_add('sel', pos, word_end)
 		self.contents.mark_set('insert', word_end)
-		line = pos
-		self.ensure_idx_visibility(line)
+		self.ensure_idx_visibility(pos)
 					
 		return "break"
 
@@ -6983,6 +6974,11 @@ class Editor(tkinter.Toplevel):
 		self.contents.unbind( "<Control-p>", funcid=self.bid2 )
 		self.contents.unbind( "<Double-Button-1>", funcid=self.bid3 )
 		self.contents.unbind( "<space>", funcid=self.bid4 )
+		
+		self.contents.bind( "<Control-n>", self.search_next)
+		self.contents.bind( "<Control-p>",
+				lambda event: self.search_next(event, **{'back':True}) )
+		
 		self.contents.bind("<Return>", self.return_override)
 		self.entry.bind("<Control-n>", self.do_nothing_without_bell)
 		self.entry.bind("<Control-p>", self.do_nothing_without_bell)

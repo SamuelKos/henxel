@@ -216,32 +216,71 @@ the bottom of the window will be y pixels above the bottom edge of the desktop.
 
 
 
+e.my_var = tkinter.StringVar()
+args = [ e.contents._w, 'search', '-all', '-count', e.my_var, 'bookmark', '1.0' ]
+res = e.tk.call(tuple(args))
+
+# m holds start-indexes of matches
+m = [ str(x) for x in res ]
+# s holds lenghts of matches and needs some parsing
+s = e.my_var.get()
+'(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8)'
+
+s = s[1:-1]
+'8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8'
+
+s = s.split(', ')
+['8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8']
+
+s = [ int(x) for x in s ]
+[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8]
+
+on search_next:
+	do above
+	use only selection
+		
+	
+	get current match position among all matches like 2/12:
+		num_all_matches = len(m)
+		pos = idx_next + 1
+		--> pos/num_all_matches
+	
+	handle_search_entry
 
 
 
 
-cmd-ae in python shell in macos?
+
+
+
+
+search_next in help error works
+error: if want to search part of filepaths (select with mouse will open file)
+	put cursor near taglink and
+	move it to right place with alt-arrow etc and select with keyboard
+
 
 ###################
 search, search_next
-Control-np
-
-
-
-count from start, count from cursor --> show position
-if count <= 1: bell
+- Control-np help error normal done ok?
+	
+if count <= 1: bell done ok?
 if selection, use it, else oldword.
-search_next: enter search mode, start search from cursor
 
-search(start=index)
 ###################
-search_next, if have selection, use it as search word instead of clipboard
-
-check_next event: no work if right then left
-it should be unbinded when pressed other than left.
-remove when search_next ready
 
 
+
+
+
+
+
+
+inspect syntax
+
+cmd-shift-left select indentation same as alt-left
+
+cmd-ae in python shell in macos?
 
 replaced less yellow
 
