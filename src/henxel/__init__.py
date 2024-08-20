@@ -3472,6 +3472,9 @@ class Editor(tkinter.Toplevel):
 			i_new = self.idx_lineend()
 			self.contents.mark_set('insert', i_new)
 		
+
+		# Cursor is somewhere between (exclusively) indent0 and idx_linestart
+		# on line that has indentation.
 		else:
 			# Put cursor at indent0
 			self.contents.mark_set('insert', 'insert linestart')
@@ -3923,7 +3926,26 @@ class Editor(tkinter.Toplevel):
 					self.goto_lineend(event=event)
 					
 				elif event.keysym == 'Left':
-					self.goto_linestart(event=event)
+					
+					# Want Cmd-Shift-left to:
+					# Select indentation on line that has indentation
+					# When: at idx_linestart
+					# same way than Alt-Shift-Left
+						
+					# At idx_linestart of line that has indentation?
+					idx, line_is_wrapped = self.idx_linestart()
+					
+					if idx and self.contents.compare(idx, '==', 'insert' ):
+						have_selection = len(self.contents.tag_ranges('sel')) > 0
+
+						if idx.split('.')[1] != 0 and not have_selection:
+							pos = self.contents.index('%s linestart' % idx )
+							self.contents.mark_set(self.anchorname, 'insert')
+							self.contents.tag_add('sel', pos, 'insert')
+					
+					else:
+						self.goto_linestart(event=event)
+					
 					
 				elif event.keysym == 'Up':
 					for i in range(10):
@@ -4022,9 +4044,9 @@ class Editor(tkinter.Toplevel):
 			
 		# Pressed arrow left or right.
 		# If have selection, put cursor on the wanted side of selection.
-		# +shift: 97
 		
 		# Pressed arrow up or down: return event.
+		# +shift: 97: return event.
 		elif event.state == 97: return
 		
 		elif event.state == 96:
@@ -5090,8 +5112,8 @@ class Editor(tkinter.Toplevel):
 		
 		
 		# 2. Build string to be inserted in the beginning of entry
-		# a: Add scopename
-		# Search backwards first def/class line and get function/class name.
+		# a: Add scope_path
+		# Search backwards and get function/class names.
 		patt = ' '
 		flag_scope = False
 		
@@ -6044,7 +6066,7 @@ class Editor(tkinter.Toplevel):
 			if wanted_num_chars > num_chars:
 				wanted_num_chars = want = num_chars
 			
-			
+
 			
 			flag_added_space = False
 			flag_changed_contents_state = False
@@ -6081,7 +6103,7 @@ class Editor(tkinter.Toplevel):
 					want = wanted_num_chars
 
 					
-			
+
 			e = self.idx_lineend()
 			
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
@@ -6123,9 +6145,7 @@ class Editor(tkinter.Toplevel):
 								
 				
 							
-							
-			
-			
+						
 			# Animate adding bookmark
 			else:
 				# Info is in remove-section above
@@ -6154,9 +6174,7 @@ class Editor(tkinter.Toplevel):
 								self.contents.config(**kwargs) )
 								
 						
-					
-				
-			
+												
 		except tkinter.TclError as ee:
 			print(ee)
 		
@@ -6634,6 +6652,7 @@ class Editor(tkinter.Toplevel):
 				
 		
 		# Info: search 'def search(' in module: tkinter
+		# https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		search_args = [ self.contents._w, 'search', '-all', search_word, '1.0' ]
 		res = self.tk.call(tuple(search_args))
 		
@@ -6692,14 +6711,15 @@ class Editor(tkinter.Toplevel):
 		if self.contents.compare(self.search_idx[0], '>=', last):
 			self.search_idx = ('1.0', '1.0')
 				
-		if self.search_idx != ('1.0', '1.0'):
-			self.contents.tag_remove('focus', self.search_idx[0], self.search_idx[1])
-		else:
-			self.contents.tag_remove('focus', '1.0', tkinter.END)
+		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		
 		
-		# self.search_idx marks range of focus-tag.
-		# Here focus is moved to next match after current focus:
+		# self.search_idx marks range of focus-tag. That is
+		# from self.search_idx[0] to self.search_idx[1], for example: from '20.2' to '20.8'
+		
+		# Here focus is moved to next match.
+		# tag_nextrange('match', self.search_idx[1]) means:
+		# Find next (range of) tag named 'match' after index self.search_idx[1].
 		self.search_idx = self.contents.tag_nextrange('match', self.search_idx[1])
 		ref = self.search_idx[0]
 		
@@ -6763,10 +6783,7 @@ class Editor(tkinter.Toplevel):
 		if self.contents.compare(self.search_idx[0], '<=', first):
 			self.search_idx = (tkinter.END, tkinter.END)
 		
-		if self.search_idx != (tkinter.END, tkinter.END):
-			self.contents.tag_remove('focus', self.search_idx[0], self.search_idx[1])
-		else:
-			self.contents.tag_remove('focus', '1.0', tkinter.END)
+		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		
 		
 		# self.search_idx marks range of focus-tag.

@@ -212,8 +212,20 @@ it specifies that the top of the window should be y pixels below the top of the 
 If it has the form -y,
 the bottom of the window will be y pixels above the bottom edge of the desktop.
 #####################
+cmd-shift-left select indentation same as alt-left done ok?
+cmd-shift-left/right, selects from, space only lines also
+#####################
 
 
+
+
+
+###################
+search, search_next
+- Control-np help error normal done ok?
+	
+if count <= 1: bell done ok?
+if selection, use it, else oldword.
 
 
 e.my_var = tkinter.StringVar()
@@ -245,12 +257,13 @@ on search_next:
 		pos = idx_next + 1
 		--> pos/num_all_matches
 	
-	handle_search_entry
+	wait_for like in show_next
+	handle_search_entry not done #######################################
 
 
 
 
-
+search replace as above
 
 
 
@@ -259,28 +272,22 @@ error: if want to search part of filepaths (select with mouse will open file)
 	put cursor near taglink and
 	move it to right place with alt-arrow etc and select with keyboard
 
-
-###################
-search, search_next
-- Control-np help error normal done ok?
-	
-if count <= 1: bell done ok?
-if selection, use it, else oldword.
-
 ###################
 
 
 
 
 
+
+goto bookmark show position among all bookmarks etc.
 
 
 
 inspect syntax
 
-cmd-shift-left select indentation same as alt-left
 
 cmd-ae in python shell in macos?
+
 
 replaced less yellow
 
@@ -296,7 +303,7 @@ update help
 uncomment '##' must be at indent0 or it can not be removed --> help?
 
 
-check use of token_can_update
+check use of token_can_update += 1
 
 
 github:
