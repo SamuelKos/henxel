@@ -64,7 +64,7 @@ import subprocess
 
 # For making paste to work in Windows
 import threading
-		
+
 ############ Imports End
 ############ Class Tab Begin
 					
@@ -291,7 +291,6 @@ class Editor(tkinter.Toplevel):
 		super().__init__(self.root, class_='Henxel', bd=4)
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		
-		
 		# Other widgets
 		self.to_be_closed = list()
 		
@@ -328,7 +327,10 @@ class Editor(tkinter.Toplevel):
 		
 		
 		# This marks range of focus-tag:
-		self.search_idx = ('1.0', '1.0')
+		self.search_focus = ('1.0', '1.0')
+		self.search_start_indexes = list()
+		self.search_end_indexes = list()
+
 		
 		self.search_matches = 0
 		self.old_word = ''
@@ -999,7 +1001,7 @@ class Editor(tkinter.Toplevel):
 		self.viewsync()
 		self.__class__.alive = True
 		self.update_title()
-		
+	
 		############################# init End ##########################
 		
 	
@@ -4547,8 +4549,8 @@ class Editor(tkinter.Toplevel):
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
 		
-		# self.search_idx marks range of focus-tag:
-		self.save_pos = self.search_idx[1]
+		# self.search_focus marks range of focus-tag:
+		self.save_pos = self.search_focus[1]
 		self.stop_search()
 		
 		return 'break'
@@ -6195,7 +6197,7 @@ class Editor(tkinter.Toplevel):
 		pos = tkinter.INSERT
 		if self.state != 'normal':
 			# 'focus'
-			pos = self.search_idx[0]
+			pos = self.search_focus[0]
 		
 			
 		s = self.contents.index('%s display linestart' % pos)
@@ -6707,21 +6709,21 @@ class Editor(tkinter.Toplevel):
 		i = len(match_ranges) - 2
 		last = match_ranges[i]
 		
-		# self.search_idx marks range of focus-tag:
-		if self.contents.compare(self.search_idx[0], '>=', last):
-			self.search_idx = ('1.0', '1.0')
+		# self.search_focus marks range of focus-tag:
+		if self.contents.compare(self.search_focus[0], '>=', last):
+			self.search_focus = ('1.0', '1.0')
 				
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		
 		
-		# self.search_idx marks range of focus-tag. That is
-		# from self.search_idx[0] to self.search_idx[1], for example: from '20.2' to '20.8'
+		# self.search_focus marks range of focus-tag. That is
+		# from self.search_focus[0] to self.search_focus[1], for example: from '20.2' to '20.8'
 		
 		# Here focus is moved to next match.
-		# tag_nextrange('match', self.search_idx[1]) means:
-		# Find next (range of) tag named 'match' after index self.search_idx[1].
-		self.search_idx = self.contents.tag_nextrange('match', self.search_idx[1])
-		ref = self.search_idx[0]
+		# tag_nextrange('match', self.search_focus[1]) means:
+		# Find next (range of) tag named 'match' after index self.search_focus[1].
+		self.search_focus = self.contents.tag_nextrange('match', self.search_focus[1])
+		ref = self.search_focus[0]
 		
 		# Compare above range of focus-tag to match_ranges to get current
 		# index position among all current matches. For example: If now have 10 matches left,
@@ -6754,8 +6756,8 @@ class Editor(tkinter.Toplevel):
 		
 
 		# Change color
-		# self.search_idx marks range of focus-tag. Here focus-tag is changed.
-		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
+		# self.search_focus marks range of focus-tag. Here focus-tag is changed.
+		self.contents.tag_add('focus', self.search_focus[0], self.search_focus[1])
 		
 		
 		self.entry.config(validate='key')
@@ -6779,17 +6781,17 @@ class Editor(tkinter.Toplevel):
 		
 		first = match_ranges[0]
 		
-		# self.search_idx marks range of focus-tag:
-		if self.contents.compare(self.search_idx[0], '<=', first):
-			self.search_idx = (tkinter.END, tkinter.END)
+		# self.search_focus marks range of focus-tag:
+		if self.contents.compare(self.search_focus[0], '<=', first):
+			self.search_focus = (tkinter.END, tkinter.END)
 		
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		
 		
-		# self.search_idx marks range of focus-tag.
+		# self.search_focus marks range of focus-tag.
 		# Here focus is moved to previous match before current focus:
-		self.search_idx = self.contents.tag_prevrange('match', self.search_idx[0])
-		ref = self.search_idx[0]
+		self.search_focus = self.contents.tag_prevrange('match', self.search_focus[0])
+		ref = self.search_focus[0]
 		
 		# Compare above range of focus-tag to match_ranges to get current
 		# index position among all current matches. For example: If now have 11 matches left,
@@ -6812,8 +6814,8 @@ class Editor(tkinter.Toplevel):
 
 		
 		# Change color
-		# self.search_idx marks range of focus-tag. Here focus-tag is changed.
-		self.contents.tag_add('focus', self.search_idx[0], self.search_idx[1])
+		# self.search_focus marks range of focus-tag. Here focus-tag is changed.
+		self.contents.tag_add('focus', self.search_focus[0], self.search_focus[1])
 			
 		self.entry.config(validate='key')
 		
@@ -6828,6 +6830,58 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 		
 		
+	def do_search(self, search_word):
+		''' asd asd
+		'''
+	
+		args = [
+				self.contents._w,
+				'search',
+				'-all',
+				'-count',
+				self.match_lenghts,
+				search_word,
+				'1.0'
+				]
+				
+		
+		res = self.tk.call(tuple(args))
+		
+
+		m = start_indexes = self.search_start_indexes = [ str(x) for x in res ]
+		
+		# Returning results to caller while not breaking execution of this function
+		yield start_indexes
+		
+
+		# s holds lenghts of matches
+		# lenghts can vary
+		s = eval( self.match_lenghts.get() )
+		# '(8, 8, 8, 8)' --> (8, 8, 8, 8)
+		# With list one can deal with single matches:
+		# (8,) --> [8]
+		s = list(s)
+		
+		# self.search_matches
+		num_matches = len(start_indexes)
+		yield num_matches
+		
+		if not num_matches: return
+		
+
+		match_ranges = list()
+		for i in range( len(start_indexes) ):
+			start_idx = start_indexes[i]
+			match_lenght = s[i]
+			end_idx = '%s +%dc' % (start_idx, match_lenght)
+			
+			match_ranges.append(start_idx)
+			match_ranges.append(end_idx)
+			
+		
+		self.contents.tag_add('match', *match_ranges)
+		
+	
 	def start_search(self, event=None):
 		
 		# Get stuff after prompt
@@ -6844,22 +6898,24 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.tag_remove('match', '1.0', tkinter.END)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
-		self.search_idx = ('1.0', '1.0')
+		self.search_focus = ('1.0', '1.0')
 		self.search_matches = 0
 		
 		pos = '1.0'
 		wordlen = len(search_word)
 		self.contents.tag_config('match', background='', foreground='')
 		
-		while True:
-			pos = self.contents.search(search_word, pos, tkinter.END)
-			if not pos: break
-			self.search_matches += 1
-			lastpos = "%s + %dc" % (pos, wordlen)
-			self.contents.tag_add('match', pos, lastpos)
-			pos = "%s + %dc" % (pos, wordlen+1)
-				
-				
+		
+		#######
+		# m is not used here, just left as yield-example
+		# m: self.search_start_indexes
+		m, self.search_matches = self.do_search(search_word)
+		#print(m, '\n', s)
+		# 'match' is tagged in do_search()
+		#######
+		
+		
+		
 		if self.search_matches > 0:
 		
 			self.old_word = search_word
@@ -7245,15 +7301,15 @@ class Editor(tkinter.Toplevel):
 		wordlen2 = len(self.new_word)
 		
 		
-		# self.search_idx marks range of focus-tag:
-		self.contents.tag_remove('focus', self.search_idx[0], self.search_idx[1])
-		self.contents.tag_remove('match', self.search_idx[0], self.search_idx[1])
-		self.contents.delete(self.search_idx[0], self.search_idx[1])
-		self.contents.insert(self.search_idx[0], self.new_word)
+		# self.search_focus marks range of focus-tag:
+		self.contents.tag_remove('focus', self.search_focus[0], self.search_focus[1])
+		self.contents.tag_remove('match', self.search_focus[0], self.search_focus[1])
+		self.contents.delete(self.search_focus[0], self.search_focus[1])
+		self.contents.insert(self.search_focus[0], self.new_word)
 		
 		# tag replacement to avoid rematching same place
-		p = "%s + %dc" % (self.search_idx[0], wordlen2)
-		self.contents.tag_add('replaced', self.search_idx[0], p)
+		p = "%s + %dc" % (self.search_focus[0], wordlen2)
+		self.contents.tag_add('replaced', self.search_focus[0], p)
 		
 		
 		self.contents.config(state='disabled')

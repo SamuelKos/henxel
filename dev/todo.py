@@ -194,6 +194,7 @@ if diff > 0:
 
 
 test in linux windows
+also check shift-tab unindent in windows
 
 
 A geometry string is a standard way of describing the size and location of a top-level window
@@ -236,16 +237,14 @@ res = e.tk.call(tuple(args))
 m = [ str(x) for x in res ]
 # s holds lenghts of matches and needs some parsing
 s = e.my_var.get()
-'(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8)'
+'(8, 8, 8, 8)'
 
 s = s[1:-1]
-'8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8'
+'8, 8, 8, 8'
 
 s = s.split(', ')
-['8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8', '8']
+['8', '8', '8', '8']
 
-s = [ int(x) for x in s ]
-[8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8]
 
 on search_next:
 	do above
@@ -262,8 +261,30 @@ on search_next:
 
 
 
-
 search replace as above
+
+
+do_search docstring
+
+tkinter
+self.search_start_indexes
+
+
+self.search_end_indexes no?
+
+
+self.match_ranges ###################
+self.entry.flag_start
+
+
+self.search_matches = len(self.start_indexes)?
+
+
+# This marks range of focus-tag:
+self.search_idx = ('1.0', '1.0')
+--> self.search_focus
+done ok?
+
 
 
 
@@ -282,17 +303,20 @@ error: if want to search part of filepaths (select with mouse will open file)
 goto bookmark show position among all bookmarks etc.
 
 
-
 inspect syntax
 
 
 cmd-ae in python shell in macos?
+Control-d not Control-c to quit multiline command
+
+
+todo path
+
+
+find empty lines regexp
 
 
 replaced less yellow
-
-
-check shift-tab unindent in windows
 
 
 chek move many lines() mac
@@ -313,6 +337,11 @@ fixed tag config -under --> -underline
 
 show closing paren
 
+
+tab on empty line, if at indent0, to same indent than prevline
+
+
+enable cancel tab-completion
 
 
 show scope always
@@ -390,9 +419,6 @@ when paste multiline, then undo that, then paste again same thing, then again un
 
 
 check is it necessary to check event.state in select_by_words etc
-
-
-tab on empty line, if at indent0, to same indent than prevline?
 
 
 fix arrow updown (put cursor to same col_nextline or
