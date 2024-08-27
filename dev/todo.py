@@ -220,73 +220,37 @@ cmd-shift-left/right, selects from, space only lines also
 
 
 
-
 ###################
-search, search_next
+search, replace, search_next
 - Control-np help error normal done ok?
+
+reset_search_setting()
+print_search_setting()
+edit_search_setting(search_setting)
+
+start_search() calls do_search(search_word)
 	
-if count <= 1: bell done ok?
+
 if selection, use it, else oldword.
 
 
-e.my_var = tkinter.StringVar()
-args = [ e.contents._w, 'search', '-all', '-count', e.my_var, 'bookmark', '1.0' ]
-res = e.tk.call(tuple(args))
-
-# m holds start-indexes of matches
-m = [ str(x) for x in res ]
-# s holds lenghts of matches and needs some parsing
-s = e.my_var.get()
-'(8, 8, 8, 8)'
-
-s = s[1:-1]
-'8, 8, 8, 8'
-
-s = s.split(', ')
-['8', '8', '8', '8']
-
-
-on search_next:
-	do above
-	use only selection
 		
-	
-	get current match position among all matches like 2/12:
-		num_all_matches = len(m)
-		pos = idx_next + 1
-		--> pos/num_all_matches
-	
-	wait_for like in show_next
-	handle_search_entry not done #######################################
+search_next:
+get current match position among all matches like 2/12:
+	num_all_matches = len(m)
+	pos = idx_next + 1
+	--> pos/num_all_matches
 
+wait_for like in show_next
+handle_search_entry not done #######################################
 
-
-search replace as above
-
-
-do_search docstring
-
-tkinter
-self.search_start_indexes
-
-
-self.search_end_indexes no?
 
 
 self.match_ranges ###################
-self.entry.flag_start
+self.entry.flag_start ###############
 
-
-self.search_matches = len(self.start_indexes)?
-
-
-# This marks range of focus-tag:
-self.search_idx = ('1.0', '1.0')
---> self.search_focus
-done ok?
-
-
-
+save search_setting with name
+load search_setting with name
 
 search_next in help error works
 error: if want to search part of filepaths (select with mouse will open file)
@@ -297,7 +261,7 @@ error: if want to search part of filepaths (select with mouse will open file)
 
 
 
-
+get(elided)
 
 
 goto bookmark show position among all bookmarks etc.
@@ -314,6 +278,8 @@ todo path
 
 
 find empty lines regexp
+tokens:
+	end_idx = '%s +%dc' % (start_idx, match_lenght)
 
 
 replaced less yellow

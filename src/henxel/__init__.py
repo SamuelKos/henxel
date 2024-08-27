@@ -328,14 +328,18 @@ class Editor(tkinter.Toplevel):
 		
 		# This marks range of focus-tag:
 		self.search_focus = ('1.0', '1.0')
-		self.search_start_indexes = list()
-		self.search_end_indexes = list()
-
+		self.search_start_indexes = list() # of str
+		self.match_lenghts = list() # of int
+		self.match_lenghts_var = tkinter.StringVar()
+		
+		self.search_settings = False
+		self.search_start_idx = '1.0'
+		self.search_end_idx = 'end'
+		
 		
 		self.search_matches = 0
 		self.old_word = ''
 		self.new_word = ''
-		self.match_lenghts = tkinter.StringVar()
 		
 		# Used in get_scope_path()
 		self.search_count_var = tkinter.IntVar()
@@ -6646,7 +6650,7 @@ class Editor(tkinter.Toplevel):
 			# Allow one linebreak
 			if 80 > len(tmp) > 0 and len(tmp.splitlines()) < 3:
 				search_word = tmp
-			
+				
 			# Too large selection
 			else:
 				self.bell()
@@ -6830,22 +6834,235 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 		
 		
-	def do_search(self, search_word):
-		''' asd asd
-		'''
-	
+	def reset_search_setting(self):
+		
 		args = [
 				self.contents._w,
 				'search',
 				'-all',
 				'-count',
-				self.match_lenghts,
-				search_word,
-				'1.0'
+				self.match_lenghts_var,
+				]
+		
+		self.search_settings = args
+		self.search_start_idx = '1.0'
+		self.search_end_idx = 'end'
+		
+	
+	def print_search_setting(self):
+	
+		if not self.search_settings:
+			self.reset_search_setting()
+		
+		print(self.search_settings)
+	
+	
+	def edit_search_setting(self, search_setting):
+		''' search_setting	string
+			Consisting of these separated by space.
+			If -end_idx is given also start_idx must have been given.
+			
+			For example:
+			my_settings = "-regexp -elide -start_idx insert -end_idx end"
+			edit_search_setting( my_settings )
+			
+			
+			'-backwards'
+			'-regexp'
+			'-nocase'
+			'-overlap'
+			'-nolinestop'
+			'-strictlimits'
+			'-elide'
+			'-start_idx'	idx
+			'-end_idx'	idx
+			
+		'''
+		
+		if not self.search_settings:
+			self.reset_search_setting()
+		
+		
+		args = [
+				self.contents._w,
+				'search',
+				'-all',
+				'-count',
+				self.match_lenghts_var,
 				]
 				
+				
+		user_options = search_setting.split()
 		
-		res = self.tk.call(tuple(args))
+		
+		options = [
+			'-backwards',
+			'-regexp',
+			'-nocase',
+			'-overlap',
+			'-nolinestop',
+			'-strictlimits',
+			'-elide'
+			]
+		
+		
+		for option in user_options:
+			if option in options:
+				args.append(option)
+				
+		
+		search_start_idx = self.search_start_idx
+		search_end_idx = self.search_end_idx
+		
+		if '-start_idx' in user_options:
+			idx = user_options.index('-start_idx') + 1
+			
+			if len(user_options) > idx:
+				tmp = user_options[idx]
+				search_start_idx = tmp
+					
+				
+				if '-end_idx' in user_options:
+					idx = user_options.index('-end_idx') + 1
+					
+					if len(user_options) > idx:
+						tmp = user_options[idx]
+						search_end_idx = tmp
+				
+		
+		# With s = args one gets reference to original list.
+		# If want copy(dont want to mess original), and one likely does, one writes:
+		s = args[:]
+		s.append( '--' )
+		tmp = self.contents.get('1.0', '1.1')
+		
+		flag = False
+		if not tmp:
+			self.contents.insert('1.0', 'A')
+			tmp = 'A'
+			flag = True
+			
+		s.append(tmp)
+		s.append(search_start_idx)
+		s.append(search_end_idx)
+		
+		
+		try:
+			self.tk.call(tuple(s))
+			#print('jou')
+			
+			self.search_settings = args
+			self.search_start_idx = search_start_idx
+			self.search_end_idx = search_end_idx
+			
+		except tkinter.TclError as e:
+			print(e)
+		
+		
+		if flag: self.contents.delete('1.0', '1.1')
+			
+		
+		
+		r'''
+		
+		-forwards
+		The search will proceed forward through the text, finding the first matching
+		range starting at or after the position given by index. This is the default.
+		
+		-backwards
+		The search will proceed backward through the text, finding the matching range
+		closest to index whose first character is before index (it is not allowed to be at index).
+		Note that, for a variety of reasons, backwards searches can be substantially slower
+		than forwards searches (particularly when using -regexp), so it is recommended that
+		performance-critical code use forward searches.
+		
+		-exact
+		Use exact matching: the characters in the matching range must be identical to
+		those in pattern. This is the default.
+		
+		-regexp
+		Treat pattern as a regular expression and match it against the text using the
+		rules for regular expressions (see the regexp command and the re_syntax page for details).
+		The default matching automatically passes both the -lineanchor and -linestop options
+		to the regexp engine (unless -nolinestop is used), so that ^$ match beginning and
+		end of line, and ., [^ sequences will never match the newline character \n.
+		
+		-nolinestop
+		This allows . and [^ sequences to match the newline character \n, which they will
+		otherwise not do (see the regexp command for details). This option is only meaningful
+		if -regexp is also given, and an error will be thrown otherwise. For example, to
+		match the entire text, use “pathName search -nolinestop -regexp ".*" 1.0”.
+		
+		-nocase
+		Ignore case differences between the pattern and the text.
+		
+		-count varName
+		The argument following -count gives the name of a variable; if a match is found,
+		the number of index positions between beginning and end of the matching range will
+		be stored in the variable. If there are no embedded images or windows in the matching
+		range (and there are no elided characters if -elide is not given), this is equivalent
+		to the number of characters matched. In either case, the range
+		matchIdx to matchIdx + $count chars will return the entire matched text.
+		
+		-all
+		Find all matches in the given range and return a list of the indices of the first
+		character of each match. If a -count varName switch is given, then varName is also
+		set to a list containing one element for each successful match. Note that, even for
+		exact searches, the elements of this list may be different, if there are embedded images,
+		windows or hidden text. Searches with -all behave very similarly to the
+		Tcl command regexp -all, in that overlapping matches are not normally returned.
+		For example, applying an -all search of the pattern “\w+” against “hello there”
+		will just match twice, once for each word,
+		and matching “Z[a-z]+Z” against “ZooZooZoo” will just match once.
+		
+		-overlap
+		When performing -all searches, the normal behaviour is that matches which overlap
+		an already-found match will not be returned. This switch changes that behaviour so that
+		all matches which are not totally enclosed within another match are returned. For example,
+		applying an -overlap search of the pattern “\w+” against “hello there” will just match
+		twice (i.e. no different to just -all), but matching “Z[a-z]+Z” against “ZooZooZoo” will
+		now match twice. An error will be thrown if this switch is used without -all.
+		
+		-strictlimits
+		When performing any search, the normal behaviour is that the start and stop limits
+		are checked with respect to the start of the matching text. With the -strictlimits flag,
+		the entire matching range must lie inside the start and stop limits specified
+		for the match to be valid.
+		
+		-elide
+		Find elided (hidden) text as well. By default only displayed text is searched.
+		
+		--
+		This switch has no effect except to terminate the list of switches: the next argument
+		will be treated as pattern even if it starts with -.
+		
+		'''
+		
+	
+	def do_search(self, search_word):
+		''' Search contents for search_word
+			with self.search_settings and tk text search
+			https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
+			
+			yields start_indexes of matches as list
+			yields number of search matches
+			
+			if at least one match:
+				tags 'match' with list match_ranges
+		'''
+		if not self.search_settings:
+			self.reset_search_setting()
+		
+		
+		s = self.search_settings[:]
+		s.append( '--' )
+		s.append(search_word)
+		s.append(self.search_start_idx)
+		s.append(self.search_end_idx)
+		
+		#print(s)
+		
+		res = self.tk.call(tuple(s))
 		
 
 		m = start_indexes = self.search_start_indexes = [ str(x) for x in res ]
@@ -6856,11 +7073,12 @@ class Editor(tkinter.Toplevel):
 
 		# s holds lenghts of matches
 		# lenghts can vary
-		s = eval( self.match_lenghts.get() )
-		# '(8, 8, 8, 8)' --> (8, 8, 8, 8)
-		# With list one can deal with single matches:
+		s = eval( self.match_lenghts_var.get() )
+		# eval( '(8, 8, 8, 8)' )  -->  (8, 8, 8, 8)
+		
+		# With list one can deal with single matches (single tuples):
 		# (8,) --> [8]
-		s = list(s)
+		s = self.match_lenghts = list(s)
 		
 		# self.search_matches
 		num_matches = len(start_indexes)
@@ -7326,26 +7544,22 @@ class Editor(tkinter.Toplevel):
 		self.contents.config(state='normal')
 		wordlen = len(self.old_word)
 		wordlen2 = len(self.new_word)
-		pos = '1.0'
 		
-		while True:
-			pos = self.contents.search(self.old_word, pos, tkinter.END)
-			if not pos: break
+		
+		for i in range( len(self.search_start_indexes) ):
+		
+			start_idx = self.search_start_indexes[i]
+			end_idx_old = '%s +%dc' % ( start_idx, self.match_lenghts[i] )
+			end_idx_new = "%s + %dc" % ( start_idx, wordlen2 )
 			
-			lastpos = "%s + %dc" % ( pos, wordlen )
-			lastpos2 = "%s + %dc" % ( pos, wordlen2 )
-			
-			self.contents.delete( pos, lastpos )
-			self.contents.insert( pos, self.new_word )
-			self.contents.tag_add( 'replaced', pos, lastpos2 )
-				
-			pos = "%s + %dc" % (pos, wordlen+1)
-			
-		# Show lastpos but dont put cursor on it
-		line = lastpos
+			self.contents.delete(start_idx, end_idx_old)
+			self.contents.insert(start_idx, self.new_word)
+			self.contents.tag_add('replaced', start_idx, end_idx_new)
+		
+		
+		pos = start_idx
 		self.wait_for(100)
-		self.ensure_idx_visibility(line)
-
+		self.ensure_idx_visibility(pos)
 		self.stop_search()
 		
 		
