@@ -333,8 +333,8 @@ class Editor(tkinter.Toplevel):
 		self.match_lenghts_var = tkinter.StringVar()
 		
 		self.search_settings = False
-		self.search_start_idx = '1.0'
-		self.search_end_idx = 'end'
+		self.search_starts_at = '1.0'
+		self.search_ends_at = False
 		
 		
 		self.search_matches = 0
@@ -5137,11 +5137,11 @@ class Editor(tkinter.Toplevel):
 				
 		# b: Add search position
 		idx = search_pos
-		lenght_of_search_position_index = len(str(idx+1))
+		lenght_of_search_position_index = len(str(idx))
 		lenght_of_search_matches = len(str(self.search_matches))
 		diff = lenght_of_search_matches - lenght_of_search_position_index
 		
-		tmp = f'{diff*" "}{idx+1}/{self.search_matches}'
+		tmp = f'{diff*" "}{idx}/{self.search_matches}'
 		patt = tmp + patt
 
 		
@@ -6706,40 +6706,95 @@ class Editor(tkinter.Toplevel):
 	def show_next(self, event=None):
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
-			
-		match_ranges = self.contents.tag_ranges('match')
 		
+		
+##		###
+##		# Find next mark
+##		#s = self.contents.index('%s display linestart' % index)
+##		mark_name = self.contents.mark_next(self.search_focus[0])
+##
+##		# Find first mark after s
+##		while mark_name:
+##			if 'match' not in mark_name:
+##				mark_name = self.contents.mark_next(mark_name)
+##			else:
+##				self.contents.tag_remove('focus', '1.0', tkinter.END)
+##				break
+##
+##		if mark_name:
+##			if 'match' in mark_name:
+##				i = int( mark_name.split('match')[1] )
+##				start = mark_name
+##				end = '%s +%dc' % ( mark_name, self.match_lenghts[i] )
+##
+##				#end = self.contents.index( self.match_lenghts[i] )
+##
+##				self.search_focus = (start, end)
+##				print(self.search_focus)
+##
+##				ref = self.search_focus[0]
+##				idx = i + 1
+##
+##
+##		###
+		
+		
+		
+		
+		
+		match_ranges = self.contents.tag_ranges('match')
+
 		# Check if at last match or beyond:
 		i = len(match_ranges) - 2
 		last = match_ranges[i]
-		
+
 		# self.search_focus marks range of focus-tag:
 		if self.contents.compare(self.search_focus[0], '>=', last):
 			self.search_focus = ('1.0', '1.0')
-				
+
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
-		
-		
+
+
 		# self.search_focus marks range of focus-tag. That is
 		# from self.search_focus[0] to self.search_focus[1], for example: from '20.2' to '20.8'
-		
+
 		# Here focus is moved to next match.
 		# tag_nextrange('match', self.search_focus[1]) means:
 		# Find next (range of) tag named 'match' after index self.search_focus[1].
 		self.search_focus = self.contents.tag_nextrange('match', self.search_focus[1])
 		ref = self.search_focus[0]
-		
+
 		# Compare above range of focus-tag to match_ranges to get current
 		# index position among all current matches. For example: If now have 10 matches left,
 		# and last position was 1/11, but then one match got replaced,
 		# so focus is now at 1/10 and after this show next-call it should be at 2/10.
-		
-		for idx in range(self.search_matches):
-			tmp = match_ranges[idx*2]
-			if self.contents.compare(ref, '==', tmp): break
-			
+
+		# <textindex object> --> str
+		# Only start-indexes: match_ranges[::2] (every other element)
+		l = [ str(x) for x in match_ranges[::2] ]
+
+		# +1: positioning starts from 1 instead of 0. 1/10 not 0/9.
+		idx = l.index(ref) + 1
+
+
+		if '-backwards' in self.search_settings:
+			idx = self.search_matches - idx + 1
+
 		
 		self.handle_search_entry(idx, ref)
+
+		###
+		
+		
+		
+		
+		
+		
+		
+		
+		
+##		# i: int, start_idx: tkinter.Text -index
+##		self.handle_search_entry(i, start_idx)
 
 		
 		# Is it viewable?
@@ -6748,7 +6803,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.ensure_idx_visibility(ref)
 		
-		# self.entry.flag_start is needed only here in show_next
+		
 		if self.entry.flag_start:
 			if self.state == 'search':
 				self.wait_for(100)
@@ -6781,6 +6836,9 @@ class Editor(tkinter.Toplevel):
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
 		
+		
+		
+		####
 		match_ranges = self.contents.tag_ranges('match')
 		
 		first = match_ranges[0]
@@ -6802,12 +6860,21 @@ class Editor(tkinter.Toplevel):
 		# and last position was 2/12, but then one match got replaced,
 		# so focus is now at say 2/11 and after this show prev-call it should be at 1/11.
 		
-		for idx in range(self.search_matches):
-			tmp = match_ranges[idx*2]
-			if self.contents.compare(ref, '==', tmp): break
+		# <textindex object> --> str
+		# Only start-indexes: match_ranges[::2] (every other element)
+		l = [ str(x) for x in match_ranges[::2] ]
+		
+		# +1: positioning starts from 1 instead of 0. 1/10 not 0/9.
+		idx = l.index(ref) + 1
+		
+		
+		if '-backwards' in self.search_settings:
+			idx = self.search_matches - idx + 1
 		
 		
 		self.handle_search_entry(idx, ref)
+		####
+		
 		
 		
 		# Is it viewable?
@@ -6816,6 +6883,15 @@ class Editor(tkinter.Toplevel):
 		
 		self.ensure_idx_visibility(ref)
 
+		
+		if self.entry.flag_start:
+			if self.state == 'search':
+				self.wait_for(100)
+				bg, fg = self.themes[self.curtheme]['match'][:]
+				self.contents.tag_config('match', background=bg, foreground=fg)
+			self.wait_for(200)
+			self.entry.flag_start = False
+		
 		
 		# Change color
 		# self.search_focus marks range of focus-tag. Here focus-tag is changed.
@@ -6836,7 +6912,7 @@ class Editor(tkinter.Toplevel):
 		
 	def reset_search_setting(self):
 		
-		args = [
+		defaults = [
 				self.contents._w,
 				'search',
 				'-all',
@@ -6844,9 +6920,9 @@ class Editor(tkinter.Toplevel):
 				self.match_lenghts_var,
 				]
 		
-		self.search_settings = args
-		self.search_start_idx = '1.0'
-		self.search_end_idx = 'end'
+		self.search_settings = defaults
+		self.search_starts_at = '1.0'
+		self.search_ends_at = False
 		
 	
 	def print_search_setting(self):
@@ -6854,36 +6930,155 @@ class Editor(tkinter.Toplevel):
 		if not self.search_settings:
 			self.reset_search_setting()
 		
-		print(self.search_settings)
+		print(
+			self.search_settings[5:],
+			'\n'
+			'start_idx:', self.search_starts_at,
+			'\n'
+			'end_idx:', self.search_ends_at
+			)
+	
+	
+	def print_search_help(self):
+		
+		helptxt = r'''
+-forwards
+The search will proceed forward through the text, finding the first matching
+range starting at or after the position given by index. This is the default.
+
+-backwards
+The search will proceed backward through the text, finding the matching range
+closest to index whose first character is before index (it is not allowed to be at index).
+Note that, for a variety of reasons, backwards searches can be substantially slower
+than forwards searches (particularly when using -regexp), so it is recommended that
+performance-critical code use forward searches.
+
+-exact
+Use exact matching: the characters in the matching range must be identical to
+those in pattern. This is the default.
+
+-regexp
+Treat pattern as a regular expression and match it against the text using the
+rules for regular expressions (see the regexp command and the re_syntax page for details).
+The default matching automatically passes both the -lineanchor and -linestop options
+to the regexp engine (unless -nolinestop is used), so that ^$ match beginning and
+end of line, and ., [^ sequences will never match the newline character \n.
+
+-nolinestop
+This allows . and [^ sequences to match the newline character \n, which they will
+otherwise not do (see the regexp command for details). This option is only meaningful
+if -regexp is also given, and an error will be thrown otherwise. For example, to
+match the entire text, use “pathName search -nolinestop -regexp ".*" 1.0”.
+
+-nocase
+Ignore case differences between the pattern and the text.
+
+-count varName
+The argument following -count gives the name of a variable; if a match is found,
+the number of index positions between beginning and end of the matching range will
+be stored in the variable. If there are no embedded images or windows in the matching
+range (and there are no elided characters if -elide is not given), this is equivalent
+to the number of characters matched. In either case, the range
+matchIdx to matchIdx + $count chars will return the entire matched text.
+
+-all
+Find all matches in the given range and return a list of the indices of the first
+character of each match. If a -count varName switch is given, then varName is also
+set to a list containing one element for each successful match. Note that, even for
+exact searches, the elements of this list may be different, if there are embedded images,
+windows or hidden text. Searches with -all behave very similarly to the
+Tcl command regexp -all, in that overlapping matches are not normally returned.
+For example, applying an -all search of the pattern “\w+” against “hello there”
+will just match twice, once for each word,
+and matching “Z[a-z]+Z” against “ZooZooZoo” will just match once.
+
+-overlap
+When performing -all searches, the normal behaviour is that matches which overlap
+an already-found match will not be returned. This switch changes that behaviour so that
+all matches which are not totally enclosed within another match are returned. For example,
+applying an -overlap search of the pattern “\w+” against “hello there” will just match
+twice (i.e. no different to just -all), but matching “Z[a-z]+Z” against “ZooZooZoo” will
+now match twice. An error will be thrown if this switch is used without -all.
+
+-strictlimits
+When performing any search, the normal behaviour is that the start and stop limits
+are checked with respect to the start of the matching text. With the -strictlimits flag,
+the entire matching range must lie inside the start and stop limits specified
+for the match to be valid.
+
+-elide
+Find elided (hidden) text as well. By default only displayed text is searched.
+
+--
+This switch has no effect except to terminate the list of switches: the next argument
+will be treated as pattern even if it starts with -.
+
+
+If stopIndex is specified, the search stops at that index: for forward searches,
+no match at or after stopIndex will be considered; for backward searches, no match
+earlier in the text than stopIndex will be considered. If stopIndex is omitted,
+the entire text will be searched: when the beginning or end of the text is reached,
+the search continues at the other end until the starting location is reached again;
+if stopIndex is specified, no wrap-around will occur. This means that, for example,
+if the search is -forwards but stopIndex is earlier in the text than startIndex,
+nothing will ever be found.
+
+		'''
+		
+		for line in helptxt.split('\n'):
+			print(line)
 	
 	
 	def edit_search_setting(self, search_setting):
-		''' search_setting	string
-			Consisting of these separated by space.
-			If -end_idx is given also start_idx must have been given.
+		''' search_setting is string consisting of options below separated by space.
 			
-			For example:
-			my_settings = "-regexp -elide -start_idx insert -end_idx end"
-			edit_search_setting( my_settings )
+			If also setting -start_idx and -end_idx:
+				-start_idx and -end_idx must be last, and -start_idx before -end_idx.
+				If -end_idx is given also start_idx must have been given.
+				It is safest always to give only start_idx so that
+				search would wrap at fileends.
+			
+			Very basic example, use regexp, search all content:
+				
+				edit_search_setting( '-regexp' )
+			
+			Another example, use regexp, include elided text,
+			search only from cursor to fileend:
+				my_settings = "-regexp -elide -start_idx insert -end_idx end"
+				edit_search_setting( my_settings )
+				
+			Yet another example, exact (default) search, backwards from cursor
+			to 50 lines up:
+				my_settings = "-backwards -start_idx insert -end_idx insert -50 lines"
+				edit_search_setting( my_settings )
+				
+			Options:
+			-backwards
+			-regexp
+			-nocase
+			-overlap
+			-nolinestop
+			-strictlimits
+			-elide
+			-start_idx	idx
+			-end_idx	idx
 			
 			
-			'-backwards'
-			'-regexp'
-			'-nocase'
-			'-overlap'
-			'-nolinestop'
-			'-strictlimits'
-			'-elide'
-			'-start_idx'	idx
-			'-end_idx'	idx
+			More help about these options:
+			print_search_help()
 			
+			Print current search settings:
+			print_search_setting()
+			
+			Reset search settings:
+			reset_search_setting()
 		'''
 		
 		if not self.search_settings:
 			self.reset_search_setting()
 		
 		
-		args = [
+		defaults = [
 				self.contents._w,
 				'search',
 				'-all',
@@ -6891,7 +7086,7 @@ class Editor(tkinter.Toplevel):
 				self.match_lenghts_var,
 				]
 				
-				
+		args = defaults[:]
 		user_options = search_setting.split()
 		
 		
@@ -6911,23 +7106,27 @@ class Editor(tkinter.Toplevel):
 				args.append(option)
 				
 		
-		search_start_idx = self.search_start_idx
-		search_end_idx = self.search_end_idx
+		search_start_idx = self.search_starts_at
+		search_end_idx = self.search_ends_at
 		
 		if '-start_idx' in user_options:
-			idx = user_options.index('-start_idx') + 1
+			search_end_idx = False
+			idx_start = user_options.index('-start_idx') + 1
 			
-			if len(user_options) > idx:
-				tmp = user_options[idx]
-				search_start_idx = tmp
-					
+			if len(user_options) > idx_start:
+				
+				if '-end_idx' in user_options[idx_start:]:
+					idx_end = user_options.index('-end_idx')
+					search_start_idx = user_options[idx_start:idx_end]
+				else:
+					search_start_idx = user_options[idx_start:]
 				
 				if '-end_idx' in user_options:
-					idx = user_options.index('-end_idx') + 1
+					idx_start = user_options.index('-end_idx') + 1
 					
-					if len(user_options) > idx:
-						tmp = user_options[idx]
-						search_end_idx = tmp
+					if len(user_options) > idx_start:
+						search_end_idx = user_options[idx_start:]
+						
 				
 		
 		# With s = args one gets reference to original list.
@@ -6943,100 +7142,36 @@ class Editor(tkinter.Toplevel):
 			flag = True
 			
 		s.append(tmp)
-		s.append(search_start_idx)
-		s.append(search_end_idx)
 		
-		
+		if not '-backwards' in user_options:
+			s.append('1.0')
+			s.append('1.0 lineend')
+		else:
+			s.append('1.0 lineend')
+			s.append('1.0')
+			
+			
 		try:
-			self.tk.call(tuple(s))
-			#print('jou')
+			res = self.tk.call(tuple(s))
+			#print(str(res))
 			
 			self.search_settings = args
-			self.search_start_idx = search_start_idx
-			self.search_end_idx = search_end_idx
+			
+			if type(search_start_idx) == list:
+				if tmp := ' '.join(x for x in search_start_idx):
+					self.search_starts_at = tmp
+			else: self.search_starts_at = search_start_idx
+			
+			if type(search_end_idx) == list:
+				if tmp := ' '.join(x for x in search_end_idx):
+					self.search_ends_at = tmp
+			else: self.search_ends_at = search_end_idx
 			
 		except tkinter.TclError as e:
 			print(e)
 		
 		
 		if flag: self.contents.delete('1.0', '1.1')
-			
-		
-		
-		r'''
-		
-		-forwards
-		The search will proceed forward through the text, finding the first matching
-		range starting at or after the position given by index. This is the default.
-		
-		-backwards
-		The search will proceed backward through the text, finding the matching range
-		closest to index whose first character is before index (it is not allowed to be at index).
-		Note that, for a variety of reasons, backwards searches can be substantially slower
-		than forwards searches (particularly when using -regexp), so it is recommended that
-		performance-critical code use forward searches.
-		
-		-exact
-		Use exact matching: the characters in the matching range must be identical to
-		those in pattern. This is the default.
-		
-		-regexp
-		Treat pattern as a regular expression and match it against the text using the
-		rules for regular expressions (see the regexp command and the re_syntax page for details).
-		The default matching automatically passes both the -lineanchor and -linestop options
-		to the regexp engine (unless -nolinestop is used), so that ^$ match beginning and
-		end of line, and ., [^ sequences will never match the newline character \n.
-		
-		-nolinestop
-		This allows . and [^ sequences to match the newline character \n, which they will
-		otherwise not do (see the regexp command for details). This option is only meaningful
-		if -regexp is also given, and an error will be thrown otherwise. For example, to
-		match the entire text, use “pathName search -nolinestop -regexp ".*" 1.0”.
-		
-		-nocase
-		Ignore case differences between the pattern and the text.
-		
-		-count varName
-		The argument following -count gives the name of a variable; if a match is found,
-		the number of index positions between beginning and end of the matching range will
-		be stored in the variable. If there are no embedded images or windows in the matching
-		range (and there are no elided characters if -elide is not given), this is equivalent
-		to the number of characters matched. In either case, the range
-		matchIdx to matchIdx + $count chars will return the entire matched text.
-		
-		-all
-		Find all matches in the given range and return a list of the indices of the first
-		character of each match. If a -count varName switch is given, then varName is also
-		set to a list containing one element for each successful match. Note that, even for
-		exact searches, the elements of this list may be different, if there are embedded images,
-		windows or hidden text. Searches with -all behave very similarly to the
-		Tcl command regexp -all, in that overlapping matches are not normally returned.
-		For example, applying an -all search of the pattern “\w+” against “hello there”
-		will just match twice, once for each word,
-		and matching “Z[a-z]+Z” against “ZooZooZoo” will just match once.
-		
-		-overlap
-		When performing -all searches, the normal behaviour is that matches which overlap
-		an already-found match will not be returned. This switch changes that behaviour so that
-		all matches which are not totally enclosed within another match are returned. For example,
-		applying an -overlap search of the pattern “\w+” against “hello there” will just match
-		twice (i.e. no different to just -all), but matching “Z[a-z]+Z” against “ZooZooZoo” will
-		now match twice. An error will be thrown if this switch is used without -all.
-		
-		-strictlimits
-		When performing any search, the normal behaviour is that the start and stop limits
-		are checked with respect to the start of the matching text. With the -strictlimits flag,
-		the entire matching range must lie inside the start and stop limits specified
-		for the match to be valid.
-		
-		-elide
-		Find elided (hidden) text as well. By default only displayed text is searched.
-		
-		--
-		This switch has no effect except to terminate the list of switches: the next argument
-		will be treated as pattern even if it starts with -.
-		
-		'''
 		
 	
 	def do_search(self, search_word):
@@ -7044,8 +7179,7 @@ class Editor(tkinter.Toplevel):
 			with self.search_settings and tk text search
 			https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			
-			yields start_indexes of matches as list
-			yields number of search matches
+			returns number of search matches
 			
 			if at least one match:
 				tags 'match' with list match_ranges
@@ -7057,18 +7191,14 @@ class Editor(tkinter.Toplevel):
 		s = self.search_settings[:]
 		s.append( '--' )
 		s.append(search_word)
-		s.append(self.search_start_idx)
-		s.append(self.search_end_idx)
+		s.append(self.search_starts_at)
+		if self.search_ends_at: s.append(self.search_ends_at)
 		
-		#print(s)
 		
 		res = self.tk.call(tuple(s))
-		
+		if not res: return False
 
 		m = start_indexes = self.search_start_indexes = [ str(x) for x in res ]
-		
-		# Returning results to caller while not breaking execution of this function
-		yield start_indexes
 		
 
 		# s holds lenghts of matches
@@ -7082,22 +7212,37 @@ class Editor(tkinter.Toplevel):
 		
 		# self.search_matches
 		num_matches = len(start_indexes)
-		yield num_matches
 		
-		if not num_matches: return
+		if not num_matches: return False
 		
-
+		
 		match_ranges = list()
 		for i in range( len(start_indexes) ):
+			
+##			###
+##			mark_name = 'match%d' % i
+##			start_idx = start_indexes[i]
+##			self.contents.mark_set(mark_name, start_idx)
+##
+##			match_lenght = s[i]
+##			end_idx = '%s +%dc' % (mark_name, match_lenght)
+##
+##			match_ranges.append(mark_name)
+##			match_ranges.append(end_idx)
+##			###
+			
+			
 			start_idx = start_indexes[i]
 			match_lenght = s[i]
 			end_idx = '%s +%dc' % (start_idx, match_lenght)
-			
+
 			match_ranges.append(start_idx)
 			match_ranges.append(end_idx)
 			
 		
 		self.contents.tag_add('match', *match_ranges)
+		
+		return num_matches
 		
 	
 	def start_search(self, event=None):
@@ -7116,21 +7261,19 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.tag_remove('match', '1.0', tkinter.END)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
-		self.search_focus = ('1.0', '1.0')
-		self.search_matches = 0
-		
-		pos = '1.0'
-		wordlen = len(search_word)
 		self.contents.tag_config('match', background='', foreground='')
 		
+		self.search_matches = 0
 		
-		#######
-		# m is not used here, just left as yield-example
-		# m: self.search_start_indexes
-		m, self.search_matches = self.do_search(search_word)
-		#print(m, '\n', s)
+		
+		
+		self.search_matches = self.do_search(search_word)
 		# 'match' is tagged in do_search()
-		#######
+		
+		self.search_focus = (self.search_starts_at, self.search_starts_at)
+		
+##		if '-backwards' in self.search_settings:
+##			self.search_focus = ('end', 'end')
 		
 		
 		
@@ -7142,14 +7285,24 @@ class Editor(tkinter.Toplevel):
 			self.entry.config(validate='none')
 				
 			if self.state == 'search':
-				self.bid_show_next = self.bind("<Control-n>", self.show_next)
-				self.bid_show_prev = self.bind("<Control-p>", self.show_prev)
+				
+				if '-backwards' in self.search_settings:
+					self.bid_show_next = self.bind("<Control-n>", self.show_prev )
+					self.bid_show_prev = self.bind("<Control-p>", self.show_next )
+				else:
+					self.bid_show_next = self.bind("<Control-n>", self.show_next )
+					self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
+				
 				
 				self.entry.flag_start = True
 				
 				self.contents.focus_set()
 				self.wait_for(100)
-				self.show_next()
+				
+				if '-backwards' in self.search_settings:
+					self.show_prev()
+				else:
+					self.show_next()
 				
 				
 			else:
@@ -7525,10 +7678,19 @@ class Editor(tkinter.Toplevel):
 		self.contents.delete(self.search_focus[0], self.search_focus[1])
 		self.contents.insert(self.search_focus[0], self.new_word)
 		
-		# tag replacement to avoid rematching same place
+		
+		# Tag replacement place for notice
 		p = "%s + %dc" % (self.search_focus[0], wordlen2)
 		self.contents.tag_add('replaced', self.search_focus[0], p)
 		
+		
+##		# To avoid rematching same place, remove place from search-indexes
+##		i = self.search_focus[0]
+##		i = self.search_start_indexes.index(i)
+##
+##		self.search_start_indexes.pop(i)
+##		self.match_lenghts.pop(i)
+	
 		
 		self.contents.config(state='disabled')
 		
@@ -7537,30 +7699,50 @@ class Editor(tkinter.Toplevel):
 		if self.search_matches == 0:
 			self.wait_for(100)
 			self.stop_search()
-
+		
 	
 	def do_replace_all(self, event=None):
 		
+		self.contents.tag_config('match', background='', foreground='')
 		self.contents.config(state='normal')
-		wordlen = len(self.old_word)
-		wordlen2 = len(self.new_word)
+		wordlen_new = len(self.new_word)
 		
+		pos = '1.0'
+		range_func = self.contents.tag_nextrange
 		
-		for i in range( len(self.search_start_indexes) ):
+		if '-backwards' in self.search_settings:
+			range_func = self.contents.tag_prevrange
+			pos = 'end'
+			
+		for i in range(self.search_matches):
 		
-			start_idx = self.search_start_indexes[i]
-			end_idx_old = '%s +%dc' % ( start_idx, self.match_lenghts[i] )
-			end_idx_new = "%s + %dc" % ( start_idx, wordlen2 )
+			start_idx, end_idx_old = range_func('match', pos)
+			end_idx_new = "%s + %dc" % ( start_idx, wordlen_new )
 			
 			self.contents.delete(start_idx, end_idx_old)
 			self.contents.insert(start_idx, self.new_word)
 			self.contents.tag_add('replaced', start_idx, end_idx_new)
+			
+			if '-backwards' in self.search_settings:
+				pos = start_idx
+			else:
+				pos = end_idx_new
 		
 		
-		pos = start_idx
-		self.wait_for(100)
+		
+		# Is it viewable?
+		if not self.contents.bbox(pos):
+			self.wait_for(200)
+		
 		self.ensure_idx_visibility(pos)
+		self.wait_for(200)
+		
+		bg, fg = self.themes[self.curtheme]['replaced'][:]
+		self.contents.tag_config('replaced', background=bg, foreground=fg)
+			
+		
 		self.stop_search()
+		###################
 		
 		
 	def start_replace(self, event=None):
@@ -7598,8 +7780,14 @@ class Editor(tkinter.Toplevel):
 		self.show_next()
 		
 		
-		self.bid_show_next = self.bind("<Control-n>", self.show_next)
-		self.bid_show_prev = self.bind("<Control-p>", self.show_prev)
+		if '-backwards' in self.search_settings:
+			self.bid_show_next = self.bind("<Control-n>", self.show_prev )
+			self.bid_show_prev = self.bind("<Control-p>", self.show_next )
+		else:
+			self.bid_show_next = self.bind("<Control-n>", self.show_next )
+			self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
+		
+		
 		self.entry.bind("<Return>", self.skip_bindlevel)
 		self.contents.bind("<Return>", self.skip_bindlevel)
 		self.contents.focus_set()

@@ -73,7 +73,7 @@ macos when trying to open: /home
 
 fixed ok?
 ###########
-check if other than py-files are tabified
+check11 if other than py-files are tabified
 	done they now are not tabified
 	update help?
 ###########
@@ -117,12 +117,12 @@ save is too big: splitted to save_forced/save
 #########
 removed no copy ln --> do_nothing_without_bell ok
 #########
-added state check in save() ok?
+added state check11 in save() ok?
 #########
 tag_link/loadfile error handling bookmarks etc.
 tag_link new_tab after f.read ok?
-save, called from deltab: check done ok?
-save, called from loadfile: check done ok?
+save, called from deltab: check11 done ok?
+save, called from loadfile: check11 done ok?
 #########
 search open() in save, get wrong scope:
 	fixed get_scope_path()
@@ -219,10 +219,60 @@ cmd-shift-left/right, selects from, space only lines also
 
 
 
+##############################
+search, replace fixing Start
 
+
+Have to use marks to get overlapping searches work.
+
+
+'-start_idx insert'
+	forwards
+		selection end == word start
+		search starts from selected
+	
+	backwards
+		selection end == word end
+		search starts from selected
+
+
+
+if '-backwards' in self.search_settings: #########
+	self.bid_show_next = self.bind("<Control-n>", self.show_next)
+	self.bid_show_prev = self.bind("<Control-p>", self.show_prev)
+
+
+
+search AAABBB:
+AAABBBAAABBB
+AAABBB
+
+second line is considered as one match if using 'match' tag only
+
+
+
+start_search:
+	search_focus == search_start_idx
+	done ok?
+
+
+self.match_ranges?
+
+
+
+
+search, replace fixing End
 ###################
+
+
+
+
+
+
+
+
 search, replace, search_next
-- Control-np help error normal done ok?
+- Control-np in help, error, normal done ok?
 
 reset_search_setting()
 print_search_setting()
@@ -245,13 +295,6 @@ wait_for like in show_next
 handle_search_entry not done #######################################
 
 
-
-self.match_ranges ###################
-self.entry.flag_start ###############
-
-save search_setting with name
-load search_setting with name
-
 search_next in help error works
 error: if want to search part of filepaths (select with mouse will open file)
 	put cursor near taglink and
@@ -261,7 +304,22 @@ error: if want to search part of filepaths (select with mouse will open file)
 
 
 
+
+
+
+
+
+
+
+
+
+
+search "self.match_lenghts" in edit_search_setting():
+	no get funcname
+
+
 get(elided)
+elided text is getted by default
 
 
 goto bookmark show position among all bookmarks etc.
@@ -308,6 +366,7 @@ tab on empty line, if at indent0, to same indent than prevline
 
 
 enable cancel tab-completion
+tab completion should first suggest from function scope
 
 
 show scope always
