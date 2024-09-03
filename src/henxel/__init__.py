@@ -326,23 +326,24 @@ class Editor(tkinter.Toplevel):
 			pass
 		
 		
+		# Search related variables Begin
 		# This marks range of focus-tag:
 		self.search_focus = ('1.0', '1.0')
-		self.search_start_indexes = list() # of str
+		self.mark_indexes = list() # of int
 		self.match_lenghts = list() # of int
 		self.match_lenghts_var = tkinter.StringVar()
 		
 		self.search_settings = False
 		self.search_starts_at = '1.0'
 		self.search_ends_at = False
-		
-		
+				
 		self.search_matches = 0
 		self.old_word = ''
 		self.new_word = ''
 		
 		# Used in get_scope_path()
 		self.search_count_var = tkinter.IntVar()
+		# Search related variables End
 		
 		self.errlines = list()
 		
@@ -418,7 +419,7 @@ class Editor(tkinter.Toplevel):
 		self.ln_widget = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4)
 		self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
 		
-		# disable copying linenumbers:
+		# Disable copying linenumbers:
 		shortcut = '<Mod1-Key-c>'
 		if self.os_type != 'mac_os': shortcut = '<Control-c>'
 		self.ln_widget.bind(shortcut, self.do_nothing_without_bell)
@@ -850,6 +851,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Return>", self.return_override)
 		self.contents.bind( "<BackSpace>", self.backspace_override)
 		
+		# Used in searching
+		self.bid_space = self.contents.bind( "<space>", self.space_override)
+		
 		self.contents.bind( "<Control-n>", self.search_next)
 		self.contents.bind( "<Control-p>",
 				lambda event: self.search_next(event, **{'back':True}) )
@@ -973,6 +977,7 @@ class Editor(tkinter.Toplevel):
 			
 		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 
+		
 		
 		# Set cursor pos:
 		line = self.tabs[self.tabindex].position
@@ -4495,6 +4500,7 @@ class Editor(tkinter.Toplevel):
 			return "break"
 		 
 		try:
+			self.wait_for(100)
 			self.contents.edit_undo()
 			
 			self.do_syntax()
@@ -4512,8 +4518,8 @@ class Editor(tkinter.Toplevel):
 			return "break"
 			
 		try:
+			self.wait_for(100)
 			self.contents.edit_redo()
-			
 			
 			self.do_syntax()
 			
@@ -4533,6 +4539,12 @@ class Editor(tkinter.Toplevel):
 	def esc_override(self, event):
 		'''	Enable toggle fullscreen with Esc.
 		'''
+		# Safe escing, if mistakenly pressed during search_next
+		if self.state == 'normal':
+			if len(self.contents.tag_ranges('sel')) > 0:
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
+				return 'break'
+			
 		if self.wm_attributes().count('-fullscreen') != 0:
 			if self.state == 'normal':
 				if self.fullscreen:
@@ -4549,7 +4561,15 @@ class Editor(tkinter.Toplevel):
 	def space_override(self, event):
 		'''	Used to bind Space-key when searching or replacing.
 		'''
-		
+		# Safe spacing, if mistakenly pressed during search_next
+		if self.state in ['normal', 'error', 'help']:
+			if len(self.contents.tag_ranges('sel')) > 0:
+				self.contents.tag_remove('sel', '1.0', tkinter.END)
+				return 'break'
+			else:
+				return
+				
+				
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
 		
@@ -5128,7 +5148,7 @@ class Editor(tkinter.Toplevel):
 				flag_scope = True
 		
 		# This flag is set in insert_inspected()
-		elif self.tabs[self.tabindex].inspected:
+		elif hasattr(self.tabs[self.tabindex], 'inspected'):
 			flag_scope = True
 			
 		if flag_scope:
@@ -5383,6 +5403,7 @@ class Editor(tkinter.Toplevel):
 		
 		# No bookmarks in this tab
 		if not pos:
+			self.wait_for(100)
 			self.bell()
 			return "break"
 			
@@ -5946,6 +5967,9 @@ class Editor(tkinter.Toplevel):
 ########## Bookmarks and Help Begin
 	
 	def print_bookmarks(self):
+		
+		self.wait_for(100)
+		
 		for mark in self.contents.mark_names():
 			if 'bookmark' in mark:
 				i = self.contents.index(mark)
@@ -6631,19 +6655,24 @@ class Editor(tkinter.Toplevel):
 		'''	Search with selection from cursor position,
 			show and select next/previous match.
 			
+			If there is no selection, search-word from
+			last real search is used.
+			
 			Shortcut: Ctrl-np
 		'''
 		search_word = False
 		
-		if self.state not in ['normal', 'error', 'help']:
+		if self.state == 'waiting':
+			return 'break'
+		
+		elif self.state not in ['normal', 'error', 'help']:
 			self.bell()
 			return 'break'
 		
 		# No selection
 		elif len(self.contents.tag_ranges('sel')) == 0:
-			self.bell()
-			return 'break'
-		
+			if search_word := self.old_word: pass
+			
 		else:
 			tmp = self.selection_get()
 			
@@ -6672,20 +6701,35 @@ class Editor(tkinter.Toplevel):
 			return "break"
 				
 		
-		# Current index
-		sel_start = self.contents.index(tkinter.SEL_FIRST)
-		idx = m.index(sel_start)
+		flag_nosel = False
 		
-		# Update index with limit check
-		if back:
-			if idx == 0:
-				idx = len(m)
-			idx -= 1
+		# Current index
+		if len(self.contents.tag_ranges('sel')) > 0:
+			start = self.contents.index(tkinter.SEL_FIRST)
 			
 		else:
-			if idx == len(m) - 1:
-				idx = -1
-			idx += 1
+			start = self.contents.search(search_word, 'insert')
+			# Want to stop at first match
+			flag_nosel = True
+			
+		
+		idx = m.index(start)
+		
+		
+		if flag_nosel:
+			if back: idx -= 1
+		
+		else:
+			# Update index with limit check
+			if back:
+				if idx == 0:
+					idx = len(m)
+				idx -= 1
+				
+			else:
+				if idx == len(m) - 1:
+					idx = -1
+				idx += 1
 		
 		
 		pos = m[idx]
@@ -6694,10 +6738,13 @@ class Editor(tkinter.Toplevel):
 		wordlen = len(search_word)
 		word_end = "%s + %dc" % (pos, wordlen)
 		
+		self.wait_for(50)
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		self.contents.mark_set(self.anchorname, pos)
+		self.wait_for(50)
 		self.contents.tag_add('sel', pos, word_end)
 		self.contents.mark_set('insert', word_end)
+		self.wait_for(100)
 		self.ensure_idx_visibility(pos)
 					
 		return "break"
@@ -6707,101 +6754,60 @@ class Editor(tkinter.Toplevel):
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
 		
+		# self.search_index is int telling: on what match-mark focus is now at.
+		# If self.search_index == 2, then focus is at mark named 'match2' etc.
 		
-##		###
-##		# Find next mark
-##		#s = self.contents.index('%s display linestart' % index)
-##		mark_name = self.contents.mark_next(self.search_focus[0])
-##
-##		# Find first mark after s
-##		while mark_name:
-##			if 'match' not in mark_name:
-##				mark_name = self.contents.mark_next(mark_name)
-##			else:
-##				self.contents.tag_remove('focus', '1.0', tkinter.END)
-##				break
-##
-##		if mark_name:
-##			if 'match' in mark_name:
-##				i = int( mark_name.split('match')[1] )
-##				start = mark_name
-##				end = '%s +%dc' % ( mark_name, self.match_lenghts[i] )
-##
-##				#end = self.contents.index( self.match_lenghts[i] )
-##
-##				self.search_focus = (start, end)
-##				print(self.search_focus)
-##
-##				ref = self.search_focus[0]
-##				idx = i + 1
-##
-##
-##		###
+		# idx counts from 0 until at next match-mark. One can not just iterate marks
+		# and get idx from mark-name because marks get 'deleted' if replacing.
+		# --> 'match2' is not necessarily second (or whatever) in list.
 		
-		
-		
-		
-		
-		match_ranges = self.contents.tag_ranges('match')
-
-		# Check if at last match or beyond:
-		i = len(match_ranges) - 2
-		last = match_ranges[i]
-
-		# self.search_focus marks range of focus-tag:
-		if self.contents.compare(self.search_focus[0], '>=', last):
-			self.search_focus = ('1.0', '1.0')
-
-		self.contents.tag_remove('focus', '1.0', tkinter.END)
-
-
-		# self.search_focus marks range of focus-tag. That is
-		# from self.search_focus[0] to self.search_focus[1], for example: from '20.2' to '20.8'
-
-		# Here focus is moved to next match.
-		# tag_nextrange('match', self.search_focus[1]) means:
-		# Find next (range of) tag named 'match' after index self.search_focus[1].
-		self.search_focus = self.contents.tag_nextrange('match', self.search_focus[1])
-		ref = self.search_focus[0]
-
-		# Compare above range of focus-tag to match_ranges to get current
-		# index position among all current matches. For example: If now have 10 matches left,
+		# idx is used to get current index position among all current matches.
+		# For example: If now have 10 matches left,
 		# and last position was 1/11, but then one match got replaced,
-		# so focus is now at 1/10 and after this show next-call it should be at 2/10.
-
-		# <textindex object> --> str
-		# Only start-indexes: match_ranges[::2] (every other element)
-		l = [ str(x) for x in match_ranges[::2] ]
-
-		# +1: positioning starts from 1 instead of 0. 1/10 not 0/9.
-		idx = l.index(ref) + 1
-
-
-		if '-backwards' in self.search_settings:
-			idx = self.search_matches - idx + 1
+		# so focus is now at 1/10 and after this show_next-call it should be at 2/10.
+		
+		# self.mark_indexes is list holding ints of still remaining match-marks.
+		# These ints are sorted from small to big.
 
 		
-		self.handle_search_entry(idx, ref)
-
-		###
+		idx = 0
+		for index in self.mark_indexes:
+			idx += 1
+			
+			if index > self.search_index:
+				self.search_index = index
+				
+				break
+				
+		# There was no bigger int in list:
+		# --> focus is at last match, or at last match that was replaced.
+		# --> Wrap focus to first match-mark.
+		else:
+			idx = 1
+			self.search_index = self.mark_indexes[0]
 		
 		
+		mark_name = 'match%d' % self.search_index
+		
+		self.contents.tag_remove('focus', '1.0', tkinter.END)
+		
+		# match-mark marks start of the match
+		start = mark_name
+		end = '%s +%dc' % ( mark_name, self.match_lenghts[self.search_index] )
+		# self.search_focus is range of focus-tag.
+		self.search_focus = (start, end)
 		
 		
-		
-		
-		
-		
-		
-##		# i: int, start_idx: tkinter.Text -index
-##		self.handle_search_entry(i, start_idx)
+		# idx: int
+		# start: tkinter.Text -index
+		self.handle_search_entry(idx, start)
 
 		
 		# Is it viewable?
-		if not self.contents.bbox(ref):
+		if not self.contents.bbox(start):
 			self.wait_for(100)
 		
-		self.ensure_idx_visibility(ref)
+		self.ensure_idx_visibility(start)
 		
 		
 		if self.entry.flag_start:
@@ -6815,8 +6821,9 @@ class Editor(tkinter.Toplevel):
 		
 
 		# Change color
-		# self.search_focus marks range of focus-tag. Here focus-tag is changed.
+		# self.search_focus is range of focus-tag.
 		self.contents.tag_add('focus', self.search_focus[0], self.search_focus[1])
+		
 		
 		
 		self.entry.config(validate='key')
@@ -6836,52 +6843,60 @@ class Editor(tkinter.Toplevel):
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
 		
+		# self.search_index is int telling: on what match-mark focus is now at.
+		# If self.search_index == 2, then focus is at mark named 'match2' etc.
+		
+		# idx counts down from len(self.mark_indexes) until at previous match-mark.
+		# One can not just iterate marks
+		# and get idx from mark-name because marks get 'deleted' if replacing.
+		# --> 'match2' is not necessarily second (or whatever) in list.
+		
+		# idx is used to get current index position among all current matches.
+		# For example: If now have 10 matches left,
+		# and last position was 3/11, but then one match got replaced,
+		# so focus could now be at say: 2/10 and after this show_prev-call it should be at 1/10.
+		
+		# self.mark_indexes is list holding ints of still remaining match-marks.
+		# These ints are sorted from small to big.
+
+		idx = len(self.mark_indexes) + 1
+		for index in self.mark_indexes[::-1]:
+			idx -= 1
+			
+			if index < self.search_index:
+				self.search_index = index
+				
+				break
+		
+		# There was no smaller int in list:
+		# --> focus is at first match, or at first match that was replaced.
+		# --> Wrap focus to last match-mark.
+		else:
+			idx = len(self.mark_indexes)
+			self.search_index = self.mark_indexes[-1]
 		
 		
-		####
-		match_ranges = self.contents.tag_ranges('match')
-		
-		first = match_ranges[0]
-		
-		# self.search_focus marks range of focus-tag:
-		if self.contents.compare(self.search_focus[0], '<=', first):
-			self.search_focus = (tkinter.END, tkinter.END)
+		mark_name = 'match%d' % self.search_index
 		
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		
-		
-		# self.search_focus marks range of focus-tag.
-		# Here focus is moved to previous match before current focus:
-		self.search_focus = self.contents.tag_prevrange('match', self.search_focus[0])
-		ref = self.search_focus[0]
-		
-		# Compare above range of focus-tag to match_ranges to get current
-		# index position among all current matches. For example: If now have 11 matches left,
-		# and last position was 2/12, but then one match got replaced,
-		# so focus is now at say 2/11 and after this show prev-call it should be at 1/11.
-		
-		# <textindex object> --> str
-		# Only start-indexes: match_ranges[::2] (every other element)
-		l = [ str(x) for x in match_ranges[::2] ]
-		
-		# +1: positioning starts from 1 instead of 0. 1/10 not 0/9.
-		idx = l.index(ref) + 1
+		# match-mark marks start of the match
+		start = mark_name
+		end = '%s +%dc' % ( mark_name, self.match_lenghts[self.search_index] )
+		# self.search_focus is range of focus-tag.
+		self.search_focus = (start, end)
 		
 		
-		if '-backwards' in self.search_settings:
-			idx = self.search_matches - idx + 1
-		
-		
-		self.handle_search_entry(idx, ref)
-		####
-		
-		
+		# idx: int
+		# start: tkinter.Text -index
+		self.handle_search_entry(idx, start)
+
 		
 		# Is it viewable?
-		if not self.contents.bbox(ref):
+		if not self.contents.bbox(start):
 			self.wait_for(100)
 		
-		self.ensure_idx_visibility(ref)
+		self.ensure_idx_visibility(start)
 
 		
 		if self.entry.flag_start:
@@ -6894,7 +6909,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 		# Change color
-		# self.search_focus marks range of focus-tag. Here focus-tag is changed.
+		# self.search_focus is range of focus-tag.
 		self.contents.tag_add('focus', self.search_focus[0], self.search_focus[1])
 			
 		self.entry.config(validate='key')
@@ -6926,25 +6941,23 @@ class Editor(tkinter.Toplevel):
 		
 	
 	def print_search_setting(self):
-	
+		
 		if not self.search_settings:
 			self.reset_search_setting()
 		
 		print(
 			self.search_settings[5:],
 			'\n'
-			'start_idx:', self.search_starts_at,
+			'start:', self.search_starts_at,
 			'\n'
-			'end_idx:', self.search_ends_at
+			'end:', self.search_ends_at
 			)
 	
 	
 	def print_search_help(self):
 		
 		helptxt = r'''
--forwards
-The search will proceed forward through the text, finding the first matching
-range starting at or after the position given by index. This is the default.
+Search-options
 
 -backwards
 The search will proceed backward through the text, finding the matching range
@@ -6952,10 +6965,6 @@ closest to index whose first character is before index (it is not allowed to be 
 Note that, for a variety of reasons, backwards searches can be substantially slower
 than forwards searches (particularly when using -regexp), so it is recommended that
 performance-critical code use forward searches.
-
--exact
-Use exact matching: the characters in the matching range must be identical to
-those in pattern. This is the default.
 
 -regexp
 Treat pattern as a regular expression and match it against the text using the
@@ -6967,38 +6976,26 @@ end of line, and ., [^ sequences will never match the newline character \n.
 -nolinestop
 This allows . and [^ sequences to match the newline character \n, which they will
 otherwise not do (see the regexp command for details). This option is only meaningful
-if -regexp is also given, and an error will be thrown otherwise. For example, to
-match the entire text, use “pathName search -nolinestop -regexp ".*" 1.0”.
+if -regexp is also given, and error will be thrown otherwise. For example, to
+match the entire text, use "-nolinestop -regexp" as search setting
+and ".*" as search word.
 
 -nocase
 Ignore case differences between the pattern and the text.
 
--count varName
-The argument following -count gives the name of a variable; if a match is found,
-the number of index positions between beginning and end of the matching range will
-be stored in the variable. If there are no embedded images or windows in the matching
-range (and there are no elided characters if -elide is not given), this is equivalent
-to the number of characters matched. In either case, the range
-matchIdx to matchIdx + $count chars will return the entire matched text.
-
--all
-Find all matches in the given range and return a list of the indices of the first
-character of each match. If a -count varName switch is given, then varName is also
-set to a list containing one element for each successful match. Note that, even for
-exact searches, the elements of this list may be different, if there are embedded images,
-windows or hidden text. Searches with -all behave very similarly to the
-Tcl command regexp -all, in that overlapping matches are not normally returned.
-For example, applying an -all search of the pattern “\w+” against “hello there”
-will just match twice, once for each word,
-and matching “Z[a-z]+Z” against “ZooZooZoo” will just match once.
-
 -overlap
-When performing -all searches, the normal behaviour is that matches which overlap
+The normal behaviour is that matches which overlap
 an already-found match will not be returned. This switch changes that behaviour so that
 all matches which are not totally enclosed within another match are returned. For example,
-applying an -overlap search of the pattern “\w+” against “hello there” will just match
-twice (i.e. no different to just -all), but matching “Z[a-z]+Z” against “ZooZooZoo” will
-now match twice. An error will be thrown if this switch is used without -all.
+doing -overlap search with pattern “\w+” against “hello there” will just match
+twice (same as without -overlap), but matching “B[a-z]+B” against “BooBooBoo” will
+now match twice.
+Replacing is disabled while this setting is on. Searching works.
+Consider this using only -regexp and no -overlap:
+If have string ABABABABA, where boundary is A and contents is B and
+want change contents B: use regexp B(?=A) to match contents.
+(It also matches BBA etc, so check every match --> don't use replace_all)
+To change boundary A, search for A.
 
 -strictlimits
 When performing any search, the normal behaviour is that the start and stop limits
@@ -7009,11 +7006,6 @@ for the match to be valid.
 -elide
 Find elided (hidden) text as well. By default only displayed text is searched.
 
---
-This switch has no effect except to terminate the list of switches: the next argument
-will be treated as pattern even if it starts with -.
-
-
 If stopIndex is specified, the search stops at that index: for forward searches,
 no match at or after stopIndex will be considered; for backward searches, no match
 earlier in the text than stopIndex will be considered. If stopIndex is omitted,
@@ -7023,6 +7015,8 @@ if stopIndex is specified, no wrap-around will occur. This means that, for examp
 if the search is -forwards but stopIndex is earlier in the text than startIndex,
 nothing will ever be found.
 
+https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
+
 		'''
 		
 		for line in helptxt.split('\n'):
@@ -7030,27 +7024,45 @@ nothing will ever be found.
 	
 	
 	def edit_search_setting(self, search_setting):
-		''' search_setting is string consisting of options below separated by space.
+		''' search_setting is string consisting of options below separated by spaces.
 			
-			If also setting -start_idx and -end_idx:
-				-start_idx and -end_idx must be last, and -start_idx before -end_idx.
-				If -end_idx is given also start_idx must have been given.
-				It is safest always to give only start_idx so that
-				search would wrap at fileends.
+			If also setting -start and -end:
+			-start and -end must be last, and -start before -end.
+			If -end is given, also -start must have been given.
 			
-			Very basic example, use regexp, search all content:
+			When both -start and -end is given:
+			If search is not -backwards: -start-index must be such that, it is before
+			-end-index in contents. If search is -backwards: -start-index must be such
+			that, it is after -end-index in contents.
+			
+			If want to search all content, it is safest always to give only -start
+			so that search would wrap at fileends. If no -start is given, old
+			indexes are used. If only -start is given, old -end-index is deleted.
+			
+
+			Special indexes:
+			(note that there is no index called 'start'):
+			filestart: 1.0
+			fileend: end
+			insertion cursor: insert
+			
+			
+			Example1, use regexp and old indexes:
 				
 				edit_search_setting( '-regexp' )
 			
-			Another example, use regexp, include elided text,
-			search only from cursor to fileend:
-				my_settings = "-regexp -elide -start_idx insert -end_idx end"
+			
+			Example2, use regexp, include elided text, search only from cursor to fileend:
+			
+				my_settings = "-regexp -elide -start insert -end end"
+			
 				edit_search_setting( my_settings )
+			
+			
+			Example3, exact (default) search, backwards from cursor to 50 lines up:
+					
+				my_settings = "-backwards -start insert -end insert -50 lines"
 				
-			Yet another example, exact (default) search, backwards from cursor
-			to 50 lines up:
-				my_settings = "-backwards -start_idx insert -end_idx insert -50 lines"
-				edit_search_setting( my_settings )
 				
 			Options:
 			-backwards
@@ -7060,9 +7072,11 @@ nothing will ever be found.
 			-nolinestop
 			-strictlimits
 			-elide
-			-start_idx	idx
-			-end_idx	idx
+			-start	idx
+			-end	idx
 			
+			
+			Replacing does not work while -overlap -setting is on. Searching works.
 			
 			More help about these options:
 			print_search_help()
@@ -7072,11 +7086,12 @@ nothing will ever be found.
 			
 			Reset search settings:
 			reset_search_setting()
+			
+			https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		'''
 		
 		if not self.search_settings:
 			self.reset_search_setting()
-		
 		
 		defaults = [
 				self.contents._w,
@@ -7086,7 +7101,7 @@ nothing will ever be found.
 				self.match_lenghts_var,
 				]
 				
-		args = defaults[:]
+		settings = defaults[:]
 		user_options = search_setting.split()
 		
 		
@@ -7103,35 +7118,38 @@ nothing will ever be found.
 		
 		for option in user_options:
 			if option in options:
-				args.append(option)
+				settings.append(option)
 				
 		
 		search_start_idx = self.search_starts_at
 		search_end_idx = self.search_ends_at
 		
-		if '-start_idx' in user_options:
-			search_end_idx = False
-			idx_start = user_options.index('-start_idx') + 1
+		
+		if '-start' in user_options:
+			idx_start = user_options.index('-start') + 1
 			
 			if len(user_options) > idx_start:
 				
-				if '-end_idx' in user_options[idx_start:]:
-					idx_end = user_options.index('-end_idx')
+				# Also changing StopIndex part1
+				if '-end' in user_options[idx_start:]:
+					idx_end = user_options.index('-end')
 					search_start_idx = user_options[idx_start:idx_end]
+				
+				# Changing only StartIndex
 				else:
 					search_start_idx = user_options[idx_start:]
 				
-				if '-end_idx' in user_options:
-					idx_start = user_options.index('-end_idx') + 1
+				# Also changing StopIndex part2
+				if '-end' in user_options:
+					idx_start = user_options.index('-end') + 1
 					
 					if len(user_options) > idx_start:
 						search_end_idx = user_options[idx_start:]
 						
-				
 		
-		# With s = args one gets reference to original list.
+		# With s = settings one gets reference to original list.
 		# If want copy(dont want to mess original), and one likely does, one writes:
-		s = args[:]
+		s = settings[:]
 		s.append( '--' )
 		tmp = self.contents.get('1.0', '1.1')
 		
@@ -7153,26 +7171,30 @@ nothing will ever be found.
 			
 		try:
 			res = self.tk.call(tuple(s))
-			#print(str(res))
 			
-			self.search_settings = args
-			
+			self.search_settings = settings
+						
+			# Start changed
 			if type(search_start_idx) == list:
 				if tmp := ' '.join(x for x in search_start_idx):
 					self.search_starts_at = tmp
-			else: self.search_starts_at = search_start_idx
-			
-			if type(search_end_idx) == list:
-				if tmp := ' '.join(x for x in search_end_idx):
-					self.search_ends_at = tmp
-			else: self.search_ends_at = search_end_idx
+					
+					# End changed
+					if type(search_end_idx) == list:
+						if tmp := ' '.join(x for x in search_end_idx):
+							self.search_ends_at = tmp
+					
+					# Start changed but End not changed
+					else: self.search_ends_at = False
 			
 		except tkinter.TclError as e:
 			print(e)
 		
 		
 		if flag: self.contents.delete('1.0', '1.1')
-		
+	
+		#### edit_search_setting End ##############
+	
 	
 	def do_search(self, search_word):
 		''' Search contents for search_word
@@ -7183,22 +7205,42 @@ nothing will ever be found.
 			
 			if at least one match:
 				tags 'match' with list match_ranges
+				
+			called from start_search()
 		'''
-		if not self.search_settings:
-			self.reset_search_setting()
 		
-		
+		def handle_search_start():
+			''' When search-setting: -start == 'insert' and search_word == selection_get:
+				ensure search starts from selection.
+			'''
+	
+			if self.search_starts_at == 'insert':
+				have_selection = len(self.contents.tag_ranges('sel')) > 0
+				if have_selection:
+					tmp = self.selection_get()
+					if tmp == search_word:
+						if '-backwards' not in self.search_settings:
+							idx_sel_start = self.contents.index(tkinter.SEL_FIRST)
+							return idx_sel_start
+						else:
+							idx_sel_end = self.contents.index(tkinter.SEL_LAST)
+							return idx_sel_end
+			# else:
+			return self.search_starts_at
+			##############################
+			
+			
 		s = self.search_settings[:]
 		s.append( '--' )
 		s.append(search_word)
-		s.append(self.search_starts_at)
+		s.append( handle_search_start() )
 		if self.search_ends_at: s.append(self.search_ends_at)
 		
 		
 		res = self.tk.call(tuple(s))
 		if not res: return False
 
-		m = start_indexes = self.search_start_indexes = [ str(x) for x in res ]
+		start_indexes = [ str(x) for x in res ]
 		
 
 		# s holds lenghts of matches
@@ -7216,30 +7258,29 @@ nothing will ever be found.
 		if not num_matches: return False
 		
 		
+		
+		for mark in self.contents.mark_names():
+			if 'match' in mark:
+				self.contents.mark_unset(mark)
+				
 		match_ranges = list()
+		self.mark_indexes = list()
+		
+		# Tag matches, add mark to start of every match
 		for i in range( len(start_indexes) ):
 			
-##			###
-##			mark_name = 'match%d' % i
-##			start_idx = start_indexes[i]
-##			self.contents.mark_set(mark_name, start_idx)
-##
-##			match_lenght = s[i]
-##			end_idx = '%s +%dc' % (mark_name, match_lenght)
-##
-##			match_ranges.append(mark_name)
-##			match_ranges.append(end_idx)
-##			###
-			
-			
+			mark_name = 'match%d' % i
 			start_idx = start_indexes[i]
-			match_lenght = s[i]
-			end_idx = '%s +%dc' % (start_idx, match_lenght)
+			self.contents.mark_set(mark_name, start_idx)
+			self.mark_indexes.append(i)
 
-			match_ranges.append(start_idx)
+			match_lenght = s[i]
+			end_idx = '%s +%dc' % (mark_name, match_lenght)
+
+			match_ranges.append(mark_name)
 			match_ranges.append(end_idx)
 			
-		
+			
 		self.contents.tag_add('match', *match_ranges)
 		
 		return num_matches
@@ -7263,46 +7304,31 @@ nothing will ever be found.
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.contents.tag_config('match', background='', foreground='')
 		
-		self.search_matches = 0
-		
-		
 		
 		self.search_matches = self.do_search(search_word)
 		# 'match' is tagged in do_search()
-		
-		self.search_focus = (self.search_starts_at, self.search_starts_at)
-		
-##		if '-backwards' in self.search_settings:
-##			self.search_focus = ('end', 'end')
-		
 		
 		
 		if self.search_matches > 0:
 		
 			self.old_word = search_word
+			self.search_index = -1
 		
 			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.entry.config(validate='none')
 				
+				
 			if self.state == 'search':
 				
-				if '-backwards' in self.search_settings:
-					self.bid_show_next = self.bind("<Control-n>", self.show_prev )
-					self.bid_show_prev = self.bind("<Control-p>", self.show_next )
-				else:
-					self.bid_show_next = self.bind("<Control-n>", self.show_next )
-					self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
-				
+				self.bid_show_next = self.bind("<Control-n>", self.show_next )
+				self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
 				
 				self.entry.flag_start = True
 				
 				self.contents.focus_set()
 				self.wait_for(100)
 				
-				if '-backwards' in self.search_settings:
-					self.show_prev()
-				else:
-					self.show_next()
+				self.show_next()
 				
 				
 			else:
@@ -7417,7 +7443,11 @@ nothing will ever be found.
 		self.contents.unbind( "<Control-n>", funcid=self.bid1 )
 		self.contents.unbind( "<Control-p>", funcid=self.bid2 )
 		self.contents.unbind( "<Double-Button-1>", funcid=self.bid3 )
+		
+		# Space is on hold for extra 200ms, released below
 		self.contents.unbind( "<space>", funcid=self.bid4 )
+		bid_tmp = self.contents.bind( "<space>", self.do_nothing_without_bell)
+		
 		
 		self.contents.bind( "<Control-n>", self.search_next)
 		self.contents.bind( "<Control-p>",
@@ -7449,6 +7479,11 @@ nothing will ever be found.
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
 		
+		# Release space
+		self.wait_for(200)
+		self.contents.unbind( "<space>", funcid=bid_tmp )
+		self.bid_space = self.contents.bind( "<space>", self.space_override)
+		
 		return "break"
 	
 	
@@ -7459,6 +7494,9 @@ nothing will ever be found.
 		if self.state != 'normal':
 			self.bell()
 			return "break"
+		
+		if not self.search_settings:
+			self.reset_search_setting()
 		
 		# Save cursor pos
 		try:
@@ -7483,8 +7521,8 @@ nothing will ever be found.
 		self.bid3 = self.contents.bind("<Double-Button-1>",
 			func=lambda event: self.update_curpos(event, **{'doubleclick':True}), add=True )
 		
-		self.bid4 = self.contents.bind("<space>", func=self.space_override )
-		
+		self.contents.unbind( "<space>", funcid=self.bid_space )
+		self.bid4 = self.contents.bind( "<space>", self.space_override )
 		
 		self.entry.delete(0, tkinter.END)
 		
@@ -7549,9 +7587,19 @@ nothing will ever be found.
 			--> show_next / show_prev / do_single_replace --> stop_search
 		'''
 		
+		if not self.search_settings:
+			self.reset_search_setting()
+		
 		if self.state != 'normal':
 			self.bell()
 			return "break"
+			
+		elif '-overlap' in self.search_settings:
+			self.wait_for(100)
+			print('\nError: Can not replace while "-overlap" in search_settings')
+			self.bell()
+			return "break"
+		
 		
 		# Save cursor pos
 		try:
@@ -7576,6 +7624,7 @@ nothing will ever be found.
 		self.bid3 = self.contents.bind("<Double-Button-1>",
 			func=lambda event: self.update_curpos(event, **{'doubleclick':True}), add=True )
 		
+		self.contents.unbind( "<space>", funcid=self.bid_space )
 		self.bid4 = self.contents.bind("<space>", func=self.space_override )
 		
 		
@@ -7617,9 +7666,20 @@ nothing will ever be found.
 
 
 	def replace_all(self, event=None):
+		
+		if not self.search_settings:
+			self.reset_search_setting()
+		
 		if self.state != 'normal':
 			self.bell()
 			return "break"
+		
+		elif '-overlap' in self.search_settings:
+			self.wait_for(100)
+			print('\nError: Can not replace_all while "-overlap" in search_settings')
+			self.bell()
+			return "break"
+		
 			
 		self.replace(event, state='replace_all')
 		
@@ -7638,13 +7698,17 @@ nothing will ever be found.
 			
 			# Not allowed to do this:
 			if tmp == self.old_word:
-
+				
+				self.wait_for(100)
+				self.bell()
+				self.wait_for(100)
 				self.entry.config(validate='none')
 				self.entry.delete(idx, tkinter.END)
+				
+				self.wait_for(200)
 				self.entry.insert(tkinter.END, self.new_word)
 				self.entry.config(validate='key')
-				self.bell()
-
+				
 				return 'break'
 
 			else:
@@ -7668,28 +7732,23 @@ nothing will ever be found.
 		# Start of actual replacing
 		self.contents.config(state='normal')
 		
-		wordlen = len(self.old_word)
-		wordlen2 = len(self.new_word)
+		wordlen_new = len(self.new_word)
 		
 		
-		# self.search_focus marks range of focus-tag:
-		self.contents.tag_remove('focus', self.search_focus[0], self.search_focus[1])
-		self.contents.tag_remove('match', self.search_focus[0], self.search_focus[1])
-		self.contents.delete(self.search_focus[0], self.search_focus[1])
-		self.contents.insert(self.search_focus[0], self.new_word)
+		###########
+		mark_name = 'match%d' % self.search_index
 		
+		start = self.contents.index(mark_name)
+		end_old = '%s +%dc' % ( start, self.match_lenghts[self.search_index] )
+		end_new = "%s +%dc" % ( start, wordlen_new )
 		
-		# Tag replacement place for notice
-		p = "%s + %dc" % (self.search_focus[0], wordlen2)
-		self.contents.tag_add('replaced', self.search_focus[0], p)
+		self.contents.replace(start, end_old, self.new_word)
 		
+		self.contents.tag_add('replaced', start, end_new)
+		self.contents.mark_unset(mark_name)
+		self.mark_indexes.remove(self.search_index)
+		###########
 		
-##		# To avoid rematching same place, remove place from search-indexes
-##		i = self.search_focus[0]
-##		i = self.search_start_indexes.index(i)
-##
-##		self.search_start_indexes.pop(i)
-##		self.match_lenghts.pop(i)
 	
 		
 		self.contents.config(state='disabled')
@@ -7707,33 +7766,30 @@ nothing will ever be found.
 		self.contents.config(state='normal')
 		wordlen_new = len(self.new_word)
 		
-		pos = '1.0'
-		range_func = self.contents.tag_nextrange
-		
-		if '-backwards' in self.search_settings:
-			range_func = self.contents.tag_prevrange
-			pos = 'end'
+
+		####
+		pos = self.contents.index('match0')
 			
-		for i in range(self.search_matches):
-		
-			start_idx, end_idx_old = range_func('match', pos)
-			end_idx_new = "%s + %dc" % ( start_idx, wordlen_new )
+		for index in self.mark_indexes[::-1]:
 			
-			self.contents.delete(start_idx, end_idx_old)
-			self.contents.insert(start_idx, self.new_word)
-			self.contents.tag_add('replaced', start_idx, end_idx_new)
+			mark_name = 'match%d' % index
+			start = self.contents.index(mark_name)
+			end_old = '%s +%dc' % ( start, self.match_lenghts[index] )
+			end_new = "%s +%dc" % ( start, wordlen_new )
 			
-			if '-backwards' in self.search_settings:
-				pos = start_idx
-			else:
-				pos = end_idx_new
-		
+			self.contents.replace(start, end_old, self.new_word)
+			
+			self.contents.tag_add('replaced', start, end_new)
+			self.contents.mark_unset(mark_name)
+			self.mark_indexes.pop(-1)
+		####
 		
 		
 		# Is it viewable?
 		if not self.contents.bbox(pos):
 			self.wait_for(200)
 		
+		# Show first match that got replaced
 		self.ensure_idx_visibility(pos)
 		self.wait_for(200)
 		
@@ -7777,15 +7833,11 @@ nothing will ever be found.
 		
 		self.entry.flag_start = True
 		self.wait_for(100)
+		
 		self.show_next()
 		
-		
-		if '-backwards' in self.search_settings:
-			self.bid_show_next = self.bind("<Control-n>", self.show_prev )
-			self.bid_show_prev = self.bind("<Control-p>", self.show_next )
-		else:
-			self.bid_show_next = self.bind("<Control-n>", self.show_next )
-			self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
+		self.bid_show_next = self.bind("<Control-n>", self.show_next )
+		self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
 		
 		
 		self.entry.bind("<Return>", self.skip_bindlevel)

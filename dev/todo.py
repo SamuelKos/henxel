@@ -216,61 +216,45 @@ the bottom of the window will be y pixels above the bottom edge of the desktop.
 cmd-shift-left select indentation same as alt-left done ok?
 cmd-shift-left/right, selects from, space only lines also
 #####################
-
-
-
+replace with replace(idx1 idx2 new_word)	done ok?
+now undo works better
+#####################
+added waiting to undo redo search_next
+#####################
+search_next now searches with old_word if no selection
+#####################
+safe space when: search_next, search, replace
+self.bid_space		done ok?
+#####################
+safe esc: if normal and selection, selection clear
+for search_next
 ##############################
 search, replace fixing Start
 
-
 Have to use marks to get overlapping searches work.
 
-
-'-start_idx insert'
-	forwards
-		selection end == word start
-		search starts from selected
+Can not replace/replace_all while "-overlap" in search_settings
 	
-	backwards
-		selection end == word end
-		search starts from selected
+if -start == 'insert' and search_word == selection_get:
+	start search from sel_start
+	done in do_search ok?
 
+show_prev show_next info
+done ok?
 
+search ACA:
+ACABACABA
+ACA
 
-if '-backwards' in self.search_settings: #########
-	self.bid_show_next = self.bind("<Control-n>", self.show_next)
-	self.bid_show_prev = self.bind("<Control-p>", self.show_prev)
+can search with -overlap, if want to replace, use -regexp:
+boundary == A
+want change contents B:
+B(?=A)
 
-
-
-search AAABBB:
-AAABBBAAABBB
-AAABBB
-
-second line is considered as one match if using 'match' tag only
-
-
-
-start_search:
-	search_focus == search_start_idx
-	done ok?
-
-
-self.match_ranges?
-
-
-
+(also matches BBA etc, so must check first with search)
 
 search, replace fixing End
 ###################
-
-
-
-
-
-
-
-
 search, replace, search_next
 - Control-np in help, error, normal done ok?
 
@@ -283,17 +267,7 @@ start_search() calls do_search(search_word)
 
 if selection, use it, else oldword.
 
-
-		
-search_next:
-get current match position among all matches like 2/12:
-	num_all_matches = len(m)
-	pos = idx_next + 1
-	--> pos/num_all_matches
-
-wait_for like in show_next
 handle_search_entry not done #######################################
-
 
 search_next in help error works
 error: if want to search part of filepaths (select with mouse will open file)
@@ -301,6 +275,7 @@ error: if want to search part of filepaths (select with mouse will open file)
 	move it to right place with alt-arrow etc and select with keyboard
 
 ###################
+Below this: not done
 
 
 
@@ -311,21 +286,34 @@ error: if want to search part of filepaths (select with mouse will open file)
 
 
 
-
-
-
+#####################################################
 search "self.match_lenghts" in edit_search_setting():
 	no get funcname
+
+
+tab on empty line, if at indent0, to same indent than prevline
+
+
+enable cancel tab-completion
+tab completion should first suggest from function scope
 
 
 get(elided)
 elided text is getted by default
 
 
-goto bookmark show position among all bookmarks etc.
-
-
 inspect syntax
+elif hasattr(self.tabs[self.tabindex], 'inspected')##
+#####################################################
+
+
+
+
+
+
+
+
+goto bookmark show position among all bookmarks etc.
 
 
 cmd-ae in python shell in macos?
@@ -362,14 +350,8 @@ fixed tag config -under --> -underline
 show closing paren
 
 
-tab on empty line, if at indent0, to same indent than prevline
-
-
-enable cancel tab-completion
-tab completion should first suggest from function scope
-
-
 show scope always
+handle_search_entry not done in search_next
 update scope path after:
 	walk_tab etc
 	in fname.py @Class.method()
