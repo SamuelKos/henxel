@@ -4592,6 +4592,26 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 	
 	
+	def tab_over_indent(self):
+		'''	Called from indent()
+		'''
+		ins = tkinter.INSERT
+		
+		# There should not be selection
+		
+		idx_s, _ = self.idx_linestart()
+		# Line is empty
+		if not idx_s:
+		
+			# Cursor is at indent0
+			if self.contents.index(ins).split('.')[1] == '0':
+				patt = r'^[[:blank:]]*[^[:blank:]#]'
+				pos = self.contents.search(patt, ins, stopindex='1.0',
+					regexp=True, backwards=True, count=self.search_count_var)
+					
+				if pos: return self.search_count_var.get() - 1
+				
+	
 	def can_expand_word(self):
 		'''	Called from indent() and unindent()
 		'''
@@ -6410,6 +6430,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 		if len(self.contents.tag_ranges('sel')) == 0:
+			
 			if self.can_expand_word():
 				self.expander.expand_word()
 				
@@ -6431,6 +6452,11 @@ class Editor(tkinter.Toplevel):
 				# which is intended to help tab-completing with slow/lazy fingers
 
 				return 'break'
+				
+			# If at start of empty line: move cursor to same indent as previous line.
+			elif indentation_level := self.tab_over_indent():
+				self.contents.insert(tkinter.INSERT, indentation_level * '\t')
+				
 			else:
 				return
 				

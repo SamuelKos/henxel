@@ -275,9 +275,10 @@ error: if want to search part of filepaths (select with mouse will open file)
 	move it to right place with alt-arrow etc and select with keyboard
 
 ###################
+tab on empty line, if at indent0, to same indent than prevline
+	tab_over_indent, done ok?
+###################
 Below this: not done
-
-
 
 
 
@@ -290,8 +291,6 @@ Below this: not done
 search "self.match_lenghts" in edit_search_setting():
 	no get funcname
 
-
-tab on empty line, if at indent0, to same indent than prevline
 
 
 enable cancel tab-completion
