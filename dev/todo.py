@@ -288,14 +288,19 @@ Below this: not done
 
 
 #####################################################
-search "self.match_lenghts" in edit_search_setting():
-	no get funcname
 
-
+search entry: AS  + arrow down == all contents, forwards, default
+AI from insert
+AE from end (only backwards, not needed?) == AS backwards
+limited
+SI, IE
+and all backwards and all with custom limits
 
 enable cancel tab-completion
 tab completion should first suggest from function scope
 
+
+goto bookmark, show bookmark on top not bottom
 
 get(elided)
 elided text is getted by default

@@ -5250,6 +5250,7 @@ class Editor(tkinter.Toplevel):
 			flag_finish = True
 			
 		
+		flag_match = False
 		
 		while pos:
 		
@@ -5299,7 +5300,7 @@ class Editor(tkinter.Toplevel):
 				except ValueError:
 					# Found line starting with keyword, but no patt_end
 					#print('Error message from get_scope_path(): ', pos)
-					return scope_path
+					continue
 					
 				
 				tmp = tmp[:e]
@@ -5309,14 +5310,22 @@ class Editor(tkinter.Toplevel):
 				else:
 					scope_path = tmp
 					
-					
-				if flag_finish: break
-					
+				
+				flag_match = True
+				
+				
+			
 			# Update search pattern and indentation of matched pos line
 			if not flag_finish: ind_last_line = ind_curline
+				
 			
-			if ind_last_line > 1:
-				patt = r'^[[:blank:]]{1,%d}[^[:blank:]#]' % (ind_last_line-1)
+			# Exit
+			if flag_match and flag_finish: break
+			flag_match = False
+				
+			
+			if ind_curline > 1:
+				patt = r'^[[:blank:]]{1,%d}[^[:blank:]#]' % (ind_curline-1)
 
 			# ind_last_line == 1
 			# No need to update indentation level of pos line anymore.
