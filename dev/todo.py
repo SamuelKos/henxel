@@ -278,7 +278,15 @@ error: if want to search part of filepaths (select with mouse will open file)
 tab on empty line, if at indent0, to same indent than prevline
 	tab_over_indent, done ok?
 ###################
+wordexpand does not expand from single letter at indent0
+	also removed re-import
+	done, ok?
+###################
+yank whole line, done ok?
+############################
+
 Below this: not done
+
 
 
 
@@ -309,6 +317,29 @@ elided text is getted by default
 inspect syntax
 elif hasattr(self.tabs[self.tabindex], 'inspected')##
 #####################################################
+system_colorname = self.entry.cget('fg')
+colors_as_rgb_tuple = self.winfo_rgb(system_colorname)
+for example, white color would get: (65535, 65535, 65535)
+
+red = r'#c01c28'
+self.winfo_rgb(red)
+self.winfo_rgb('deep sky blue')
+#################################
+
+capslock more bell
+
+tab_over_indent -1
+
+
+
+
+
+
+# get tcl name of widget
+cont_name = str(e.nametowidget(e.contents))
+#e.contents.winfo_name()
+words_in_string = e.tk.eval( r'regexp -all -inline {\S+} [%s get 1.0 end]' % cont_name )
+
 
 
 
@@ -739,7 +770,7 @@ if bigger they are basic buttons
 # get tcl name of widget
 str(e.nametowidget(e.entry))
 e.contents.winfo_name()
-			
+
 label .lbl
 
 e.tk.eval('.!editor.!entry config -bg')

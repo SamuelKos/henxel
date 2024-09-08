@@ -3698,12 +3698,12 @@ class Editor(tkinter.Toplevel):
 			
 			
 		i = self.contents.index(tkinter.INSERT)
-		t = self.contents.get('%s display linestart' % i, '%s display lineend' % i)
+		t = self.contents.get('%s display linestart' % i, '%s lineend' % i)
 		
 		
 		if t.strip() != '':
 			s,_ = self.idx_linestart()
-			e = self.idx_lineend()
+			e = '%s lineend' % s
 			
 			tmp = self.contents.get(s,e)
 			self.contents.clipboard_clear()
@@ -4616,26 +4616,26 @@ class Editor(tkinter.Toplevel):
 		'''	Called from indent() and unindent()
 		'''
 		ins = tkinter.INSERT
-		
+
 		# There should not be selection, checked before call in caller.
 		
 		# Check if cursor not in indentation or not empty line
 		idx_s, _ = self.idx_linestart()
-		# Line is not empty
-		if idx_s:
 		
+		if idx_s:
 			# Cursor is after indentation
 			if self.contents.compare(idx_s, '<', ins):
 				
 				# Check previous char
 				idx = self.contents.index(ins)
 				col = int(idx.split(sep='.')[1])
-				if col > 1:
+				
+				if col > 0:
 					prev_char = self.contents.get( ('%s -1 char') % ins, '%s' % ins )
 				
 					if prev_char in self.expander.wordchars:
 						return True
-					
+	
 		return False
 			
 	
@@ -6465,6 +6465,7 @@ class Editor(tkinter.Toplevel):
 			# If at start of empty line: move cursor to same indent as previous line.
 			elif indentation_level := self.tab_over_indent():
 				self.contents.insert(tkinter.INSERT, indentation_level * '\t')
+				return 'break'
 				
 			else:
 				return
