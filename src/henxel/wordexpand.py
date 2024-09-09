@@ -26,7 +26,7 @@ class ExpandWord:
 		self.textwid = textwid
 		self.bell = self.textwid.bell
 		self.state = None
-
+		
 
 	def expand_word(self):
 		''' Replace the current word with the next expansion.
@@ -40,9 +40,10 @@ class ExpandWord:
 			self.tcl_name_of_contents = str( self.textwid.nametowidget(self.textwid) )
 			words = self.getwords()
 			index = 0
-			
-			
+						
+
 		else:
+				
 			words, index, insert, line = self.state
 			
 			if insert != curinsert or line != curline:
@@ -86,38 +87,75 @@ class ExpandWord:
 		if not word:
 			return []
 
+		
+		#####################
+		patt_start = r'regexp -all -line -inline {\m%s[[:alnum:]_.]+} [%s' \
+				% (word, self.tcl_name_of_contents)
+		
+		patt_end = ' get %s %s]'
+		
+		editor = self.textwid.master
 
-		patt = r'regexp -all -line -inline {\m%s[[:alnum:]_.]+} [%s get 1.0 {insert wordstart}]' \
-				% (word, self.tcl_name_of_contents)
-				
-		wbefore = self.textwid.tk.eval(patt).split()
-		
-		patt = r'regexp -all -line -inline {\m%s[[:alnum:]_.]+} [%s get {insert wordend} end]' \
-				% (word, self.tcl_name_of_contents)
-				
-		wafter = self.textwid.tk.eval(patt).split()
+		scope_path, ind_curline, start = editor.get_scope_path('insert', flag_only_one=True)
 		
 		
+		all_words = False
 		
+		if ind_curline:
+			end = editor.get_next_def_line_position(ind_curline)
+			
+			print(scope_path, start, end)
+			
+			# Up: insert - start == start - insert reversed
+			p = patt_start + patt_end % (start,  '{insert wordstart}')
+			l1 = words_ins_def_up = self.textwid.tk.eval(p).split()
+			l1.reverse()
+
+			# Down: insert - end
+			p = patt_start + patt_end % ('{insert wordend}', end)
+			l2 = words_ins_def_down = self.textwid.tk.eval(p).split()
+
+			# Up: start - filestart == filestart - start reversed
+			p = patt_start + patt_end % ('1.0',  start)
+			l3 = words_def_up_filestart = self.textwid.tk.eval(p).split()
+			l3.reverse()
+			
+			if end != 'end':
+				# Down: end - fileend
+				p = patt_start + patt_end % (end, 'end')
+				l4 = words_def_down_fileend = self.textwid.tk.eval(p).split()
+	
+				all_words = l1 + l2 + l3 + l4
+			
+			# At last function
+			else:
+				all_words = l1 + l2 + l3
+		
+		
+		if not all_words:
+			print('nou')
+			p = patt_start + patt_end % ('1.0', '{insert wordstart}')
+			l1 = words_ins_filestart = self.textwid.tk.eval(p).split()
+			l1.reverse()
+			
+			p = patt_start + patt_end % ('{insert wordstart}', 'end')
+			l2 = words_ins_filestart = self.textwid.tk.eval(p).split()
+			
+			all_words = l1 + l2
+		#######################
+			
+			
 		words = []
 		dictionary = {}
 		
-		# Search backwards through words before
-		wbefore.reverse()
-		for w in wbefore:
+		
+		for w in all_words:
 			if dictionary.get(w):
 				continue
 				
 			words.append(w)
 			dictionary[w] = w
 
-		# Search onwards through words after
-		for w in wafter:
-			if dictionary.get(w):
-				continue
-			
-			words.append(w)
-			dictionary[w] = w
 			
 		words.append(word)
 		return words

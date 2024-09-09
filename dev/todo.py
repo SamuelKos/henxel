@@ -284,6 +284,21 @@ wordexpand does not expand from single letter at indent0
 ###################
 yank whole line, done ok?
 ############################
+capslock more visual done ok?
+############################
+tab completion should first suggest from function scope
+in henxel.Editor:
+	get_next_def_line_position(self, ind_last_line)
+	called in:
+in wordexpand.ExpandWord.getwords():
+	up: insert - def linestart
+	down: insert - next def linestart
+	up: def - 1.0
+	down: next def - end
+	
+	renaming in getwords?
+	done ok?
+############################
 
 Below this: not done
 
@@ -305,7 +320,8 @@ SI, IE
 and all backwards and all with custom limits
 
 enable cancel tab-completion
-tab completion should first suggest from function scope
+
+
 
 
 goto bookmark, show bookmark on top not bottom
@@ -325,12 +341,6 @@ red = r'#c01c28'
 self.winfo_rgb(red)
 self.winfo_rgb('deep sky blue')
 #################################
-
-capslock more bell
-
-tab_over_indent -1
-
-
 
 
 

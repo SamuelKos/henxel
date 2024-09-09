@@ -1721,11 +1721,14 @@ class Editor(tkinter.Toplevel):
 		
 		self.tabs = [ Tab(**item) for item in dictionary['tabs'] ]
 		
-		# Have to step backwards here to avoid for-loop breaking
-		# while removing items from the container.
+		# To avoid for-loop breaking, while removing items from the container being iterated,
+		# one can iterate over container[:], that is: self.tabs[:],
+		# which returns a shallow copy of the list --> safe to remove items.
 		
-		for i in range(len(self.tabs)-1, -1, -1):
-			tab = self.tabs[i]
+		# This is same as:
+		# tmplist = self.tabs[:]
+		# for tab in tmplist:
+		for tab in self.tabs[:]:
 			
 			if tab.type == 'normal':
 				try:
@@ -1739,7 +1742,7 @@ class Editor(tkinter.Toplevel):
 					
 				except (EnvironmentError, UnicodeDecodeError) as e:
 					print(e.__str__())
-					self.tabs.pop(i)
+					self.tabs.remove(tab)
 			else:
 				tab.bookmarks.clear()
 				tab.filepath = None
@@ -4608,9 +4611,10 @@ class Editor(tkinter.Toplevel):
 				patt = r'^[[:blank:]]*[^[:blank:]#]'
 				pos = self.contents.search(patt, ins, stopindex='1.0',
 					regexp=True, backwards=True, count=self.search_count_var)
-					
-				if pos: return self.search_count_var.get() - 1
 				
+				# self.search_count_var.get() == indentation level +1
+				if pos: return self.search_count_var.get() -1
+
 	
 	def can_expand_word(self):
 		'''	Called from indent() and unindent()
@@ -5044,18 +5048,46 @@ class Editor(tkinter.Toplevel):
 		'''
 		
 		self.btn_git.config(bitmap='')
+		bg, fg = self.themes[self.curtheme]['normal_text'][:]
 
-##		For two times, i=1,2:
+##		For some times:
 ##			wait 300
 ##		 	change btn_git text to spaces
 ##		 	again wait 300
 ##		 	change btn_git text to CAPS
 
-		for i in range(1,3):
-			t1 = (2 * i-1) * 300
-			t2 = 2 * i * 300
+		def get_wait_time(round, position):
+			''' round	int >= 0
+				position	string 't1' or 't2'
+			'''
+			
+			t1 = 300 + 600*round
+			t2 = t1 + 300
+			
+			if position == 't1':
+				return t1
+			else:
+				return t2
+				
+			
+		for i in range(4):
+			t1 = get_wait_time(i, 't1')
+			t2 = get_wait_time(i, 't2')
 			l1 = lambda kwargs={'text': 5*' ', 'disabledforeground': 'brown1'}: self.btn_git.config(**kwargs)
 			l2 = lambda kwargs={'text': 'CAPS '}: self.btn_git.config(**kwargs)
+			
+			
+			###
+			l3 = lambda kwargs={'bg':fg, 'fg':bg}: self.contents.config(**kwargs)
+			l4 = lambda kwargs={'bg':bg, 'fg':fg}: self.contents.config(**kwargs)
+			
+			c3 = self.after(t1, l3)
+			c4 = self.after(t2, l4)
+			self.to_be_cancelled.append(c3)
+			self.to_be_cancelled.append(c4)
+			###
+			
+			
 			c1 = self.after(t1, l1)
 			c2 = self.after(t2, l2)
 			self.to_be_cancelled.append(c1)
@@ -5089,15 +5121,15 @@ class Editor(tkinter.Toplevel):
 				
 				# If quickly pressed CapsLock off,
 				# cancel flashing started at the end of this callback.
-				for i in range(len(self.to_be_cancelled)-1, -1, -1):
-					item = self.to_be_cancelled[i]
+				for item in self.to_be_cancelled[:]:
 					self.after_cancel(item)
-					self.to_be_cancelled.pop(i)
+					self.to_be_cancelled.remove(item)
 					
 					
 				# Put Git-branch name back if on one
 				self.restore_btn_git()
-				
+				bg, fg = self.themes[self.curtheme]['normal_text'][:]
+				self.contents.config(bg=bg, fg=fg)
 		
 		# event.keysym == Caps_Lock
 		# Check if CapsLock -state changes when focus is in editor
@@ -5113,15 +5145,16 @@ class Editor(tkinter.Toplevel):
 				
 				# If quickly pressed CapsLock off,
 				# cancel flashing started at the end of this callback.
-				for i in range(len(self.to_be_cancelled)-1, -1, -1):
-					item = self.to_be_cancelled[i]
+				for item in self.to_be_cancelled[:]:
 					self.after_cancel(item)
-					self.to_be_cancelled.pop(i)
+					self.to_be_cancelled.remove(item)
 					
 					
 				# Put Git-branch name back if on one
 				self.restore_btn_git()
-			
+				bg, fg = self.themes[self.curtheme]['normal_text'][:]
+				self.contents.config(bg=bg, fg=fg)
+		
 
 			# CapsLock is being turned on
 			else:
@@ -5189,7 +5222,7 @@ class Editor(tkinter.Toplevel):
 		self.entry.insert(0, patt)
 
 	
-	def get_scope_path(self, index):
+	def get_scope_path(self, index, flag_only_one=False):
 		''' Index is tkinter.Text -index
 			
 			Search backwards from index up to filestart and build scope-path
@@ -5310,6 +5343,9 @@ class Editor(tkinter.Toplevel):
 				else:
 					scope_path = tmp
 					
+					if flag_only_one:
+						return scope_path, ind_curline, pos
+					
 				
 				flag_match = True
 				
@@ -5336,6 +5372,7 @@ class Editor(tkinter.Toplevel):
 				
 		
 		if scope_path == '':
+			if flag_only_one: return False, False, False
 			scope_path = '__main__()'
 			return scope_path
 	
@@ -6433,6 +6470,58 @@ class Editor(tkinter.Toplevel):
 		return False, 0
 	
 	
+	def get_next_def_line_position(self, ind_last_line):
+		''' Used in self.expander.expand_word()
+		'''
+		
+		patt = r'^[[:blank:]]{%d}[acd]' % (ind_last_line)
+		
+		res = False
+		pos = 'insert'
+		
+		while pos:
+			try:
+				pos = self.contents.search(patt, 'insert', stopindex='end', regexp=True)
+				
+			except tkinter.TclError as e:
+				print(e)
+				return res
+			
+			if not pos:
+				return 'end'
+				
+				
+			def_line_contents = tmp = self.contents.get( pos, '%s display lineend' % pos )
+			tmp = tmp.strip()
+			
+			if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
+				
+				patt_end = ':'
+				if '(' in tmp: patt_end = '('
+	
+
+				if tmp[:5] == 'async':
+					tmp = tmp[5:].strip()
+					
+				if tmp[:3] == 'def':
+					tmp = tmp[3:].strip()
+				
+				if tmp[:5] == 'class':
+					tmp = tmp[5:].strip()
+					
+				try:
+					e = tmp.index(patt_end)
+				except ValueError:
+					# Found line starting with keyword, but no patt_end
+					#print('Error message from get_scope_path(): ', pos)
+					continue
+				
+				res = pos
+				break
+		
+		return res
+				
+			
 	def indent(self, event=None):
 		if self.state in [ 'search', 'replace', 'replace_all' ]:
 			return 'break'
@@ -6462,7 +6551,7 @@ class Editor(tkinter.Toplevel):
 
 				return 'break'
 				
-			# If at start of empty line: move cursor to same indent as previous line.
+			# If at start of empty line: move cursor to indent of previous line.
 			elif indentation_level := self.tab_over_indent():
 				self.contents.insert(tkinter.INSERT, indentation_level * '\t')
 				return 'break'
@@ -6518,8 +6607,10 @@ class Editor(tkinter.Toplevel):
 		
 			
 		if len(self.contents.tag_ranges('sel')) == 0:
+		
 			if self.can_expand_word():
 				self.expander.expand_word()
+					
 				# can_expand_word called before indent and unindent
 				
 				# Reason is that before commit 5300449a75c4826
