@@ -15,9 +15,9 @@ when view changes, after open tab:
 	# Restore bookmarks
 	for i, pos in enumerate(self.tabs[self.tabindex].bookmarks):
 		self.contents.mark_set('bookmark%d' % i, pos)
-		
+
 	self.tabs[self.tabindex].bookmarks.clear()
-	
+
 	for mark in self.contents.mark_names():
 		if 'bookmark' in mark:
 			self.tabs[self.tabindex].bookmarks.append(mark)
@@ -30,9 +30,9 @@ view changes, after open tab, restore_bookmarks() is used in:
 	stop_show_errors
 	loadfile
 	stop_help
-																			
+
 	done ok?
-	
+
 
 animate add/remove bookmark		done ok?
 
@@ -41,7 +41,7 @@ walk bookmarks cmd/Control-bB	done ok?
 
 delete_all_bookmarks		no shortcut
 print_bookmarks				no shortcut
-	
+
 
 tab.bookmarks = list()
 add_bookmark --> tab.bookmarks.append(pos)
@@ -104,8 +104,8 @@ show scope when inspect
 	used only in handle_search_entry()
 	could be used to:
 		preserve syntax in inspected over things like walk_tab etc
-						
-	
+
+
 search: no strip searchword						done, ok? ####
 search, show scope in entry when show_next prev	done, ok? ####
 show_next/prev: entry handling to function		done, ok? ####
@@ -202,7 +202,7 @@ on a desktop. A geometry string has this general form:
 	'wxh±x±y' where:
 	The w and h parts give the window width and height in pixels.
 	They are separated by the character 'x'.
-	
+
 If the next part has the form +x,
 it specifies that the left side of the window should be x pixels from the left side of the desktop.
 If it has the form -x,
@@ -234,7 +234,7 @@ search, replace fixing Start
 Have to use marks to get overlapping searches work.
 
 Can not replace/replace_all while "-overlap" in search_settings
-	
+
 if -start == 'insert' and search_word == selection_get:
 	start search from sel_start
 	done in do_search ok?
@@ -263,7 +263,7 @@ print_search_setting()
 edit_search_setting(search_setting)
 
 start_search() calls do_search(search_word)
-	
+
 
 if selection, use it, else oldword.
 
@@ -295,10 +295,13 @@ in wordexpand.ExpandWord.getwords():
 	down: insert - next def linestart
 	up: def - 1.0
 	down: next def - end
-	
-	renaming in getwords?
+
 	done ok?
 ############################
+strip empty lines, done in tabify(), ok ?
+############################
+
+
 
 Below this: not done
 
@@ -319,9 +322,27 @@ limited
 SI, IE
 and all backwards and all with custom limits
 
-enable cancel tab-completion
+#####
+enable cancel tab-completion, no?##
 
 
+nested check:
+	tab in Tab __str__
+	get_scope_end: same or lower indent done ok?
+	Don't rematch same line, done ok?
+
+	tab completion currently searches also commented lines
+	lookahead?
+
+
+tab after t near:
+# https://tcl.tk/man/tcl9.0/TkCmd/index.html
+get tcl.tk etc
+
+
+
+alt-backspace: del to dot
+#####
 
 
 goto bookmark, show bookmark on top not bottom
@@ -400,12 +421,12 @@ handle_search_entry not done in search_next
 update scope path after:
 	walk_tab etc
 	in fname.py @Class.method()
-	
+
 unbind load() Return?
 focusin focusout show full path?
 #############
 
-	
+
 
 
 
@@ -430,7 +451,7 @@ focusin focusout show full path?
 
 check syntax before quit?
 python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
-	
+
 
 search: regexp?
 start of search/replace: insert window in start of entry:
@@ -457,7 +478,7 @@ fdialog.py
 	sorted(pathlib.Path().glob("normal filename"))
 	two entries for setting filter at bottom,
 	one for dirs, one for files: *.* as default
-	
+
 
 when creating for example new function newname(),
 how to ensure newname has not already been reserved?
@@ -542,7 +563,7 @@ tokens to list --> after cancel
 delete, cmd a, comment at linestart, no syntax
 clarify update_tokens marked spot
 
-	
+
 check before copy, paste:
 	is selection from editor?
 	check indentation if not?
@@ -567,8 +588,8 @@ toggle clipboard (10 newest items) dropdown in git_btn
 #################
 fix search etc: after giving search word, quickly pressing return and esc
 state is locked to search
-		
-		
+
+
 FIXED with checking if state is waiting in stop_search
 
 check other escapable callbacks?
@@ -924,7 +945,7 @@ e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBrea
 ''' asd
 	import tkinter
 	import tkinter.font
-	
+
 '''
 
 import tkinter
@@ -959,7 +980,7 @@ import tkinter.font
 
 # Howto: lambda to nothing:
 # self.contents.bind( "<Left>", lambda event: ...)
-	
+
 
 # Howto: unbind in tkinter:
 
@@ -968,13 +989,13 @@ import tkinter.font
 
 # def mycallback2(self, event=None):
 #	print(2, event.keysum, event.num)
-	
+
 # self.anykeyid = self.mywidget1.bind( "<Any-Key>", func=self.mycallback1)
 # self.anybutid = self.mywidget1.bind( "<Any-Button>", func=self.mycallback2)
 
 # self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
 # self.contents.unbind("<Any-Button>", funcid=self.anybutid)
-		
+
 
 
 ############# About screen dimensions Begin
@@ -1013,52 +1034,52 @@ class Ed(tkinter.Toplevel):
 	# Self must be then added to this list in init with:
 	# self.__class__.editors.append(self)
 	editors = []
-			
+
 	def __init__(self):
-		
+
 		self.root = tkinter.Tk().withdraw()
 		super().__init__(self.root)
 		self.__class__.editors.append(self)
-		
+
 		self.lineNumbers = ''
-		
+
 		self.rowconfigure(1, weight=1)
 		self.columnconfigure(1, weight=1)
-		
+
 		self.btn_test=tkinter.Button(self, text='Test')
 		self.btn_test.grid(row=0, column = 0, sticky='w')
-		
+
 		self.entry = tkinter.Entry(self)
 		self.entry.grid(row=0, column = 1, sticky='we')
-		
+
 		self.btn_open=tkinter.Button(self, text='Open')
 		self.btn_save=tkinter.Button(self, text='Save')
 		self.btn_open.grid(row=0, column = 2)
 		self.btn_save.grid(row=0, column = 3, sticky='e')
-		
-		
+
+
 		self.lb = tkinter.Text(self, width=5, padx=10)
 		self.lb.grid(row=1, column = 0, sticky='nsw')
-		
+
 		self.contents = tkinter.Text(self, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor')
-		
+
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL)
-		
-		
+
+
 		self.contents.grid(row=1, column=1, columnspan=3, sticky='nswe')
 		self.scrollbar.grid(row=1,column=3, sticky='nse')
-		
+
 		self.font = tkinter.font.Font(size=12)
 		self.font.config(family='Noto Mono', size=12)
-		
+
 		self.lb.tag_config('justright', justify=tkinter.RIGHT)
-	
+
 		self.scrollbar_width = 30
 		self.elementborderwidth = 4
-		
+
 		self.scrollbar.config(width=self.scrollbar_width)
 		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
-		
+
 		self.contents.config(font=self.font)
 		self.entry.config(font=self.font)
 		self.btn_open.config(font=self.font)
@@ -1067,55 +1088,55 @@ class Ed(tkinter.Toplevel):
 		self.lb.config(font=self.font, state='disabled')
 
 		# Changing the settings to make the scrolling work
-		
+
 		self.scrollbar['command'] = self.contents.yview
 		self.contents['yscrollcommand'] = self.scrollbar.set
-		
+
 		noOfLines = 500
 		s = 'line ................................... %s'
 		s = '\n'.join( s%i for i in range(1, noOfLines+1) )
-			
+
 		self.contents.insert(tkinter.END, s)
-		
+
 		# Needed in updateLineNumbers(), there is more info.
 		# y_extra_offset is 3 but why, dont know:
-		
+
 		self.update_idletasks()
 		_, self.y_extra_offset, _,  self.bbox_height = self.contents.bbox('1.0')
-		
-		
+
+
 ##		self.contents.bind('<<Modified>>', self.modified)
-		
+
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		self.eventnum = 0
-		
+
 		if self.__class__.updateId is None:
 			self.updateAllLineNumbers()
 
-		
+
 	def modified(self, event=None):
-		
+
 		self.eventnum += 1
-	
+
 		print(f'Begin Event {self.eventnum}:\n')
-	
+
 		#l = [ item for item in dir(event) if '_' not in item ]
-		
+
 		print(event.__class__)
 		print(event)
 		print('asd', event.__repr__() )
-		
+
 		#for key in l:
 		#	print(key, getattr(event, key))
-		
-		
+
+
 		print(f'\nEnd Event {self.eventnum}:')
 		print(10*'= ')
-		
+
 		self.contents.edit_modified(0)
-		
-		
+
+
 	def getLineNumbers(self):
 
 		x = 0
@@ -1128,7 +1149,7 @@ class Ed(tkinter.Toplevel):
 
 		nl = '\n'
 		lineMask = '    %s\n'
-		
+
 		# @x,y is tkinter text-index:
 		# The character that covers the (x,y) -coordinate within the text's window.
 		indexMask = '@0,%d'
@@ -1136,7 +1157,7 @@ class Ed(tkinter.Toplevel):
 		for i in range(0, self.contents.winfo_height(), step):
 
 			ll, cc = self.contents.index( indexMask % i).split('.')
-			
+
 			if line == ll:
 				if col != cc:
 					col = cc
@@ -1146,41 +1167,41 @@ class Ed(tkinter.Toplevel):
 				# -5: show up to four smallest number (0-9999)
 				# then starts again from 0 (when actually 10000)
 				ln += (lineMask % line)[-5:]
-		
+
 		return ln
 
-		
+
 	def updateLineNumbers(self):
 
 		tt = self.lb
 		ln = self.getLineNumbers()
 		if self.lineNumbers != ln:
 			self.lineNumbers = ln
-			
+
 			# 1 - 3 : adjust linenumber-lines with text-lines
-			
+
 			# 1: Actual line.col of x=0 y=0 in text-widget:
 			# idx is index of currently visible first character
 			idx = self.contents.index('@0,0')
-			
+
 			# 2: bbox returns this kind of tuple: (3, -9, 19, 38)
 			# (bbox is cell that holds a character)
 			# (x-offset, y-offset, width, height) in pixels
 			# Want y-offset of first visible line, and reverse it.
 			# Also update line-height (bbox_height) in case of font changes:
-			
+
 			_, y_offset, _, self.bbox_height = self.contents.bbox(idx)
-			
+
 			y_offset *= -1
-			
+
 			if y_offset != 0:
 				y_offset += self.y_extra_offset
-				
+
 			tt.config(state='normal')
 			tt.delete('1.0', tkinter.END)
 			tt.insert('1.0', self.lineNumbers)
 			tt.tag_add('justright', '1.0', tkinter.END)
-			
+
 			# 3: Then scroll lineswidget same amount to fix offset
 			# compared to text-widget:
 			tt.yview_scroll(y_offset, 'pixels')
@@ -1194,14 +1215,14 @@ class Ed(tkinter.Toplevel):
 		if len(cls.editors) < 1:
 			cls.updateId = None
 			return
-				
+
 		for ed in cls.editors:
 			ed.updateLineNumbers()
 
 		cls.updateId = ed.contents.after(
 			cls.UPDATE_PERIOD,
 			cls.updateAllLineNumbers)
-		
+
 		# about double cpu compared to after(100ms), but is smoother
 ##		cls.updateId = ed.contents.after_idle(
 ##			cls.updateAllLineNumbers)

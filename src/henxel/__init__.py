@@ -102,7 +102,7 @@ class Tab:
 				self.position
 				)
 				
-				
+			
 ############ Class Tab End
 ############ Class Editor Begin
 
@@ -4616,33 +4616,6 @@ class Editor(tkinter.Toplevel):
 				if pos: return self.search_count_var.get() -1
 
 	
-	def can_expand_word(self):
-		'''	Called from indent() and unindent()
-		'''
-		ins = tkinter.INSERT
-
-		# There should not be selection, checked before call in caller.
-		
-		# Check if cursor not in indentation or not empty line
-		idx_s, _ = self.idx_linestart()
-		
-		if idx_s:
-			# Cursor is after indentation
-			if self.contents.compare(idx_s, '<', ins):
-				
-				# Check previous char
-				idx = self.contents.index(ins)
-				col = int(idx.split(sep='.')[1])
-				
-				if col > 0:
-					prev_char = self.contents.get( ('%s -1 char') % ins, '%s' % ins )
-				
-					if prev_char in self.expander.wordchars:
-						return True
-	
-		return False
-			
-	
 	def backspace_override(self, event):
 		""" for syntax highlight
 		"""
@@ -4984,12 +4957,15 @@ class Editor(tkinter.Toplevel):
 		for char in line:
 			if char in [' ', '\t']: indent_stop_index += 1
 			else: break
-			
+		
+
+		
+		if line.isspace(): return '\n'
+	
 		if indent_stop_index == 0:
 			# remove trailing space
 			if not line.isspace():
 				line = line.rstrip() + '\n'
-				
 			return line
 		
 		
@@ -5223,8 +5199,14 @@ class Editor(tkinter.Toplevel):
 
 	
 	def get_scope_path(self, index, flag_only_one=False):
-		''' Index is tkinter.Text -index
+		''' Get info about function or class where insertion-cursor is in.
 			
+			Index is tkinter.Text -index
+		
+			Called from handle_search_entry()
+			flag_only_one:
+				Called from self.expander.expand_word(), returns only first match
+				
 			Search backwards from index up to filestart and build scope-path
 			of current position: index.
 			
@@ -5259,6 +5241,9 @@ class Editor(tkinter.Toplevel):
 		
 		if ind_last_line == 0:
 			scope_path = '__main__()'
+			
+			if flag_only_one:
+				return scope_path, 0, '1.0'
 			
 			return scope_path
 
@@ -5333,6 +5318,15 @@ class Editor(tkinter.Toplevel):
 				except ValueError:
 					# Found line starting with keyword, but no patt_end
 					#print('Error message from get_scope_path(): ', pos)
+					
+					# Question: Why not:
+					# 	pos = '%s -1c' % pos
+					# 	To avoiding rematching same line?
+					# Answer:
+					#	Search is backwards, so even if there is a match at pos,
+					#	(where search starts every round), it is not taken as match,
+					#	because it is considered to be completely outside of search-range,
+					#	which ends at pos, when searching backwards.
 					continue
 					
 				
@@ -5369,15 +5363,73 @@ class Editor(tkinter.Toplevel):
 				patt = r'^[acd]'
 				flag_finish = True
 				
-				
-		
+			# Question: Why not:
+			# 	pos = '%s -1c' % pos
+			# 	To avoiding rematching same line?
+			# Answer: See above
+			
+
 		if scope_path == '':
-			if flag_only_one: return False, False, False
 			scope_path = '__main__()'
+			
+			if flag_only_one:
+				return scope_path, 0, '1.0'
+			
 			return scope_path
 	
 		else:
 			return scope_path + '()'
+			
+			
+	def get_scope_end(self, ind_last_line):
+		''' Get info about function or class where insertion-cursor is in.
+			That is, position of next(down) uncommented line == end of current scope
+		
+			Called from self.expander.expand_word()
+			
+			ind_last_line is int which is supposed to tell indentation of function
+			or class -definition line, where insertion-cursor is currently in.
+			This ind_last_line can be getted with calling:
+				
+				get_scope_path('insert', flag_only_one=True)
+				
+		 	
+		 	Goal is to get positions of function start and end.
+			
+			On success:
+				Returns string: position of next uncommented line
+			Else:
+				Returns 'end'
+				
+		'''
+		p1 = ''
+		# From start of line: Not blank and not comment
+		p2 = r'^[^[:blank:]#]+'
+		
+		if ind_last_line > 0:
+			# Want: uncommented line with ind_last_line blanks or one less
+			blank_range = '{%d,%d}' % (ind_last_line-1, ind_last_line)
+			p1 = r'^[[:blank:]]%s' % blank_range
+			# Not blank and not comment
+			p2 = r'[^[:blank:]#]+'
+		
+		
+		
+		patt = p1 + p2
+		pos = False
+		print(patt)
+		try:
+			pos = self.contents.search(patt, 'insert', stopindex='end', regexp=True)
+			
+		except tkinter.TclError as e:
+			print(e)
+		
+		
+		if not pos:
+			return 'end'
+		
+		return pos
+		
 	
 ########## Utilities End
 ########## Gotoline etc Begin
@@ -6468,60 +6520,35 @@ class Editor(tkinter.Toplevel):
 								return False, 0
 					
 		return False, 0
+				
 	
-	
-	def get_next_def_line_position(self, ind_last_line):
-		''' Used in self.expander.expand_word()
+	def can_expand_word(self):
+		'''	Called from indent() and unindent()
 		'''
-		
-		patt = r'^[[:blank:]]{%d}[acd]' % (ind_last_line)
-		
-		res = False
-		pos = 'insert'
-		
-		while pos:
-			try:
-				pos = self.contents.search(patt, 'insert', stopindex='end', regexp=True)
-				
-			except tkinter.TclError as e:
-				print(e)
-				return res
-			
-			if not pos:
-				return 'end'
-				
-				
-			def_line_contents = tmp = self.contents.get( pos, '%s display lineend' % pos )
-			tmp = tmp.strip()
-			
-			if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
-				
-				patt_end = ':'
-				if '(' in tmp: patt_end = '('
-	
+		ins = tkinter.INSERT
 
-				if tmp[:5] == 'async':
-					tmp = tmp[5:].strip()
-					
-				if tmp[:3] == 'def':
-					tmp = tmp[3:].strip()
-				
-				if tmp[:5] == 'class':
-					tmp = tmp[5:].strip()
-					
-				try:
-					e = tmp.index(patt_end)
-				except ValueError:
-					# Found line starting with keyword, but no patt_end
-					#print('Error message from get_scope_path(): ', pos)
-					continue
-				
-				res = pos
-				break
+		# There should not be selection, checked before call in caller.
 		
-		return res
+		# Check if cursor not in indentation or not empty line
+		idx_s, _ = self.idx_linestart()
+		
+		if idx_s:
+			# Cursor is after indentation
+			if self.contents.compare(idx_s, '<', ins):
 				
+				# Check previous char
+				idx = self.contents.index(ins)
+				col = int(idx.split(sep='.')[1])
+				
+				if col > 0:
+					prev_char = self.contents.get( ('%s -1 char') % ins, '%s' % ins )
+				
+					if prev_char in self.expander.wordchars:
+						return True
+	
+		return False
 			
+	
 	def indent(self, event=None):
 		if self.state in [ 'search', 'replace', 'replace_all' ]:
 			return 'break'
