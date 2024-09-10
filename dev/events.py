@@ -6,24 +6,24 @@ import tkinter
 
 root = tkinter.Tk()
 textwid = tkinter.Text(root)
-	
+
 eventnum = 0
 
 def mycallback(event=None):
 	global eventnum
 	eventnum += 1
-	
+
 	print(f'Begin Event {eventnum}:\n')
 
 	l = [ item for item in dir(event) if '_' not in item ]
-	
+
 	for key in l:
 		print(key, getattr(event, key))
-	
-	
+
+
 	print(f'\nEnd Event {eventnum}:')
 	print(10*'= ')
-	
+
 
 
 
@@ -31,7 +31,7 @@ textwid.bind('<Any-KeyPress>', mycallback)
 
 # Notice binding to release of button for some reasons.
 textwid.bind('<Any-ButtonRelease>', mycallback)
-			
+
 textwid.pack()
 
 pat = '''

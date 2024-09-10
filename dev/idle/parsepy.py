@@ -78,29 +78,29 @@ testfile = '/home/samuel/pyyttoni/aa.py'
 
 
 def parser(fname):
-	
+
 	try:
 		with open( fname, 'rb' ) as f:
-		
+
 			tokens = tokenize.tokenize( f.readline )
-		
-				
+
+
 			for token in tokens:
-				
+
 				# token.line contains line as string which contains token.
 				print(token)
 ##				if token.type == tokenize.NAME:
 ##					print(token)
-				
-						
-			
+
+
+
 	except IndentationError as e:
 		pass
-	
-		
+
+
 	except tokenize.TokenError as ee:
 		pass
-	
 
-	
+
+
 parser(testfile)

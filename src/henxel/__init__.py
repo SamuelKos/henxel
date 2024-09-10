@@ -67,15 +67,15 @@ import threading
 
 ############ Imports End
 ############ Class Tab Begin
-					
+
 class Tab:
 	'''	Represents a tab-page of an Editor-instance
 	'''
-	
+
 	def __init__(self, **entries):
 		''' active		Bool
 			filepath	pathlib.Path
-			
+
 			contents,
 			oldcontents,
 			position,
@@ -89,20 +89,20 @@ class Tab:
 		self.position = '1.0'
 		self.type = 'newtab'
 		self.bookmarks = list()
-		
+
 		self.__dict__.update(entries)
-		
-		
+
+
 	def __str__(self):
-		
+
 		return	'\nfilepath: %s\nactive: %s\ntype: %s\nposition: %s' % (
 				str(self.filepath),
 				str(self.active),
 				self.type,
 				self.position
 				)
-				
-			
+
+
 ############ Class Tab End
 ############ Class Editor Begin
 
@@ -146,38 +146,38 @@ GOODFONTS = [
 			'Noto Sans Mono',
 			'Courier'
 			]
-			
+
 ############ Constants End
-			
+
 class Editor(tkinter.Toplevel):
 
 	alive = False
-	
+
 	pkg_contents = None
 	no_icon = True
 	pic = None
 	helptxt = None
-	
+
 	root = None
-	
+
 	mac_term = None
 	win_id = None
 	os_type = None
-	
+
 	if sys.platform == 'darwin': os_type = 'mac_os'
 	elif sys.platform[:3] == 'win': os_type = 'windows'
 	elif sys.platform.count('linux'): os_type = 'linux'
 	else: os_type = 'linux'
-		
-	
+
+
 	if os_type == 'mac_os':
 		# macOS: Get name of terminal App.
 		# Used to give focus back to it when closing editor, in quit_me()
-		
+
 		# This have to be before tkinter.tk()
 		# or appname is set to 'Python'
 		try:
-			
+
 ##			# With this method one can get appname with single run but is still slower
 ##			# than the two run method used earlier and now below:
 ##			tmp = ['lsappinfo', 'metainfo']
@@ -190,33 +190,33 @@ class Editor(tkinter.Toplevel):
 ##			tmp = tmp.partition('bringForwardOrder')[2]
 ##			# Get appname from line
 ##			mac_term = tmp.split(sep='"', maxsplit=2)[1]
-			
-			
+
+
 			tmp = ['lsappinfo', 'front']
 			tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
 			tmp = tmp[:-1]
-			
+
 			tmp = ('lsappinfo info -only name %s' % tmp).split()
 			tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
 			tmp = tmp[:-1]
 			mac_term = tmp.split('=')[1].strip('"')
-			
+
 			# Get window id in case many windows of app is open
 			tmp = ['osascript', '-e', 'id of window 1 of app "%s"' % mac_term]
 			tmp = subprocess.run(tmp, check=True, capture_output=True).stdout.decode()
-			
+
 			win_id = tmp[:-1]
 			del tmp
-			
+
 			#print(win_id)
 			#print('AAAAAAAAA', mac_term)
-		
+
 		except (FileNotFoundError, subprocess.SubprocessError):
 			pass
 
-	
+
 	def __new__(cls):
-	
+
 		if not cls.root:
 			#print('BBBB')
 			# Was earlier v.0.2.2 in init:
@@ -237,10 +237,10 @@ class Editor(tkinter.Toplevel):
 			cls.root = tkinter.Tk()
 			cls.root.withdraw()
 
-		
+
 		if not cls.pkg_contents:
 			cls.pkg_contents = importlib.resources.files(__name__)
-			
+
 
 		if cls.pkg_contents:
 
@@ -258,7 +258,7 @@ class Editor(tkinter.Toplevel):
 
 			if not cls.helptxt:
 				for item in cls.pkg_contents.iterdir():
-					
+
 					helpfile = HELPPATH
 					if cls.os_type == 'mac_os': helpfile = HELP_MAC
 
@@ -276,81 +276,81 @@ class Editor(tkinter.Toplevel):
 
 		if not cls.alive:
 			return super(Editor, cls).__new__(cls)
-			
+
 		else:
 			print('Instance of ', cls, ' already running!\n')
-			
+
 			# By raising error the object creation is totally aborted.
 			raise ValueError()
-			
-			
+
+
 
 	def __init__(self):
-		
+
 		self.root = self.__class__.root
 		super().__init__(self.root, class_='Henxel', bd=4)
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
-		
+
 		# Other widgets
 		self.to_be_closed = list()
-		
+
 		# Used in check_caps
 		self.to_be_cancelled = list()
-		
+
 		self.ln_string = ''
 		self.want_ln = True
 		self.syntax = True
 		self.oldconf = None
 		self.tab_char = TAB_WIDTH_CHAR
-			
+
 		if sys.prefix != sys.base_prefix:
 			self.env = sys.prefix
 		else:
 			self.env = None
-		
+
 		self.tabs = list()
 		self.tabindex = None
 		self.branch = None
 		self.version = VERSION
 		self.os_type = self.__class__.os_type
-		
-		
+
+
 		self.font = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
 		self.menufont = tkinter.font.Font(family='TkDefaulFont', size=10, name='menufont')
-		
+
 		# get current git-branch
 		try:
 			self.branch = subprocess.run('git branch --show-current'.split(),
 					check=True, capture_output=True).stdout.decode().strip()
 		except Exception as e:
 			pass
-		
-		
+
+
 		# Search related variables Begin
 		# This marks range of focus-tag:
 		self.search_focus = ('1.0', '1.0')
 		self.mark_indexes = list() # of int
 		self.match_lenghts = list() # of int
 		self.match_lenghts_var = tkinter.StringVar()
-		
+
 		self.search_settings = False
 		self.search_starts_at = '1.0'
 		self.search_ends_at = False
-				
+
 		self.search_matches = 0
 		self.old_word = ''
 		self.new_word = ''
-		
+
 		# Used in get_scope_path()
 		self.search_count_var = tkinter.IntVar()
 		# Search related variables End
-		
+
 		self.errlines = list()
-		
+
 		# When clicked with mouse button 1 while searching
 		# to set cursor position to that position clicked.
 		self.save_pos = None
-		
+
 		# Used in load()
 		self.tracevar_filename = tkinter.StringVar()
 		self.tracefunc_name = None
@@ -358,7 +358,7 @@ class Editor(tkinter.Toplevel):
 
 		self.check_pars = False
 		self.par_err = False
-		
+
 		# Used in copy() and paste()
 		self.flag_fix_indent = False
 		self.checksum_fix_indent = False
@@ -366,75 +366,75 @@ class Editor(tkinter.Toplevel):
 		self.waitvar = tkinter.IntVar()
 		self.fullscreen = False
 		self.state = 'normal'
-		
-		
+
+
 		self.helptxt = 'Could not load help-file. Press ESC to return.'
-		
+
 		if self.__class__.helptxt:
 			self.helptxt = self.__class__.helptxt
-					
+
 		try:
 			self.tk.call('wm','iconphoto', self._w, self.__class__.pic)
 		except tkinter.TclError as e:
 			print(e)
-		
-		
+
+
 		# Initiate widgets
 		####################################
 		self.btn_git = tkinter.Button(self, takefocus=0, font=self.menufont, relief='flat', highlightthickness=0, padx=0, state='disabled')
 		# Put branch name, if on one
 		self.restore_btn_git()
-		
+
 		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, takefocus=0)
 		if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
 		self.entry.bind("<Return>", self.load)
-		
+
 		self.btn_open=tkinter.Button(self, takefocus=0, text='Open', bd=4, highlightthickness=0, command=self.load)
 		self.btn_save=tkinter.Button(self, takefocus=0, text='Save', bd=4, highlightthickness=0, command=self.save)
-		
+
 		# Get conf:
 		string_representation = None
 		data = None
-		
+
 		# Try to apply saved configurations:
 		if self.env:
 			p = pathlib.Path(self.env) / CONFPATH
-		
+
 		if self.env and p.exists():
 			try:
 				with open(p, 'r', encoding='utf-8') as f:
 					string_representation = f.read()
 					data = json.loads(string_representation)
-						
+
 			except EnvironmentError as e:
 				print(e.__str__())	# __str__() is for user (print to screen)
 				#print(e.__repr__())	# __repr__() is for developer (log to file)
 				print(f'\n Could not load existing configuration file: {p}')
-			
+
 		if data:
 			self.oldconf = string_representation
 			self.load_config(data)
-			
-		
+
+
 		self.ln_widget = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4)
 		self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
-		
+
 		# Disable copying linenumbers:
 		shortcut = '<Mod1-Key-c>'
 		if self.os_type != 'mac_os': shortcut = '<Control-c>'
 		self.ln_widget.bind(shortcut, self.do_nothing_without_bell)
-		
+
 		self.contents = tkinter.Text(self, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
-		
+
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, takefocus=0, command = self.contents.yview)
 
 		# Tab-completion, used in indent() and unindent()
 		self.expander = wordexpand.ExpandWord(self.contents)
-		
-		
+
+
 		# Needed in leave() taglink in: Run file Related
 		self.name_of_cursor_in_text_widget = self.contents['cursor']
-		
+
 		self.popup = tkinter.Menu(self.contents, tearoff=0, bd=0, activeborderwidth=0)
 		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
 		self.popup.add_command(label="         run", command=self.run)
@@ -447,7 +447,7 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="      errors", command=self.show_errors)
 		self.popup.add_command(label="        help", command=self.help)
 
-		
+
 		# Get anchor-name of selection-start.
 		# Used in for example select_by_words():
 		self.contents.insert(1.0, 'asd')
@@ -457,45 +457,45 @@ class Editor(tkinter.Toplevel):
 		# This is needed to clear selection
 		# otherwise left at the end of file:
 		self.contents.event_generate('<<PrevLine>>')
-		
+
 		# Now also this array is created which is needed
 		# in RE-fixing ctrl-leftright behaviour in Windows below.
 		# self.tk.eval('parray ::tcl::WordBreakRE')
-		
+
 		self.anchorname = None
 		for item in self.contents.mark_names():
 			if 'tk::' in item:
 				self.anchorname = item
 				break
-		
+
 		self.contents.delete('1.0', '1.3')
-		
+
 		# In Win11 event: <<NextWord>> does not work (as supposed) but does so in Linux and macOS
 		# https://www.tcl.tk/man/tcl9.0/TclCmd/tclvars.html
 		# https://www.tcl.tk/man/tcl9.0/TclCmd/library.html
 
 		if self.os_type == 'windows':
-			
+
 			# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
 			# replace proc tk::TextNextWord with newer version which was looked in Debian 12
 			# Need for some reason generate event: <<NextWord>> before this,
 			# because array ::tcl::WordBreakRE does not exist yet,
 			# but after this event it does. This was done above.
-			
+
 			self.tk.eval(r'set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
 			self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
 			self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
 
-		
+
 		if data:
 			self.apply_config()
-			
+
 			# Hide selection in linenumbers
 			self.ln_widget.config( selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
-			
-		
+
+
 		# Colors Begin #######################
-			
+
 		red = r'#c01c28'
 		cyan = r'#2aa1b3'
 		magenta = r'#a347ba'
@@ -504,18 +504,18 @@ class Editor(tkinter.Toplevel):
 		gray = r'#508490'
 		black = r'#000000'
 		white = r'#d3d7cf'
-		
-		
+
+
 		self.default_themes = dict()
 		self.default_themes['day'] = d = dict()
 		self.default_themes['night'] = n = dict()
-		
+
 		# self.default_themes[self.curtheme][tagname] = [backgroundcolor, foregroundcolor]
 		d['normal_text'] = [white, black]
 		n['normal_text'] = [black, white]
-		
+
 		# if background is same as sel background, change
-		
+
 		d['keywords'] = ['', orange]
 		n['keywords'] = ['', 'deep sky blue']
 		d['numbers'] = ['', red]
@@ -532,71 +532,71 @@ class Editor(tkinter.Toplevel):
 		n['breaks'] = ['', orange]
 		d['selfs'] = ['', gray]
 		n['selfs'] = ['', gray]
-		
+
 		d['match'] = ['lightyellow', 'black']
 		n['match'] = ['lightyellow', 'black']
 		d['focus'] = ['lightgreen', 'black']
 		n['focus'] = ['lightgreen', 'black']
-		
+
 		d['replaced'] = ['yellow', 'black']
 		n['replaced'] = ['yellow', 'black']
-		
+
 		d['mismatch'] = ['brown1', 'white']
 		n['mismatch'] = ['brown1', 'white']
-		
+
 		d['sel'] = ['#c3c3c3', black]
 		n['sel'] = ['#c3c3c3', black]
-		
-		
+
+
 		# if no conf:
 		if self.tabindex == None:
-		
+
 			self.tabindex = -1
 			self.new_tab()
-			
+
 			self.curtheme = 'night'
 			self.themes = copy.deepcopy(self.default_themes)
-			
+
 			for tagname in self.themes[self.curtheme]:
 				bg, fg = self.themes[self.curtheme][tagname][:]
 				self.contents.tag_config(tagname, background=bg, foreground=fg)
-			
-			
+
+
 			self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
-			
-			
+
+
 			# Set Font Begin ##################################################
 			fontname = None
-						
+
 			fontfamilies = [f for f in tkinter.font.families()]
-			
+
 			for font in GOODFONTS:
 				if font in fontfamilies:
 					fontname = font
 					break
-					
+
 			if not fontname:
 				fontname = 'TkDefaulFont'
-				
-			
+
+
 			size0, size1 = 12, 10
 			# There is no font-scaling in macOS?
 			if self.os_type == 'mac_os': size0, size1 = 22, 16
-				
-				
+
+
 			# Initialize rest of configurables
 			self.font.config(family=fontname, size=size0)
 			self.menufont.config(family=fontname, size=size1)
-			
+
 			self.scrollbar_width, self.elementborderwidth = 16, 2
 			if self.os_type == 'linux': self.scrollbar_width, self.elementborderwidth = 30, 4
-			
+
 			self.scrollbar.config(width=self.scrollbar_width)
 			self.scrollbar.config(elementborderwidth=self.elementborderwidth)
-			
+
 			self.ind_depth = TAB_WIDTH
 			self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
-			
+
 
 
 			# One char lenght is: self.tab_width // self.ind_depth
@@ -608,17 +608,17 @@ class Editor(tkinter.Toplevel):
 			self.contents.config(font=self.font, foreground=self.fgcolor,
 				background=self.bgcolor, insertbackground=self.fgcolor,
 				tabs=(self.tab_width, ), padx=pad_x, pady=pad_y)
-				
+
 			self.entry.config(font=self.menufont)
 			self.btn_open.config(font=self.menufont)
 			self.btn_save.config(font=self.menufont)
 			self.popup.config(font=self.menufont)
-			
+
 			self.btn_git.config(font=self.menufont)
-			
+
 			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled', padx=pad_x, pady=pad_y)
 
-		
+
 		# Widgets are initiated, now more configuration
 		################################################
 		# Needed in update_linenums(), there is more info.
@@ -628,170 +628,170 @@ class Editor(tkinter.Toplevel):
 		# Needed in update_linenums() and sbset_override()
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
-				
+
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
-		
-		
-		
-		
+
+
+
+
 		# Bindigs Begin
 		####################################################
 		self.right_mousebutton_num = 3
-		
+
 		if self.os_type == 'mac_os':
 			self.right_mousebutton_num = 2
-			
+
 			# Default cmd-q does not trigger quit_me
 			# Override Cmd-Q:
 			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
 			self.root.createcommand("tk::mac::Quit", self.quit_me)
 			#self.root.createcommand("tk::mac::OnHide", self.test_hide)
-			
+
 		self.contents.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
-		
+
 		if self.os_type == 'linux':
 			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
 		else:
 			self.contents.bind( "<Shift-Tab>", self.unindent)
-		
-		
+
+
 		############################################################
 		# In macOS all Alt-shortcuts makes some special symbol.
 		# Have to bind to this symbol-name to get Alt-shorcuts work.
 		# For example binding to Alt-f:
 		# self.contents.bind( "<function>", self.font_choose)
-		
+
 		# Except that tkinter does not give all symbol names, like
 		# Alt-x or l
 		# which makes these key-combinations quite unbindable.
 		# It would be much easier if one could do bindings normally:
 		# Alt-SomeKey
 		# like in Linux and Windows.
-		
+
 		# Also binding to combinations which has Command-key (apple-key)
 		# (or Meta-key as reported by events.py)
 		# must use Mod1-Key as modifier name:
 		# Mod1-Key-n == Command-Key-n
-		
+
 		# fn-key -bindings have to be done by checking the state of the event
 		# in proxy-callback: mac_cmd_overrides
-		
+
 		# In short, In macOS one can not just bind like:
 		# Command-n
 		# fn-f
 		# Alt-f
-		
+
 		# This is the reason why below is some extra
 		# and strange looking binding-lines when using macOS.
 		##############################################################
 		if self.os_type != 'mac_os':
-			
+
 			self.bind( "<Alt-n>", self.new_tab)
 			self.bind( "<Control-q>", self.quit_me)
-			
+
 			self.contents.bind( "<Control-b>", self.goto_bookmark)
 			self.contents.bind( "<Control-B>",
 				lambda event: self.goto_bookmark(event, **{'back':True}) )
-			
+
 			self.contents.bind( "<Control-l>", self.gotoline)
 			self.contents.bind( "<Control-g>", self.goto_def)
 			self.contents.bind( "<Alt-p>", self.toggle_bookmark)
-			
+
 			self.contents.bind( "<Alt-s>", self.color_choose)
 			self.contents.bind( "<Alt-t>", self.toggle_color)
-			
+
 			self.bind( "<Alt-w>", self.walk_tabs)
 			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
-			
+
 			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
 			self.contents.bind( "<Alt-l>", self.toggle_ln)
 			self.contents.bind( "<Alt-x>", self.toggle_syntax)
 			self.contents.bind( "<Alt-f>", self.font_choose)
-			
+
 			self.contents.bind( "<Control-c>", self.copy)
 			self.contents.bind( "<Control-v>", self.paste)
 			self.contents.bind( "<Control-x>",
 				lambda event: self.copy(event, **{'flag_cut':True}) )
-			
+
 			self.contents.bind( "<Control-y>", self.yank_line)
-			
+
 			self.contents.bind( "<Control-Left>", self.move_by_words)
 			self.contents.bind( "<Control-Right>", self.move_by_words)
 			self.contents.bind( "<Control-Shift-Left>", self.select_by_words)
 			self.contents.bind( "<Control-Shift-Right>", self.select_by_words)
-			
+
 			self.contents.bind( "<Control-Up>", self.move_many_lines)
 			self.contents.bind( "<Control-Down>", self.move_many_lines)
 			self.contents.bind( "<Control-Shift-Up>", self.move_many_lines)
 			self.contents.bind( "<Control-Shift-Down>", self.move_many_lines)
-			
+
 			self.contents.bind("<Left>", self.check_sel)
 			self.contents.bind("<Right>", self.check_sel)
 			self.entry.bind("<Left>", self.check_sel)
 			self.entry.bind("<Right>", self.check_sel)
-		
-		
+
+
 		# self.os_type == 'mac_os':
 		else:
 			self.contents.bind( "<Left>", self.mac_cmd_overrides)
 			self.contents.bind( "<Right>", self.mac_cmd_overrides)
 			self.contents.bind( "<Up>", self.mac_cmd_overrides)
 			self.contents.bind( "<Down>", self.mac_cmd_overrides)
-			
+
 			self.entry.bind( "<Right>", self.mac_cmd_overrides)
 			self.entry.bind( "<Left>", self.mac_cmd_overrides)
-			
+
 			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
-			
+
 			# Have to bind using Mod1 as modifier name if want bind to Command-key,
 			# Last line is the only one working:
 			#self.contents.bind( "<Meta-Key-k>", lambda event, arg=('AAA'): print(arg) )
 			#self.contents.bind( "<Command-Key-k>", lambda event, arg=('AAA'): print(arg) )
 			#self.contents.bind( "<Mod1-Key-k>", lambda event, arg=('AAA'): print(arg) )
-			
-			
+
+
 			self.contents.bind( "<Mod1-Key-y>", self.yank_line)
 			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
-			
+
 			self.contents.bind( "<Mod1-Key-f>", self.search)
 			self.contents.bind( "<Mod1-Key-r>", self.replace)
 			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
-			
+
 			self.contents.bind( "<Mod1-Key-c>", self.copy)
 			self.contents.bind( "<Mod1-Key-v>", self.paste)
 			self.contents.bind( "<Mod1-Key-x>",
 				lambda event: self.copy(event, **{'flag_cut':True}) )
-			
+
 			self.contents.bind( "<Mod1-Key-b>", self.goto_bookmark)
 			self.contents.bind( "<Mod1-Key-B>",
 				lambda event: self.goto_bookmark(event, **{'back':True}) )
-				
+
 			self.contents.bind( "<Mod1-Key-p>", self.toggle_bookmark)
 			self.contents.bind( "<Mod1-Key-g>", self.goto_def)
 			self.contents.bind( "<Mod1-Key-l>", self.gotoline)
 			self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
 			self.contents.bind( "<Mod1-Key-e>", self.goto_lineend)
-			
+
 			self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
 			self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
-			
+
 			self.contents.bind( "<Mod1-Key-z>", self.undo_override)
 			self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
-			
+
 			# Could not get keysym for Alt-l and x, so use ctrl
 			self.contents.bind( "<Control-l>", self.toggle_ln)
 			self.contents.bind( "<Control-x>", self.toggle_syntax)
-			
+
 			# have to bind to symbol name to get Alt-shorcuts work in macOS
 			# This is: Alt-f
 			self.contents.bind( "<function>", self.font_choose)		# Alt-f
 			self.contents.bind( "<dagger>", self.toggle_color)		# Alt-t
 			self.contents.bind( "<ssharp>", self.color_choose)		# Alt-s
-			
-			
+
+
 		#######################################################
-		
-		
+
+
 		# Arrange detection of CapsLock-state.
 		self.capslock = 'init'
 		self.motion_bind = self.bind('<Motion>', self.check_caps)
@@ -800,8 +800,8 @@ class Editor(tkinter.Toplevel):
 		else:
 			self.bind('<KeyPress-Caps_Lock>', self.check_caps)
 			self.bind('<KeyRelease-Caps_Lock>', self.check_caps)
-	
-		
+
+
 		self.bind( "<Control-R>", self.replace_all)
 		self.bind( "<Control-r>", self.replace)
 
@@ -809,63 +809,63 @@ class Editor(tkinter.Toplevel):
 		self.bind( "<Return>", self.do_nothing_without_bell)
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
 		self.bind( "<Control-plus>", self.increase_scrollbar_width)
-		
+
 		self.ln_widget.bind("<Control-n>", self.do_nothing_without_bell)
 		self.ln_widget.bind("<Control-p>", self.do_nothing_without_bell)
-		
+
 		self.contents.bind( "<Control-a>", self.goto_linestart)
 		self.contents.bind( "<Control-e>", self.goto_lineend)
 		self.contents.bind( "<Control-A>", self.goto_linestart)
 		self.contents.bind( "<Control-E>", self.goto_lineend)
-		
+
 		if self.os_type == 'windows':
 			self.entry.bind( "<Control-E>",
 				lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
 			self.entry.bind( "<Control-A>",
 				lambda event, arg=('<<SelectLineStart>>'): self.entry.event_generate)
-			
+
 			self.entry.bind( "<Control-c>", self.copy_windows)
 			self.entry.bind( "<Control-x>",
 				lambda event: self.copy_windows(event, **{'flag_cut':True}) )
-			
-			
+
+
 		self.contents.bind( "<Control-j>", self.center_view)
 		self.contents.bind( "<Control-u>",
 			lambda event: self.center_view(event, **{'up':True}) )
-		
+
 		self.contents.bind( "<Control-d>", self.del_tab)
 		self.contents.bind( "<Control-Q>",
 			lambda event: self.del_tab(event, **{'save':False}) )
-		
+
 		self.contents.bind( "<Shift-Return>", self.comment)
 		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
 		self.contents.bind( "<Tab>", self.indent)
-		
+
 		self.contents.bind( "<Control-Tab>", self.insert_tab)
-		
+
 		self.contents.bind( "<Control-t>", self.tabify_lines)
 		self.contents.bind( "<Control-z>", self.undo_override)
 		self.contents.bind( "<Control-Z>", self.redo_override)
 		self.contents.bind( "<Control-f>", self.search)
-		
+
 		self.contents.bind( "<Return>", self.return_override)
 		self.contents.bind( "<BackSpace>", self.backspace_override)
-		
+
 		# Used in searching
 		self.bid_space = self.contents.bind( "<space>", self.space_override)
-		
+
 		self.contents.bind( "<Control-n>", self.search_next)
 		self.contents.bind( "<Control-p>",
 				lambda event: self.search_next(event, **{'back':True}) )
-		
-		
+
+
 		# Unbind some default bindings
 		# Paragraph-bindings: too easy to press by accident
 		self.contents.unbind_class('Text', '<<NextPara>>')
 		self.contents.unbind_class('Text', '<<PrevPara>>')
 		self.contents.unbind_class('Text', '<<SelectNextPara>>')
 		self.contents.unbind_class('Text', '<<SelectPrevPara>>')
-		
+
 		# LineStart and -End:
 		# fix goto_linestart-end and
 		# enable tab-walking in mac_os with cmd-left-right
@@ -873,22 +873,22 @@ class Editor(tkinter.Toplevel):
 		self.contents.unbind_class('Text', '<<LineEnd>>')
 		self.contents.unbind_class('Text', '<<SelectLineEnd>>')
 		self.contents.unbind_class('Text', '<<SelectLineStart>>')
-		
-		
+
+
 		# Register validation-functions, note the tuple-syntax:
 		self.validate_gotoline = (self.register(self.do_validate_gotoline), '%i', '%S', '%P')
 		self.validate_search = (self.register(self.do_validate_search), '%i', '%s', '%S')
-		
-		
+
+
 		self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
-		
+
 		# Widgets are configured
 		###############################
 		#
 		# Syntax-highlight Begin #################
 		self.keywords = keyword.kwlist
 		self.keywords.insert(0, 'self')
-		
+
 		self.bools = [ 'False', 'True', 'None' ]
 		self.breaks = [
 						'break',
@@ -899,7 +899,7 @@ class Editor(tkinter.Toplevel):
 						'assert',
 						'yield'
 						]
-						
+
 		self.tests = [
 					'not',
 					'or',
@@ -907,7 +907,7 @@ class Editor(tkinter.Toplevel):
 					'in',
 					'as'
 					]
-		
+
 		self.tagnames = [
 				'keywords',
 				'numbers',
@@ -918,11 +918,11 @@ class Editor(tkinter.Toplevel):
 				'calls',
 				'selfs'
 				]
-		
-		
+
+
 		self.boldfont = self.font.copy()
 		self.boldfont.config(weight='bold')
-		
+
 		self.contents.tag_config('keywords', font=self.boldfont)
 		self.contents.tag_config('numbers', font=self.boldfont)
 		self.contents.tag_config('comments', font=self.boldfont)
@@ -930,73 +930,73 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('calls', font=self.boldfont)
 
 		self.contents.tag_config('focus', underline=True)
-		
+
 		# search tags have highest priority
 		self.contents.tag_raise('match')
 		self.contents.tag_raise('replaced')
 		self.contents.tag_raise('sel')
 		self.contents.tag_raise('focus')
-		
-		
+
+
 		self.oldline = ''
 		self.token_err = False
 		self.token_can_update = False
 		self.oldlinenum = self.contents.index(tkinter.INSERT).split('.')[0]
-		
+
 		self.do_syntax(everything=True)
-			
+
 		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
 		# Viewsync-event does not trigger at window size changes,
 		# to get linenumbers right, one binds to this:
 		self.contents.bind("<Configure>", self.handle_window_resize)
-		
-		
+
+
 		####  Syntax-highlight End  ######################################
-		
+
 		# Layout Begin
 		################################
 		self.rowconfigure(1, weight=1)
 		self.columnconfigure(1, weight=1)
-		
+
 		# It seems that widget is shown on screen when doing grid_configure
 		self.btn_git.grid_configure(row=0, column = 0, sticky='nsew')
 		self.entry.grid_configure(row=0, column = 1, sticky='nsew')
 		self.btn_open.grid_configure(row=0, column = 2, sticky='nsew')
 		self.btn_save.grid_configure(row=0, column = 3, columnspan=2, sticky='nsew')
-		
-		
+
+
 		self.ln_widget.grid_configure(row=1, column = 0, sticky='nswe')
-			
+
 		# If want linenumbers:
 		if self.want_ln:
 			self.contents.grid_configure(row=1, column=1, columnspan=3, sticky='nswe')
-		
+
 		else:
 			self.contents.grid_configure(row=1, column=0, columnspan=4, sticky='nswe')
 			self.ln_widget.grid_remove()
-			
+
 		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 
-		
-		
+
+
 		# Set cursor pos:
 		line = self.tabs[self.tabindex].position
-		
+
 		if self.os_type == 'windows':
 			self.contents.focus_force()
 		else:
 			self.contents.focus_set()
-		
+
 		try:
 			self.contents.mark_set('insert', line)
 			self.ensure_idx_visibility(line)
-			
+
 		except tkinter.TclError:
 			self.contents.mark_set('insert', '1.0')
 			self.tabs[self.tabindex].position = '1.0'
 			self.contents.see('1.0')
-				
-		
+
+
 		# Sticky top right corner, to get some space for console on left
 		# Next line seems not to work in macos12 consistently.
 		#self.geometry('-0+0')
@@ -1010,25 +1010,25 @@ class Editor(tkinter.Toplevel):
 		self.viewsync()
 		self.__class__.alive = True
 		self.update_title()
-	
+
 		############################# init End ##########################
-		
-	
+
+
 	def update_title(self, event=None):
 		tail = len(self.tabs) - self.tabindex - 1
 		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
-		
-	
+
+
 	def handle_window_resize(self, event=None):
 		'''	In case of size change, like maximize etc. viewsync-event is not
 			generated in such situation so need to bind to <Configure>-event.
-			
+
 			Just update self.fullscreen here, not actually setting fullscreen,
 			which is done in esc_override
 		'''
 		# Handle fullscreen toggles
 		self.update_idletasks()
-		
+
 		# Check if setting attribute '-fullscreen' is supported
 		# type(self.wm_attributes()) == tuple
 		if self.wm_attributes().count('-fullscreen') != 0:
@@ -1038,14 +1038,14 @@ class Editor(tkinter.Toplevel):
 			else:
 				if self.fullscreen == True:
 					self.fullscreen = False
-				
-		
+
+
 		self.text_widget_height = self.scrollbar.winfo_height()
 		self.update_linenums()
-		
-	
+
+
 	def copy_windows(self, event=None, selection=None, flag_cut=False):
-		
+
 		try:
 			#self.clipboard_clear()
 			# From copy():
@@ -1053,126 +1053,126 @@ class Editor(tkinter.Toplevel):
 				tmp = selection
 			else:
 				tmp = self.selection_get()
-			
-			
+
+
 			if flag_cut:
 				w = self.contents
-				
+
 				# Event should only come when in entry
 				if event:
 					w = event.widget
-					
+
 				w.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
-			
-			
+
+
 			# https://stackoverflow.com/questions/51921386
 			# pyperclip approach works in windows fine
 			# import clipboard as cb
 			# cb.copy(tmp)
-			
+
 			# os.system approach also works but freezes editor for a little time
-			
-			
+
+
 			d = dict()
 			d['input'] = tmp.encode('ascii')
-			
+
 			t = threading.Thread( target=subprocess.run, args=('clip',), kwargs=d, daemon=True )
 			t.start()
-			
-				
+
+
 			#self.clipboard_append(tmp)
 		except tkinter.TclError:
 			# is empty
 			return 'break'
-			
-			
+
+
 		#print(#self.clipboard_get())
 		return 'break'
-		
-	
+
+
 	def wait_for(self, ms):
 		# This is important, 'cancel' all bindings which checks the state.
 		state = self.state
 		self.state = 'waiting'
-		
+
 		self.waitvar.set(False)
 		self.after(ms, self.waiter)
 		self.wait_variable(self.waitvar)
-		
+
 		# 'Release' bindings
 		self.state = state
-		
-	
+
+
 	def waiter(self):
 		self.waitvar.set(True)
-		
-	
+
+
 	def do_nothing(self, event=None):
 		self.bell()
 		return 'break'
-		
-	
+
+
 	def do_nothing_without_bell(self, event=None):
 		return 'break'
-	
-		
+
+
 	def test_bind(self, event=None):
 		print('jou')
-		
-	
+
+
 	def skip_bindlevel(self, event=None):
 		return 'continue'
-		
-	
+
+
 	def ensure_idx_visibility(self, index, back=None):
 		b=2
 		if back:
 			b=back
-			
+
 		self.contents.mark_set('insert', index)
 		s = self.contents.bbox('%s - %ilines' % (index,b))
 		e = self.contents.bbox('%s + 4lines' % index)
-		
+
 		tests = [
 				not s,
 				not e,
 				( s and s[1] < 0 )
 				]
-				
+
 		if any(tests):
 			self.contents.see('%s - %ilines' % (index,b))
 			self.update_idletasks()
 			self.contents.see('%s + 4lines' % index)
-		
-		
+
+
 	def quit_me(self, event=None):
-		
+
 		if not self.save_forced():
 			self.bell()
 			return 'break'
-		
+
 		tab = self.tabs[self.tabindex]
 		tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
-		
+
 		self.save_config()
-		
+
 		# Affects color, fontchoose, load:
 		for widget in self.to_be_closed:
 			widget.destroy()
-		
+
 		self.quit()
 		self.destroy()
-		
-		
+
+
 		# Activate terminal
 		if self.os_type == 'mac_os':
-		
+
 			# This osascript-language is funny
 			# https://ss64.com/osx/osascript.html
-			
+
 			mac_term = 'Terminal'
-			
-			
+
+
 			try:
 				# Giving focus back to python terminal-window is not very simple task in macOS
 				# https://apple.stackexchange.com/questions/421137
@@ -1181,10 +1181,10 @@ class Editor(tkinter.Toplevel):
 					mac_term = self.__class__.mac_term
 					win_id  = self.__class__.win_id
 
-					
+
 					if mac_term == 'iTerm2':
 						tmp = [ 'osascript', '-e', 'tell app "%s" to select windows whose id = %s' % (mac_term, win_id), '-e', 'tell app "%s" to activate' % mac_term ]
-						
+
 					else:
 						tmp = [ 'osascript', '-e', 'tell app "%s" to set frontmost of windows whose id = %s to true' % (mac_term, win_id), '-e', 'tell app "%s" to activate' % mac_term ]
 
@@ -1201,19 +1201,19 @@ class Editor(tkinter.Toplevel):
 
 			except (FileNotFoundError, subprocess.SubprocessError):
 				pass
-			
+
 			# No need to put in thread
 			#t = threading.Thread( target=subprocess.run, args=(tmp,), daemon=True )
 			#t.start()
-			
-		
+
+
 		if self.tracefunc_name:
 			self.tracevar_filename.trace_remove('write', self.tracefunc_name)
-		
+
 		del self.font
 		del self.menufont
 		del self.boldfont
-		
+
 		# This is maybe not necessary
 		del self.entry
 		del self.btn_open
@@ -1223,14 +1223,14 @@ class Editor(tkinter.Toplevel):
 		del self.ln_widget
 		del self.scrollbar
 		del self.popup
-				
+
 		self.__class__.alive = False
-		
-	
+
+
 	def avoid_viewsync_mess(self, event=None):
 		# Avoid viewsync messing when cursor
 		# position is in line with multiline string marker:
-		
+
 		if self.tabs[self.tabindex].filepath:
 			if self.can_do_syntax():
 				pos = self.tabs[self.tabindex].position
@@ -1245,7 +1245,7 @@ class Editor(tkinter.Toplevel):
 	def viewsync(self, event=None):
 		'''	Triggered when event is <<WidgetViewSync>>
 			Used to update linenumbers and syntax highlight.
-		
+
 			This event itself is generated *after* when inserting, deleting or on screen geometry change, but
 			not when just scrolling (like yview). Almost all font-changes also generates this event.
 		'''
@@ -1253,35 +1253,35 @@ class Editor(tkinter.Toplevel):
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
 		self.update_linenums()
-		
+
 		if self.tabs[self.tabindex].filepath:
 			if self.can_do_syntax():
 				if self.token_can_update:
-				
+
 					#  tag alter triggers this event if font changes, like from normal to bold.
 					# --> need to check if line is changed to prevent self-trigger
 					line_idx = self.contents.index( tkinter.INSERT )
 					linenum = line_idx.split('.')[0]
 					#prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT )
-					
-					
+
+
 					lineend = '%s lineend' % line_idx
 					linestart = '%s linestart' % line_idx
-					
+
 					tmp = self.contents.get( linestart, lineend )
-					
+
 					if self.oldline != tmp or self.oldlinenum != linenum:
-					
+
 						#print('sync')
 						self.oldline = tmp
 						self.oldlinenum = linenum
 						self.update_tokens(start=linestart, end=lineend, line=tmp)
-				
+
 
 ############## Linenumbers Begin
 
 	def toggle_ln(self, event=None):
-		
+
 		# if dont want linenumbers:
 		if self.want_ln:
 			# remove remembers grid-options
@@ -1291,12 +1291,12 @@ class Editor(tkinter.Toplevel):
 		else:
 			self.contents.grid_configure(column=1, columnspan=3)
 			self.ln_widget.grid()
-			
+
 			self.want_ln = True
-		
+
 		return 'break'
-		
-	
+
+
 	def get_linenums(self):
 
 		x = 0
@@ -1309,13 +1309,13 @@ class Editor(tkinter.Toplevel):
 
 		nl = '\n'
 		lineMask = '%s\n'
-		
+
 		# @x,y is tkinter text-index -notation:
 		# The character that covers the (x,y) -coordinate within the text's window.
 		indexMask = '@0,%d'
-		
+
 		# stepping lineheight at time, checking index of each lines first cell, and splitting it.
-		
+
 		for i in range(0, self.text_widget_height, step):
 
 			ll, cc = self.contents.index( indexMask % i).split('.')
@@ -1330,58 +1330,58 @@ class Editor(tkinter.Toplevel):
 				# -5: show up to four smallest number (0-9999)
 				# then starts again from 0 (when actually 10000)
 				ln += (lineMask % line)[-5:]
-				
+
 		return ln
 
-	
+
 	def update_linenums(self):
 
 		# self.ln_widget is linenumber-widget,
 		# self.ln_string is string which holds the linenumbers in self.ln_widget
 		tt = self.ln_widget
 		ln = self.get_linenums()
-		
+
 		if self.ln_string != ln:
 			self.ln_string = ln
-			
+
 			# 1 - 3 : adjust linenumber-lines with text-lines
-			
+
 			# 1:
 			# @0,0 is currently visible first character at
 			# x=0 y=0 in text-widget.
-			
+
 			# 2: bbox returns this kind of tuple: (3, -9, 19, 38)
 			# (bbox is cell that holds a character)
 			# (x-offset, y-offset, width, height) in pixels
 			# Want y-offset of first visible line, and reverse it:
-			
+
 			y_offset = self.contents.bbox('@0,0')[1]
-			
+
 			y_offset *= -1
-			
+
 			# if self.y_extra_offset > 0, this is needed:
 			if y_offset != 0:
 				y_offset += self.y_extra_offset
-				
+
 			tt.config(state='normal')
 			tt.delete('1.0', tkinter.END)
 			tt.insert('1.0', self.ln_string)
 			tt.tag_add('justright', '1.0', tkinter.END)
-			
+
 			# 3: Then scroll lineswidget same amount to fix offset
 			# compared to text-widget:
 			tt.yview_scroll(y_offset, 'pixels')
 
 			tt.config(state='disabled')
 
-		
+
 ############## Linenumbers End
 ############## Tab Related Begin
 
 	def new_tab(self, event=None, error=False):
 		''' error == True from tag_link()
 		'''
-	
+
 		# Normally there would only be event.state check, but because
 		# one can open file (in new tab) from error-view, when state is 'error',
 		# there is an additional check if event is None:
@@ -1389,48 +1389,48 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal' and event != None:
 			self.bell()
 			return 'break'
-		
-				
+
+
 		if len(self.tabs) > 0  and not error:
 			try:
 				pos = self.contents.index(tkinter.INSERT)
-				
+
 			except tkinter.TclError:
 				pos = '1.0'
-				
+
 			self.tabs[self.tabindex].position = pos
-			
+
 			tmp = self.contents.get('1.0', tkinter.END)
 			# [:-1]: remove unwanted extra newline
 			self.tabs[self.tabindex].contents = tmp[:-1]
-			
+
 			tab = self.tabs[self.tabindex]
 			tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
 			self.clear_bookmarks()
-			
-		
+
+
 		self.contents.delete('1.0', tkinter.END)
 		self.entry.delete(0, tkinter.END)
-		
+
 		if len(self.tabs) > 0:
 			self.tabs[self.tabindex].active = False
-			
+
 		newtab = Tab()
-		
+
 		self.tabindex += 1
 		self.tabs.insert(self.tabindex, newtab)
-		
+
 		self.contents.focus_set()
 		self.contents.see('1.0')
 		self.contents.mark_set('insert', '1.0')
-		
+
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		
+
 		self.update_title()
 		return 'break'
-		
-		
+
+
 	def del_tab(self, event=None, save=True):
 		''' save=False from cmd/Control-Q
 		'''
@@ -1438,7 +1438,7 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal':
 			self.bell()
 			return 'break'
-			
+
 		if ((len(self.tabs) == 1) and self.tabs[self.tabindex].type == 'newtab'):
 			self.clear_bookmarks()
 			self.tabs[self.tabindex].bookmarks.clear()
@@ -1450,87 +1450,87 @@ class Editor(tkinter.Toplevel):
 			if not self.save(activetab=True):
 				self.bell()
 				return 'break'
-	
+
 		self.tabs.pop(self.tabindex)
-			
+
 		if (len(self.tabs) == 0):
 			newtab = Tab()
 			self.tabs.append(newtab)
-	
+
 		if self.tabindex > 0:
 			self.tabindex -= 1
-	
+
 		self.tabs[self.tabindex].active = True
 		self.entry.delete(0, tkinter.END)
-		
+
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
-			
-		
+
+
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
-		
+
 		self.do_syntax(everything=True)
-		
+
 		# set cursor pos
 		line = self.tabs[self.tabindex].position
 		self.contents.focus_set()
-		
+
 		try:
 			self.contents.mark_set('insert', line)
 			self.ensure_idx_visibility(line)
-			
+
 		except tkinter.TclError:
 			self.contents.mark_set('insert', '1.0')
 			self.tabs[self.tabindex].position = '1.0'
 			self.contents.see('1.0')
-		
-			
+
+
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		
+
 		self.avoid_viewsync_mess()
 		self.update_title()
-		
+
 		return 'break'
 
-		
+
 	def walk_tabs(self, event=None, back=False):
-	
+
 		if self.state != 'normal' or len(self.tabs) < 2:
 			self.bell()
 			return "break"
-		
-		
+
+
 		self.tabs[self.tabindex].active = False
-		
+
 		try:
 			pos = self.contents.index(tkinter.INSERT)
 		except tkinter.TclError:
 			pos = '1.0'
-		
+
 		self.tabs[self.tabindex].position = pos
-			
+
 		tmp = self.contents.get('1.0', tkinter.END)
 		# [:-1]: remove unwanted extra newline
 		self.tabs[self.tabindex].contents = tmp[:-1]
 		tab = self.tabs[self.tabindex]
 		tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
-		
+
 		idx = self.tabindex
-		
+
 		if back:
 			if idx == 0:
 				idx = len(self.tabs)
 			idx -= 1
-			
+
 		else:
 			if idx == len(self.tabs) - 1:
 				idx = -1
 			idx += 1
-		
+
 		self.tabindex = idx
 		self.tabs[self.tabindex].active = True
 		self.entry.delete(0, tkinter.END)
@@ -1539,12 +1539,12 @@ class Editor(tkinter.Toplevel):
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
-		
+
 		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
-		
+
 		if self.tabs[self.tabindex].filepath:
 			if self.can_do_syntax():
 				self.update_tokens(start='1.0', end=tkinter.END, everything=True)
@@ -1552,23 +1552,23 @@ class Editor(tkinter.Toplevel):
 		# set cursor pos
 		line = self.tabs[self.tabindex].position
 		self.contents.focus_set()
-		
+
 		try:
 			self.contents.mark_set('insert', line)
 			self.ensure_idx_visibility(line)
-			
+
 		except tkinter.TclError:
 			self.contents.mark_set('insert', '1.0')
 			self.tabs[self.tabindex].position = '1.0'
 			self.contents.see('1.0')
 
-		
+
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		
+
 		self.avoid_viewsync_mess()
 		self.update_title()
-		
+
 		return 'break'
 
 ########## Tab Related End
@@ -1576,12 +1576,12 @@ class Editor(tkinter.Toplevel):
 
 	def save_config(self, event=None):
 		data = self.get_config()
-		
+
 		string_representation = json.dumps(data)
-		
+
 		if string_representation == self.oldconf:
 			return
-			
+
 		if self.env:
 			p = pathlib.Path(self.env) / CONFPATH
 			try:
@@ -1592,114 +1592,114 @@ class Editor(tkinter.Toplevel):
 				print('\nCould not save configuration')
 		else:
 			print('\nNot saving configuration when not in venv.')
-		
-	
+
+
 	def load_config(self, data):
-		
+
 		font, menufont = self.fonts_exists(data)
 		self.set_config(data, font, menufont)
-		
-	
+
+
 	def fonts_exists(self, dictionary):
-		
+
 		res = True
 		fontfamilies = [f for f in tkinter.font.families()]
-		
+
 		font = dictionary['font']['family']
-		
+
 		if font not in fontfamilies:
 			print(f'Font {font.upper()} does not exist.')
 			font = False
-		
+
 		menufont = dictionary['menufont']['family']
-		
+
 		if dictionary['menufont']['family'] not in fontfamilies:
 			print(f'Font {menufont.upper()} does not exist.')
 			menufont = False
-			
+
 		return font, menufont
-		
-		
+
+
 	def get_config(self):
 		dictionary = dict()
 		dictionary['curtheme'] = self.curtheme
 		dictionary['lastdir'] = self.lastdir.__str__()
-		
+
 		# Replace possible Tkdefaulfont as family with real name,
 		# if not mac_os, because tkinter.font.Font does not recognise
 		# this: .APPLESYSTEMUIFONT
 
 		if self.os_type == 'mac_os':
-		
+
 			if self.font.cget('family') == 'TkDefaulFont':
 				dictionary['font'] = self.font.config()
-				
+
 			else:
 				dictionary['font'] = self.font.actual()
-				
+
 			if self.menufont.cget('family') == 'TkDefaulFont':
 				dictionary['menufont'] = self.menufont.config()
-				
+
 			else:
 				dictionary['menufont'] = self.menufont.actual()
-				
+
 		else:
 			dictionary['font'] = self.font.actual()
 			dictionary['menufont'] = self.menufont.actual()
 
-		
+
 		dictionary['scrollbar_width'] = self.scrollbar_width
 		dictionary['elementborderwidth'] = self.elementborderwidth
 		dictionary['want_ln'] = self.want_ln
 		dictionary['syntax'] = self.syntax
 		dictionary['ind_depth'] = self.ind_depth
 		dictionary['themes'] = self.themes
-		
+
 		for tab in self.tabs:
 			tab.contents = ''
 			tab.oldcontents = ''
-			
+
 			# Convert tab.filepath to string for serialization
 			if tab.filepath:
 				tab.filepath = tab.filepath.__str__()
 			else:
 				tab.bookmarks.clear()
-		
+
 		tmplist = [ tab.__dict__ for tab in self.tabs ]
 		dictionary['tabs'] = tmplist
-		
+
 		return dictionary
-		
-		
+
+
 	def set_config(self, dictionary, font, menufont):
-		
+
 		# Set Font Begin ##############################
-		
+
 		# Both missing:
 		if not font and not menufont:
 			fontname = None
-			
+
 			fontfamilies = [f for f in tkinter.font.families()]
-			
+
 			for font in GOODFONTS:
 				if font in fontfamilies:
 					fontname = font
 					break
-			
+
 			if not fontname:
 				fontname = 'TkDefaulFont'
-				
+
 			dictionary['font']['family'] = fontname
 			dictionary['menufont']['family'] = fontname
-		
+
 		# One missing, copy existing:
 		elif bool(font) ^ bool(menufont):
 			if font:
 				dictionary['menufont']['family'] = font
 			else:
 				dictionary['font']['family'] = menufont
-			
-			
+
+
 		self.font.config(**dictionary['font'])
 		self.menufont.config(**dictionary['menufont'])
 		self.scrollbar_width 	= dictionary['scrollbar_width']
@@ -1709,37 +1709,37 @@ class Editor(tkinter.Toplevel):
 		self.ind_depth = dictionary['ind_depth']
 		self.themes = dictionary['themes']
 		self.curtheme = dictionary['curtheme']
-		
+
 		self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
-			
+
 		self.lastdir = dictionary['lastdir']
-		
+
 		if self.lastdir != None:
 			self.lastdir = pathlib.Path(dictionary['lastdir'])
 			if not self.lastdir.exists():
 				self.lastdir = None
-		
+
 		self.tabs = [ Tab(**item) for item in dictionary['tabs'] ]
-		
+
 		# To avoid for-loop breaking, while removing items from the container being iterated,
 		# one can iterate over container[:], that is: self.tabs[:],
 		# which returns a shallow copy of the list --> safe to remove items.
-		
+
 		# This is same as:
 		# tmplist = self.tabs[:]
 		# for tab in tmplist:
 		for tab in self.tabs[:]:
-			
+
 			if tab.type == 'normal':
 				try:
 					with open(tab.filepath, 'r', encoding='utf-8') as f:
 						tmp = f.read()
 						tab.contents = tmp
 						tab.oldcontents = tab.contents
-						
+
 					tab.filepath = pathlib.Path(tab.filepath)
-					
-					
+
+
 				except (EnvironmentError, UnicodeDecodeError) as e:
 					print(e.__str__())
 					self.tabs.remove(tab)
@@ -1747,15 +1747,15 @@ class Editor(tkinter.Toplevel):
 				tab.bookmarks.clear()
 				tab.filepath = None
 				tab.position = '1.0'
-				
+
 		for i,tab in enumerate(self.tabs):
 			if tab.active == True:
 				self.tabindex = i
 				break
-		
+
 
 	def apply_config(self):
-		
+
 		if self.tabindex == None:
 			if len(self.tabs) == 0:
 				self.tabindex = -1
@@ -1764,95 +1764,95 @@ class Editor(tkinter.Toplevel):
 			else:
 				self.tabindex = 0
 				self.tabs[self.tabindex].active = True
-		
+
 
 		self.tab_width = self.font.measure(self.ind_depth * TAB_WIDTH_CHAR)
-		
+
 		pad_x =  self.tab_width // self.ind_depth // 3
 		pad_y = pad_x
 
 		for tagname in self.themes[self.curtheme]:
 			bg, fg = self.themes[self.curtheme][tagname][:]
 			self.contents.tag_config(tagname, background=bg, foreground=fg)
-		
-		
+
+
 		self.contents.config(font=self.font, foreground=self.fgcolor,
 			background=self.bgcolor, insertbackground=self.fgcolor,
 			tabs=(self.tab_width, ), padx=pad_x, pady=pad_y)
-			
+
 		self.scrollbar.config(width=self.scrollbar_width)
 		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
-		
+
 		self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor,
 			padx=pad_x, pady=pad_y)
-			
+
 		self.entry.config(font=self.menufont)
 		self.btn_open.config(font=self.menufont)
 		self.btn_save.config(font=self.menufont)
 		self.btn_git.config(font=self.menufont)
 		self.popup.config(font=self.menufont)
-		
+
 		if self.tabs[self.tabindex].type == 'normal':
 			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 			self.restore_bookmarks()
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
-			
-			
+
+
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		
+
 ########## Configuration Related End
 ########## Syntax highlight Begin
-	
+
 	def toggle_syntax(self, event=None):
-		
+
 		if self.syntax:
 			self.syntax = False
 			self.token_can_update = False
-			
+
 			for tag in self.tagnames:
 				self.contents.tag_remove( tag, '1.0', tkinter.END )
-				
+
 			return 'break'
-	
+
 		else:
 			self.syntax = True
 			self.do_syntax(everything=True)
-			
+
 			return 'break'
-			
-	
+
+
 	def can_do_syntax(self):
-	
+
 		return '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax
-		
-		
+
+
 	def do_syntax(self, everything=False):
-	
+
 		if self.tabs[self.tabindex].filepath:
 			if self.can_do_syntax():
-			
+
 				self.token_err = True
 				content_is_uptodate = everything
 				self.update_tokens(start='1.0', end=tkinter.END, everything=content_is_uptodate)
 				self.token_can_update = True
-				
+
 			else:
 				self.token_err = False
 				self.token_can_update = False
-			
+
 		else:
 			self.token_err = False
 			self.token_can_update = False
-			
-	
+
+
 	def update_tokens(self, start=None, end=None, line=None, everything=False):
-	
+
 		start_idx = start
 		end_idx = end
 		linecontents = None
-		
+
 		if not everything:
 			if line:
 				linecontents = line
@@ -1863,126 +1863,126 @@ class Editor(tkinter.Toplevel):
 					]
 			else:
 				test1 = [self.token_err]
-				
-				
+
+
 			if any(test1):
 				start_idx = '1.0'
 				end_idx = tkinter.END
 				linecontents = None
 				#print('err')
-		
+
 			# check if inside multiline string
 			elif 'strings' in self.contents.tag_names(tkinter.INSERT) and \
 					not ( start_idx == '1.0' and end_idx == tkinter.END ):
-				
+
 				try:
 					s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
 					# Clarify this:################################################
 					l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
-				
+
 					if l0 != l1:
 						start_idx, end_idx = (s, e)
 						linecontents = None
-		
+
 				except ValueError:
 					pass
-			
-			
+
+
 			if not linecontents:
 				tmp = self.contents.get( start_idx, end_idx )
-				
+
 			else:
 				tmp = linecontents
-				
+
 		else:
 			tmp = self.tabs[self.tabindex].contents
-			
-		
-		
+
+
+
 		prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
 		if prev_char in [ '(', ')', '[', ']' , '{', '}' ]:
 			self.par_err = True
-		
+
 		linenum = int(start_idx.split('.')[0])
 		flag_err = False
 		#print(self.token_err)
-		
-		
+
+
 		try:
 			par_err = None
-			
+
 			with io.BytesIO( tmp.encode('utf-8') ) as fo:
-			
+
 				tokens = tokenize.tokenize( fo.readline )
-			
+
 				# Remove old tags:
 				for tag in self.tagnames:
 					self.contents.tag_remove( tag, start_idx, end_idx )
-					
+
 				# Retag:
 				idx_start = None
 				for token in tokens:
 					#print(token)
-					
+
 					# token.line contains line as string which contains token.
-					
+
 					if token.type == tokenize.NAME or \
 						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
 						( token.exact_type == tokenize.LPAR ):
-						
+
 						# initiate indexes with correct linenum
 						s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
 						e0, e1 = map(str, [ token.end[0] + linenum - 1, token.end[1] ] )
 						idx_start = s0 + '.' + s1
 						idx_end = e0 + '.' + e1
-						
-						
+
+
 						if token.type == tokenize.NAME:
-							
+
 							#lastoken = token
 							last_idx_start = idx_start
 							last_idx_end = idx_end
-							
+
 							if token.string in self.keywords:
-							
+
 								if token.string == 'self':
 									self.contents.tag_add('selfs', idx_start, idx_end)
-								
+
 								elif token.string in self.bools:
 									self.contents.tag_add('bools', idx_start, idx_end)
-									
+
 ##								elif token.string in self.tests:
 ##									self.contents.tag_add('tests', idx_start, idx_end)
-								
+
 								elif token.string in self.breaks:
 									self.contents.tag_add('breaks', idx_start, idx_end)
-								
+
 								else:
 									self.contents.tag_add('keywords', idx_start, idx_end)
-								
-						
+
+
 						# calls
 						elif token.exact_type == tokenize.LPAR:
 							# Need to know if last char before ( was not empty.
 							# Previously used test was:
 							#if self.contents.get( '%s - 1c' % idx_start, idx_start ).strip():
-							
+
 							# token.line contains line as string which contains token.
 							prev_char_idx = token.start[1]-1
 							if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
 								self.contents.tag_add('calls', last_idx_start, last_idx_end)
-								
+
 						elif token.type == tokenize.STRING:
 							self.contents.tag_add('strings', idx_start, idx_end)
-							
+
 						elif token.type == tokenize.COMMENT:
 							self.contents.tag_add('comments', idx_start, idx_end)
-						
+
 						# token.type == tokenize.NUMBER
 						else:
 							self.contents.tag_add('numbers', idx_start, idx_end)
-					
-		
+
+
 		except IndentationError as e:
 ##			for attr in ['args', 'filename', 'lineno', 'msg', 'offset', 'text']:
 ##				item = getattr( e, attr)
@@ -1993,22 +1993,22 @@ class Editor(tkinter.Toplevel):
 			flag_err = True
 			self.token_err = True
 
-		
+
 		except tokenize.TokenError as ee:
-			
+
 			if 'EOF in multi-line statement' in ee.args[0]:
 				self.check_pars = idx_start
-				
+
 			elif 'multi-line string' in ee.args[0]:
 				flag_err = True
 				self.token_err = True
-			
-			
+
+
 		# from backspace_override:
 		if self.check_pars:
 			startl = self.check_pars
 			par_err = self.checkpars(startl)
-			
+
 		elif self.par_err:
 			startl = False
 			par_err = self.checkpars(startl)
@@ -2019,56 +2019,56 @@ class Editor(tkinter.Toplevel):
 		if not par_err:
 			# not always checking whole file for par mismatches, so clear
 			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
-			
+
 
 
 		if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
 			#print('ok')
 			self.token_err = False
-			
-			
+
+
 	def checkpars(self, idx_start):
 		# possible par mismatch may be caused from another line,
 		# so find current block: find first empty line before and after curline
 		# then count pars in it.
-		
+
 		if not idx_start:
 			# line had nothing but brace in it and it were deleted
 			idx_start = self.contents.index(tkinter.INSERT)
-			
+
 		curline = int( idx_start.split('.')[0] )
 		startline, endline, lines = self.find_empty_lines(curline)
 		err_indexes = self.count_pars(startline, lines)
-		
+
 		err = False
-		
+
 		if err_indexes:
 			err = True
 			err_line = startline + err_indexes[0]
 			err_col = err_indexes[1]
 			err_idx = '%i.%i' % (err_line, err_col)
-			
+
 			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
 			self.contents.tag_add('mismatch', err_idx, '%s +1c' % err_idx)
-		
+
 		#print(err)
 		return err
-	
-	
+
+
 	def count_pars(self, startline, lines):
-		
+
 		pars = list()
 		bras = list()
 		curls = list()
-		
+
 		opening  = [ '(', '[', '{' ]
 		closing  = [ ')', ']', '}' ]
-		
+
 		tags = None
-		
+
 		# populate lists and return at first extra closer:
 		for i in range(len(lines)):
-			
+
 			for j in range(len(lines[i])):
 				c = lines[i][j]
 				patt = '%i.%i' % (startline+i, j)
@@ -2079,67 +2079,67 @@ class Editor(tkinter.Toplevel):
 					if 'strings' in tags or 'comments' in tags:
 						tags = None
 						continue
-				
+
 				if c in closing:
 					if c == ')':
 						if len(pars) > 0:
 							pars.pop(-1)
 						else:
 							return (i,j)
-					
+
 					elif c == ']':
 						if len(bras) > 0:
 							bras.pop(-1)
 						else:
 							return (i,j)
-					
+
 					# c == '}'
 					else:
 						if len(curls) > 0:
 							curls.pop(-1)
 						else:
 							return (i,j)
-						
-							
+
+
 				elif c in opening:
 					if c == '(':
 						pars.append((i,j))
-						
+
 					elif c == '[':
 						bras.append((i,j))
-					
+
 					# c == '{':
 					else:
 						curls.append((i,j))
-				
-		
+
+
 		# no extra closer in block.
 		# Return last extra opener:
 		idxlist = list()
-		
+
 		for item in [ pars, bras, curls ]:
 			if len(item) > 0:
 				idx =  item.pop(-1)
 				idxlist.append(idx)
-	
-	
+
+
 		if len(idxlist) > 0:
 			if len(idxlist) > 1:
-			
+
 				maxidx = max(idxlist)
-				
+
 				return idxlist[idxlist.index(maxidx)]
-					
+
 			else:
 				return idxlist[0]
-			
+
 		else:
 			return False
 
-		
+
 	def find_empty_lines(self, lnstart):
 		'''	Finds first empty lines before and after current line
-			
+
 			returns
 				linenumber of start and end of the block
 				and list of lines.
@@ -2156,16 +2156,16 @@ class Editor(tkinter.Toplevel):
 		if ln > endln:
 			ln -= 1
 			t = self.contents.get('%i.0' % ln, '%i.end' % ln)
-			
+
 			while t != '' and not t.isspace():
 				lines.append(t)
 				ln -= 1
-				
+
 				if ln < endln:
 					break
-				
+
 				t = self.contents.get('%i.0' % ln, '%i.end' % ln)
-			
+
 			ln += 1
 
 		else:
@@ -2187,9 +2187,9 @@ class Editor(tkinter.Toplevel):
 		# first empty line after curline:
 		endln = int( self.contents.index(tkinter.END).split('.')[0] )
 		ln += 1
-		
+
 		if ln < endln:
-			
+
 			t = self.contents.get('%i.0' % ln, '%i.end' % ln)
 
 			while  t != '' and not t.isspace():
@@ -2200,9 +2200,9 @@ class Editor(tkinter.Toplevel):
 					break
 
 				t = self.contents.get('%i.0' % ln, '%i.end' % ln)
-				
+
 			ln -= 1
-			
+
 		else:
 			# curline is lastline
 			pass
@@ -2211,7 +2211,7 @@ class Editor(tkinter.Toplevel):
 		endline = ln
 
 		return startline, endline, lines
-							
+
 
 ########## Syntax highlight End
 ########## Theme Related Begin
@@ -2219,12 +2219,12 @@ class Editor(tkinter.Toplevel):
 	def change_indentation_width(self, width):
 		''' width is integer between 1-8
 		'''
-		
+
 		if type(width) != int: return
 		elif width == self.ind_depth: return
 		elif not 0 < width <= 8: return
-		
-		
+
+
 		self.ind_depth = width
 		self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
 		self.contents.config(tabs=(self.tab_width, ))
@@ -2237,15 +2237,15 @@ class Editor(tkinter.Toplevel):
 		if self.scrollbar_width >= 100:
 			self.bell()
 			return 'break'
-			
+
 		self.scrollbar_width += 7
 		self.elementborderwidth += 1
 		self.scrollbar.config(width=self.scrollbar_width)
 		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
-			
+
 		return 'break'
-		
-		
+
+
 	def decrease_scrollbar_width(self, event=None):
 		'''	Change width of scrollbar and self.contents
 			Shortcut: Ctrl-minus
@@ -2253,127 +2253,127 @@ class Editor(tkinter.Toplevel):
 		if self.scrollbar_width <= 0:
 			self.bell()
 			return 'break'
-			
+
 		self.scrollbar_width -= 7
 		self.elementborderwidth -= 1
 		self.scrollbar.config(width=self.scrollbar_width)
 		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
-			
+
 		return 'break'
-		
+
 
 	def toggle_color(self, event=None):
-		
+
 		if self.curtheme == 'day':
 			self.curtheme = 'night'
 		else:
 			self.curtheme = 'day'
-		
+
 		self.update_normal_text()
-		
+
 		return 'break'
 
 
 	def update_normal_text(self):
-	
+
 		self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
-			
-	
+
+
 		for tagname in self.themes[self.curtheme]:
 			bg, fg = self.themes[self.curtheme][tagname][:]
 			self.contents.tag_config(tagname, background=bg, foreground=fg)
-	
-		
+
+
 		self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
 			insertbackground=self.fgcolor)
-			
+
 		self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
-	
-	
+
+
 	def update_fonts(self):
 		self.boldfont = self.font.copy()
 		self.boldfont.config(weight='bold')
-		
+
 		self.contents.tag_config('keywords', font=self.boldfont)
 		self.contents.tag_config('numbers', font=self.boldfont)
 		self.contents.tag_config('comments', font=self.boldfont)
 		self.contents.tag_config('breaks', font=self.boldfont)
 		self.contents.tag_config('calls', font=self.boldfont)
-		
-		
+
+
 		self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
 		pad_x =  self.tab_width // self.ind_depth // 3
 		pad_y = pad_x
-		
+
 		self.contents.config(tabs=(self.tab_width, ), padx=pad_x, pady=pad_y)
 		self.ln_widget.config(padx=pad_x, pady=pad_y)
 		self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
 		#self.bbox_height = self.contents.bbox('@0,0')[3]
-		
 
-					
+
+
 	def font_choose(self, event=None):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-		
+
 		fonttop = tkinter.Toplevel()
 		fonttop.title('Choose Font')
-		
+
 		big = False
 		shortcut = "<Alt-f>"
-		
+
 		if self.os_type == 'mac_os':
 			big = True
 			shortcut = "<function>"
-		
-		
+
+
 		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
 				self.contents.bind( shortcut, self.font_choose)) )
-		
+
 		changefont.FontChooser( fonttop, [self.font, self.menufont], big,
 			tracefunc=self.update_fonts, os_type=self.os_type )
 		self.contents.bind( shortcut, self.do_nothing)
 		self.to_be_closed.append(fonttop)
-	
+
 		return 'break'
-		
-		
+
+
 	def enter2(self, args, event=None):
 		''' When mousecursor enters hyperlink tagname in colorchooser.
 		'''
 		wid = args[0]
 		tagname = args[1]
-		
+
 		t = wid.textwid
-		
+
 		# Maybe left as lambda-example?
 		#wid.after(200, lambda kwargs={'cursor':'hand2'}: t.config(**kwargs) )
 
 		t.config(cursor="hand2")
 		wid.after(50, lambda args=[tagname],
 				kwargs={'underline':1, 'font':self.boldfont}: t.tag_config(*args, **kwargs) )
-		
-		
+
+
 	def leave2(self, args, event=None):
 		''' When mousecursor leaves hyperlink tagname in colorchooser.
 		'''
 		wid = args[0]
 		tagname = args[1]
-		
+
 		t = wid.textwid
-		
+
 		t.config(cursor=self.name_of_cursor_in_text_widget)
 		wid.after(50, lambda args=[tagname],
 				kwargs={'underline':0, 'font':self.menufont}: t.tag_config(*args, **kwargs) )
-		
-		
+
+
 	def lclick2(self, args, event=None):
 		'''	When clicked hyperlink in colorchooser.
 		'''
 		wid = args[0]
 		tagname = args[1]
-		
+
 		syntags = [
 		'normal_text',
 		'keywords',
@@ -2390,21 +2390,21 @@ class Editor(tkinter.Toplevel):
 		'mismatch',
 		'selected'
 		]
-		
+
 		modetags = [
 		'Day',
 		'Night',
 		'Text',
 		'Background'
 		]
-		
+
 		savetags = [
 		'Save_TMP',
 		'TMP',
 		'Start',
 		'Defaults'
 		]
-		
+
 		onlyfore = [
 		'keywords',
 		'numbers',
@@ -2416,29 +2416,29 @@ class Editor(tkinter.Toplevel):
 		'selfs'
 		]
 
-		
+
 		if tagname in syntags:
-			
+
 			if tagname == 'selected':
 				tagname = 'sel'
-			
+
 			if wid.frontback_mode == 'foreground':
 				initcolor = self.contents.tag_cget(tagname, 'foreground')
 				patt = 'Choose fgcolor for: %s' % tagname
-				
+
 			else:
 				initcolor = self.contents.tag_cget(tagname, 'background')
 				patt = 'Choose bgcolor for: %s' % tagname
-			
+
 			res = self.tk.call('tk_chooseColor', '-initialcolor', initcolor, '-title', patt)
-				
+
 			tmpcolor = str(res)
-			
+
 			if tmpcolor in [None, '']:
 				wid.focus_set()
 				return 'break'
-			
-			
+
+
 			try:
 				if wid.frontback_mode == 'foreground':
 					self.themes[self.curtheme][tagname][1] = tmpcolor
@@ -2446,179 +2446,179 @@ class Editor(tkinter.Toplevel):
 				else:
 					self.themes[self.curtheme][tagname][0] = tmpcolor
 					self.contents.tag_config(tagname, background=tmpcolor)
-			
-			
+
+
 				if tagname == 'normal_text':
 					self.update_normal_text()
-				
+
 			# if closed editor and still pressing ok in colorchooser:
 			except (tkinter.TclError, AttributeError) as e:
 				# because if closed editor, this survives
 				pass
-			
-			
+
+
 		elif tagname in modetags:
-		
+
 			t = wid.textwid
-		
+
 			if tagname == 'Day' and self.curtheme != 'day':
 				r1 = t.tag_nextrange('Day', 1.0)
 				r2 = t.tag_nextrange('Night', 1.0)
-				
+
 				t.delete(r1[0], r1[1])
 				t.insert(r1[0], '[X] Day-mode	', 'Day')
 				t.delete(r2[0], r2[1])
 				t.insert(r2[0], '[ ] Night-mode	', 'Night')
-				
+
 				self.toggle_color()
-				
-				
+
+
 			elif tagname == 'Night' and self.curtheme != 'night':
 				r1 = t.tag_nextrange('Day', 1.0)
 				r2 = t.tag_nextrange('Night', 1.0)
-				
+
 				t.delete(r1[0], r1[1])
 				t.insert(r1[0], '[ ] Day-mode	', 'Day')
 				t.delete(r2[0], r2[1])
 				t.insert(r2[0], '[X] Night-mode	', 'Night')
-				
+
 				self.toggle_color()
-				
-				
+
+
 			elif tagname == 'Text':
 				if wid.frontback_mode != 'foreground':
 					r1 = t.tag_nextrange('Text', 1.0)
 					r2 = t.tag_nextrange('Background', 1.0)
-					
+
 					t.delete(r1[0], r1[1])
 					t.insert(r1[0], '[X] Text color\n', 'Text')
-					
+
 					t.delete(r2[0], r2[1])
 					t.insert(r2[0], '[ ] Background color\n', 'Background')
 					wid.frontback_mode = 'foreground'
-					
+
 					t.tag_remove('disabled', 1.0, tkinter.END)
-					
+
 					for tag in onlyfore:
 						r3 = wid.tag_idx.get(tag)
 						t.tag_add(tag, r3[0], r3[1])
-					
-								
+
+
 			elif tagname == 'Background':
 				if wid.frontback_mode != 'background':
 					r1 = t.tag_nextrange('Text', 1.0)
 					r2 = t.tag_nextrange('Background', 1.0)
-					
+
 					t.delete(r1[0], r1[1])
 					t.insert(r1[0], '[ ] Text color\n', 'Text')
-					
+
 					t.delete(r2[0], r2[1])
 					t.insert(r2[0], '[X] Background color\n', 'Background')
 					wid.frontback_mode = 'background'
-					
+
 					for tag in onlyfore:
 						r3 = t.tag_nextrange(tag, 1.0)
 						wid.tag_idx.setdefault(tag, r3)
 						t.tag_remove(tag, 1.0, tkinter.END)
 						t.tag_add('disabled', r3[0], r3[1])
-						
-				
+
+
 		elif tagname in savetags:
-			
+
 			t = wid.textwid
-			
+
 			if tagname == 'Save_TMP':
 				wid.tmp_theme = copy.deepcopy(self.themes)
 				wid.flag_tmp = True
 				self.flash_tag(t, tagname)
-				
+
 			elif tagname == 'TMP' and wid.flag_tmp:
 				self.themes = copy.deepcopy(wid.tmp_theme)
 				self.flash_tag(t, tagname)
-				
+
 			elif tagname == 'Start':
 				self.themes = copy.deepcopy(wid.start_theme)
 				self.flash_tag(t, tagname)
-				
+
 			elif tagname == 'Defaults':
 				self.themes = copy.deepcopy(self.default_themes)
 				self.flash_tag(t, tagname)
-				
-				
+
+
 			if (tagname in ['Defaults', 'Start']) or (tagname == 'TMP' and wid.flag_tmp):
-			
+
 				for tag in self.themes[self.curtheme]:
 					bg, fg = self.themes[self.curtheme][tag][:]
 					self.contents.tag_config(tag, background=bg, foreground=fg)
-	
+
 				self.update_normal_text()
-				
-		
+
+
 		wid.focus_set()
-				
-				
+
+
 	def flash_tag(self, widget, tagname):
 		''' Flash save_tag when clicked in colorchooser.
 			widget is tkinter.Text -widget
 		'''
 		w = widget
-		
+
 		w.after(50, lambda args=[tagname],
 				kwargs={'background':'green'}: w.tag_config(*args, **kwargs) )
-					
+
 		w.after(600, lambda args=[tagname],
 				kwargs={'background':w.cget('background')}: w.tag_config(*args, **kwargs) )
-					
-	
+
+
 	def color_choose(self, event=None):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-			
+
 		colortop = tkinter.Toplevel()
 		c = colortop
 		c.title('Choose Color')
 		c.start_theme = copy.deepcopy(self.themes)
 		c.tmp_theme = copy.deepcopy(self.themes)
 		c.flag_tmp = False
-		
+
 		shortcut_color = "<Alt-s>"
 		shortcut_toggl = "<Alt-t>"
 
 		if self.os_type == 'mac_os':
 			shortcut_color = "<ssharp>"
 			shortcut_toggl = "<dagger>"
-		
-		
+
+
 		c.protocol("WM_DELETE_WINDOW", lambda: ( c.destroy(),
 				self.contents.bind( shortcut_color, self.color_choose),
 				self.contents.bind( shortcut_toggl, self.toggle_color)) )
-				
+
 		self.contents.bind( shortcut_color, self.do_nothing)
 		self.contents.bind( shortcut_toggl, self.do_nothing)
-		
+
 		#c.textfont = tkinter.font.Font(family='TkDefaulFont', size=10)
-		
+
 		size_title = 12
 		if self.os_type == 'mac_os': size_title = 16
 		c.titlefont = tkinter.font.Font(family='TkDefaulFont', size=size_title)
-		
+
 		c.textwid = tkinter.Text(c, blockcursor=True, highlightthickness=0,
 							bd=4, pady=4, padx=10, tabstyle='wordprocessor', font=self.menufont)
-		
+
 		c.scrollbar = tkinter.Scrollbar(c, orient=tkinter.VERTICAL, highlightthickness=0,
 							bd=0, command = c.textwid.yview)
 
-		
+
 		c.textwid['yscrollcommand'] = c.scrollbar.set
 		c.scrollbar.config(width=self.scrollbar_width)
 		c.scrollbar.config(elementborderwidth=self.elementborderwidth)
 
 		t = c.textwid
-		
+
 		t.tag_config('title', font=c.titlefont)
 		t.tag_config('disabled', foreground='#a6a6a6')
-		
+
 		tags = [
 		'Day',
 		'Night',
@@ -2643,12 +2643,12 @@ class Editor(tkinter.Toplevel):
 		'Start',
 		'Defaults'
 		]
-		
-		
-		
-				
-		
-		
+
+
+
+
+
+
 		for tag in tags:
 			t.tag_config(tag, font=self.menufont)
 			t.tag_bind(tag, "<Enter>",
@@ -2657,52 +2657,52 @@ class Editor(tkinter.Toplevel):
 				lambda event, arg=[c, tag]: self.leave2(arg, event))
 			t.tag_bind(tag, "<ButtonRelease-1>",
 					lambda event, arg=[c, tag]: self.lclick2(arg, event))
-						
-		
-				
+
+
+
 		c.rowconfigure(1, weight=1)
 		c.columnconfigure(1, weight=1)
-		
+
 		t.grid_configure(row=0, column = 0)
 		c.scrollbar.grid_configure(row=0, column = 1, sticky='ns')
-		
-		
+
+
 		i = tkinter.INSERT
-		
+
 		t.insert(i, 'Before closing, load setting from: Start\n', 'title')
 		t.insert(i, 'if there were made unwanted changes.\n', 'title')
 		t.insert(i, '\nChanging color for:\n', 'title')
-		
-		
+
+
 		c.frontback_mode = None
 		c.tag_idx = dict()
-		
+
 		if self.curtheme == 'day':
-		
+
 			t.insert(i, '[X] Day-mode	', 'Day')
 			t.insert(i, '[X] Text color\n', 'Text')
-		
+
 			t.insert(i, '[ ] Night-mode	', 'Night')
 			t.insert(i, '[ ] Background color\n', 'Background')
-			
+
 			c.frontback_mode = 'foreground'
-			
-			
+
+
 		else:
 			t.insert(i, '[ ] Day-mode	', 'Day')
 			t.insert(i, '[X] Text color\n', 'Text')
-		
+
 			t.insert(i, '[X] Night-mode	', 'Night')
 			t.insert(i, '[ ] Background color\n', 'Background')
-			
+
 			c.frontback_mode = 'foreground'
-			
-		
-		
+
+
+
 		t.insert(i, '\nSelect tag you want to modify\n', 'title')
 		t.insert(i, 'normal text\n', 'normal_text')
-		
-		
+
+
 		t.insert(i, '\nSyntax highlight tags\n', 'title')
 		t.insert(i, 'keywords\n', 'keywords')
 		t.insert(i, 'numbers\n', 'numbers')
@@ -2712,25 +2712,25 @@ class Editor(tkinter.Toplevel):
 		t.insert(i, 'breaks\n', 'breaks')
 		t.insert(i, 'calls\n', 'calls')
 		t.insert(i, 'selfs\n', 'selfs')
-	
+
 
 		t.insert(i, '\nSearch tags\n', 'title')
 		t.insert(i, 'match\n', 'match')
 		t.insert(i, 'focus\n', 'focus')
 		t.insert(i, 'replaced\n', 'replaced')
-	
+
 
 		t.insert(i, '\nParentheses\n', 'title')
 		t.insert(i, 'mismatch\n', 'mismatch')
-		
+
 		t.insert(i, '\nSelection\n', 'title')
 		t.insert(i, 'selected\n', 'selected')
-	
+
 
 		t.insert(i, '\nSave current setting to template,\n', 'title')
 		t.insert(i, 'to which you can revert later:\n', 'title')
 		t.insert(i, 'Save TMP\n', 'Save_TMP')
-		
+
 		t.insert(i, '\nLoad setting from:\n', 'title')
 		t.insert(i, 'TMP\n', 'TMP')
 		t.insert(i, 'Start\n', 'Start')
@@ -2745,7 +2745,7 @@ class Editor(tkinter.Toplevel):
 
 		return 'break'
 
-		
+
 ########## Theme Related End
 ########## Run file Related Begin
 
@@ -2765,30 +2765,30 @@ class Editor(tkinter.Toplevel):
 
 	def lclick(self, tagname, event=None):
 		'''	Used in error-page, when hyperlink tagname is clicked.
-		
+
 			self.taglinks is dict with tagname as key
 			and function (self.taglink) as value.
 		'''
-		
+
 		# Passing tagname-string as argument to function self.taglink()
 		# which in turn is a value of tagname-key in dictionary taglinks:
 		self.taglinks[tagname](tagname)
-		
+
 
 	def tag_link(self, tagname, event=None):
 		''' Used in error-page, executed when hyperlink tagname is clicked.
 		'''
-		
+
 		i = int(tagname.split("-")[1])
 		filepath, errline = self.errlines[i]
-		
+
 		filepath = pathlib.Path(filepath)
 		openfiles = [tab.filepath for tab in self.tabs]
-		
+
 		# Clicked activetab, do nothing
 		if filepath == self.tabs[self.tabindex].filepath:
 			pass
-			
+
 		# Clicked file that is open, switch activetab
 		elif filepath in openfiles:
 			for i,tab in enumerate(self.tabs):
@@ -2797,7 +2797,7 @@ class Editor(tkinter.Toplevel):
 					self.tabindex = i
 					self.tabs[self.tabindex].active = True
 					break
-					
+
 		# else: open file in newtab
 		else:
 			try:
@@ -2805,84 +2805,84 @@ class Editor(tkinter.Toplevel):
 					tmp = f.read()
 					self.new_tab(error=True)
 					self.tabs[self.tabindex].oldcontents = tmp
-					
+
 					if '.py' in filepath.suffix:
 						indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
-						
+
 						if indentation_is_alien:
 							tmp = self.tabs[self.tabindex].oldcontents.splitlines(True)
 							tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 							tmp = ''.join(tmp)
 							self.tabs[self.tabindex].contents = tmp
-							
+
 						else:
 							self.tabs[self.tabindex].contents = self.tabs[self.tabindex].oldcontents
 					else:
 						self.tabs[self.tabindex].contents = self.tabs[self.tabindex].oldcontents
-				
-					
+
+
 					self.tabs[self.tabindex].filepath = filepath
 					self.tabs[self.tabindex].type = 'normal'
-					
+
 			except (EnvironmentError, UnicodeDecodeError) as e:
 				print(e.__str__())
 				print(f'\n Could not open file: {filepath}')
 				self.bell()
 				return
 
-		
+
 		self.entry.delete(0, tkinter.END)
 		self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		self.entry.xview_moveto(1.0)
-		
-		
+
+
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
-		
+
 		if self.syntax:
-		
+
 			lineend = '%s lineend' % tkinter.INSERT
 			linestart = '%s linestart' % tkinter.INSERT
-			
+
 			tmp = self.contents.get( linestart, lineend )
 			self.oldline = tmp
-			
+
 			self.token_err = True
 			self.update_tokens(start='1.0', end=tkinter.END)
 			self.token_can_update = True
-		
-		
+
+
 		# Set cursor pos
 		line = errline + '.0'
 		self.contents.focus_set()
 		self.contents.mark_set('insert', line)
 		self.ensure_idx_visibility(line)
-					
-		
+
+
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		
+
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 		self.state = 'normal'
 		self.update_title()
-		
+
 
 	def run(self):
 		'''	Run file currently being edited. This can not catch errlines of
 			those exceptions that are catched. Like:
-			
+
 			try:
 				code known sometimes failing with SomeError
 				(but might also fail with other error-type)
 			except SomeError:
 				some other code but no raising error
-				
+
 			Note: 	Above code will raise an error in case
 			 		code in try-block raises some other error than SomeError.
 					In that case those errlines will be of course catched.
-			
+
 			What this means: If you self.run() with intention to spot possible
 			errors in your program, you should use logging (in except-block)
 			if you are not 100% sure about your code in except-block.
@@ -2890,133 +2890,133 @@ class Editor(tkinter.Toplevel):
 		if (self.state != 'normal') or (self.tabs[self.tabindex].type == 'newtab'):
 			self.bell()
 			return 'break'
-		
+
 		if not self.save_forced():
 			self.bell()
 			return 'break'
-		
+
 		# https://docs.python.org/3/library/subprocess.html
 
 		res = subprocess.run(['python', self.tabs[self.tabindex].filepath], stderr=subprocess.PIPE).stderr
-		
+
 		err = res.decode()
-		
+
 		if len(err) != 0:
 			self.bind("<Escape>", self.stop_show_errors)
 			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.state = 'error'
-			
+
 			self.taglinks = dict()
 			self.errlines = list()
 			openfiles = [tab.filepath for tab in self.tabs]
-			
+
 			tab = self.tabs[self.tabindex]
 			tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
-			
+
 			self.contents.delete('1.0', tkinter.END)
-			
+
 			for tag in self.contents.tag_names():
 				if 'hyper' in tag:
 					self.contents.tag_delete(tag)
-				
+
 			self.err = err.splitlines()
-			
+
 			for line in self.err:
 				tmp = line
 
 				tagname = "hyper-%s" % len(self.errlines)
 				self.contents.tag_config(tagname)
-				
+
 				# Why ButtonRelease instead of just Button-1:
 				# https://stackoverflow.com/questions/24113946/unable-to-move-text-insert-index-with-mark-set-widget-function-python-tkint
-				
+
 				self.contents.tag_bind(tagname, "<ButtonRelease-1>",
 					lambda event, arg=tagname: self.lclick(arg, event))
-				
+
 				self.contents.tag_bind(tagname, "<Enter>",
 					lambda event, arg=tagname: self.enter(arg, event))
-				
+
 				self.contents.tag_bind(tagname, "<Leave>",
 					lambda event, arg=tagname: self.leave(arg, event))
-				
+
 				self.taglinks[tagname] = self.tag_link
-				
+
 				# Parse filepath and linenums from errors
 				if 'File ' in line and 'line ' in line:
 					self.contents.insert(tkinter.INSERT, '\n')
-					 
+
 					data = line.split(',')[:2]
 					linenum = data[1][6:]
 					path = data[0][8:-1]
 					pathlen = len(path) + 2
 					filepath = pathlib.Path(path)
-					
+
 					self.errlines.append((filepath, linenum))
-					
+
 					self.contents.insert(tkinter.INSERT, tmp)
 					s0 = tmp.index(path) - 1
 					s = self.contents.index('insert linestart +%sc' % s0 )
 					e = self.contents.index('%s +%sc' % (s, pathlen) )
-					
+
 					self.contents.tag_add(tagname, s, e)
-						
+
 					if filepath in openfiles:
 						self.contents.tag_config(tagname, foreground='brown1')
 						self.contents.tag_raise(tagname)
-							
-						
+
+
 					self.contents.insert(tkinter.INSERT, '\n')
-					
-					
+
+
 				else:
 					self.contents.insert(tkinter.INSERT, tmp +"\n")
-					
+
 					# Make look bit nicer:
 					if self.syntax:
 						# -1 lines because linebreak has been added already
 						start = self.contents.index('insert -1 lines linestart')
 						end = self.contents.index('insert -1 lines lineend')
-						
+
 						self.update_tokens(start=start, end=end, line=line)
-			
-					
+
+
 		return 'break'
-				
+
 
 	def show_errors(self):
 		''' Show traceback from last run with added hyperlinks.
 		'''
-		
+
 		if len(self.errlines) != 0:
 			self.bind("<Escape>", self.stop_show_errors)
 			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.state = 'error'
-			
+
 			tmp = self.contents.get('1.0', tkinter.END)
 			# [:-1]: remove unwanted extra newline
 			self.tabs[self.tabindex].contents = tmp[:-1]
-			
+
 			try:
 				pos = self.contents.index(tkinter.INSERT)
 			except tkinter.TclError:
 				pos = '1.0'
-				
+
 			self.tabs[self.tabindex].position = pos
 			tab = self.tabs[self.tabindex]
 			tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
-			
+
 			self.contents.delete('1.0', tkinter.END)
 			openfiles = [tab.filepath for tab in self.tabs]
-			
+
 			for tag in self.contents.tag_names():
 				if 'hyper' in tag:
 					self.contents.tag_config(tag, foreground=self.fgcolor)
-			
+
 			i = 0
 			for line in self.err:
 				tmp = line
 				tagname = 'hyper-%d' % i
-				
+
 				# Parse filepath and linenums from errors
 				if 'File ' in line and 'line ' in line:
 					self.contents.insert(tkinter.INSERT, '\n')
@@ -3025,102 +3025,102 @@ class Editor(tkinter.Toplevel):
 					path = data[0][8:-1]
 					pathlen = len(path) + 2
 					filepath = pathlib.Path(path)
-					
+
 					self.contents.insert(tkinter.INSERT, tmp)
 					s0 = tmp.index(path) - 1
 					s = self.contents.index('insert linestart +%sc' % s0 )
 					e = self.contents.index('%s +%sc' % (s, pathlen) )
-					
+
 					self.contents.tag_add(tagname, s, e)
-					
+
 					if filepath in openfiles:
 						self.contents.tag_config(tagname, foreground='brown1')
 						self.contents.tag_raise(tagname)
-						
-						
+
+
 					self.contents.insert(tkinter.INSERT, '\n')
-					
+
 					i += 1
-					
+
 				else:
 					self.contents.insert(tkinter.INSERT, tmp +"\n")
-					
+
 					# Make look bit nicer:
 					if self.syntax:
 						# -1 lines because linebreak has been added already
 						start = self.contents.index('insert -1 lines linestart')
 						end = self.contents.index('insert -1 lines lineend')
-						
+
 						self.update_tokens(start=start, end=end, line=line)
-			
-					
-									
+
+
+
 	def stop_show_errors(self, event=None):
 		self.state = 'normal'
 		self.bind("<Escape>", self.esc_override)
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
-		
+
 		self.entry.delete(0, tkinter.END)
-		
+
 		if self.tabs[self.tabindex].type == 'normal':
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
-			
-		
+
+
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
-		
+
 		self.do_syntax(everything=True)
-		
-		
+
+
 		# set cursor pos
 		line = self.tabs[self.tabindex].position
 		self.contents.focus_set()
 		self.contents.mark_set('insert', line)
 		self.ensure_idx_visibility(line)
-			
-			
+
+
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		
-		
+
+
 ########## Run file Related End
 ########## Select and move Begin
-	
+
 	def move_many_lines(self, event=None):
 		''' Move or select 10 lines from cursor.
 		'''
-		
+
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-		
+
 		if event.widget != self.contents:
 			return
-		
-		
+
+
 		# Check if: not only ctrl (+shift) down, then return
 		if self.os_type == 'linux':
 			if event.state not in  [4, 5]: return
-		
+
 		elif self.os_type == 'windows':
 			if event.state not in [ 262156, 262148, 262157, 262149 ]: return
-				
-		
+
+
 		# Pressed Control + Shift + arrow up or down.
 		# Want: select 10 lines from cursor.
-		
+
 		# Pressed Control + arrow up or down.
 		# Want: move 10 lines from cursor.
-						
+
 		if event.keysym == 'Up':
 			e = '<<SelectPrevLine>>'
-			
+
 			if event.state not in [ 5, 262157, 262149 ]:
 				e = '<<PrevLine>>'
-			
+
 			for i in range(10):
 				# Add some delay
 				if 'Select' in e:
@@ -3128,15 +3128,15 @@ class Editor(tkinter.Toplevel):
 						self.contents.event_generate(*args) )
 				else:
 					self.contents.event_generate(e)
-				
+
 			return 'break'
-		
+
 		elif event.keysym == 'Down':
 			e = '<<SelectNextLine>>'
-			
+
 			if event.state not in [ 5, 262157, 262149 ]:
 				e = '<<NextLine>>'
-			
+
 			for i in range(10):
 				# Add some delay
 				if 'Select' in e:
@@ -3144,53 +3144,53 @@ class Editor(tkinter.Toplevel):
 						self.contents.event_generate(*args) )
 				else:
 					self.contents.event_generate(e)
-			
+
 			return 'break'
-		
+
 		else:
 			return
-			
-			
-	
+
+
+
 	def center_view(self, event=None, up=False):
 		''' Raise insertion-line
 		'''
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-			
-		
+
+
 		num_lines = self.text_widget_height // self.bbox_height
 		num_scroll = num_lines // 3
 		pos = self.contents.index('insert')
 		#posint = int(float(self.contents.index('insert')))
 		# lastline of visible window
 		lastline_screen = int(float(self.contents.index("@0,65535")))
-		
+
 		# lastline
 		last = int(float(self.contents.index('end'))) - 1
 		curline = int(float(self.contents.index('insert'))) - 1
-		
-		
+
+
 		if up: num_scroll *= -1
-			
+
 		# if near fileend
 		elif curline + 2*num_scroll + 2 > last:
 			self.contents.insert(tkinter.END, num_scroll*'\n')
 			self.contents.mark_set('insert', pos)
-						
-		
+
+
 		# if near screen end
 		#elif curline + 2*num_scroll + 2 > lastline_screen:
 		self.contents.yview_scroll(num_scroll, 'units')
-		
-		
+
+
 		# No ensure_view, enable return to cursor by arrow keys
 		return "break"
-	
-	
+
+
 	def idx_lineend(self):
-	
+
 ##		?submodifier? linestart
 ##		Adjust the index to refer to the first index on the line. If the display submodifier is given, this is the first index on the display line, otherwise on the logical line.
 ##
@@ -3199,42 +3199,42 @@ class Editor(tkinter.Toplevel):
 
 		pos = self.contents.index( 'insert display lineend' )
 		return pos
-		
-			
+
+
 	def idx_linestart(self):
 		'''	Returns tuple:
-			
+
 			pos, line_is_wrapped
-		
+
 			Where pos is tkinter.Text -index of linestart:
-			
+
 			if line is wrapped:
 				pos = start of display-line
 			else:
 				pos = end of indentation if there is such.
-				
+
 			If line is empty, pos = False
-			
+
 			Wrapped line definition:
 			Line that has not started on (display-) line with cursor
 		'''
-		
+
 		# In case of wrapped lines
 		y_cursor = self.contents.bbox(tkinter.INSERT)[1]
 		p = self.contents.index( '@0,%s' % y_cursor )
 		p2 = self.contents.index( '%s linestart' % p )
 		line_is_wrapped = False
-		
+
 		# Is line wrapped?
 		c1 = int(p.split('.')[1])
 		l2 = int(p2.split('.')[0])
-		
+
 		pos = False
 		# Yes, put cursor start of (display-) line, not the whole (=logical) line:
 		if c1 != 0:
 			pos = p
 			line_is_wrapped = True
-			
+
 		# No, put cursor after indentation:
 		else:
 			tmp = self.contents.get( '%s linestart' % p2, '%s lineend' % p2 )
@@ -3243,10 +3243,10 @@ class Editor(tkinter.Toplevel):
 					tmp2 = tmp.lstrip()
 					indent = tmp.index(tmp2)
 					pos = self.contents.index( '%i.%i' % (l2, indent) )
-		
+
 		return pos, line_is_wrapped
-		
-	
+
+
 	def select_by_words(self, event=None):
 		'''	Pressed ctrl or Alt + shift and arrow left or right.
 			Make <<SelectNextWord>> and <<SelectPrevWord>> to stop at lineends.
@@ -3254,7 +3254,7 @@ class Editor(tkinter.Toplevel):
 		if self.state not in [ 'normal', 'error', 'search', 'replace', 'replace_all' ]:
 			self.bell()
 			return "break"
-		
+
 		###########################################
 		# Get marknames: self.contents.mark_names()
 		# It gives something like this if there has been or is a selection:
@@ -3271,17 +3271,17 @@ class Editor(tkinter.Toplevel):
 		# MacOS event is already checked.
 		if self.os_type == 'linux':
 			if event.state != 5: return
-		
+
 		elif self.os_type == 'windows':
 			if event.state not in [ 262157, 262149 ]: return
-		
-		
+
+
 		have_selection = len(self.contents.tag_ranges('sel')) > 0
 		selection_started_from_top = False
-		
+
 		if event.keysym == 'Right':
 			s = self.contents.index( 'insert')
-			
+
 			# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
 			# no matter if selection started from top or bottom:
 			if have_selection:
@@ -3296,31 +3296,31 @@ class Editor(tkinter.Toplevel):
 				selection_started_from_top = True
 				sel_start = s
 
-			
-			
+
+
 			##################### Right Real start:
-			
-			
+
+
 			pos = self.move_by_words_right()
-			
-			
+
+
 			if have_selection:
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
 
 				if selection_started_from_top:
 					self.contents.mark_set(self.anchorname, sel_start)
 					self.contents.tag_add('sel', sel_start, pos)
-					
+
 				else:
 					# Check if selection is about to be closed
 					# (selecting towards selection-start)
 					# to avoid one char selection -leftovers.
 					if self.contents.compare( '%s +1 chars' % pos, '>=' , sel_end ):
-						
+
 						self.contents.mark_set('insert', sel_end)
 						self.contents.mark_set(self.anchorname, sel_end)
 						return 'break'
-					
+
 					self.contents.mark_set(self.anchorname, sel_end)
 					self.contents.tag_add('sel', pos, sel_end)
 
@@ -3333,9 +3333,9 @@ class Editor(tkinter.Toplevel):
 
 
 		elif event.keysym == 'Left':
-				
+
 			s = self.contents.index( 'insert')
-			
+
 			# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
 			# no matter if selection started from top or bottom:
 			if have_selection:
@@ -3351,15 +3351,15 @@ class Editor(tkinter.Toplevel):
 				sel_end = s
 
 
-			
+
 			##################### Left Real start:
-			
-			
+
+
 			pos = self.move_by_words_left()
-			
-			
+
+
 			if have_selection:
-				
+
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
 
 				if selection_started_from_top:
@@ -3367,62 +3367,62 @@ class Editor(tkinter.Toplevel):
 					# (selecting towards selection-start)
 					# to avoid one char selection -leftovers.
 					if self.contents.compare( '%s -1 chars' % pos, '<=' , sel_start ):
-						
+
 						self.contents.mark_set('insert', sel_start)
 						self.contents.mark_set(self.anchorname, sel_start)
 						return 'break'
-					
+
 					self.contents.mark_set(self.anchorname, sel_start)
 					self.contents.tag_add('sel', sel_start, pos)
-				
+
 				else:
 					self.contents.mark_set(self.anchorname, sel_end)
 					self.contents.tag_add('sel', pos, sel_end)
-				
-								
+
+
 			# No selection,
 			# no need to check direction of selection:
 			else:
 				self.contents.mark_set(self.anchorname, s)
 				self.contents.tag_add('sel', pos, s)
-			
-			
+
+
 		return 'break'
-	
-	
+
+
 	def move_by_words_left(self):
 		''' Returns tkinter.Text -index: pos
 			and moves cursor to it.
 		'''
-		
+
 		idx_linestart, line_is_wrapped = self.idx_linestart()
 		i_orig = self.contents.index('insert')
-		
+
 		# Empty line
 		if not idx_linestart:
 			# Go over empty space first
 			self.contents.event_generate('<<PrevWord>>')
-			
+
 			# And put cursor to line end
 			i_new = self.idx_lineend()
 			self.contents.mark_set('insert', i_new)
-		
+
 
 		# Is cursor on such line that has not started on that (display-) line?
 		elif line_is_wrapped:
-			
+
 			# At indent0, put cursor to line end of previous line
 			if self.contents.compare('insert', '==', idx_linestart):
 				self.contents.event_generate('<<PrevWord>>')
 				self.contents.mark_set('insert', 'insert display lineend')
-				
+
 			# Not at indent0, just check cursor not go over indent0
 			else:
 				self.contents.event_generate('<<PrevWord>>')
 				if self.contents.compare('insert', '<', idx_linestart):
 					self.contents.mark_set('insert', idx_linestart)
-			
-			
+
+
 		# Below this line is non empty and not wrapped
 		############
 		# Most common scenario:
@@ -3430,39 +3430,39 @@ class Editor(tkinter.Toplevel):
 		# i_orig > idx_linestart
 		elif self.contents.compare( i_orig, '>', idx_linestart ):
 			self.contents.event_generate('<<PrevWord>>')
-			
+
 			# Check that cursor did not go over idx_linestart
 			i_new = self.contents.index(tkinter.INSERT)
 			if self.contents.compare( i_new, '<', idx_linestart):
 				self.contents.mark_set('insert', idx_linestart)
-		
-		
+
+
 		## Below this i_orig <= idx_linestart
 		############
 		# At idx_linestart
 		elif i_orig == idx_linestart:
-			
+
 			# No indentation?
 			if int(idx_linestart.split('.')[1]) == 0:
 				# At filestart?
 				if self.contents.compare( i_orig, '==', '1.0'):
 					pos = i_orig
 					return pos
-					
+
 				# Go over empty space first
 				self.contents.event_generate('<<PrevWord>>')
-				
+
 				# And put cursor to line end
 				i_new = self.idx_lineend()
 				self.contents.mark_set('insert', i_new)
-			
+
 			# Cursor is at idx_linestart (end of indentation)
 			# of line that has indentation.
 			else:
 				# Put cursor at indent0 (start of indentation)
 				self.contents.mark_set('insert', 'insert linestart')
-		
-		
+
+
 		# Below this only lines that has indentation
 		############
 		# 1: Cursor is not after idx_linestart
@@ -3471,76 +3471,76 @@ class Editor(tkinter.Toplevel):
 		# 							start of line, (indent0), if line has no indentation
 		#
 		# --> Cursor is in indentation
-		
+
 		# At indent0 of line that has indentation
 		elif int(i_orig.split('.')[1]) == 0:
 			# At filestart?
 			if self.contents.compare( i_orig, '==', '1.0'):
 				pos = i_orig
 				return pos
-			
+
 			# Go over empty space first
 			self.contents.event_generate('<<PrevWord>>')
-			
+
 			# And put cursor to line end
 			i_new = self.idx_lineend()
 			self.contents.mark_set('insert', i_new)
-		
+
 
 		# Cursor is somewhere between (exclusively) indent0 and idx_linestart
 		# on line that has indentation.
 		else:
 			# Put cursor at indent0
 			self.contents.mark_set('insert', 'insert linestart')
-			
-		
+
+
 		pos = self.contents.index('insert')
 		return pos
-	
-	
+
+
 	def move_by_words_right(self):
 		''' Returns tkinter.Text -index: pos
 			and moves cursor to it.
 		'''
-		
+
 		# Get some basic indexes first
 		idx_linestart, line_is_wrapped = self.idx_linestart()
 		i_orig = self.contents.index('insert')
-		
+
 		# Get idx_lineend (of non empty line)
 		if idx_linestart:
 			e = self.idx_lineend()
-		
+
 		# Empty line
 		if not idx_linestart:
 			# Go over empty space first
 			self.contents.event_generate('<<NextWord>>')
-			
+
 			# And put cursor to idx_linestart
 			i_new, line_is_wrapped = self.idx_linestart()
-			
+
 			# Check not at fileend, if not then proceed
 			if i_new:
 				self.contents.mark_set('insert', i_new)
-				
-		
+
+
 		# Below this line is non empty
 		##################
 		# Cursor is at lineend, goto idx_linestart of next non empty line
 		elif i_orig == e:
-		
+
 			# Check if at fileend
 			if self.contents.compare('%s +1 chars' % i_orig, '==', tkinter.END):
 				pos = i_orig
 				return pos
-			
+
 			self.contents.event_generate('<<NextWord>>')
 			idx_linestart, line_is_wrapped = self.idx_linestart()
-			
+
 			if idx_linestart:
 				self.contents.mark_set('insert', idx_linestart)
 
-		
+
 		# Below this line cursor is before line end
 		############
 		# Most common scenario
@@ -3549,27 +3549,27 @@ class Editor(tkinter.Toplevel):
 		elif self.contents.compare(i_orig, '>=', idx_linestart):
 
 			self.contents.event_generate('<<NextWord>>')
-			
+
 			# Check not over lineend
 			if self.contents.compare('insert', '>', e):
 				self.contents.mark_set('insert', e)
-		
-		
+
+
 		############
 		# Below this line has indentation and is not wrapped
 		# Cursor is at
 		# indent0 <= i_orig < idx_linestart
-		
+
 		# --> put cursor to idx_linestart
 		############
 		else:
 			self.contents.mark_set('insert', idx_linestart)
-			
-		
+
+
 		pos = self.contents.index('insert')
 		return pos
 
-		
+
 	def move_by_words(self, event=None):
 		'''	Pressed ctrl or Alt and arrow left or right.
 			Make <<NextWord>> and <<PrevWord>> to handle lineends.
@@ -3577,74 +3577,74 @@ class Editor(tkinter.Toplevel):
 		if self.state not in [ 'normal', 'error', 'search', 'replace', 'replace_all' ]:
 			self.bell()
 			return "break"
-			
+
 		# Check if: not only ctrl down, then return
 		# MacOS event is already checked.
 		if self.os_type == 'linux':
 			if event.state != 4: return
-		
+
 		elif self.os_type == 'windows':
 			if event.state not in [ 262156, 262148 ]: return
-			
-		
+
+
 		if event.keysym == 'Right':
 			pos = self.move_by_words_right()
-			
+
 		elif event.keysym == 'Left':
 			pos = self.move_by_words_left()
-			
+
 		else:
 			return
-				
-				
+
+
 		return 'break'
-	
-		
+
+
 	def check_sel(self, event=None):
 		'''	Pressed arrow left or right.
 			If have selection, put cursor on the wanted side of selection.
 		'''
-		
+
 		if self.state in [ 'filedialog' ]:
 			self.bell()
 			return "break"
-	
-		
+
+
 		# self.contents or self.entry
 		wid = event.widget
-			
+
 		# Check if have shift etc. pressed. If is, return to default bindings.
 		# macOS event is already handled in mac_cmd_overrides.
 		# macOS event here is only plain arrow left or right and has selection.
 		if self.os_type != 'mac_os':
 			if self.os_type == 'linux' and event.state != 0: return
 			if self.os_type == 'windows' and event.state not in [ 262152, 262144 ]: return
-			
+
 			have_selection = False
-	
+
 			if wid == self.entry:
 				have_selection = self.entry.selection_present()
-	
+
 			elif wid == self.contents:
 				have_selection = len(self.contents.tag_ranges('sel')) > 0
-	
+
 			else:
 				return
-	
+
 			if not have_selection: return
-			
-		
+
+
 		s = wid.index(tkinter.SEL_FIRST)
 		e = wid.index(tkinter.SEL_LAST)
 		i = wid.index(tkinter.INSERT)
-		
+
 		if wid == self.contents:
-			
+
 			# Leave cursor where it is if have selected all
 			if s == self.contents.index('1.0') and e == self.contents.index(tkinter.END):
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
-			
-			
+
+
 			# When long selection == index not visible:
 			# at first keypress, show wanted end of selection
 			elif event.keysym == 'Right':
@@ -3654,7 +3654,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.mark_set('insert', e)
 				self.ensure_idx_visibility(e)
 
-				
+
 			elif event.keysym == 'Left':
 
 				if self.contents.dlineinfo(s):
@@ -3665,73 +3665,73 @@ class Editor(tkinter.Toplevel):
 
 			else:
 				return
-					
-					
-				
+
+
+
 		if wid == self.entry:
 			self.entry.selection_clear()
-			
+
 			if event.keysym == 'Right':
 				self.entry.icursor(e)
 				self.entry.xview_moveto(1.0)
-				
+
 			elif event.keysym == 'Left':
-				
+
 				if self.state in ['search', 'replace', 'replace_all']:
 					tmp = self.entry.get()
 					s = tmp.index(':') + 2
-				
+
 				self.entry.icursor(s)
 				self.entry.xview_moveto(0)
-			
+
 			else:
 				return
-			
-		
+
+
 		return 'break'
-		
-	
+
+
 	def yank_line(self, event=None):
 		'''	copy current line to clipboard
 		'''
-		
+
 		if self.state not in [ 'normal', 'error', 'search', 'replace', 'replace_all' ]:
 			self.bell()
 			return "break"
-			
-			
+
+
 		i = self.contents.index(tkinter.INSERT)
 		t = self.contents.get('%s display linestart' % i, '%s lineend' % i)
-		
-		
+
+
 		if t.strip() != '':
 			s,_ = self.idx_linestart()
 			e = '%s lineend' % s
-			
+
 			tmp = self.contents.get(s,e)
 			self.contents.clipboard_clear()
-			
+
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			self.contents.tag_add('sel', s, e)
-		
+
 			if self.os_type != 'windows':
 				self.contents.clipboard_append(tmp)
 			else:
 				self.copy_windows(selection=tmp)
-			
+
 			self.after(600, lambda args=['sel', '1.0', tkinter.END]:
 					self.contents.tag_remove(*args) )
-			
-			
+
+
 		return 'break'
-		
-		
+
+
 	def goto_lineend(self, event=None):
 		if self.state in [ 'filedialog' ]:
 			self.bell()
 			return "break"
-		
-		
+
+
 		wid = event.widget
 		if wid == self.entry:
 			wid.selection_clear()
@@ -3739,88 +3739,88 @@ class Editor(tkinter.Toplevel):
 			wid.icursor(idx)
 			wid.xview_moveto(1.0)
 			return 'break'
-		
-		
+
+
 		have_selection = False
 		want_selection = False
-		
+
 		# ctrl-(shift)?-a or e
 		# and cmd-a or e in macOS
-		
+
 		# If want selection:
-		
+
 		# Pressed also shift, so adjust selection
 		# Linux, macOS state:
 		# ctrl-shift == 5
-		
+
 		# Windows state:
 		# ctrl-shift == 13
-		
+
 		# Also in mac_OS:
 		# command-shift-arrowleft or right == 105
 		# Note: command-shift-a or e not binded.
-		
+
 		# If want selection:
 		if event.state in [ 5, 105, 13 ]:
 			want_selection = True
 			i = self.contents.index(tkinter.INSERT)
-				
+
 			if len( self.contents.tag_ranges('sel') ) > 0:
 				# Need to know if selection started from top or bottom.
-				
-				
+
+
 				have_selection = True
 				s = self.contents.index(tkinter.SEL_FIRST)
 				e = self.contents.index(tkinter.SEL_LAST)
-				
+
 				# Selection started from top
 				from_top = False
 				if self.contents.compare(s,'<',i):
 					from_top = True
-					
+
 				# From bottom
 				# else:	from_top = False
-		
-		
+
+
 		# Dont want selection, ctrl/cmd-a/e:
 		else:
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
-		
-		
+
+
 		self.ensure_idx_visibility('insert')
-		
+
 		pos = self.idx_lineend()
-		
+
 		self.contents.see(pos)
 		self.contents.mark_set('insert', pos)
-		
-		
+
+
 		if want_selection:
 			if have_selection:
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
-					
+
 				if from_top:
 					self.contents.mark_set(self.anchorname, s)
 					self.contents.tag_add('sel', s, 'insert')
-				
+
 				# From bottom:
 				else:
 					self.contents.mark_set(self.anchorname, e)
 					self.contents.tag_add('sel', 'insert', e)
-				
+
 			else:
 				self.contents.mark_set(self.anchorname, i)
 				self.contents.tag_add('sel', i, 'insert')
-		
-		
+
+
 		return "break"
-		
-		
+
+
 	def goto_linestart(self, event=None):
 		if self.state in [ 'filedialog' ]:
 			self.bell()
 			return "break"
-		
+
 		wid = event.widget
 		if wid == self.entry:
 			wid.selection_clear()
@@ -3828,127 +3828,127 @@ class Editor(tkinter.Toplevel):
 			if self.state in ['search', 'replace', 'replace_all']:
 				tmp = wid.get()
 				idx = tmp.index(':') + 2
-			
+
 			wid.icursor(idx)
 			wid.xview_moveto(0)
 			return 'break'
-			
-		
+
+
 		have_selection = False
 		want_selection = False
-		
+
 		# ctrl-(shift)?-a or e
 		# and cmd-a or e in macOS
-		
+
 		# If want selection:
-		
+
 		# Pressed also shift, so adjust selection
 		# Linux, macOS state:
 		# ctrl-shift == 5
-		
+
 		# Windows state:
 		# ctrl-shift == 13
-		
+
 		# Also in mac_OS:
 		# command-shift-arrowleft or right == 105
 		# Note: command-shift-a or e not binded.
-		
+
 		# If want selection:
 		if event.state in [ 5 , 105, 13 ]:
 			want_selection = True
 			i = self.contents.index(tkinter.INSERT)
-				
+
 			if len( self.contents.tag_ranges('sel') ) > 0:
 				# Need to know if selection started from top or bottom.
-				
-				
+
+
 				have_selection = True
 				s = self.contents.index(tkinter.SEL_FIRST)
 				e = self.contents.index(tkinter.SEL_LAST)
-				
+
 				# Selection started from top
 				from_top = False
 				if self.contents.compare(s,'<',i):
 					from_top = True
-					
+
 				# From bottom
 				# else:	from_top = False
-		
-		
+
+
 		# Dont want selection, ctrl/cmd-a/e:
 		else:
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			
-		
+
+
 		self.ensure_idx_visibility('insert')
-		
+
 		pos, line_is_wrapped = self.idx_linestart()
 		if not pos:
 			pos = self.contents.index( 'insert display linestart' )
 
 		self.contents.see(pos)
 		self.contents.mark_set('insert', pos)
-	
+
 		if want_selection:
-			
+
 			if have_selection:
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
-				
+
 				if from_top:
 					self.contents.mark_set(self.anchorname, s)
 					self.contents.tag_add('sel', s, 'insert')
-				
+
 				# From bottom
 				else:
 					self.contents.mark_set(self.anchorname, e)
 					self.contents.tag_add('sel', 'insert', e)
-				
+
 			else:
 				self.contents.mark_set(self.anchorname, i)
 				self.contents.tag_add('sel', 'insert', i)
-					
-		
+
+
 		return "break"
 
 ########## Select and move End
 ########## Overrides Begin
-	
+
 	def mac_cmd_overrides(self, event=None):
 		'''	Used to catch key-combinations like Alt-shift-Right
 			in macOS, which are difficult to bind.
 		'''
-		
-		
+
+
 		# Pressed Cmd + Shift + arrow left or right.
 		# Want: select line from cursor.
-		
+
 		# Pressed Cmd + Shift + arrow up or down.
 		# Want: select 10 lines from cursor.
 		if event.state == 105:
-		
+
 			# self.contents or self.entry
 			wid = event.widget
-			
+
 			# Enable select from in entry
 			if wid == self.entry:
 				return
-			
+
 			# Enable select from in contents
 			elif wid == self.contents:
-				
+
 				if event.keysym == 'Right':
 					self.goto_lineend(event=event)
-					
+
 				elif event.keysym == 'Left':
-					
+
 					# Want Cmd-Shift-left to:
 					# Select indentation on line that has indentation
 					# When: at idx_linestart
 					# same way than Alt-Shift-Left
-						
+
 					# At idx_linestart of line that has indentation?
 					idx, line_is_wrapped = self.idx_linestart()
-					
+
 					if idx and self.contents.compare(idx, '==', 'insert' ):
 						have_selection = len(self.contents.tag_ranges('sel')) > 0
 
@@ -3956,117 +3956,117 @@ class Editor(tkinter.Toplevel):
 							pos = self.contents.index('%s linestart' % idx )
 							self.contents.mark_set(self.anchorname, 'insert')
 							self.contents.tag_add('sel', pos, 'insert')
-					
+
 					else:
 						self.goto_linestart(event=event)
-					
-					
+
+
 				elif event.keysym == 'Up':
 					for i in range(10):
 						self.after(12, lambda args=['<<SelectPrevLine>>']:
 							self.contents.event_generate(*args) )
-						
+
 				elif event.keysym == 'Down':
 					for i in range(10):
 						self.after(12, lambda args=['<<SelectNextLine>>']:
 							self.contents.event_generate(*args) )
-						
+
 				else:
 					return
-			
+
 			return 'break'
-		
-		
+
+
 		# Pressed Cmd + arrow left or right.
 		# Want: walk tabs.
-		
+
 		# Pressed Cmd + arrow up or down.
 		# Want: move cursor 10 lines from cursor.
 		elif event.state == 104:
-	
+
 			if event.keysym == 'Right':
 				self.walk_tabs(event=event)
-				
+
 			elif event.keysym == 'Left':
 				self.walk_tabs(event=event, **{'back':True})
-	
+
 			elif event.keysym == 'Up':
 					for i in range(10):
 						self.contents.event_generate('<<PrevLine>>')
-				
+
 			elif event.keysym == 'Down':
 				for i in range(10):
 					self.contents.event_generate('<<NextLine>>')
-				
+
 			else:
 				return
-			
+
 			return 'break'
-			
-			
+
+
 		# Pressed Alt + arrow left or right.
 		elif event.state == 112:
-			
+
 			if event.keysym in ['Up', 'Down']: return
-			
+
 			# self.contents or self.entry
 			wid = event.widget
-			
+
 			if wid == self.entry:
-				
+
 				if event.keysym == 'Right':
 					self.entry.event_generate('<<NextWord>>')
-					
+
 				elif event.keysym == 'Left':
 					self.entry.event_generate('<<PrevWord>>')
-					
+
 				else:
 					return
-		
+
 			else:
 				res = self.move_by_words(event=event)
 				return res
-			
+
 			return 'break'
-		
-		
+
+
 		# Pressed Alt + Shift + arrow left or right.
 		elif event.state == 113:
-		
+
 			if event.keysym in ['Up', 'Down']: return
-			
+
 			# self.contents or self.entry
 			wid = event.widget
-			
+
 			if wid == self.entry:
-				
+
 				if event.keysym == 'Right':
 					self.entry.event_generate('<<SelectNextWord>>')
-					
+
 				elif event.keysym == 'Left':
 					self.entry.event_generate('<<SelectPrevWord>>')
-					
+
 				else:
 					return
-		
+
 			else:
 				res = self.select_by_words(event=event)
 				return res
-				
+
 			return 'break'
-			
-			
+
+
 		# Pressed arrow left or right.
 		# If have selection, put cursor on the wanted side of selection.
-		
+
 		# Pressed arrow up or down: return event.
 		# +shift: 97: return event.
 		elif event.state == 97: return
-		
+
 		elif event.state == 96:
-			
+
 			if event.keysym in ['Up', 'Down']: return
-				
+
 			# self.contents or self.entry
 			wid = event.widget
 			have_selection = False
@@ -4083,19 +4083,19 @@ class Editor(tkinter.Toplevel):
 			if have_selection:
 				if event.keysym == 'Right':
 					self.check_sel(event=event)
-						
+
 				elif event.keysym == 'Left':
 					self.check_sel(event=event)
-					
+
 				else:
 					return
-				
+
 			else:
 				return
-				
+
 			return 'break'
-			
-		
+
+
 		# Pressed Fn
 		elif event.state == 64:
 
@@ -4108,54 +4108,54 @@ class Editor(tkinter.Toplevel):
 			# Like fn-h does not insert h.
 			else:
 				return
-				
+
 		return
-		
+
 		######### mac_cmd_overrides End #################
-		
-	
+
+
 	def raise_popup(self, event=None):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-		
+
 		self.popup.post(event.x_root, event.y_root)
 		self.popup.focus_set() # Needed to remove popup when clicked outside.
-		
-		
+
+
 	def popup_focusOut(self, event=None):
 		self.popup.unpost()
-	
-	
+
+
 	def copy_fallback(self, selection=None, flag_cut=False):
-		
+
 		if self.os_type == 'windows':
 			self.copy_windows(selection=selection, flag_cut=flag_cut)
-		
+
 		else:
 			try:
 				self.clipboard_clear()
 				self.clipboard_append(self.selection_get())
 				if flag_cut:
 					self.contents.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
-				
+
 			except tkinter.TclError:
 				# is empty
 				pass
-		
+
 		return 'break'
-		
-	
+
+
 	def copy(self, event=None, flag_cut=False):
 		''' When selection started from start of block,
 				for example: cursor is before if-word,
 			and
 				selected at least one whole line below firsline
-				
+
 			Then
 				preserve indentation
 				of all lines in selection.
-				
+
 			This is done in paste()
 			if self.flag_fix_indent is True.
 			If not, paste_fallback() is used instead.
@@ -4166,17 +4166,17 @@ class Editor(tkinter.Toplevel):
 		self.flag_fix_indent = False
 		self.checksum_fix_indent = False
 
-				
+
 		# Check if have_selection
 		have_selection = len(self.contents.tag_ranges('sel')) > 0
 		if not have_selection:
 			#print('copy fail 1, no selection')
 			return 'break'
 
-		
+
 		t_orig = self.contents.selection_get()
-		
-		
+
+
 		# Check if num selection lines > 1
 		startline, startcol = map(int, self.contents.index(tkinter.SEL_FIRST).split(sep='.'))
 		endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
@@ -4184,52 +4184,52 @@ class Editor(tkinter.Toplevel):
 		if not numlines > 1:
 			#print('copy fail 2, numlines not > 1')
 			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
-			
+
 
 		# Selection start indexes:
 		line, col = startline, startcol
 
 		self.indent_selstart = col
 
-		
+
 		# Check if selstart line not empty
 		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
 		if len(tmp.strip()) == 0:
 			#print('copy fail 4, startline empty')
 			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
-		
+
 		# Check if cursor not at idx_linestart
 		for i in range(len(tmp)):
 			if not tmp[i].isspace():
 				break
-		
+
 		if i > self.indent_selstart:
 			# Cursor is inside indentation or indent0
 			#print('copy fail 3, Cursor in indentation')
 			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
-			
+
 		elif i < self.indent_selstart:
 			#print('copy fail 3, SEL_FIRST after idx_linestart')
 			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
-		
+
 		# Check if two nextlines below selstart not empty
 		t = t_orig.splitlines(keepends=True)
 		tmp = t[1]
-		
+
 		if len(tmp.strip()) == 0:
-			
+
 			if numlines > 2:
 				tmp = t[2]
-				
+
 				if len(tmp.strip()) == 0:
 					#print('copy fail 6, two nextlines empty')
 					return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
-					
+
 			# numlines == 2:
 			else:
 				#print('copy fail 5, numlines == 2, nextline is empty')
 				return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
-		
+
 		for i in range(len(tmp)):
 			if not tmp[i].isspace():
 				self.indent_nextline = i
@@ -4237,7 +4237,7 @@ class Editor(tkinter.Toplevel):
 
 		# Indentation difference of first line and next nonempty line
 		self.indent_diff = self.indent_nextline - self.indent_selstart
-		
+
 		# Continue checks
 		if self.indent_diff < 0:
 			# For example:
@@ -4247,91 +4247,91 @@ class Editor(tkinter.Toplevel):
 			#indent0
 			#print('copy fail 7, indentation decreasing on first non empty line')
 			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
-			
-			
+
+
 		# Check if indent of any line in selection < self.indent_selstart
 		min_ind = self.indent_selstart
 		for i in range(1, numlines):
 			tmp = t[i]
-			
+
 			if len(tmp.strip()) == 0:
 				# This will skip rest of for-loop contents below
 				# and start next iteration.
 				continue
-			
+
 			for j in range(len(tmp)):
 				if not tmp[j].isspace():
 					if j < min_ind:
 						min_ind = j
 					# This will break out from this for-loop only.
 					break
-						
+
 		if self.indent_selstart > min_ind:
 			#print('copy fail 8, indentation of line in selection < self.indent_selstart')
 			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
 
-		
+
 		if self.os_type != 'windows':
 			self.contents.clipboard_clear()
 			self.contents.clipboard_append(t_orig)
 		else:
 			self.copy_windows(selection=t_orig, flag_cut=flag_cut)
-			
+
 		self.flag_fix_indent = True
 		self.checksum_fix_indent = t_orig
-		
+
 		if flag_cut:
 			self.contents.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
-		
+
 		#print('copy ok')
 		return 'break'
 		###################
-		
-	
+
+
 	def paste(self, event=None):
 		''' When selection started from start of block,
 				for example: cursor is before if-word,
 			and
 				selected at least one whole line below firsline
-				
+
 			Then
 				preserve indentation
 				of all lines in selection.
-				
+
 			This is done if self.flag_fix_indent is True.
 			If not, paste_fallback() is used instead.
 			self.flag_fix_indent is set in copy()
 		'''
-		
+
 		try:
 			t = self.contents.clipboard_get()
 			if len(t) == 0:
 				return 'break'
-				
+
 		# Clipboard empty
 		except tkinter.TclError:
 			return 'break'
-			
+
 		if not self.flag_fix_indent or t != self.checksum_fix_indent:
 			self.paste_fallback(event=event)
 			self.contents.edit_separator()
 			#print('paste norm')
 			return 'break'
-			
-		#print('paste ride')
-		
 
-		
+		#print('paste ride')
+
+
+
 		have_selection = False
-		
+
 		if len( self.contents.tag_ranges('sel') ) > 0:
 			selstart = self.contents.index( '%s' % tkinter.SEL_FIRST)
 			selend = self.contents.index( '%s' % tkinter.SEL_LAST)
-			
+
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			have_selection = True
-		
-		
+
+
 		# Cursor index:
 		idx_insert_orig = self.contents.index(tkinter.INSERT)
 		idx_ins, col = map(int, idx_insert_orig.split('.'))
@@ -4354,191 +4354,191 @@ class Editor(tkinter.Toplevel):
 				#	self.indent_selstart
 				#			indent_cursor
 				#indent0
-				
+
 				line = indent_diff_cursor*'\t' + line
-				
+
 			elif indent_diff_cursor < 0:
 				# For example:
 				#
 				#			self.indent_selstart
 				#		indent_cursor
 				#indent0
-				
+
 				# This is one reason to cancel in copy()
 				# if indentation of any line in selection < self.indent_selstart
 				line = line[-1*indent_diff_cursor:]
-				
+
 			#else:
 			#line == line
 			# same indentation level,
 			# so do nothing.
-			
+
 			s += line
 			lno += 1
-		
+
 		# Do paste string
 		self.contents.insert(idx_insert_orig, s)
 		lastline = lno - 1
 		len_lastline = len(line)
 		idx_insert_after = self.contents.index(
 			'%d.0 +%d chars' % (lastline, len_lastline) )
-		
-		
-		
+
+
+
 		tmp = t.splitlines(True)
-		
+
 		# Taken from paste_fallback
 		##########################
 		s = self.contents.index( '%s linestart' % idx_insert_orig)
 		e = self.contents.index( '%d.0 lineend' % lastline )
 		t = self.contents.get( s, e )
-		
+
 		if self.tabs[self.tabindex].filepath:
 			if self.can_do_syntax():
 				self.update_tokens( start=s, end=e, line=t )
-				
-		
+
+
 		if have_selection:
 			self.contents.tag_add('sel', selstart, selend)
-			
+
 		else:
 			self.contents.tag_add('sel', idx_insert_orig, idx_insert_after)
-			
+
 		self.contents.mark_set('insert', idx_insert_orig)
-		
-		
+
+
 		self.wait_for(100)
 		self.ensure_idx_visibility(idx_insert_orig)
 		#####
-		
+
 		self.contents.edit_separator()
 		return 'break'
-	
-	
+
+
 	def paste_fallback(self, event=None):
 		''' Fallback from paste
 		'''
-		
+
 		try:
 			tmp = self.clipboard_get()
 			tmp = tmp.splitlines(keepends=True)
-			
-			
+
+
 		except tkinter.TclError:
 			# is empty
 			return 'break'
-			
+
 		have_selection = False
-		
+
 		if len( self.contents.tag_ranges('sel') ) > 0:
 			selstart = self.contents.index( '%s' % tkinter.SEL_FIRST)
 			selend = self.contents.index( '%s' % tkinter.SEL_LAST)
-			
+
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			have_selection = True
-			
-			
+
+
 		idx_ins = self.contents.index(tkinter.INSERT)
 		self.contents.event_generate('<<Paste>>')
-		
-		
+
+
 		# Selected many lines or
 		# one line and cursor is not at the start of next line:
 		if len(tmp) > 1:
-		
+
 			s = self.contents.index( '%s linestart' % idx_ins)
 			e = self.contents.index( 'insert lineend')
 			t = self.contents.get( s, e )
-			
+
 			if self.tabs[self.tabindex].filepath:
 				if self.can_do_syntax():
 					self.update_tokens( start=s, end=e, line=t )
-					
-			
+
+
 			if have_selection:
 				self.contents.tag_add('sel', selstart, selend)
-				
+
 			else:
 				self.contents.tag_add('sel', idx_ins, tkinter.INSERT)
-				
+
 			self.contents.mark_set('insert', idx_ins)
-			
-			
+
+
 			self.wait_for(100)
 			self.ensure_idx_visibility(idx_ins)
-			
-			
+
+
 		# Selected one line and cursor is at the start of next line:
 		elif len(tmp) == 1 and tmp[-1][-1] == '\n':
 			s = self.contents.index( '%s linestart' % idx_ins)
 			e = self.contents.index( '%s lineend' % idx_ins)
 			t = self.contents.get( s, e )
-			
+
 			if self.tabs[self.tabindex].filepath:
 				if self.can_do_syntax():
 					self.update_tokens( start=s, end=e, line=t )
-					
-			
+
+
 			if have_selection:
 				self.contents.tag_add('sel', selstart, selend)
-				
+
 			else:
 				self.contents.tag_add('sel', idx_ins, tkinter.INSERT)
-				
+
 			self.contents.mark_set('insert', idx_ins)
-			
-					
+
+
 		else:
 			if have_selection:
 				self.contents.tag_add('sel', selstart, selend)
 				self.contents.mark_set('insert', idx_ins)
-			
-			
+
+
 		return 'break'
-	
+
 
 	def undo_override(self, event=None):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-		 
+
 		try:
 			self.wait_for(100)
 			self.contents.edit_undo()
-			
+
 			self.do_syntax()
-			
-			
+
+
 		except tkinter.TclError:
 			self.bell()
-			
+
 		return 'break'
-		
-		
+
+
 	def redo_override(self, event=None):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-			
+
 		try:
 			self.wait_for(100)
 			self.contents.edit_redo()
-			
+
 			self.do_syntax()
-			
-			
+
+
 		except tkinter.TclError:
 			self.bell()
-			
+
 		return 'break'
-		
-		
+
+
 	def select_all(self, event=None):
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		self.contents.tag_add('sel', 1.0, tkinter.END)
 		return "break"
-	
-	
+
+
 	def esc_override(self, event):
 		'''	Enable toggle fullscreen with Esc.
 		'''
@@ -4547,20 +4547,20 @@ class Editor(tkinter.Toplevel):
 			if len(self.contents.tag_ranges('sel')) > 0:
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
 				return 'break'
-			
+
 		if self.wm_attributes().count('-fullscreen') != 0:
 			if self.state == 'normal':
 				if self.fullscreen:
 					self.wm_attributes('-fullscreen', 0)
 				else:
 					self.wm_attributes('-fullscreen', 1)
-				
+
 				return 'break'
-		
+
 		self.bell()
 		return 'break'
-	
-	
+
+
 	def space_override(self, event):
 		'''	Used to bind Space-key when searching or replacing.
 		'''
@@ -4571,143 +4571,143 @@ class Editor(tkinter.Toplevel):
 				return 'break'
 			else:
 				return
-				
-				
+
+
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
-		
+
 		# self.search_focus marks range of focus-tag:
 		self.save_pos = self.search_focus[1]
 		self.stop_search()
-		
+
 		return 'break'
-	
-	
+
+
 	def insert_tab(self, event):
 		'''	Used to insert tab
 		'''
-		
+
 		if self.state in [ 'search', 'replace', 'replace_all' ]:
 			return 'break'
-			
+
 		self.contents.insert(tkinter.INSERT, '\t')
-		
+
 		return 'break'
-	
-	
+
+
 	def tab_over_indent(self):
 		'''	Called from indent()
 		'''
 		ins = tkinter.INSERT
-		
+
 		# There should not be selection
-		
+
 		idx_s, _ = self.idx_linestart()
 		# Line is empty
 		if not idx_s:
-		
+
 			# Cursor is at indent0
 			if self.contents.index(ins).split('.')[1] == '0':
 				patt = r'^[[:blank:]]*[^[:blank:]#]'
 				pos = self.contents.search(patt, ins, stopindex='1.0',
 					regexp=True, backwards=True, count=self.search_count_var)
-				
+
 				# self.search_count_var.get() == indentation level +1
 				if pos: return self.search_count_var.get() -1
 
-	
+
 	def backspace_override(self, event):
 		""" for syntax highlight
 		"""
-		
+
 		# State is 8 in windows when no other keys are pressed
 		if self.state != 'normal' or event.state not in [0, 8]:
 			return
-		
+
 		pars = [ '(', ')', '[', ']' , '{', '}' ]
-		
+
 		try:
-			
+
 			# Is there a selection?
 			if len(self.contents.tag_ranges('sel')) > 0:
 				tmp = self.contents.selection_get()
 				l = [ x for x in tmp if x in pars ]
 				if len(l) > 0:
 					self.par_err = True
-				
+
 			self.contents.delete( tkinter.SEL_FIRST, tkinter.SEL_LAST )
-			
+
 			self.do_syntax()
-			
+
 			return 'break'
-			
-				
+
+
 		except tkinter.TclError:
 			# Deleting one letter
-			
-			
+
+
 			# Rest is multiline string check
 			chars = self.contents.get( '%s - 3c' % tkinter.INSERT, '%s + 2c' % tkinter.INSERT )
-			
+
 			triples = ["'''", '"""']
 			doubles = ["''", '""']
 			singles = ["'", '"']
-			
+
 			prev_3chars = chars[:3]
 			prev_2chars = chars[1:3]
 			next_2chars = chars[-2:]
-			
+
 			prev_char = chars[2:3]
 			next_char = chars[-2:-1]
-		
+
 			quote_tests = [
 						(prev_char == '#'),
 						(prev_3chars in triples),
 						( (prev_2chars in doubles) and (next_char in singles) ),
 						( (prev_char in singles) and (next_2chars in doubles) )
 						]
-						
+
 			if any(quote_tests):
 				#print('#')
 				self.token_err = True
-				
-				
+
+
 			# To trigger parcheck if only one of these was in line and it was deleted:
 			if prev_char in pars:
 				self.par_err = True
-				
-				
+
+
 		#print('deleting')
-				
+
 		return
 
-	
+
 	def return_override(self, event):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-		
-		
+
+
 		# macOS, open file with cmd-return:
 		if self.os_type == 'mac_os' and event.state == 8:
 			self.btn_open.invoke()
 			return 'break'
-		
-		
+
+
 		# Cursor indexes when pressed return:
 		line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
-		
-		
+
+
 		# First an easy case:
 		if col == 0:
 			self.contents.insert(tkinter.INSERT, '\n')
 			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
 			return "break"
-			
-		
+
+
 		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
-		
+
 		# Then one special case: check if cursor is inside indentation,
 		# and line is not empty.
 		if tmp[:col].isspace() and not tmp[col:].isspace():
@@ -4716,28 +4716,28 @@ class Editor(tkinter.Toplevel):
 			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
 			return "break"
-			
+
 		else:
 			# rstrip space to prevent indentation sailing.
 			if tmp[col:].isspace():
 				self.contents.delete(tkinter.INSERT, 'insert lineend')
-				
+
 			for i in range(len(tmp[:col]) + 1):
 				if tmp[i] != '\t':
 					break
-	
+
 			self.contents.insert(tkinter.INSERT, '\n') # Manual newline because return is overrided.
 			self.contents.insert(tkinter.INSERT, i*'\t')
 			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
 			return "break"
-			
-			
+
+
 	def sbset_override(self, *args):
 		'''	Fix for: not being able to config slider min-size
 		'''
 		self.scrollbar.set(*args)
-		
+
 		h = self.text_widget_height
 
 		# Relative position (tuple on two floats) of
@@ -4758,9 +4758,9 @@ class Editor(tkinter.Toplevel):
 
 		if h*(a[1] - a[0]) < SLIDER_MINSIZE:
 			self.scrollbar.set(a[0], a[1]+d)
-		
+
 		self.update_linenums()
-		
+
 ########## Overrides End
 ########## Utilities Begin
 
@@ -4773,209 +4773,209 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			self.bell()
 			return 'break'
-		
+
 		target=target.strip()
-		
+
 		if not len(target) > 0:
 			self.bell()
 			return 'break'
-		
-		
+
+
 		import inspect
 		is_module = False
-		
+
 		try:
 			mod = importlib.import_module(target)
 			is_module = True
 			filepath = inspect.getsourcefile(mod)
-			
+
 			if not filepath:
 				# For example: readline
 				self.bell()
 				print('Could not inspect:', target, '\nimport and use help()')
 				return 'break'
-			
+
 			try:
 				with open(filepath, 'r', encoding='utf-8') as f:
 					fcontents = f.read()
-					
+
 					self.new_tab()
-					
-					
+
+
 					if '.py' in filepath:
 						indentation_is_alien, indent_depth = self.check_indent_depth(fcontents)
-						
+
 						tmp = fcontents.splitlines(True)
 						tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 						tmp = ''.join(tmp)
 						self.tabs[self.tabindex].contents = tmp
-					
+
 					else:
 						self.tabs[self.tabindex].contents = fcontents
-				
-					
+
+
 					self.tabs[self.tabindex].position = '1.0'
 					self.contents.focus_set()
 					self.contents.see('1.0')
 					self.contents.mark_set('insert', '1.0')
 					self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-					
+
 					if self.syntax:
 						self.token_err = True
 						self.update_tokens(start='1.0', end=tkinter.END)
 						self.token_can_update = True
-						
+
 					else:
 						self.token_can_update = False
-						
+
 					# This flag is used in handle_search_entry()
 					self.tabs[self.tabindex].inspected = True
 					self.contents.edit_reset()
 					self.contents.edit_modified(0)
-					
+
 					return 'break'
-					
-					
+
+
 			except (EnvironmentError, UnicodeDecodeError) as e:
 				print(e.__str__())
 				print(f'\n Could not open file: {filepath}')
 				self.bell()
 				return 'break'
-					
+
 		except ModuleNotFoundError:
 			print(f'\n Is not a module: {target}')
 		except TypeError as ee:
 			print(ee.__str__())
 			self.bell()
 			return 'break'
-			
-			
+
+
 		if not is_module:
-		
+
 			try:
 				modulepart = target[:target.rindex('.')]
 				object_part = target[target.rindex('.')+1:]
 				mod = importlib.import_module(modulepart)
 				target_object = getattr(mod, object_part)
-				
+
 				l = inspect.getsourcelines(target_object)
 				t = ''.join(l[0])
-				
+
 				self.new_tab()
-				
-				
+
+
 				indentation_is_alien, indent_depth = self.check_indent_depth(t)
-				
+
 				tmp = t.splitlines(True)
 				tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 				tmp = ''.join(tmp)
 				self.tabs[self.tabindex].contents = tmp
-					
-				
+
+
 				self.tabs[self.tabindex].position = '1.0'
 				self.contents.focus_set()
 				self.contents.see('1.0')
 				self.contents.mark_set('insert', '1.0')
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-				
+
 				if self.syntax:
 					self.token_err = True
 					self.update_tokens(start='1.0', end=tkinter.END)
 					self.token_can_update = True
-					
+
 				else:
 					self.token_can_update = False
-				
+
 				# This flag is used in handle_search_entry()
 				self.tabs[self.tabindex].inspected = True
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
-				
+
 				return 'break'
-			
-			
+
+
 			# from rindex()
 			except ValueError:
 				self.bell()
 				return 'break'
-				
+
 			except Exception as e:
 				self.bell()
 				print(e.__str__())
 				return 'break'
-		
+
 		return 'break'
-	
-	
+
+
 	def tabify_lines(self, event=None):
-	
+
 		try:
 			startline = self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0]
 			endline = self.contents.index(tkinter.SEL_LAST).split(sep='.')[0]
-			
+
 			start = '%s.0' % startline
 			end = '%s.0 lineend' % endline
 			tmp = self.contents.get(start, end)
-			
+
 			indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
-			
+
 			tmp = tmp.splitlines()
-			
+
 			if indentation_is_alien:
 				tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
-							
+
 			else:
 				tmp[:] = [self.tabify(line) for line in tmp]
-			
-						
+
+
 			tmp = ''.join(tmp)
-			
+
 			self.contents.delete(start, end)
 			self.contents.insert(start, tmp)
-			
-			
+
+
 			self.update_tokens(start=start, end=end)
-						
-															
+
+
 			self.contents.edit_separator()
 			return "break"
-		
+
 		except tkinter.TclError as e:
 			#print(e)
 			return "break"
-	
-	
+
+
 	def tabify(self, line, width=None):
-		
+
 		if width:
 			ind_width = width
 		else:
 			ind_width = self.ind_depth
-			
+
 		indent_stop_index = 0
-		
+
 		for char in line:
 			if char in [' ', '\t']: indent_stop_index += 1
 			else: break
-		
 
-		
+
+
 		if line.isspace(): return '\n'
-	
+
 		if indent_stop_index == 0:
 			# remove trailing space
 			if not line.isspace():
 				line = line.rstrip() + '\n'
 			return line
-		
-		
+
+
 		indent_string = line[:indent_stop_index]
 		line = line[indent_stop_index:]
-		
+
 		# remove trailing space
 		line = line.rstrip() + '\n'
-		
-		
+
+
 		count = 0
 		for char in indent_string:
 			if char == '\t':
@@ -4985,16 +4985,16 @@ class Editor(tkinter.Toplevel):
 			if count == ind_width:
 				indent_string = indent_string.replace(ind_width * ' ', '\t', True)
 				count = 0
-		
+
 		tabified_line = ''.join([indent_string, line])
-		
+
 		return tabified_line
-	
-	
+
+
 	def restore_btn_git(self):
 		''' Put Git-branch name back if on one
 		'''
-		
+
 		if self.branch:
 			branch = self.branch[:5]
 			# Set branch name lenght to 5.
@@ -5009,7 +5009,7 @@ class Editor(tkinter.Toplevel):
 					else:
 						branch = ' ' + branch
 					t *= -1
-		
+
 			self.btn_git.config(text=branch, disabledforeground='')
 
 			if 'main' in self.branch or 'master' in self.branch:
@@ -5017,12 +5017,12 @@ class Editor(tkinter.Toplevel):
 
 		else:
 			self.btn_git.config(bitmap='info', disabledforeground='')
-			
-	
+
+
 	def flash_btn_git(self):
 		''' Flash text and enable canceling flashing later.
 		'''
-		
+
 		self.btn_git.config(bitmap='')
 		bg, fg = self.themes[self.curtheme]['normal_text'][:]
 
@@ -5036,180 +5036,180 @@ class Editor(tkinter.Toplevel):
 			''' round	int >= 0
 				position	string 't1' or 't2'
 			'''
-			
+
 			t1 = 300 + 600*round
 			t2 = t1 + 300
-			
+
 			if position == 't1':
 				return t1
 			else:
 				return t2
-				
-			
+
+
 		for i in range(4):
 			t1 = get_wait_time(i, 't1')
 			t2 = get_wait_time(i, 't2')
 			l1 = lambda kwargs={'text': 5*' ', 'disabledforeground': 'brown1'}: self.btn_git.config(**kwargs)
 			l2 = lambda kwargs={'text': 'CAPS '}: self.btn_git.config(**kwargs)
-			
-			
+
+
 			###
 			l3 = lambda kwargs={'bg':fg, 'fg':bg}: self.contents.config(**kwargs)
 			l4 = lambda kwargs={'bg':bg, 'fg':fg}: self.contents.config(**kwargs)
-			
+
 			c3 = self.after(t1, l3)
 			c4 = self.after(t2, l4)
 			self.to_be_cancelled.append(c3)
 			self.to_be_cancelled.append(c4)
 			###
-			
-			
+
+
 			c1 = self.after(t1, l1)
 			c2 = self.after(t2, l2)
 			self.to_be_cancelled.append(c1)
 			self.to_be_cancelled.append(c2)
-	
-		
+
+
 	def check_caps(self, event=None):
 		'''	Check if CapsLock is on.
 		'''
-		
+
 		e = event.state
 		# 0,2	macos, linux
 		# 8,10	win11
-		
+
 		# event.keysym == Motion
 		# Bind to Motion is for: checking CapsLock -state when starting editor,
 		# (this assumes user moves mouse)
 		# and checking if CapsLock -state changes when focus is not in editor
 		if event.keysym != 'Caps_Lock':
-			
+
 			# CapsLock is on but self.capslock is not True:
 			if e in [2, 10] and self.capslock in [False, 'init']:
 				self.capslock = True
 				self.bell()
 				self.flash_btn_git()
-				
-				
+
+
 			# CapsLock is off but self.capslock is True:
 			elif e in [0, 8] and self.capslock in [True, 'init']:
 				self.capslock = False
-				
+
 				# If quickly pressed CapsLock off,
 				# cancel flashing started at the end of this callback.
 				for item in self.to_be_cancelled[:]:
 					self.after_cancel(item)
 					self.to_be_cancelled.remove(item)
-					
-					
+
+
 				# Put Git-branch name back if on one
 				self.restore_btn_git()
 				bg, fg = self.themes[self.curtheme]['normal_text'][:]
 				self.contents.config(bg=bg, fg=fg)
-		
+
 		# event.keysym == Caps_Lock
 		# Check if CapsLock -state changes when focus is in editor
 		else:
 			# CapsLock is being turned off
 			# macOS -state
 			event_state = 0
-			
+
 			if self.os_type == 'linux': event_state = 2
-			
+
 			if e in [event_state, 10]:
 				self.capslock = False
-				
+
 				# If quickly pressed CapsLock off,
 				# cancel flashing started at the end of this callback.
 				for item in self.to_be_cancelled[:]:
 					self.after_cancel(item)
 					self.to_be_cancelled.remove(item)
-					
-					
+
+
 				# Put Git-branch name back if on one
 				self.restore_btn_git()
 				bg, fg = self.themes[self.curtheme]['normal_text'][:]
 				self.contents.config(bg=bg, fg=fg)
-		
+
 
 			# CapsLock is being turned on
 			else:
 				self.capslock = True
 				self.bell()
 				self.flash_btn_git()
-				
+
 		return 'break'
-		
-		
+
+
 	def handle_search_entry(self, search_pos, index):
 		''' Handle entry when searching/replacing
-		
+
 			Search_pos is position of current focus among search matches.
 			For example, if current search position would be
 			' 2/20' then search_pos would be 2.
-			
+
 			index is tkinter.Text -index of current search position,
 			for example, '100.1'
 		'''
 
 		self.entry.config(validate='none')
-		
+
 		# 1. Delete from 0 to Se/Re*: check ':' always in prompt
 		entry_contents = self.entry.get()
 		patt_e = 'Re'
 		if self.state == 'search': patt_e = 'Se'
-		
+
 		idx_s = entry_contents.index(':')
 		idx_e = entry_contents.rindex(patt_e, 0, idx_s)
 		self.entry.delete(0, idx_e)
-		
+
 		# Prompt is now '^Se.*' / '^Re.*'
-		
-		
+
+
 		# 2. Build string to be inserted in the beginning of entry
 		# a: Add scope_path
 		# Search backwards and get function/class names.
 		patt = ' '
 		flag_scope = False
-		
+
 		if self.tabs[self.tabindex].filepath:
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
 				flag_scope = True
-		
+
 		# This flag is set in insert_inspected()
 		elif hasattr(self.tabs[self.tabindex], 'inspected'):
 			flag_scope = True
-			
+
 		if flag_scope:
 			if scope_name := self.get_scope_path(index):
 				patt = ' @' + scope_name + ' @'
-				
+
 		# b: Add search position
 		idx = search_pos
 		lenght_of_search_position_index = len(str(idx))
 		lenght_of_search_matches = len(str(self.search_matches))
 		diff = lenght_of_search_matches - lenght_of_search_position_index
-		
+
 		tmp = f'{diff*" "}{idx}/{self.search_matches}'
 		patt = tmp + patt
 
-		
+
 		# 3. Insert string
 		self.entry.insert(0, patt)
 
-	
+
 	def get_scope_path(self, index, flag_only_one=False):
 		''' Get info about function or class where insertion-cursor is in.
-			
+
 			Index is tkinter.Text -index
-		
+
 			Called from handle_search_entry()
 			flag_only_one:
 				Called from self.expander.expand_word(), returns only first match
-				
+
 			Search backwards from index up to filestart and build scope-path
 			of current position: index.
-			
+
 			on success:
 				returns string: scope_path
 			else:
@@ -5224,32 +5224,32 @@ class Editor(tkinter.Toplevel):
 ##		patt_name = r'[[:alnum:]_]+(?:\()?(?::)?'
 ##
 ##		search_word = patt_indent + patt_keywords + patt_space + patt_name
-		
+
 		pos = index
-		
+
 		index_line_contents = self.contents.get( '%s linestart' % pos,
 			'%s display lineend' % pos )
-		
+
 		# Indentation of pos line
 		ind_last_line = 0
 		scope_path = ''
-			
+
 		for char in index_line_contents:
 			if char in ['\t']: ind_last_line += 1
 			else: break
-		
-		
+
+
 		if ind_last_line == 0:
 			scope_path = '__main__()'
-			
+
 			if flag_only_one:
 				return scope_path, 0, '1.0'
-			
+
 			return scope_path
 
-		
+
 		flag_finish = False
-		
+
 		if ind_last_line > 1:
 			# Why: [^[:blank:]#] instead of: [acd], as from: (a)sync, (c)lass, (d)ef?
 			# Reason: need to update indentation level of pos line or else path
@@ -5261,64 +5261,64 @@ class Editor(tkinter.Toplevel):
 		else:
 			# Left as example of: from start of line, not blank and not #
 			#patt = r'^[^[:blank:]#]'
-			
+
 			# Can now change pattern to:
 			# From start of line, [acd], as from: (a)sync, (c)lass or (d)ef
 			patt = r'^[acd]'
 			flag_finish = True
-			
-		
+
+
 		flag_match = False
-		
+
 		while pos:
-		
+
 			try:
 				# Count is tkinter.IntVar which is used to
 				# count indentation level of matched line.
 				pos = self.contents.search(patt, pos, stopindex='1.0',
 					regexp=True, backwards=True, count=self.search_count_var)
-					
+
 			except tkinter.TclError as e:
 				print(e)
 				return False
-			
+
 			if not pos:
 				break
-			
+
 			# -1: remove terminating char(not blank not #) from matched char count
 			# Check patt if interested.
 			ind_curline = self.search_count_var.get() - 1
-			
+
 			#print(pos, ind_curline, ind_last_line, flag_finish)
-			
+
 			# Find previous line that:
 			# Has one (or more) indentation level smaller indentation than ind_last_line
 			# 	Then if it also is definition line --> add to scopepath
 			# 	update ind_last_line
 			def_line_contents = tmp = self.contents.get( pos, '%s display lineend' % pos )
 			tmp = tmp.strip()
-			
+
 			if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
 				# Add to scopepath
 				patt_end = ':'
 				if '(' in tmp: patt_end = '('
-	
+
 
 				if tmp[:5] == 'async':
 					tmp = tmp[5:].strip()
-					
+
 				if tmp[:3] == 'def':
 					tmp = tmp[3:].strip()
-				
+
 				if tmp[:5] == 'class':
 					tmp = tmp[5:].strip()
-					
+
 				try:
 					e = tmp.index(patt_end)
 				except ValueError:
 					# Found line starting with keyword, but no patt_end
 					#print('Error message from get_scope_path(): ', pos)
-					
+
 					# Question: Why not:
 					# 	pos = '%s -1c' % pos
 					# 	To avoiding rematching same line?
@@ -5328,32 +5328,32 @@ class Editor(tkinter.Toplevel):
 					#	because it is considered to be completely outside of search-range,
 					#	which ends at pos, when searching backwards.
 					continue
-					
-				
+
+
 				tmp = tmp[:e]
-				
+
 				if scope_path != '':
 					scope_path = tmp +'.'+ scope_path
 				else:
 					scope_path = tmp
-					
+
 					if flag_only_one:
 						return scope_path, ind_curline, pos
-					
-				
+
+
 				flag_match = True
-				
-				
-			
+
+
+
 			# Update search pattern and indentation of matched pos line
 			if not flag_finish: ind_last_line = ind_curline
-				
-			
+
+
 			# Exit
 			if flag_match and flag_finish: break
 			flag_match = False
-				
-			
+
+
 			if ind_curline > 1:
 				patt = r'^[[:blank:]]{1,%d}[^[:blank:]#]' % (ind_curline-1)
 
@@ -5362,75 +5362,75 @@ class Editor(tkinter.Toplevel):
 			else:
 				patt = r'^[acd]'
 				flag_finish = True
-				
+
 			# Question: Why not:
 			# 	pos = '%s -1c' % pos
 			# 	To avoiding rematching same line?
 			# Answer: See above
-			
+
 
 		if scope_path == '':
 			scope_path = '__main__()'
-			
+
 			if flag_only_one:
 				return scope_path, 0, '1.0'
-			
+
 			return scope_path
-	
+
 		else:
 			return scope_path + '()'
-			
-			
+
+
 	def get_scope_end(self, ind_last_line):
 		''' Get info about function or class where insertion-cursor is in.
 			That is, position of next(down) uncommented line == end of current scope
-		
+
 			Called from self.expander.expand_word()
-			
+
 			ind_last_line is int which is supposed to tell indentation of function
 			or class -definition line, where insertion-cursor is currently in.
 			This ind_last_line can be getted with calling:
-				
+
 				get_scope_path('insert', flag_only_one=True)
-				
-		 	
+
+
 		 	Goal is to get positions of function start and end.
-			
+
 			On success:
 				Returns string: position of next uncommented line
 			Else:
 				Returns 'end'
-				
+
 		'''
 		p1 = ''
 		# From start of line: Not blank and not comment
 		p2 = r'^[^[:blank:]#]+'
-		
+
 		if ind_last_line > 0:
 			# Want: uncommented line with ind_last_line blanks or one less
 			blank_range = '{%d,%d}' % (ind_last_line-1, ind_last_line)
 			p1 = r'^[[:blank:]]%s' % blank_range
 			# Not blank and not comment
 			p2 = r'[^[:blank:]#]+'
-		
-		
-		
+
+
+
 		patt = p1 + p2
 		pos = False
 		print(patt)
 		try:
 			pos = self.contents.search(patt, 'insert', stopindex='end', regexp=True)
-			
+
 		except tkinter.TclError as e:
 			print(e)
-		
-		
+
+
 		if not pos:
 			return 'end'
-		
+
 		return pos
-		
-	
+
+
 ########## Utilities End
 ########## Gotoline etc Begin
 
@@ -5438,162 +5438,162 @@ class Editor(tkinter.Toplevel):
 		''' Get word under cursor or use selection and
 			go to function definition
 		'''
-		
+
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-		
+
 		have_selection = len(self.contents.tag_ranges('sel')) > 0
-		
+
 		if have_selection:
 			word_at_cursor = self.contents.selection_get()
 		else:
 			word_at_cursor = self.contents.get('insert wordstart', 'insert wordend')
-		
+
 		word_at_cursor = word_at_cursor.strip()
-		
+
 		if word_at_cursor == '':
 			return 'break'
-		
+
 		#print(word_at_cursor)
 		# https://www.tcl.tk/man/tcl9.0/TclCmd/re_syntax.html#M31
 		patt_indent = r'^#*[[:blank:]]*'
 		patt_keywords = r'(?:async[[:blank:]]+)?def[[:blank:]]+'
 		search_word = patt_indent + patt_keywords + word_at_cursor + r'\('
-		
+
 		try:
 			pos = self.contents.search(search_word, '1.0', regexp=True)
-			
+
 		except tkinter.TclError:
 			return 'break'
-			
+
 		if pos:
 			self.contents.mark_set('insert', 'insert')
 			self.contents.focus_set()
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
-			
+
 			if have_selection:
 				self.contents.tag_remove( 'sel', '1.0', tkinter.END )
 		else:
 			self.bell()
-			
+
 		return 'break'
-	
-	
+
+
 	def goto_bookmark(self, event=None, back=False):
 		''' Walk bookmarks
 		'''
-		
+
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-		
-		
+
+
 		def get_mark(start_idx, markfunc):
 			pos = False
 			mark_name = markfunc(start_idx)
-			
+
 			while mark_name:
 				if 'bookmark' in mark_name:
 					pos_mark = self.contents.index(mark_name)
 					if self.contents.compare(pos_mark, '!=', 'insert' ):
 						pos = pos_mark
 						break
-					
+
 				mark_name = markfunc(mark_name)
-				
+
 			return pos
-			
+
 		# Start
 		mark_func = self.contents.mark_next
-		
+
 		if back:
 			mark_func = self.contents.mark_previous
-			
+
 		pos = get_mark('insert', mark_func)
-		
+
 		# At file_startend, try again from beginning of other end
 		if not pos:
 			start = '1.0'
 			if back: start = tkinter.END
 			pos = get_mark(start, mark_func)
-		
+
 		# No bookmarks in this tab
 		if not pos:
 			self.wait_for(100)
 			self.bell()
 			return "break"
-			
-		
+
+
 		try:
 			self.contents.mark_set('insert', pos)
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
-			
+
 		except tkinter.TclError as e:
 			print(e)
-			
+
 		return "break"
-	
+
 
 	def do_gotoline(self, event=None):
 		''' If tkinter.END is linenumber of last line:
 			When linenumber given is positive and between 0 - tkinter.END,
 			go to start of that line, if greater, go to tkinter.END.
-			
+
 			When given negative number between -1 - -tkinter.END or so,
 			start counting from tkinter.END towards beginning and
 			go to that line.
-		
+
 		'''
-		
+
 		try:
 			# Get stuff after prompt
 			tmp = self.entry.get()
 			idx = self.entry.len_prompt
 			tmp = tmp[idx:].strip()
-			
-			
+
+
 			if tmp in ['-1', '']:
 				line = tkinter.END
-			
+
 			elif '-' not in tmp:
 				line = tmp + '.0'
-			
+
 			elif tmp[0] == '-' and '-' not in tmp[1:] and len(tmp) > 1:
-				
+
 				if int(tmp[1:]) < int(self.entry.endline):
 					line = self.entry.endline + '.0 -%s lines' % tmp[1:]
 				else:
 					line = tkinter.END
 			else:
 				line = tkinter.INSERT
-				
+
 			self.tabs[self.tabindex].position = line
-			
-		
+
+
 		except tkinter.TclError as e:
 			print(e)
-		
+
 		self.stop_gotoline()
 		return "break"
-		
-	
+
+
 	def stop_gotoline(self, event=None):
 		self.state = 'normal'
 		self.bind("<Escape>", self.esc_override)
-		
+
 		self.entry.config(validate='none')
-		
+
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
-		
+
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
-			
-		
+
+
 		# Set cursor pos
 		try:
 			line = self.tabs[self.tabindex].position
@@ -5601,110 +5601,110 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', line)
 			self.wait_for(100)
 			self.ensure_idx_visibility(line)
-			
+
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			
-			
+
+
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'
-		
+
 		return "break"
-		
-	
+
+
 	def gotoline(self, event=None):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-		
+
 		self.state = 'gotoline'
-		
+
 		try:
 			pos = self.contents.index(tkinter.INSERT)
 		except tkinter.TclError:
 			pos = '1.0'
-		
+
 		self.tabs[self.tabindex].position = pos
-		
+
 		# Remove extra line, this is number of lines in contents
 		self.entry.endline = str(int(self.contents.index(tkinter.END).split('.')[0]) - 1)
-		
+
 		self.entry.bind("<Return>", self.do_gotoline)
 		self.bind("<Escape>", self.stop_gotoline)
-		
+
 		self.entry.delete(0, tkinter.END)
 		self.entry.focus_set()
-		
+
 		patt = 'Go to line, 1-%s: ' % self.entry.endline
 		self.entry.len_prompt = len(patt)
 		self.entry.insert(0, patt)
 		self.entry.config(validate='key', validatecommand=self.validate_gotoline)
-		
+
 		return "break"
-	
-	
+
+
 	def do_validate_gotoline(self, i, S, P):
 		'''	i is index of action,
 			S is new string to be validated,
 			P is all content of entry.
 		'''
-		
+
 		#print(i,S,P)
 		max_idx = self.entry.len_prompt + len(self.entry.endline) + 1
-		
+
 		if int(i) < self.entry.len_prompt:
 			self.entry.selection_clear()
 			self.entry.icursor(self.entry.len_prompt)
-			
+
 			return S == ''
-			
+
 		elif len(P) > max_idx:
 			return S == ''
-		
+
 		elif S.isdigit() or S == '-':
 			return True
-			
+
 		else:
 			return S == ''
-	
-	
+
+
 ########## Gotoline etc End
 ########## Save and Load Begin
 
 	def trace_filename(self, *args):
-		
+
 		# Canceled
 		if self.tracevar_filename.get() == '':
 			self.entry.delete(0, tkinter.END)
-			
+
 			if self.tabs[self.tabindex].filepath != None:
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
 				self.entry.xview_moveto(1.0)
-				
+
 		else:
 			# update self.lastdir
 			filename = pathlib.Path().cwd() / self.tracevar_filename.get()
 			self.lastdir = pathlib.Path(*filename.parts[:-1])
-		
+
 			self.loadfile(filename)
-		
-		
+
+
 		self.tracevar_filename.trace_remove('write', self.tracefunc_name)
 		self.tracefunc_name = None
-		
+
 		if self.os_type == 'mac_os':
 			self.contents.bind( "<Return>", self.return_override)
 		else:
 			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
-		
+
 		self.state = 'normal'
-		
-	
+
+
 		for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
 			widget.config(state='normal')
-		
+
 		return 'break'
-		
-		
+
+
 	def loadfile(self, filepath):
 		''' filepath is pathlib.Path
 			If filepath is python-file, convert indentation to tabs.
@@ -5712,126 +5712,126 @@ class Editor(tkinter.Toplevel):
 
 		filename = filepath
 		openfiles = [tab.filepath for tab in self.tabs]
-		
+
 		for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
 			widget.config(state='normal')
-		
-		
+
+
 		if filename in openfiles:
 			print(f'file: {filename} is already open')
 			self.bell()
 			self.entry.delete(0, tkinter.END)
-			
+
 			if self.tabs[self.tabindex].filepath != None:
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
 				self.entry.xview_moveto(1.0)
-				
+
 			return
-		
+
 		if self.tabs[self.tabindex].type == 'normal':
 			if not self.save(activetab=True):
 				self.bell()
 				return 'break'
-	
-	
+
+
 		# Using same tab:
 		try:
 			with open(filename, 'r', encoding='utf-8') as f:
 				tmp = f.read()
 				self.tabs[self.tabindex].oldcontents = tmp
-				
+
 				if '.py' in filename.suffix:
 					indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
-					
+
 					if indentation_is_alien:
 						tmp = self.tabs[self.tabindex].oldcontents.splitlines(True)
 						tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 						tmp = ''.join(tmp)
 						self.tabs[self.tabindex].contents = tmp
-						
+
 					else:
 						self.tabs[self.tabindex].contents = self.tabs[self.tabindex].oldcontents
 				else:
 					self.tabs[self.tabindex].contents = self.tabs[self.tabindex].oldcontents
-				
-			
-				
+
+
+
 				self.entry.delete(0, tkinter.END)
 				self.tabs[self.tabindex].filepath = filename
 				self.tabs[self.tabindex].type = 'normal'
 				self.tabs[self.tabindex].position = '1.0'
 				self.entry.insert(0, filename)
 				self.entry.xview_moveto(1.0)
-				
-				
+
+
 				self.contents.delete('1.0', tkinter.END)
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				self.remove_bookmarks(all_tabs=False)
-				
+
 				self.do_syntax(everything=True)
-				
-				
+
+
 				self.contents.focus_set()
 				self.contents.see('1.0')
 				self.contents.mark_set('insert', '1.0')
-				
+
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 				self.avoid_viewsync_mess()
-				
+
 		except (EnvironmentError, UnicodeDecodeError) as e:
 			print(e.__str__())
 			print(f'\n Could not open file: {filename}')
 			self.entry.delete(0, tkinter.END)
-			
+
 			if self.tabs[self.tabindex].filepath != None:
 				self.entry.insert(0, self.tabs[self.tabindex].filepath)
 				self.entry.xview_moveto(1.0)
-				
+
 		return
-		
-	
+
+
 	def load(self, event=None):
 		'''	Get just the filename,
 			on success, pass it to loadfile()
 		'''
-		
+
 		if self.state != 'normal':
 			self.bell()
 			return 'break'
-		
-		
+
+
 		# Pressed Open-button
 		if event == None:
-			
+
 			self.state = 'filedialog'
-			
+
 			shortcut = "<Return>"
 			if self.os_type != 'mac_os':
 				shortcut = "<Alt-Return>"
-				
+
 			self.contents.bind( shortcut, self.do_nothing_without_bell)
-			
+
 			for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
 				widget.config(state='disabled')
-				
+
 			self.tracevar_filename.set('empty')
 			self.tracefunc_name = self.tracevar_filename.trace_add('write', self.trace_filename)
-			
+
 			p = pathlib.Path().cwd()
-			
+
 			if self.lastdir:
 				p = p / self.lastdir
-			
+
 			filetop = tkinter.Toplevel()
 			filetop.title('Select File')
 			self.to_be_closed.append(filetop)
-			
-			
+
+
 			fd = fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.font, menufont=self.menufont, os_type=self.os_type)
-			
+
 			return 'break'
-			
+
 
 		# Entered filename to be opened in entry:
 		else:
@@ -5840,17 +5840,17 @@ class Editor(tkinter.Toplevel):
 			if not isinstance(tmp, str) or tmp.isspace():
 				self.bell()
 				return 'break'
-	
+
 			filename = pathlib.Path().cwd() / tmp
-			
+
 			self.loadfile(filename)
-			
+
 			return 'break'
 
-					
+
 	def save_forced(self):
 		''' Called from run() or quit_me()
-			
+
 			If python-file, convert indentation to tabs.
 		'''
 		# Dont want contents to be replaced with errorlines or help.
@@ -5858,35 +5858,35 @@ class Editor(tkinter.Toplevel):
 
 		while self.state != 'normal':
 			self.contents.event_generate('<Escape>')
-			
+
 			# Is state actually changing, or is it stuck == there is a bug
 			# --> cancel
 			if self.state == last_state:
 				print(r'\nState is not changing, currenty: ', self.state)
-				
+
 				return False
-				
+
 			last_state = self.state
 
-		
+
 		# Update active tab first
 		try:
 			pos = self.contents.index(tkinter.INSERT)
 		except tkinter.TclError:
 			pos = '1.0'
-			
+
 		tmp = self.contents.get('1.0', tkinter.END)
 
 		self.tabs[self.tabindex].position = pos
 		self.tabs[self.tabindex].contents = tmp
-		
-		
+
+
 		res = True
-		
+
 		# Then save tabs to disk
 		for tab in self.tabs:
 			if tab.type == 'normal':
-				
+
 				if '.py' in tab.filepath.suffix:
 					# Check indent (tabify) and rstrip:
 					tmp = tab.contents.splitlines(True)
@@ -5894,37 +5894,37 @@ class Editor(tkinter.Toplevel):
 					tmp = ''.join(tmp)
 				else:
 					tmp = tab.contents
-					
+
 				if tab.active == True:
 					tmp = tmp[:-1]
-				
+
 				tab.contents = tmp
-				
+
 				if tab.contents == tab.oldcontents:
 					continue
-				
+
 				try:
 					with open(tab.filepath, 'w', encoding='utf-8') as f:
 						f.write(tab.contents)
 						tab.oldcontents = tab.contents
-						
+
 				except EnvironmentError as e:
 					print(e.__str__())
 					print(f'\n Could not save file: {tab.filepath}')
 					res = False
 			else:
 				tab.position = '1.0'
-				
-	
+
+
 		return res
-		
-		
-	
+
+
+
 	def save(self, activetab=False):
 		''' Called for example when pressed Save-button.
-		
+
 			activetab=True from load() and del_tab()
-			
+
 			If python-file, convert indentation to tabs.
 		'''
 		# Have to check if activetab because
@@ -5932,71 +5932,71 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal' and not activetab:
 			self.bell()
 			return 'break'
-				
+
 		# Used below
 		def del_ins_move():
 			self.entry.delete(0, tkinter.END)
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
-			
-		
+
+
 		def set_cursor_pos():
 			try:
 				line = self.tabs[self.tabindex].position
 				self.contents.focus_set()
 				self.contents.mark_set('insert', line)
 				self.ensure_idx_visibility(line)
-				
+
 			except tkinter.TclError:
 				self.tabs[self.tabindex].position = '1.0'
-			
-		
-			
+
+
+
 		tmp = self.entry.get().strip()
-		
+
 		if not isinstance(tmp, str) or tmp.isspace():
 			print('Give a valid filename')
 			self.bell()
 			return False
-		
+
 		fpath_in_entry = pathlib.Path().cwd() / tmp
-		
+
 		try:
 			pos = self.contents.index(tkinter.INSERT)
 		except tkinter.TclError:
 			pos = '1.0'
-					
+
 		tmp = self.contents.get('1.0', tkinter.END)
-		
+
 		self.tabs[self.tabindex].position = pos
 		self.tabs[self.tabindex].contents = tmp
 
 		openfiles = [tab.filepath for tab in self.tabs]
-		
-		
+
+
 		# Creating a new file
 		if fpath_in_entry != self.tabs[self.tabindex].filepath and not activetab:
-		
+
 			if fpath_in_entry in openfiles:
 				self.bell()
 				print(f'\nFile: {fpath_in_entry} already opened')
-				
+
 				if self.tabs[self.tabindex].filepath != None:
 					del_ins_move()
 
 				return False
-				
+
 			if fpath_in_entry.exists():
 				self.bell()
 				print(f'\nCan not overwrite file: {fpath_in_entry}')
-				
+
 				if self.tabs[self.tabindex].filepath != None:
 					del_ins_move()
-					
+
 				return False
-			
+
 			if self.tabs[self.tabindex].type == 'newtab':
-			
+
 				# Avoiding disk-writes, just checking filepath:
 				try:
 					with open(fpath_in_entry, 'w', encoding='utf-8') as f:
@@ -6006,18 +6006,18 @@ class Editor(tkinter.Toplevel):
 					print(e.__str__())
 					print(f'\n Could not save file: {fpath_in_entry}')
 					return False
-				
+
 				if self.tabs[self.tabindex].filepath != None:
 					del_ins_move()
-					
+
 					self.do_syntax()
-								
+
 				set_cursor_pos()
-			
+
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
-									
-				
+
+
 			# Want to create new file with same contents:
 			else:
 				try:
@@ -6026,30 +6026,30 @@ class Editor(tkinter.Toplevel):
 				except EnvironmentError as e:
 					print(e.__str__())
 					print(f'\n Could not save file: {fpath_in_entry}')
-					
+
 					if self.tabs[self.tabindex].filepath != None:
 						del_ins_move()
-						
+
 					return False
-					
+
 				self.new_tab()
 				self.tabs[self.tabindex].filepath = fpath_in_entry
 				self.tabs[self.tabindex].contents = tmp
 				self.tabs[self.tabindex].position = pos
 				self.tabs[self.tabindex].type = 'normal'
-				
+
 				del_ins_move()
-			
+
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-				
+
 				self.do_syntax(everything=True)
-				
+
 				set_cursor_pos()
-				
+
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
-				
-				
+
+
 		else:
 			# Skip unnecessary disk-writing
 			if not activetab:
@@ -6064,180 +6064,180 @@ class Editor(tkinter.Toplevel):
 			else:
 				tmp = self.tabs[self.tabindex].contents
 				tmp = tmp[:-1]
-				
+
 			if self.tabs[self.tabindex].contents == self.tabs[self.tabindex].oldcontents:
 				return True
-				
+
 			try:
 				with open(self.tabs[self.tabindex].filepath, 'w', encoding='utf-8') as f:
 					f.write(tmp)
-					
+
 			except EnvironmentError as e:
 				print(e.__str__())
 				print(f'\n Could not save file: {self.tabs[self.tabindex].filepath}')
 				return False
-		
-			
+
+
 		return True
 		############# Save End #######################################
-	
+
 ########## Save and Load End
 ########## Bookmarks and Help Begin
-	
+
 	def print_bookmarks(self):
-		
+
 		self.wait_for(100)
-		
+
 		for mark in self.contents.mark_names():
 			if 'bookmark' in mark:
 				i = self.contents.index(mark)
 				print(mark, i)
-				
+
 		tab = self.tabs[self.tabindex]
 		print(tab.bookmarks)
-	
-	
+
+
 	def line_is_bookmarked(self, index):
 		''' mark_name is tkinter.Text -index
 		'''
-		
+
 		# Find first mark in line
 		s = self.contents.index('%s display linestart' % index)
 		mark_name = self.contents.mark_next(s)
-		
+
 		# Find first bookmark after s
 		while mark_name:
 			if 'bookmark' not in mark_name:
 				mark_name = self.contents.mark_next(mark_name)
 			else:
 				break
-				
+
 		if mark_name:
 			if 'bookmark' in mark_name:
 				mark_line = self.contents.index(mark_name).split('.')[0]
 				pos_line = s.split('.')[0]
-			
+
 			if mark_line == pos_line:
 				return mark_name
-		
+
 		return False
-		
-			
+
+
 	def clear_bookmarks(self):
 		for mark in self.contents.mark_names():
 			if 'bookmark' in mark:
 				self.contents.mark_unset(mark)
-		
-	
+
+
 	def restore_bookmarks(self):
 		''' When view changes, after tab has its contents again,
-			
+
 			restore tabs bookmarks
 		'''
-		
+
 		self.clear_bookmarks()
-		
+
 		tab = self.tabs[self.tabindex]
 		for i, pos in enumerate(tab.bookmarks):
 			self.contents.mark_set('bookmark%d' % i, pos)
-			
+
 		tab.bookmarks.clear()
-		
+
 		for mark in self.contents.mark_names():
 			if 'bookmark' in mark:
 				tab.bookmarks.append(mark)
-				
-	
+
+
 	def remove_bookmarks(self, all_tabs=True):
 		''' Removes bookmarks from current tab
 			or from all tabs.
 		'''
 		self.clear_bookmarks()
-		
+
 		tabs = [self.tabs[self.tabindex]]
 		if all_tabs: tabs = self.tabs
-		
+
 		for tab in tabs:
 			tab.bookmarks.clear()
-	
+
 
 	def remove_single_bookmark(self):
 		pos_cursor = self.contents.index(tkinter.INSERT)
-		
+
 		if mark_name := self.line_is_bookmarked(pos_cursor):
-			
+
 			self.contents.mark_unset(mark_name)
 			tab = self.tabs[self.tabindex]
 			tab.bookmarks.remove(mark_name)
-			
+
 			# Fix naming of bookmarks in tab.bookmarks
 			tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
 			self.restore_bookmarks()
-			
+
 			return True
-		
+
 		else:
 			return False
-			
-	
+
+
 	def bookmark_animate(self, idx_linestart, remove=False):
 		''' Animate on Add/Remove bookmark
 		'''
-		
+
 		s = idx_linestart
-		
+
 		self.contents.edit_separator()
-		
+
 		try:
 			e0 = self.idx_lineend()
 			col = int(e0.split('.')[1])
-			
-			
+
+
 			# Time to spend with marking-animation on line
 			time_wanted = 400
 			# Time to spend with marking-animation on char
 			step = 8
-			
+
 			# Removing animation is 'doubled' --> need to reduce time
 			if remove:
 				time_wanted = 300
 				step = 6
-				
+
 			# Want to animate on this many chars
 			wanted_num_chars = want = time_wanted // step
-			
+
 			# Check not over screen width 1
 			width_char = self.font.measure('A')
 			width_scr = self.contents.winfo_width()
 			num_chars = width_scr // width_char
-			
+
 			if wanted_num_chars > num_chars:
 				wanted_num_chars = want = num_chars
-			
 
-			
+
+
 			flag_added_space = False
 			flag_changed_contents_state = False
-			
-			
+
+
 			# If line has not enough characters
 			if (diff := want - col) > 0:
-				
+
 				# Check not over screen width 2
 				if (self.contents.bbox(e0)[0] + diff * width_char) < (width_scr - width_char):
-					
+
 					# Add some space so we can tag more estate from line. It is later removed.
 					flag_added_space = True
-					
+
 					# Searching, Replacing
 					if self.contents.cget('state') == 'disabled':
-						
+
 						self.contents.config(state='normal')
 						flag_changed_contents_state = True
-						
+
 					self.contents.insert(e0, diff * ' ')
-					
-				
+
+
 				# Some deep indentation and small screen size combo
 				# --> Line has enough characters, just update step
 				else:
@@ -6245,203 +6245,203 @@ class Editor(tkinter.Toplevel):
 					t = self.contents.get(s, e0)
 					for char in t:
 						wanted_num_chars += 1
-						
+
 					# Recalculate step
 					step = time_wanted // wanted_num_chars
 					want = wanted_num_chars
 
-					
+
 
 			e = self.idx_lineend()
-			
+
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			self.contents.tag_raise('sel')
-			
+
 			# Animate removing bookmark
 			if remove:
 				# 1: Tag wanted_num_chars from start. In effect this, but in loop
 				# to enable use of after(), to get animating effect.
 				# self.contents.tag_add('sel', s, '%s +%d chars' % (s, wanted_num_chars) )
-				
+
 				for i in range(wanted_num_chars):
 					p0 = '%s +%d chars' % (s, wanted_num_chars - i-1 )
 					p1 = '%s +%d chars' % (s, wanted_num_chars - i )
-					
+
 					self.after( (i+1)*step, lambda args=['sel', p0, p1]:
 							self.contents.tag_add(*args) )
-				
+
 				# 2: Same story as when adding, just note some time has passed
 				for i in range(wanted_num_chars):
 					p0 = '%s +%d chars' % (s, wanted_num_chars - i-1 )
 					p1 = '%s +%d chars' % (s, wanted_num_chars - i )
-					
+
 					self.after( ( time_wanted + (i+1)*step ), lambda args=['sel', p0, p1]:
 							self.contents.tag_remove(*args) )
-				
-				
+
+
 				self.after( (2*time_wanted + 20), lambda args=['focus']:
 						self.contents.tag_raise(*args) )
-				
-				
+
+
 				if flag_added_space:
 					self.after( (2*time_wanted + 30), lambda args=[e0, '%s display lineend' % e0]:
 							self.contents.delete(*args) )
-							
+
 					if flag_changed_contents_state:
 						self.after( (2*time_wanted + 40), lambda kwargs={'state':'disabled'}:
 								self.contents.config(**kwargs) )
-								
-				
-							
-						
+
+
+
+
 			# Animate adding bookmark
 			else:
 				# Info is in remove-section above
 				for i in range(wanted_num_chars):
 					p0 = '%s +%d chars' % (s, i)
 					p1 = '%s +%d chars' % (s, i+1)
-					
+
 					self.after( (i+1)*step, lambda args=['sel', p0, p1]:
 							self.contents.tag_add(*args) )
-						
-			
+
+
 				self.after( (time_wanted + 300), lambda args=['sel', '1.0', tkinter.END]:
 						self.contents.tag_remove(*args) )
-				
-				
+
+
 				self.after( (time_wanted + 320), lambda args=['focus']:
 						self.contents.tag_raise(*args) )
-				
-				
+
+
 				if flag_added_space:
 					self.after( (time_wanted + 330), lambda args=[e0, '%s display lineend' % e0]:
 							self.contents.delete(*args) )
-							
+
 					if flag_changed_contents_state:
 						self.after( (time_wanted + 340), lambda kwargs={'state':'disabled'}:
 								self.contents.config(**kwargs) )
-								
-						
-												
+
+
+
 		except tkinter.TclError as ee:
 			print(ee)
-		
-		
+
+
 		self.contents.edit_separator()
 
 		######## bookmark_animate End #######
-	
-	
+
+
 	def toggle_bookmark(self, event=None):
 		''' Add/Remove bookmark at cursor position
 		'''
-		
+
 		if self.state not in [ 'normal', 'search', 'replace' ]:
 			self.bell()
 			return "break"
-		
+
 		pos = tkinter.INSERT
 		if self.state != 'normal':
 			# 'focus'
 			pos = self.search_focus[0]
-		
-			
+
+
 		s = self.contents.index('%s display linestart' % pos)
-		
+
 		# If there is bookmark, remove it
 		if self.remove_single_bookmark():
 			self.bookmark_animate(s, remove=True)
 			return "break"
-	
-		
+
+
 		new_mark = 'bookmark' + str(len(self.tabs[self.tabindex].bookmarks))
 		self.contents.mark_set( new_mark, s )
 		self.tabs[self.tabindex].bookmarks.append(new_mark)
-		
+
 		self.bookmark_animate(s)
 		return "break"
-		
-	
+
+
 	def stop_help(self, event=None):
 		self.state = 'normal'
-		
+
 		self.entry.config(state='normal')
 		self.contents.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
-		
+
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
-			
+
 		self.token_can_update = True
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
-		
+
 		self.do_syntax(everything=True)
-		
-		
+
+
 		# set cursor pos
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
 			self.ensure_idx_visibility(line)
-			
+
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'
-		
-			
+
+
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		self.avoid_viewsync_mess()
-		
+
 		self.bind("<Escape>", self.esc_override)
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
-		
-		
+
+
 	def help(self, event=None):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-			
+
 		self.state = 'help'
-		
+
 		try:
 			pos = self.contents.index(tkinter.INSERT)
 		except tkinter.TclError:
 			pos = '1.0'
-		
+
 		self.tabs[self.tabindex].position = pos
 		tmp = self.contents.get('1.0', tkinter.END)
 		# [:-1]: remove unwanted extra newline
 		self.tabs[self.tabindex].contents = tmp[:-1]
 		tab = self.tabs[self.tabindex]
 		tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
-		
+
 		self.token_can_update = False
-		
+
 		self.entry.delete(0, tkinter.END)
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.helptxt)
-		
+
 		self.entry.config(state='disabled')
 		self.contents.config(state='disabled')
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
-		
+
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 		self.bind("<Escape>", self.stop_help)
-	
-			
+
+
 ########## Bookmarks and Help End
 ########## Indent and Comment Begin
-	
+
 	def check_indent_depth(self, contents):
 		'''Contents is contents of py-file as string.'''
-		
+
 		words = [
 				'def ',
 				'if ',
@@ -6449,449 +6449,449 @@ class Editor(tkinter.Toplevel):
 				'while ',
 				'class '
 				]
-				
+
 		tmp = contents.splitlines()
-		
+
 		for word in words:
-			
+
 			for i in range(len(tmp)):
 				line = tmp[i]
 				if word in line:
-					
+
 					# Trying to check if at the beginning of new block:
 					if line.strip()[-1] == ':':
 						# Offset is num of empty lines between this line and next
 						# non empty line
 						nextline = None
-						
+
 						for offset in range(1, len(tmp)-i):
 							nextline = tmp[i+offset]
 							if nextline.strip() == '': continue
 							else: break
-							
-							
+
+
 						if not nextline:
 							continue
-						
-						
+
+
 						# Now should have next non empty line,
 						# so start parsing it:
 						flag_space = False
 						indent_0 = 0
 						indent_1 = 0
-		
+
 						for char in line:
 							if char in [' ', '\t']: indent_0 += 1
 							else: break
-		
+
 						for char in nextline:
 							# Check if indent done with spaces:
 							if char == ' ':
 								flag_space = True
-		
+
 							if char in [' ', '\t']: indent_1 += 1
 							else: break
-						
-						
+
+
 						indent = indent_1 - indent_0
 						#print(indent)
 						tests = [
 								( indent <= 0 ),
 								( not flag_space and indent > 1 )
 								]
-						
+
 						if any(tests):
 							#print('indent err')
 							#skipping
 							continue
-						
-						
+
+
 						# All is good, do nothing:
 						if not flag_space:
 							return False, 0
-							
+
 						# Found one block with spaced indentation,
 						# assuming it is used in whole file.
 						else:
 							if indent != self.ind_depth:
 								return True, indent
-							
+
 							else:
 								return False, 0
-					
+
 		return False, 0
-				
-	
+
+
 	def can_expand_word(self):
 		'''	Called from indent() and unindent()
 		'''
 		ins = tkinter.INSERT
 
 		# There should not be selection, checked before call in caller.
-		
+
 		# Check if cursor not in indentation or not empty line
 		idx_s, _ = self.idx_linestart()
-		
+
 		if idx_s:
 			# Cursor is after indentation
 			if self.contents.compare(idx_s, '<', ins):
-				
+
 				# Check previous char
 				idx = self.contents.index(ins)
 				col = int(idx.split(sep='.')[1])
-				
+
 				if col > 0:
 					prev_char = self.contents.get( ('%s -1 char') % ins, '%s' % ins )
-				
+
 					if prev_char in self.expander.wordchars:
 						return True
-	
+
 		return False
-			
-	
+
+
 	def indent(self, event=None):
 		if self.state in [ 'search', 'replace', 'replace_all' ]:
 			return 'break'
-		
-		
+
+
 		if len(self.contents.tag_ranges('sel')) == 0:
-			
+
 			if self.can_expand_word():
 				self.expander.expand_word()
-				
+
 				# can_expand_word called before indent and unindent
-				
+
 				# Reason is that before commit 5300449a75c4826
 				# when completing with Tab word1_word2 at word1:
 				# first, pressing Shift down to enter underscore '_'
 				# then fast pressing Tab after that.
-				
+
 				# Now, Shift might still be pressed down
 				# --> get: word1_ and unindent line but no completion
-				
+
 				# Want: indent, unindent one line (no selection) only when:
 				# cursor_index <= idx_linestart
-				
+
 				# Solution
 				# Tab-completion also with Shift-Tab,
 				# which is intended to help tab-completing with slow/lazy fingers
 
 				return 'break'
-				
+
 			# If at start of empty line: move cursor to indent of previous line.
 			elif indentation_level := self.tab_over_indent():
 				self.contents.insert(tkinter.INSERT, indentation_level * '\t')
 				return 'break'
-				
+
 			else:
 				return
-				
+
 		try:
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
 			i = self.contents.index(tkinter.INSERT)
-			
+
 			start_idx = self.contents.index(tkinter.SEL_FIRST)
 			end_idx = self.contents.index(tkinter.SEL_LAST)
-					
+
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			self.contents.tag_add('sel', start_idx, end_idx)
-			
-		
+
+
 			if len(self.contents.tag_ranges('sel')) != 0:
-					
+
 				# is start of selection viewable?
 				if not self.contents.bbox(tkinter.SEL_FIRST):
-					
+
 					self.wait_for(150)
 					self.ensure_idx_visibility(tkinter.SEL_FIRST, back=4)
 					self.wait_for(100)
-						
-			
+
+
 			for linenum in range(startline, endline+1):
 				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 				self.contents.insert(tkinter.INSERT, '\t')
-			
-			
+
+
 			if startline == endline:
 				self.contents.mark_set(tkinter.INSERT, '%s +1c' %i)
-			
+
 			elif self.contents.compare(tkinter.SEL_FIRST, '<', tkinter.INSERT):
 				self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
-				
+
 			self.ensure_idx_visibility('insert', back=4)
 			self.contents.edit_separator()
-			
+
 		except tkinter.TclError:
 			pass
-			
+
 		return 'break'
-			
+
 
 	def unindent(self, event=None):
 		if self.state in [ 'search', 'replace', 'replace_all' ]:
 			return 'break'
-		
-			
+
+
 		if len(self.contents.tag_ranges('sel')) == 0:
-		
+
 			if self.can_expand_word():
 				self.expander.expand_word()
-					
+
 				# can_expand_word called before indent and unindent
-				
+
 				# Reason is that before commit 5300449a75c4826
 				# when completing with Tab word1_word2 at word1:
 				# first, pressing Shift down to enter underscore '_'
 				# then fast pressing Tab after that.
-				
+
 				# Now, Shift might still be pressed down
 				# --> get: word1_ and unindent line but no completion
-				
+
 				# Want: indent, unindent one line (no selection) only when:
 				# cursor_index <= idx_linestart
-				
+
 				# Solution
 				# Tab-completion also with Shift-Tab,
 				# which is intended to help tab-completing with slow/lazy fingers
 
 				return 'break'
-			
+
 		try:
 			# Unindenting curline only:
 			if len(self.contents.tag_ranges('sel')) == 0:
 				startline = int(self.contents.index(tkinter.INSERT).split(sep='.')[0])
 				endline = startline
-				
+
 			else:
 				startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 				endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
-			
+
 			i = self.contents.index(tkinter.INSERT)
-			
+
 			# Check there is enough space in every line:
 			flag_continue = True
-			
+
 			for linenum in range(startline, endline+1):
 				tmp = self.contents.get('%s.0' % linenum, '%s.0 lineend' % linenum)
-				
+
 				if len(tmp) != 0 and tmp[0] != '\t':
 					flag_continue = False
 					break
-				
+
 			if flag_continue:
-				
+
 				if len(self.contents.tag_ranges('sel')) != 0:
-					
+
 					# is start of selection viewable?
 					if not self.contents.bbox(tkinter.SEL_FIRST):
-						
+
 						self.wait_for(150)
 						self.ensure_idx_visibility('insert', back=4)
 						self.wait_for(100)
-						
-						
+
+
 				for linenum in range(startline, endline+1):
 					tmp = self.contents.get('%s.0' % linenum, '%s.0 lineend' % linenum)
-				
+
 					if len(tmp) != 0:
 						if len(self.contents.tag_ranges('sel')) != 0:
 							self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 							self.contents.delete(tkinter.INSERT, '%s+%dc' % (tkinter.INSERT, 1))
-						
+
 						else:
 							self.contents.delete( '%s.0' % linenum, '%s.0 +1c' % linenum)
-				
-		
+
+
 				# is selection made from down to top or from right to left?
 				if len(self.contents.tag_ranges('sel')) != 0:
-				
+
 					if startline == endline:
 						self.contents.mark_set(tkinter.INSERT, '%s -1c' %i)
-					
+
 					elif self.contents.compare(tkinter.SEL_FIRST, '<', tkinter.INSERT):
 						self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
-						
+
 					# is start of selection viewable?
 					if not self.contents.bbox(tkinter.SEL_FIRST):
 						self.ensure_idx_visibility('insert', back=4)
-					
+
 				self.contents.edit_separator()
-		
+
 		except tkinter.TclError:
 			pass
-			
+
 		return "break"
-	
-	
+
+
 	def comment(self, event=None):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-			
+
 		try:
 			s = self.contents.index(tkinter.SEL_FIRST)
 			e = self.contents.index(tkinter.SEL_LAST)
-		
+
 			startline = int( s.split('.')[0] )
 			startpos = self.contents.index( '%s linestart' % s )
-			
+
 			endline = int( e.split('.')[0] )
 			endpos = self.contents.index( '%s lineend' % e )
-			
-			
+
+
 			for linenum in range(startline, endline+1):
 				self.contents.insert('%d.0' % linenum, '##')
-				
-						
+
+
 			self.update_tokens(start=startpos, end=endpos)
 
-			
+
 		# No selection, comment curline
 		except tkinter.TclError as e:
 			self.contents.insert('%s linestart' % tkinter.INSERT, '##')
-		
-		
+
+
 		self.contents.edit_separator()
 		return "break"
-	
+
 
 	def uncomment(self, event=None):
 		''' Should work even if there are uncommented lines between commented lines. '''
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-		
+
 		idx_ins = self.contents.index(tkinter.INSERT)
-		
+
 		try:
 			s = self.contents.index(tkinter.SEL_FIRST)
 			e = self.contents.index(tkinter.SEL_LAST)
-		
+
 			startline = int(s.split('.')[0])
 			endline = int(e.split('.')[0])
 			startpos = self.contents.index('%s linestart' % s)
 			endpos = self.contents.index('%s lineend' % e)
 			changed = False
-			
+
 			for linenum in range(startline, endline+1):
 				tmp = self.contents.get('%d.0' % linenum,'%d.0 lineend' % linenum)
-				
+
 				if tmp.lstrip()[:2] == '##':
 					self.contents.delete('%d.0' % linenum,
 						'%d.0 +2c' % linenum)
-					
+
 					changed = True
-					
-					
+
+
 			if changed:
 				self.update_tokens(start=startpos, end=endpos)
 				self.contents.edit_separator()
 
-		
+
 		# No selection, uncomment curline
 		except tkinter.TclError as e:
 			tmp = self.contents.get('%s linestart' % idx_ins,
 				'%s lineend' % idx_ins)
-			
+
 			if tmp.lstrip()[:2] == '##':
 				self.contents.delete('%s linestart' % idx_ins,
 					'%s linestart +2c' % idx_ins)
-				
+
 				self.contents.edit_separator()
-				
+
 		return "break"
-		
+
 ########## Indent and Comment End
 ################ Search Begin
-	
+
 	def search_next(self, event=None, back=False):
 		'''	Search with selection from cursor position,
 			show and select next/previous match.
-			
+
 			If there is no selection, search-word from
 			last real search is used.
-			
+
 			Shortcut: Ctrl-np
 		'''
 		search_word = False
-		
+
 		if self.state == 'waiting':
 			return 'break'
-		
+
 		elif self.state not in ['normal', 'error', 'help']:
 			self.bell()
 			return 'break'
-		
+
 		# No selection
 		elif len(self.contents.tag_ranges('sel')) == 0:
 			if search_word := self.old_word: pass
-			
+
 		else:
 			tmp = self.selection_get()
-			
+
 			# Allow one linebreak
 			if 80 > len(tmp) > 0 and len(tmp.splitlines()) < 3:
 				search_word = tmp
-				
+
 			# Too large selection
 			else:
 				self.bell()
 				return "break"
-				
-		
+
+
 		# Info: search 'def search(' in module: tkinter
 		# https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		search_args = [ self.contents._w, 'search', '-all', search_word, '1.0' ]
 		res = self.tk.call(tuple(search_args))
-		
+
 		# Start-indexes of matches
 		m = [ str(x) for x in res ]
-		
+
 		num_all_matches = len(m)
-		
+
 		if num_all_matches == 1:
 			self.bell()
 			return "break"
-				
-		
+
+
 		flag_nosel = False
-		
+
 		# Current index
 		if len(self.contents.tag_ranges('sel')) > 0:
 			start = self.contents.index(tkinter.SEL_FIRST)
-			
+
 		else:
 			start = self.contents.search(search_word, 'insert')
 			# Want to stop at first match
 			flag_nosel = True
-			
-		
+
+
 		idx = m.index(start)
-		
-		
+
+
 		if flag_nosel:
 			if back: idx -= 1
-		
+
 		else:
 			# Update index with limit check
 			if back:
 				if idx == 0:
 					idx = len(m)
 				idx -= 1
-				
+
 			else:
 				if idx == len(m) - 1:
 					idx = -1
 				idx += 1
-		
-		
+
+
 		pos = m[idx]
-		
-		
+
+
 		wordlen = len(search_word)
 		word_end = "%s + %dc" % (pos, wordlen)
-		
+
 		self.wait_for(50)
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		self.contents.mark_set(self.anchorname, pos)
@@ -6900,70 +6900,70 @@ class Editor(tkinter.Toplevel):
 		self.contents.mark_set('insert', word_end)
 		self.wait_for(100)
 		self.ensure_idx_visibility(pos)
-					
+
 		return "break"
 
 
 	def show_next(self, event=None):
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
-		
+
 		# self.search_index is int telling: on what match-mark focus is now at.
 		# If self.search_index == 2, then focus is at mark named 'match2' etc.
-		
+
 		# idx counts from 0 until at next match-mark. One can not just iterate marks
 		# and get idx from mark-name because marks get 'deleted' if replacing.
 		# --> 'match2' is not necessarily second (or whatever) in list.
-		
+
 		# idx is used to get current index position among all current matches.
 		# For example: If now have 10 matches left,
 		# and last position was 1/11, but then one match got replaced,
 		# so focus is now at 1/10 and after this show_next-call it should be at 2/10.
-		
+
 		# self.mark_indexes is list holding ints of still remaining match-marks.
 		# These ints are sorted from small to big.
 
-		
+
 		idx = 0
 		for index in self.mark_indexes:
 			idx += 1
-			
+
 			if index > self.search_index:
 				self.search_index = index
-				
+
 				break
-				
+
 		# There was no bigger int in list:
 		# --> focus is at last match, or at last match that was replaced.
 		# --> Wrap focus to first match-mark.
 		else:
 			idx = 1
 			self.search_index = self.mark_indexes[0]
-		
-		
+
+
 		mark_name = 'match%d' % self.search_index
-		
+
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
-		
+
 		# match-mark marks start of the match
 		start = mark_name
 		end = '%s +%dc' % ( mark_name, self.match_lenghts[self.search_index] )
 		# self.search_focus is range of focus-tag.
 		self.search_focus = (start, end)
-		
-		
+
+
 		# idx: int
 		# start: tkinter.Text -index
 		self.handle_search_entry(idx, start)
 
-		
+
 		# Is it viewable?
 		if not self.contents.bbox(start):
 			self.wait_for(100)
-		
+
 		self.ensure_idx_visibility(start)
-		
-		
+
+
 		if self.entry.flag_start:
 			if self.state == 'search':
 				self.wait_for(100)
@@ -6971,88 +6971,88 @@ class Editor(tkinter.Toplevel):
 				self.contents.tag_config('match', background=bg, foreground=fg)
 			self.wait_for(200)
 			self.entry.flag_start = False
-			
-		
+
+
 
 		# Change color
 		# self.search_focus is range of focus-tag.
 		self.contents.tag_add('focus', self.search_focus[0], self.search_focus[1])
-		
-		
-		
+
+
+
 		self.entry.config(validate='key')
-		
+
 		if self.search_matches == 1:
 			self.bind("<Control-n>", self.do_nothing)
 			self.bind("<Control-p>", self.do_nothing)
-			
-		
+
+
 		self.entry.xview_moveto(0)
-		
+
 		return 'break'
-		
+
 
 	def show_prev(self, event=None):
-		
+
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
-		
+
 		# self.search_index is int telling: on what match-mark focus is now at.
 		# If self.search_index == 2, then focus is at mark named 'match2' etc.
-		
+
 		# idx counts down from len(self.mark_indexes) until at previous match-mark.
 		# One can not just iterate marks
 		# and get idx from mark-name because marks get 'deleted' if replacing.
 		# --> 'match2' is not necessarily second (or whatever) in list.
-		
+
 		# idx is used to get current index position among all current matches.
 		# For example: If now have 10 matches left,
 		# and last position was 3/11, but then one match got replaced,
 		# so focus could now be at say: 2/10 and after this show_prev-call it should be at 1/10.
-		
+
 		# self.mark_indexes is list holding ints of still remaining match-marks.
 		# These ints are sorted from small to big.
 
 		idx = len(self.mark_indexes) + 1
 		for index in self.mark_indexes[::-1]:
 			idx -= 1
-			
+
 			if index < self.search_index:
 				self.search_index = index
-				
+
 				break
-		
+
 		# There was no smaller int in list:
 		# --> focus is at first match, or at first match that was replaced.
 		# --> Wrap focus to last match-mark.
 		else:
 			idx = len(self.mark_indexes)
 			self.search_index = self.mark_indexes[-1]
-		
-		
+
+
 		mark_name = 'match%d' % self.search_index
-		
+
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
-		
+
 		# match-mark marks start of the match
 		start = mark_name
 		end = '%s +%dc' % ( mark_name, self.match_lenghts[self.search_index] )
 		# self.search_focus is range of focus-tag.
 		self.search_focus = (start, end)
-		
-		
+
+
 		# idx: int
 		# start: tkinter.Text -index
 		self.handle_search_entry(idx, start)
 
-		
+
 		# Is it viewable?
 		if not self.contents.bbox(start):
 			self.wait_for(100)
-		
+
 		self.ensure_idx_visibility(start)
 
-		
+
 		if self.entry.flag_start:
 			if self.state == 'search':
 				self.wait_for(100)
@@ -7060,27 +7060,27 @@ class Editor(tkinter.Toplevel):
 				self.contents.tag_config('match', background=bg, foreground=fg)
 			self.wait_for(200)
 			self.entry.flag_start = False
-		
-		
+
+
 		# Change color
 		# self.search_focus is range of focus-tag.
 		self.contents.tag_add('focus', self.search_focus[0], self.search_focus[1])
-			
+
 		self.entry.config(validate='key')
-		
-		
+
+
 		if self.search_matches == 1:
 			self.bind("<Control-n>", self.do_nothing)
 			self.bind("<Control-p>", self.do_nothing)
-		
-		
+
+
 		self.entry.xview_moveto(0)
-		
+
 		return 'break'
-		
-		
+
+
 	def reset_search_setting(self):
-		
+
 		defaults = [
 				self.contents._w,
 				'search',
@@ -7088,17 +7088,17 @@ class Editor(tkinter.Toplevel):
 				'-count',
 				self.match_lenghts_var,
 				]
-		
+
 		self.search_settings = defaults
 		self.search_starts_at = '1.0'
 		self.search_ends_at = False
-		
-	
+
+
 	def print_search_setting(self):
-		
+
 		if not self.search_settings:
 			self.reset_search_setting()
-		
+
 		print(
 			self.search_settings[5:],
 			'\n'
@@ -7106,10 +7106,10 @@ class Editor(tkinter.Toplevel):
 			'\n'
 			'end:', self.search_ends_at
 			)
-	
-	
+
+
 	def print_search_help(self):
-		
+
 		helptxt = r'''
 Search-options
 
@@ -7172,52 +7172,52 @@ nothing will ever be found.
 https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		'''
-		
+
 		for line in helptxt.split('\n'):
 			print(line)
-	
-	
+
+
 	def edit_search_setting(self, search_setting):
 		''' search_setting is string consisting of options below separated by spaces.
-			
+
 			If also setting -start and -end:
 			-start and -end must be last, and -start before -end.
 			If -end is given, also -start must have been given.
-			
+
 			When both -start and -end is given:
 			If search is not -backwards: -start-index must be such that, it is before
 			-end-index in contents. If search is -backwards: -start-index must be such
 			that, it is after -end-index in contents.
-			
+
 			If want to search all content, it is safest always to give only -start
 			so that search would wrap at fileends. If no -start is given, old
 			indexes are used. If only -start is given, old -end-index is deleted.
-			
+
 
 			Special indexes:
 			(note that there is no index called 'start'):
 			filestart: 1.0
 			fileend: end
 			insertion cursor: insert
-			
-			
+
+
 			Example1, use regexp and old indexes:
-				
+
 				edit_search_setting( '-regexp' )
-			
-			
+
+
 			Example2, use regexp, include elided text, search only from cursor to fileend:
-			
+
 				my_settings = "-regexp -elide -start insert -end end"
-			
+
 				edit_search_setting( my_settings )
-			
-			
+
+
 			Example3, exact (default) search, backwards from cursor to 50 lines up:
-					
+
 				my_settings = "-backwards -start insert -end insert -50 lines"
-				
-				
+
+
 			Options:
 			-backwards
 			-regexp
@@ -7228,25 +7228,25 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			-elide
 			-start	idx
 			-end	idx
-			
-			
+
+
 			Replacing does not work while -overlap -setting is on. Searching works.
-			
+
 			More help about these options:
 			print_search_help()
-			
+
 			Print current search settings:
 			print_search_setting()
-			
+
 			Reset search settings:
 			reset_search_setting()
-			
+
 			https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		'''
-		
+
 		if not self.search_settings:
 			self.reset_search_setting()
-		
+
 		defaults = [
 				self.contents._w,
 				'search',
@@ -7254,11 +7254,11 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				'-count',
 				self.match_lenghts_var,
 				]
-				
+
 		settings = defaults[:]
 		user_options = search_setting.split()
-		
-		
+
+
 		options = [
 			'-backwards',
 			'-regexp',
@@ -7268,106 +7268,106 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			'-strictlimits',
 			'-elide'
 			]
-		
-		
+
+
 		for option in user_options:
 			if option in options:
 				settings.append(option)
-				
-		
+
+
 		search_start_idx = self.search_starts_at
 		search_end_idx = self.search_ends_at
-		
-		
+
+
 		if '-start' in user_options:
 			idx_start = user_options.index('-start') + 1
-			
+
 			if len(user_options) > idx_start:
-				
+
 				# Also changing StopIndex part1
 				if '-end' in user_options[idx_start:]:
 					idx_end = user_options.index('-end')
 					search_start_idx = user_options[idx_start:idx_end]
-				
+
 				# Changing only StartIndex
 				else:
 					search_start_idx = user_options[idx_start:]
-				
+
 				# Also changing StopIndex part2
 				if '-end' in user_options:
 					idx_start = user_options.index('-end') + 1
-					
+
 					if len(user_options) > idx_start:
 						search_end_idx = user_options[idx_start:]
-						
-		
+
+
 		# With s = settings one gets reference to original list.
 		# If want copy(dont want to mess original), and one likely does, one writes:
 		s = settings[:]
 		s.append( '--' )
 		tmp = self.contents.get('1.0', '1.1')
-		
+
 		flag = False
 		if not tmp:
 			self.contents.insert('1.0', 'A')
 			tmp = 'A'
 			flag = True
-			
+
 		s.append(tmp)
-		
+
 		if not '-backwards' in user_options:
 			s.append('1.0')
 			s.append('1.0 lineend')
 		else:
 			s.append('1.0 lineend')
 			s.append('1.0')
-			
-			
+
+
 		try:
 			res = self.tk.call(tuple(s))
-			
+
 			self.search_settings = settings
-						
+
 			# Start changed
 			if type(search_start_idx) == list:
 				if tmp := ' '.join(x for x in search_start_idx):
 					self.search_starts_at = tmp
-					
+
 					# End changed
 					if type(search_end_idx) == list:
 						if tmp := ' '.join(x for x in search_end_idx):
 							self.search_ends_at = tmp
-					
+
 					# Start changed but End not changed
 					else: self.search_ends_at = False
-			
+
 		except tkinter.TclError as e:
 			print(e)
-		
-		
+
+
 		if flag: self.contents.delete('1.0', '1.1')
-	
+
 		#### edit_search_setting End ##############
-	
-	
+
+
 	def do_search(self, search_word):
 		''' Search contents for search_word
 			with self.search_settings and tk text search
 			https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
-			
+
 			returns number of search matches
-			
+
 			if at least one match:
 				tags 'match' with list match_ranges
-				
+
 			called from start_search()
 		'''
-		
+
 		def handle_search_start():
 			''' When search-setting: -start == 'insert' and search_word == selection_get:
 				ensure search starts from selection.
 			'''
-	
+
 			if self.search_starts_at == 'insert':
 				have_selection = len(self.contents.tag_ranges('sel')) > 0
 				if have_selection:
@@ -7382,47 +7382,47 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			# else:
 			return self.search_starts_at
 			##############################
-			
-			
+
+
 		s = self.search_settings[:]
 		s.append( '--' )
 		s.append(search_word)
 		s.append( handle_search_start() )
 		if self.search_ends_at: s.append(self.search_ends_at)
-		
-		
+
+
 		res = self.tk.call(tuple(s))
 		if not res: return False
 
 		start_indexes = [ str(x) for x in res ]
-		
+
 
 		# s holds lenghts of matches
 		# lenghts can vary
 		s = eval( self.match_lenghts_var.get() )
 		# eval( '(8, 8, 8, 8)' )  -->  (8, 8, 8, 8)
-		
+
 		# With list one can deal with single matches (single tuples):
 		# (8,) --> [8]
 		s = self.match_lenghts = list(s)
-		
+
 		# self.search_matches
 		num_matches = len(start_indexes)
-		
+
 		if not num_matches: return False
-		
-		
-		
+
+
+
 		for mark in self.contents.mark_names():
 			if 'match' in mark:
 				self.contents.mark_unset(mark)
-				
+
 		match_ranges = list()
 		self.mark_indexes = list()
-		
+
 		# Tag matches, add mark to start of every match
 		for i in range( len(start_indexes) ):
-			
+
 			mark_name = 'match%d' % i
 			start_idx = start_indexes[i]
 			self.contents.mark_set(mark_name, start_idx)
@@ -7433,188 +7433,188 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 			match_ranges.append(mark_name)
 			match_ranges.append(end_idx)
-			
-			
+
+
 		self.contents.tag_add('match', *match_ranges)
-		
+
 		return num_matches
-		
-	
+
+
 	def start_search(self, event=None):
-		
+
 		# Get stuff after prompt
 		tmp_orig = self.entry.get()
-		
+
 		idx = tmp_orig.index(':') + 2
 		tmp = tmp_orig[idx:]
-		
+
 		if len(tmp) == 0:
 			self.bell()
 			return 'break'
-		
+
 		search_word = tmp
-		
+
 		self.contents.tag_remove('match', '1.0', tkinter.END)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.contents.tag_config('match', background='', foreground='')
-		
-		
+
+
 		self.search_matches = self.do_search(search_word)
 		# 'match' is tagged in do_search()
-		
-		
+
+
 		if self.search_matches > 0:
-		
+
 			self.old_word = search_word
 			self.search_index = -1
-		
+
 			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.entry.config(validate='none')
-				
-				
+
+
 			if self.state == 'search':
-				
+
 				self.bid_show_next = self.bind("<Control-n>", self.show_next )
 				self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
-				
+
 				self.entry.flag_start = True
-				
+
 				self.contents.focus_set()
 				self.wait_for(100)
-				
+
 				self.show_next()
-				
-				
+
+
 			else:
 				patt = 'Replace %s matches with: ' % str(self.search_matches)
 				idx = tmp_orig.index(':') + 2
 				self.entry.delete(0, idx)
 				self.entry.insert(0, patt)
-				
+
 				self.entry.select_from(len(patt))
 				self.entry.select_to(tkinter.END)
 				self.entry.icursor(len(patt))
 				self.entry.xview_moveto(0)
-				
+
 
 				bg, fg = self.themes[self.curtheme]['match'][:]
 				self.contents.tag_config('match', background=bg, foreground=fg)
-				
-				
+
+
 				self.entry.bind("<Return>", self.start_replace)
 				self.entry.focus_set()
 				self.entry.config(validate='key')
-				
+
 		else:
 			self.bell()
 			bg, fg = self.themes[self.curtheme]['match'][:]
 			self.contents.tag_config('match', background=bg, foreground=fg)
 			self.bind("<Control-n>", self.do_nothing)
 			self.bind("<Control-p>", self.do_nothing)
-			
-			
-				
+
+
+
 		return 'break'
-		
-	
+
+
 	def update_curpos(self, event=None, doubleclick=False):
 		self.save_pos = self.contents.index(tkinter.INSERT)
-		
+
 		if doubleclick:
 			self.stop_search()
-		
+
 		else:
 			# This is needed to enable replacing with Return.
 			# Because of binding to self in start_replace().
 			# And when pressing contents with mouse, self.contents gets focus,
 			# so put it back to self.
 			self.focus_set()
-		
+
 		return "break"
-			
-			
+
+
 	def clear_search_tags(self, event=None):
 		if self.state != 'normal':
 			return "break"
-			
+
 		self.contents.tag_remove('replaced', '1.0', tkinter.END)
 		self.bind("<Escape>", self.esc_override)
-		
-	
+
+
 	def stop_search(self, event=None):
 		if self.state == 'waiting':
 			return 'break'
-			
+
 		self.contents.config(state='normal')
 		self.entry.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
-		
+
 		#self.wait_for(200)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.contents.tag_remove('match', '1.0', tkinter.END)
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
-		
+
 		# Leave marks on replaced areas, Esc clears.
 		if len(self.contents.tag_ranges('replaced')) > 0:
 			self.bind("<Escape>", self.clear_search_tags)
 		else:
 			self.bind("<Escape>", self.esc_override)
-			
-		
+
+
 		self.entry.config(validate='none')
-		
-		
+
+
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
-	
+
 		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
-			
+
 		self.new_word = ''
 		self.search_matches = 0
 		flag_all = False
 		if self.state == 'replace_all': flag_all = True
-		
+
 		if self.state in [ 'replace_all', 'replace' ]:
-			
+
 				self.state = 'normal'
-				
+
 				self.do_syntax()
-				
-				
+
+
 		self.state = 'normal'
-		
+
 		if self.bid_show_next:
 			self.unbind( "<Control-n>", funcid=self.bid_show_next )
 			self.unbind( "<Control-p>", funcid=self.bid_show_prev )
 			self.bid_show_next = None
 			self.bid_show_prev = None
-		
+
 		self.contents.unbind( "<Control-n>", funcid=self.bid1 )
 		self.contents.unbind( "<Control-p>", funcid=self.bid2 )
 		self.contents.unbind( "<Double-Button-1>", funcid=self.bid3 )
-		
+
 		# Space is on hold for extra 200ms, released below
 		self.contents.unbind( "<space>", funcid=self.bid4 )
 		bid_tmp = self.contents.bind( "<space>", self.do_nothing_without_bell)
-		
-		
+
+
 		self.contents.bind( "<Control-n>", self.search_next)
 		self.contents.bind( "<Control-p>",
 				lambda event: self.search_next(event, **{'back':True}) )
-		
+
 		self.contents.bind("<Return>", self.return_override)
 		self.entry.bind("<Control-n>", self.do_nothing_without_bell)
 		self.entry.bind("<Control-p>", self.do_nothing_without_bell)
 		self.bind( "<Return>", self.do_nothing_without_bell)
-		
-		
+
+
 		#self.wait_for(200)
-		
+
 		# set cursor pos
 		try:
 			if self.save_pos:
@@ -7623,64 +7623,64 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				self.save_pos = None
 			else:
 				line = self.tabs[self.tabindex].position
-			
+
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
-	
+
 			if not flag_all:
 				self.ensure_idx_visibility(line)
-			
+
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
-		
+
 		# Release space
 		self.wait_for(200)
 		self.contents.unbind( "<space>", funcid=bid_tmp )
 		self.bid_space = self.contents.bind( "<space>", self.space_override)
-		
+
 		return "break"
-	
-	
+
+
 	def search(self, event=None):
 		'''	Ctrl-f --> search --> start_search --> show_next / show_prev --> stop_search
 		'''
-		
+
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-		
+
 		if not self.search_settings:
 			self.reset_search_setting()
-		
+
 		# Save cursor pos
 		try:
 			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
-		
+
 		except tkinter.TclError:
 			pass
-			
+
 		self.state = 'search'
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 		self.entry.bind("<Return>", self.start_search)
 		self.bind("<Escape>", self.stop_search)
-		
+
 		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
 		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
 		self.entry.bind("<Control-n>", self.skip_bindlevel)
 		self.entry.bind("<Control-p>", self.skip_bindlevel)
 		self.bid_show_next = None
 		self.bid_show_prev = None
-		
+
 		self.bid3 = self.contents.bind("<Double-Button-1>",
 			func=lambda event: self.update_curpos(event, **{'doubleclick':True}), add=True )
-		
+
 		self.contents.unbind( "<space>", funcid=self.bid_space )
 		self.bid4 = self.contents.bind( "<space>", self.space_override )
-		
+
 		self.entry.delete(0, tkinter.END)
-		
-		
+
+
 		tmp = False
 
 		# Suggest selection as search_word if appropiate, else old_word.
@@ -7690,46 +7690,46 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			# Allow one linebreak
 			if not (80 > len(tmp) > 0 and len(tmp.splitlines()) < 3):
 				tmp = False
-				
+
 				raise tkinter.TclError
-				
+
 		# No selection
 		except tkinter.TclError:
 			tmp = self.old_word
-			
-			
+
+
 		if tmp:
 			self.entry.insert(tkinter.END, tmp)
 			self.entry.xview_moveto(1.0)
 			self.entry.select_to(tkinter.END)
 			self.entry.icursor(tkinter.END)
-				
-			
-		
+
+
+
 		patt = 'Search: '
 		self.entry.insert(0, patt)
 		self.entry.config(validate='key', validatecommand=self.validate_search)
-		
+
 		self.contents.config(state='disabled')
 		self.entry.focus_set()
-		
+
 		return "break"
-		
-		
+
+
 	def do_validate_search(self, i, s, S):
 		'''	i is index of action,
 			s is string before action,
 			S is new string to be validated
 		'''
-		
+
 		idx = s.index(':') + 2
-		
+
 		if int(i) < idx:
 			self.entry.selection_clear()
 			self.entry.icursor(idx)
-			
+
 			return S == ''
-			
+
 		else:
 			return True
 
@@ -7740,28 +7740,28 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		'''	Ctrl-r --> replace --> start_search --> start_replace
 			--> show_next / show_prev / do_single_replace --> stop_search
 		'''
-		
+
 		if not self.search_settings:
 			self.reset_search_setting()
-		
+
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-			
+
 		elif '-overlap' in self.search_settings:
 			self.wait_for(100)
 			print('\nError: Can not replace while "-overlap" in search_settings')
 			self.bell()
 			return "break"
-		
-		
+
+
 		# Save cursor pos
 		try:
 			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
-		
+
 		except tkinter.TclError:
 			pass
-		
+
 		self.state = state
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
@@ -7773,239 +7773,239 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.entry.bind("<Control-p>", self.skip_bindlevel)
 		self.bid_show_next = None
 		self.bid_show_prev = None
-		
-		
+
+
 		self.bid3 = self.contents.bind("<Double-Button-1>",
 			func=lambda event: self.update_curpos(event, **{'doubleclick':True}), add=True )
-		
+
 		self.contents.unbind( "<space>", funcid=self.bid_space )
 		self.bid4 = self.contents.bind("<space>", func=self.space_override )
-		
-		
+
+
 		self.entry.delete(0, tkinter.END)
-		
-		
+
+
 		tmp = False
 		# Suggest selection as search_word if appropiate, else old_word.
 		try:
 			tmp = self.selection_get()
-			
+
 			if not (80 > len(tmp) > 0):
 				tmp = False
-				
+
 				raise tkinter.TclError
-				
+
 		# No selection
 		except tkinter.TclError:
 			tmp = self.old_word
-			
-			
+
+
 		if tmp:
 			self.entry.insert(tkinter.END, tmp)
 			self.entry.xview_moveto(1.0)
 			self.entry.select_to(tkinter.END)
 			self.entry.icursor(tkinter.END)
-			
-		
+
+
 		patt = 'Replace this: '
 		self.entry.insert(0, patt)
 		self.entry.config(validate='key', validatecommand=self.validate_search)
-		
+
 		self.wait_for(400)
 		self.contents.tag_remove('replaced', '1.0', tkinter.END)
-		
+
 		self.contents.config(state='disabled')
 		self.entry.focus_set()
 		return "break"
 
 
 	def replace_all(self, event=None):
-		
+
 		if not self.search_settings:
 			self.reset_search_setting()
-		
+
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-		
+
 		elif '-overlap' in self.search_settings:
 			self.wait_for(100)
 			print('\nError: Can not replace_all while "-overlap" in search_settings')
 			self.bell()
 			return "break"
-		
-			
+
+
 		self.replace(event, state='replace_all')
-		
-		
+
+
 	def do_single_replace(self, event=None):
-		
+
 		# Enable changing newword between replaces Begin
 		#################
 		# Get stuff after prompt
 		tmp_orig = self.entry.get()
 		idx = tmp_orig.index(':') + 2
 		tmp = tmp_orig[idx:].strip()
-		
+
 		# Replacement-string has changed
 		if tmp != self.new_word:
-			
+
 			# Not allowed to do this:
 			if tmp == self.old_word:
-				
+
 				self.wait_for(100)
 				self.bell()
 				self.wait_for(100)
 				self.entry.config(validate='none')
 				self.entry.delete(idx, tkinter.END)
-				
+
 				self.wait_for(200)
 				self.entry.insert(tkinter.END, self.new_word)
 				self.entry.config(validate='key')
-				
+
 				return 'break'
 
 			else:
 				self.new_word = tmp
 		# Enable changing newword between replaces End
 		#################
-		
 
-		
+
+
 		# Apply normal 'Replace and proceed to next by pressing Return' -behaviour.
 		# If last replace was done by pressing Return, there is currently no focus-tag.
 		# Check this and get focus-tag with show_next() if this is the case, and break.
 		# This means that the actual replacing happens only when have focus-tag.
 		c = self.contents.tag_nextrange('focus', 1.0)
-		
+
 		if not len(c) > 0:
 			self.show_next()
 			return 'break'
-			
-		
+
+
 		# Start of actual replacing
 		self.contents.config(state='normal')
-		
+
 		wordlen_new = len(self.new_word)
-		
-		
+
+
 		###########
 		mark_name = 'match%d' % self.search_index
-		
+
 		start = self.contents.index(mark_name)
 		end_old = '%s +%dc' % ( start, self.match_lenghts[self.search_index] )
 		end_new = "%s +%dc" % ( start, wordlen_new )
-		
+
 		self.contents.replace(start, end_old, self.new_word)
-		
+
 		self.contents.tag_add('replaced', start, end_new)
 		self.contents.mark_unset(mark_name)
 		self.mark_indexes.remove(self.search_index)
 		###########
-		
-	
-		
+
+
+
 		self.contents.config(state='disabled')
-		
+
 		self.search_matches -= 1
-		
+
 		if self.search_matches == 0:
 			self.wait_for(100)
 			self.stop_search()
-		
-	
+
+
 	def do_replace_all(self, event=None):
-		
+
 		self.contents.tag_config('match', background='', foreground='')
 		self.contents.config(state='normal')
 		wordlen_new = len(self.new_word)
-		
+
 
 		####
 		pos = self.contents.index('match0')
-			
+
 		for index in self.mark_indexes[::-1]:
-			
+
 			mark_name = 'match%d' % index
 			start = self.contents.index(mark_name)
 			end_old = '%s +%dc' % ( start, self.match_lenghts[index] )
 			end_new = "%s +%dc" % ( start, wordlen_new )
-			
+
 			self.contents.replace(start, end_old, self.new_word)
-			
+
 			self.contents.tag_add('replaced', start, end_new)
 			self.contents.mark_unset(mark_name)
 			self.mark_indexes.pop(-1)
 		####
-		
-		
+
+
 		# Is it viewable?
 		if not self.contents.bbox(pos):
 			self.wait_for(200)
-		
+
 		# Show first match that got replaced
 		self.ensure_idx_visibility(pos)
 		self.wait_for(200)
-		
+
 		bg, fg = self.themes[self.curtheme]['replaced'][:]
 		self.contents.tag_config('replaced', background=bg, foreground=fg)
-			
-		
+
+
 		self.stop_search()
 		###################
-		
-		
+
+
 	def start_replace(self, event=None):
-		
+
 		# Get stuff after prompt
 		tmp_orig = self.entry.get()
 		idx = tmp_orig.index(':') + 2
 		tmp = tmp_orig[idx:].strip()
 		self.new_word = tmp
-		
+
 		# No check for empty newword to enable deletion.
-		
+
 		if self.old_word == self.new_word:
 			self.bell()
 			return 'break'
-		
-		
+
+
 		self.entry.config(validate='none')
-		
+
 		lenght_of_search_matches = len(str(self.search_matches))
 		diff = lenght_of_search_matches - 1
 		idx = tmp_orig.index(':')
 		self.entry.delete(0, idx)
-			
+
 		patt = f'{diff*" "}1/{self.search_matches} Replace with'
-			
+
 		if self.state == 'replace_all':
 			patt = f'{diff*" "}1/{self.search_matches} Replace ALL with'
-			
+
 		self.entry.insert(0, patt)
-		
-		
+
+
 		self.entry.flag_start = True
 		self.wait_for(100)
-		
+
 		self.show_next()
-		
+
 		self.bid_show_next = self.bind("<Control-n>", self.show_next )
 		self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
-		
-		
+
+
 		self.entry.bind("<Return>", self.skip_bindlevel)
 		self.contents.bind("<Return>", self.skip_bindlevel)
 		self.contents.focus_set()
-		
+
 		if self.state == 'replace':
 			self.bind( "<Return>", self.do_single_replace)
-			
+
 		elif self.state == 'replace_all':
 			self.bind( "<Return>", self.do_replace_all)
-			
+
 		return 'break'
-		
-		
+
+
 ################ Replace End
 ########### Class Editor End
