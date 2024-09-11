@@ -275,7 +275,7 @@ error: if want to search part of filepaths (select with mouse will open file)
 	move it to right place with alt-arrow etc and select with keyboard
 
 ###################
-tab on empty line, if at indent0, to same indent than prevline
+tab on line, if at indent0, move line to same indent than prevline
 	tab_over_indent, done ok?
 ###################
 wordexpand does not expand from single letter at indent0
@@ -287,6 +287,8 @@ yank whole line, done ok?
 capslock more visual done ok?
 ############################
 tab completion should first suggest from function scope
+enable cancel tab-completion, no ####
+
 in henxel.Editor:
 	get_next_def_line_position(self, ind_last_line)
 	called in:
@@ -300,8 +302,12 @@ in wordexpand.ExpandWord.getwords():
 ############################
 strip empty lines, done in tabify(), ok ?
 ############################
-
-
+Alt - BackSpace
+Cmd - BackSpace
+del_to_dot()
+delete previous word
+done ok?
+#########################
 
 Below this: not done
 
@@ -309,51 +315,25 @@ Below this: not done
 
 
 
+update help
+uncomment '##' must be at indent0 or it can not be removed --> help?
+Control-d not Control-c to quit multiline command --> help
 
 
+if sel many lines down then up, or up then down
+no see selection
 
 
-#####################################################
+ensure in venv?
+python not remommended install with brew?
 
-search entry: AS  + arrow down == all contents, forwards, default
-AI from insert
-AE from end (only backwards, not needed?) == AS backwards
-limited
-SI, IE
-and all backwards and all with custom limits
-
-#####
-enable cancel tab-completion, no?##
-
-
-nested check:
-	tab in Tab __str__
-	get_scope_end: same or lower indent done ok?
-	Don't rematch same line, done ok?
-
-	tab completion currently searches also commented lines
-	lookahead?
-
-
-tab after t near:
-# https://tcl.tk/man/tcl9.0/TkCmd/index.html
-get tcl.tk etc
-
-
-
-alt-backspace: del to dot
-#####
-
-
-goto bookmark, show bookmark on top not bottom
 
 get(elided)
 elided text is getted by default
-
-
-inspect syntax
-elif hasattr(self.tabs[self.tabindex], 'inspected')##
+structure-viewer with taglinks
 #####################################################
+replaced less yellow
+
 system_colorname = self.entry.cget('fg')
 colors_as_rgb_tuple = self.winfo_rgb(system_colorname)
 for example, white color would get: (65535, 65535, 65535)
@@ -366,78 +346,12 @@ self.winfo_rgb('deep sky blue')
 
 
 
-# get tcl name of widget
-cont_name = str(e.nametowidget(e.contents))
-#e.contents.winfo_name()
-words_in_string = e.tk.eval( r'regexp -all -inline {\S+} [%s get 1.0 end]' % cont_name )
 
-
-
-
-
-
-
-
-
-goto bookmark show position among all bookmarks etc.
-
-
-cmd-ae in python shell in macos?
-Control-d not Control-c to quit multiline command
-
-
-todo path
-
-
-find empty lines regexp
-tokens:
-	end_idx = '%s +%dc' % (start_idx, match_lenght)
-
-
-replaced less yellow
-
-
-chek move many lines() mac
-after
-
-
-update help
-uncomment '##' must be at indent0 or it can not be removed --> help?
-
-
-check use of token_can_update += 1
 
 
 github:
 fixed tag config -under --> -underline
 2tkcon.tcl
-
-
-show closing paren
-
-
-show scope always
-handle_search_entry not done in search_next
-update scope path after:
-	walk_tab etc
-	in fname.py @Class.method()
-
-unbind load() Return?
-focusin focusout show full path?
-#############
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -449,15 +363,28 @@ focusin focusout show full path?
 # Below this, not essential but wanted
 #######################################
 
-check syntax before quit?
+check syntax before quit? no?
 python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
 
 
-search: regexp?
+search:
 start of search/replace: insert window in start of entry:
 	dropdown:
 		1 use regexp
 		2 start from filestart/cursor
+		etc
+
+
+#############
+show scope always
+handle_search_entry not done in search_next
+update scope path after:
+	walk_tab etc
+	in fname.py @Class.method()
+
+unbind load() Return?
+focusin focusout show full path?
+#############
 
 
 macos:
@@ -501,6 +428,25 @@ fix arrow updown (put cursor to same col_nextline or
 bitmap check ensure width?
 
 
+no state cheks in mac_cmd move_many_lines?
+
+
+goto bookmark show position among all bookmarks etc.
+goto bookmark, show bookmark on top not bottom?
+
+
+cmd-ae linestartend in python shell in macos?
+
+
+todo path
+
+
+check use of token_can_update += 1
+show closing paren, find empty lines regexp
+inspect syntax
+elif hasattr(self.tabs[self.tabindex], 'inspected')##
+
+
 animate walk_tab, save etc?
 
 
@@ -534,7 +480,7 @@ self.contents.bind( "<<TkWorldChanged>>", self.test_bind)
 	works on macos
 
 
-search/next also in errors, help
+search/next also in errors, help####################
 
 
 toggle indent with tabs --> space?
@@ -553,9 +499,6 @@ save file to disk when pressing save
 
 
 tuple after_cancel: (from_who, after_object_id)
-
-
-structure-viewer with taglinks
 
 
 syntax highlight often slow, needs check

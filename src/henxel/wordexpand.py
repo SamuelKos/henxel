@@ -102,12 +102,12 @@ class ExpandWord:
 		# On fail, scope_start == '1.0'
 		scope_path, ind_curline, scope_start = editor.get_scope_path('insert', flag_only_one=True)
 
-		print(scope_path, ind_curline, scope_start)
+		#print(scope_path, ind_curline, scope_start)
 		all_words = False
 
 		if scope_start != '1.0':
 			scope_end = editor.get_scope_end(ind_curline)
-			print(scope_end)
+			#print(scope_end)
 			# Up: insert - scope_start == scope_start - insert reversed
 			p = patt_start + patt_end % (scope_start, '{insert wordstart}')
 			l1 = words_ins_def_up = self.textwid.tk.eval(p).split()
@@ -134,8 +134,8 @@ class ExpandWord:
 				all_words = l1 + l2 + l3
 
 
+		# Tabbing at __main__()
 		if not all_words:
-			print('nou')
 			p = patt_start + patt_end % ('1.0', '{insert wordstart}')
 			l1 = words_ins_filestart = self.textwid.tk.eval(p).split()
 			l1.reverse()
@@ -166,15 +166,13 @@ class ExpandWord:
 	def getprevword(self):
 		''' Return the word prefix before the cursor.
 		'''
-
-
 		patt = r'%s get {insert linestart} insert' \
 				% self.tcl_name_of_contents
 
 		tmp = self.textwid.tk.eval(patt)
 
 
-		for i in range(len(tmp)-1, -1, -1):
+		for i in reversed( range(len(tmp)) ):
 			if tmp[i] not in self.wordchars:
 				break
 

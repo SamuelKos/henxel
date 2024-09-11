@@ -851,6 +851,11 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind( "<Return>", self.return_override)
 		self.contents.bind( "<BackSpace>", self.backspace_override)
 
+		if self.os_type == 'mac_os':
+			self.contents.bind( "<Mod1-Key-BackSpace>", self.del_to_dot)
+		else:
+			self.contents.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
+
 		# Used in searching
 		self.bid_space = self.contents.bind( "<space>", self.space_override)
 
@@ -1008,6 +1013,7 @@ class Editor(tkinter.Toplevel):
 		self.avoid_viewsync_mess()
 		self.update_idletasks()
 		self.viewsync()
+		self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
 		self.__class__.alive = True
 		self.update_title()
 
@@ -1742,6 +1748,7 @@ class Editor(tkinter.Toplevel):
 
 				except (EnvironmentError, UnicodeDecodeError) as e:
 					print(e.__str__())
+					# Note: remove(val) actually removes the first occurence of val
 					self.tabs.remove(tab)
 			else:
 				tab.bookmarks.clear()
@@ -3091,9 +3098,11 @@ class Editor(tkinter.Toplevel):
 
 	def move_many_lines(self, event=None):
 		''' Move or select 10 lines from cursor.
+			Called from linux or windows.
+			Mac stuff is in mac_cmd_overrides()
 		'''
 
-		if self.state != 'normal':
+		if self.state not in  ['normal', 'search']:
 			self.bell()
 			return "break"
 
@@ -3122,14 +3131,16 @@ class Editor(tkinter.Toplevel):
 				e = '<<PrevLine>>'
 
 			for i in range(10):
-				# Add some delay
+				# Add some delay to get visual feedback
 				if 'Select' in e:
-					self.after(12, lambda args=[e]:
+					self.after(i*5, lambda args=[e]:
 						self.contents.event_generate(*args) )
 				else:
-					self.contents.event_generate(e)
+					self.after(i*7, lambda args=[e]:
+						self.contents.event_generate(*args) )
 
 			return 'break'
+
 
 		elif event.keysym == 'Down':
 			e = '<<SelectNextLine>>'
@@ -3138,12 +3149,13 @@ class Editor(tkinter.Toplevel):
 				e = '<<NextLine>>'
 
 			for i in range(10):
-				# Add some delay
+				# Add some delay to get visual feedback
 				if 'Select' in e:
-					self.after(12, lambda args=[e]:
+					self.after(i*5, lambda args=[e]:
 						self.contents.event_generate(*args) )
 				else:
-					self.contents.event_generate(e)
+					self.after(i*7, lambda args=[e]:
+						self.contents.event_generate(*args) )
 
 			return 'break'
 
@@ -3962,13 +3974,15 @@ class Editor(tkinter.Toplevel):
 
 
 				elif event.keysym == 'Up':
+					# As in move_many_lines()
+					# Add some delay to get visual feedback
 					for i in range(10):
-						self.after(12, lambda args=['<<SelectPrevLine>>']:
+						self.after(i*5, lambda args=['<<SelectPrevLine>>']:
 							self.contents.event_generate(*args) )
 
 				elif event.keysym == 'Down':
 					for i in range(10):
-						self.after(12, lambda args=['<<SelectNextLine>>']:
+						self.after(i*5, lambda args=['<<SelectNextLine>>']:
 							self.contents.event_generate(*args) )
 
 				else:
@@ -3991,12 +4005,16 @@ class Editor(tkinter.Toplevel):
 				self.walk_tabs(event=event, **{'back':True})
 
 			elif event.keysym == 'Up':
-					for i in range(10):
-						self.contents.event_generate('<<PrevLine>>')
+				# As in move_many_lines()
+				# Add some delay to get visual feedback
+				for i in range(10):
+					self.after(i*7, lambda args=['<<PrevLine>>']:
+						self.contents.event_generate(*args) )
 
 			elif event.keysym == 'Down':
 				for i in range(10):
-					self.contents.event_generate('<<NextLine>>')
+					self.after(i*7, lambda args=['<<NextLine>>']:
+						self.contents.event_generate(*args) )
 
 			else:
 				return
@@ -4598,22 +4616,31 @@ class Editor(tkinter.Toplevel):
 	def tab_over_indent(self):
 		'''	Called from indent()
 		'''
+		# There should not be selection
 		ins = tkinter.INSERT
 
-		# There should not be selection
+		# Cursor is not at indent0
+		if self.contents.index(ins).split('.')[1] != '0': return False
 
-		idx_s, _ = self.idx_linestart()
-		# Line is empty
-		if not idx_s:
+		patt = r'^[[:blank:]]*[^[:blank:]#]'
+		pos = self.contents.search(patt, ins, stopindex='1.0',
+			regexp=True, backwards=True, count=self.search_count_var)
 
-			# Cursor is at indent0
-			if self.contents.index(ins).split('.')[1] == '0':
-				patt = r'^[[:blank:]]*[^[:blank:]#]'
-				pos = self.contents.search(patt, ins, stopindex='1.0',
-					regexp=True, backwards=True, count=self.search_count_var)
+		# self.search_count_var.get() == indentation level +1
+		# because pattern matches: not blank and not comment at end of patt
+		if pos: return self.search_count_var.get() -1
 
-				# self.search_count_var.get() == indentation level +1
-				if pos: return self.search_count_var.get() -1
+
+	def del_to_dot(self, event):
+		""" Delete previous word
+		"""
+		# No need to check of event.state?
+		if self.state != 'normal': return
+		if len( self.contents.tag_ranges('sel') ) > 0:
+			self.contents.tag_remove('sel', '1.0', tkinter.END)
+
+		self.contents.delete('%s -1c wordstart' % 'insert', 'insert')
+		return 'break'
 
 
 	def backspace_override(self, event):
@@ -4959,8 +4986,8 @@ class Editor(tkinter.Toplevel):
 			else: break
 
 
-
 		if line.isspace(): return '\n'
+
 
 		if indent_stop_index == 0:
 			# remove trailing space
@@ -4972,7 +4999,7 @@ class Editor(tkinter.Toplevel):
 		indent_string = line[:indent_stop_index]
 		line = line[indent_stop_index:]
 
-		# remove trailing space
+		# Remove trailing space
 		line = line.rstrip() + '\n'
 
 
@@ -5032,23 +5059,25 @@ class Editor(tkinter.Toplevel):
 ##		 	again wait 300
 ##		 	change btn_git text to CAPS
 
-		def get_wait_time(round, position):
-			''' round	int >= 0
-				position	string 't1' or 't2'
+		def get_wait_time(lap, delay, position, num_waiters):
+			''' all ints
+				lap: how many laps have been completed
+				delay: delay between waiters
+				position: position among waiters, first, second etc
+				num_waiters: number of waiters
+
+				Time of a waiter at position position after lap laps:
+					time spend with passed laps + time spend on current lap
+					(lap * delay * num_waiters) + (position * delay)
 			'''
 
-			t1 = 300 + 600*round
-			t2 = t1 + 300
-
-			if position == 't1':
-				return t1
-			else:
-				return t2
+			return (lap * delay * num_waiters) + (position * delay)
 
 
 		for i in range(4):
-			t1 = get_wait_time(i, 't1')
-			t2 = get_wait_time(i, 't2')
+			t1 = get_wait_time(i, 300, 1, 2)
+			t2 = get_wait_time(i, 300, 2, 2)
+
 			l1 = lambda kwargs={'text': 5*' ', 'disabledforeground': 'brown1'}: self.btn_git.config(**kwargs)
 			l2 = lambda kwargs={'text': 'CAPS '}: self.btn_git.config(**kwargs)
 
@@ -5381,15 +5410,15 @@ class Editor(tkinter.Toplevel):
 			return scope_path + '()'
 
 
-	def get_scope_end(self, ind_last_line):
+	def get_scope_end(self, ind_def_line):
 		''' Get info about function or class where insertion-cursor is in.
 			That is, position of next(down) uncommented line == end of current scope
 
 			Called from self.expander.expand_word()
 
-			ind_last_line is int which is supposed to tell indentation of function
+			ind_def_line is int which is supposed to tell indentation of function
 			or class -definition line, where insertion-cursor is currently in.
-			This ind_last_line can be getted with calling:
+			This ind_def_line can be getted with calling:
 
 				get_scope_path('insert', flag_only_one=True)
 
@@ -5406,18 +5435,17 @@ class Editor(tkinter.Toplevel):
 		# From start of line: Not blank and not comment
 		p2 = r'^[^[:blank:]#]+'
 
-		if ind_last_line > 0:
-			# Want: uncommented line with ind_last_line blanks or one less
-			blank_range = '{%d,%d}' % (ind_last_line-1, ind_last_line)
+		if ind_def_line > 0:
+			# Want: uncommented line with ind_def_line blanks or one less
+			blank_range = '{%d,%d}' % (ind_def_line-1, ind_def_line)
 			p1 = r'^[[:blank:]]%s' % blank_range
 			# Not blank and not comment
 			p2 = r'[^[:blank:]#]+'
 
 
-
 		patt = p1 + p2
 		pos = False
-		print(patt)
+
 		try:
 			pos = self.contents.search(patt, 'insert', stopindex='end', regexp=True)
 
@@ -6578,7 +6606,7 @@ class Editor(tkinter.Toplevel):
 
 				return 'break'
 
-			# If at start of empty line: move cursor to indent of previous line.
+			# If at start of line: move line to match indent of previous line.
 			elif indentation_level := self.tab_over_indent():
 				self.contents.insert(tkinter.INSERT, indentation_level * '\t')
 				return 'break'
@@ -7980,7 +8008,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		patt = f'{diff*" "}1/{self.search_matches} Replace with'
 
 		if self.state == 'replace_all':
-			patt = f'{diff*" "}1/{self.search_matches} Replace ALL with'
+			patt = f'{diff*" "}1/{self.search_matches} ReplaceALL with'
 
 		self.entry.insert(0, patt)
 
