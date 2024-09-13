@@ -308,8 +308,17 @@ del_to_dot()
 delete previous word
 done ok?
 #########################
+yank when help done, ok?
+#########################
+check syntax of python-files in henxel in quit_me()
+e=henxel.Editor(debug=True)
+	done with: import ast
+#########################
 
 Below this: not done
+
+
+
 
 
 
@@ -320,11 +329,32 @@ uncomment '##' must be at indent0 or it can not be removed --> help?
 Control-d not Control-c to quit multiline command --> help
 
 
-if sel many lines down then up, or up then down
-no see selection
+paste selection is sometimes wrong, maybe because idx_linestart?
 
 
-ensure in venv?
+
+broken:
+	idx_linestart() not done
+
+	bookmark_animate() done
+	tests = (
+			( self.state not in [ 'normal', 'search', 'replace' ] ),
+			( not self.contents.bbox('insert') )
+			)
+
+	self.contents.bbox('insert') --> None if cursor is offscreen
+
+
+cmd-shift-()
+Alt-
+selecto_scope()
+goto_scope()
+goto_scope:
+	if at defline: goto scope-level up or down
+	else: goto next prev defline
+
+
+
 python not remommended install with brew?
 
 
@@ -438,7 +468,7 @@ goto bookmark, show bookmark on top not bottom?
 cmd-ae linestartend in python shell in macos?
 
 
-todo path
+ensure in venv?
 
 
 check use of token_can_update += 1
@@ -518,6 +548,9 @@ tab-comp in entry?
 selection handling not perfect when:
 	comment
 	indent
+
+if selecting many lines down then many lines back up, or vice versa:
+	no see selection
 
 
 guides ?

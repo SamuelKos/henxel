@@ -30,9 +30,15 @@
 
 ############ Stucture briefing End
 ############ TODO Begin
-
 #
-
+# Get repo from:
+#
+# 	https://github.com/SamuelKos/henxel
+#
+# Todo is located at, counted from the root of repo:
+#
+#	dev/todo.py
+#
 ############ TODO End
 ############ Imports Begin
 
@@ -42,6 +48,7 @@ import tkinter
 import pathlib
 import json
 import copy
+import ast
 
 # Used in init
 import importlib.resources
@@ -215,7 +222,7 @@ class Editor(tkinter.Toplevel):
 			pass
 
 
-	def __new__(cls):
+	def __new__(cls, *args, debug=False, **kwargs):
 
 		if not cls.root:
 			#print('BBBB')
@@ -275,7 +282,7 @@ class Editor(tkinter.Toplevel):
 
 
 		if not cls.alive:
-			return super(Editor, cls).__new__(cls)
+			return super(Editor, cls).__new__(cls, *args, **kwargs)
 
 		else:
 			print('Instance of ', cls, ' already running!\n')
@@ -285,11 +292,12 @@ class Editor(tkinter.Toplevel):
 
 
 
-	def __init__(self):
+	def __init__(self, *args, debug=False, **kwargs):
 
 		self.root = self.__class__.root
-		super().__init__(self.root, class_='Henxel', bd=4)
+		super().__init__(self.root, *args, class_='Henxel', bd=4, **kwargs)
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
+		self.debug = debug
 
 		# Other widgets
 		self.to_be_closed = list()
@@ -725,6 +733,15 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Control-Shift-Up>", self.move_many_lines)
 			self.contents.bind( "<Control-Shift-Down>", self.move_many_lines)
 
+			self.contents.bind( "<Alt-(>", self.goto_scope)
+			self.contents.bind( "<Alt-)>",
+				lambda event: self.goto_scope(event, **{'end':True}) )
+
+			self.contents.bind( "<Alt-Shift-(>", self.selecto_scope)
+			self.contents.bind( "<Alt-Shift-)>",
+				lambda event: self.selecto_scope(event, **{'end':True}) )
+
+
 			self.contents.bind("<Left>", self.check_sel)
 			self.contents.bind("<Right>", self.check_sel)
 			self.entry.bind("<Left>", self.check_sel)
@@ -749,6 +766,15 @@ class Editor(tkinter.Toplevel):
 			#self.contents.bind( "<Command-Key-k>", lambda event, arg=('AAA'): print(arg) )
 			#self.contents.bind( "<Mod1-Key-k>", lambda event, arg=('AAA'): print(arg) )
 
+			# 8,9 as '(' and ')' nordic
+			# 9,0 in us/uk ?
+			self.contents.bind( "<Mod1-Key-8>", self.goto_scope)
+			self.contents.bind( "<Mod1-Key-9>",
+				lambda event: self.goto_scope(event, **{'end':True}) )
+
+			self.contents.bind( "<Mod1-Shift-(>", self.selecto_scope)
+			self.contents.bind( "<Mod1-Shift-)>",
+				lambda event: self.selecto_scope(event, **{'end':True}) )
 
 			self.contents.bind( "<Mod1-Key-y>", self.yank_line)
 			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
@@ -1154,8 +1180,33 @@ class Editor(tkinter.Toplevel):
 	def quit_me(self, event=None):
 
 		if not self.save_forced():
+			self.wait_for(30)
 			self.bell()
 			return 'break'
+
+		if self.debug:
+			flag_cancel = False
+
+			for item in self.__class__.pkg_contents.iterdir():
+				if item.is_file() and '.py' in item.suffix:
+
+					try:
+						#print(item)
+						f = item.__str__()
+						ast.parse(open(f).read(), filename=f)
+
+					except Exception as e:
+						err = '\t' + e.__str__() + '\n'
+						print( '\nIn: ', item.resolve().__str__() )
+						print(err)
+						flag_cancel = True
+						continue
+
+			if flag_cancel:
+				self.wait_for(30)
+				self.bell()
+				return 'break'
+
 
 		tab = self.tabs[self.tabindex]
 		tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
@@ -3096,6 +3147,73 @@ class Editor(tkinter.Toplevel):
 ########## Run file Related End
 ########## Select and move Begin
 
+	def goto_scope(self, event=None, end=False):
+		''' Goto scopestart or end
+		'''
+		(scope_path, ind_defline,
+		idx_scope_start ) = self.get_scope_path('insert', flag_only_one=True)
+
+		# Skip indentation
+		idx_scope_start = self.contents.index(idx_scope_start)
+		line = idx_scope_start.split('.')[0]
+		tmp = self.contents.get( '%s linestart' % idx_scope_start,
+			'%s lineend' % idx_scope_start )
+		tmp2 = tmp.lstrip()
+		indent = tmp.index(tmp2)
+		idx_scope_start = self.contents.index( '%s.%i' % (line, indent) )
+		self.contents.mark_set('insert', idx_scope_start)
+
+
+		if not end:
+			pos = idx_scope_start
+		else:
+			pos = idx_scope_end = self.get_scope_end(ind_defline)
+			pos = '%s -1c' % pos
+
+		try:
+			self.contents.mark_set('insert', pos)
+			self.wait_for(100)
+			self.ensure_idx_visibility(pos)
+
+		except tkinter.TclError as e:
+			print(e)
+
+		return "break"
+
+
+	def selecto_scope(self, event=None, end=False):
+		''' Adjust selection to scopestart or end
+		'''
+
+		(scope_path, ind_defline,
+		idx_scope_start ) = self.get_scope_path('insert', flag_only_one=True)
+
+		if not end:
+			print(idx_scope_start)
+
+			[ s, have_selection, selection_started_from_top,
+			sel_start, sel_end ] = args = self.get_sel_info('up')
+
+			args.insert(0, idx_scope_start)
+			self.set_selection(*args, direction='up')
+
+			print(args)
+
+		else:
+			idx_scope_end = self.get_scope_end(ind_defline)
+			print(idx_scope_end)
+
+			[ s, have_selection, selection_started_from_top,
+			sel_start, sel_end ] = args = self.get_sel_info('down')
+
+			args.insert(0, idx_scope_end)
+			self.set_selection(*args, direction='down')
+
+			print(args)
+
+		return 'break'
+
+
 	def move_many_lines(self, event=None):
 		''' Move or select 10 lines from cursor.
 			Called from linux or windows.
@@ -3232,7 +3350,7 @@ class Editor(tkinter.Toplevel):
 		'''
 
 		# In case of wrapped lines
-		y_cursor = self.contents.bbox(tkinter.INSERT)[1]
+		y_cursor = self.contents.bbox('insert')[1]
 		p = self.contents.index( '@0,%s' % y_cursor )
 		p2 = self.contents.index( '%s linestart' % p )
 		line_is_wrapped = False
@@ -3259,14 +3377,12 @@ class Editor(tkinter.Toplevel):
 		return pos, line_is_wrapped
 
 
-	def select_by_words(self, event=None):
-		'''	Pressed ctrl or Alt + shift and arrow left or right.
-			Make <<SelectNextWord>> and <<SelectPrevWord>> to stop at lineends.
-		'''
-		if self.state not in [ 'normal', 'error', 'search', 'replace', 'replace_all' ]:
-			self.bell()
-			return "break"
+	def set_selection(self, pos, s, have_selection, selection_started_from_top,
+					sel_start, sel_end, direction=None):
+		''' direction is 'up' or 'down'
 
+			Called from select_by_words()
+		'''
 		###########################################
 		# Get marknames: self.contents.mark_names()
 		# It gives something like this if there has been or is a selection:
@@ -3278,60 +3394,21 @@ class Editor(tkinter.Toplevel):
 		# builtin-events, <<SelectNextWord>> and <<SelectPrevWord>>.
 		###########################################
 
-
-		# Check if: ctrl + shift down.
-		# MacOS event is already checked.
-		if self.os_type == 'linux':
-			if event.state != 5: return
-
-		elif self.os_type == 'windows':
-			if event.state not in [ 262157, 262149 ]: return
-
-
-		have_selection = len(self.contents.tag_ranges('sel')) > 0
-		selection_started_from_top = False
-
-		if event.keysym == 'Right':
-			s = self.contents.index( 'insert')
-
-			# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
-			# no matter if selection started from top or bottom:
-			if have_selection:
-				sel_start = self.contents.index(tkinter.SEL_FIRST)
-				sel_end = self.contents.index(tkinter.SEL_LAST)
-				if s == sel_end:
-					selection_started_from_top = True
-
-				#else: selection_started_from_top = False
-
-			else:
-				selection_started_from_top = True
-				sel_start = s
-
-
-
-			##################### Right Real start:
-
-
-			pos = self.move_by_words_right()
-
-
+		if direction == 'down':
 			if have_selection:
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
 
 				if selection_started_from_top:
 					self.contents.mark_set(self.anchorname, sel_start)
 					self.contents.tag_add('sel', sel_start, pos)
-
 				else:
 					# Check if selection is about to be closed
 					# (selecting towards selection-start)
 					# to avoid one char selection -leftovers.
 					if self.contents.compare( '%s +1 chars' % pos, '>=' , sel_end ):
-
 						self.contents.mark_set('insert', sel_end)
 						self.contents.mark_set(self.anchorname, sel_end)
-						return 'break'
+						return
 
 					self.contents.mark_set(self.anchorname, sel_end)
 					self.contents.tag_add('sel', pos, sel_end)
@@ -3343,35 +3420,8 @@ class Editor(tkinter.Toplevel):
 				self.contents.tag_add('sel', s, pos)
 
 
-
-		elif event.keysym == 'Left':
-
-			s = self.contents.index( 'insert')
-
-			# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
-			# no matter if selection started from top or bottom:
+		elif direction == 'up':
 			if have_selection:
-				sel_start = self.contents.index(tkinter.SEL_FIRST)
-				sel_end = self.contents.index(tkinter.SEL_LAST)
-				if s != sel_start:
-					selection_started_from_top = True
-
-				#else: selection_started_from_top = False
-
-			else:
-				#selection_started_from_top = False
-				sel_end = s
-
-
-
-			##################### Left Real start:
-
-
-			pos = self.move_by_words_left()
-
-
-			if have_selection:
-
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
 
 				if selection_started_from_top:
@@ -3379,10 +3429,9 @@ class Editor(tkinter.Toplevel):
 					# (selecting towards selection-start)
 					# to avoid one char selection -leftovers.
 					if self.contents.compare( '%s -1 chars' % pos, '<=' , sel_start ):
-
 						self.contents.mark_set('insert', sel_start)
 						self.contents.mark_set(self.anchorname, sel_start)
-						return 'break'
+						return
 
 					self.contents.mark_set(self.anchorname, sel_start)
 					self.contents.tag_add('sel', sel_start, pos)
@@ -3391,12 +3440,88 @@ class Editor(tkinter.Toplevel):
 					self.contents.mark_set(self.anchorname, sel_end)
 					self.contents.tag_add('sel', pos, sel_end)
 
-
 			# No selection,
 			# no need to check direction of selection:
 			else:
 				self.contents.mark_set(self.anchorname, s)
 				self.contents.tag_add('sel', pos, s)
+
+
+	def get_sel_info(self, direction):
+		''' direction is 'up' or 'down'
+
+			Called from select_by_words()
+		'''
+		have_selection = len(self.contents.tag_ranges('sel')) > 0
+		s = self.contents.index( 'insert')
+		selection_started_from_top = False
+		sel_start = False
+		sel_end = False
+
+
+		if direction == 'down':
+			# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
+			# no matter if selection started from top or bottom:
+			if have_selection:
+				sel_start = self.contents.index(tkinter.SEL_FIRST)
+				sel_end = self.contents.index(tkinter.SEL_LAST)
+				if s == sel_end:
+					selection_started_from_top = True
+
+			else:
+				selection_started_from_top = True
+				sel_start = s
+
+			return [s, have_selection, selection_started_from_top,
+					sel_start, sel_end ]
+
+		elif direction == 'up':
+			if have_selection:
+				sel_start = self.contents.index(tkinter.SEL_FIRST)
+				sel_end = self.contents.index(tkinter.SEL_LAST)
+				if s != sel_start:
+					selection_started_from_top = True
+
+			else:
+				sel_end = s
+
+			return [s, have_selection, selection_started_from_top,
+					sel_start, sel_end ]
+
+
+	def select_by_words(self, event=None):
+		'''	Pressed ctrl or Alt + shift and arrow left or right.
+			Make <<SelectNextWord>> and <<SelectPrevWord>> to stop at lineends.
+		'''
+		if self.state not in [ 'normal', 'error', 'search', 'replace', 'replace_all' ]:
+			self.bell()
+			return "break"
+
+		# Check if: ctrl + shift down.
+		# MacOS event is already checked.
+		if self.os_type == 'linux':
+			if event.state != 5: return
+
+		elif self.os_type == 'windows':
+			if event.state not in [ 262157, 262149 ]: return
+
+
+		if event.keysym == 'Right':
+			[ s, have_selection, selection_started_from_top,
+			sel_start, sel_end ] = args = self.get_sel_info('down')
+
+			pos = self.move_by_words_right()
+			args.insert(0, pos)
+			self.set_selection(*args, direction='down')
+
+
+		elif event.keysym == 'Left':
+			[ s, have_selection, selection_started_from_top,
+			sel_start, sel_end ] = args = self.get_sel_info('up')
+
+			pos = self.move_by_words_left()
+			args.insert(0, pos)
+			self.set_selection(*args, direction='up')
 
 
 		return 'break'
@@ -3704,10 +3829,10 @@ class Editor(tkinter.Toplevel):
 
 
 	def yank_line(self, event=None):
-		'''	copy current line to clipboard
+		'''	Copy current line to clipboard
 		'''
 
-		if self.state not in [ 'normal', 'error', 'search', 'replace', 'replace_all' ]:
+		if self.state not in [ 'normal', 'help', 'error', 'search', 'replace', 'replace_all' ]:
 			self.bell()
 			return "break"
 
@@ -4621,6 +4746,9 @@ class Editor(tkinter.Toplevel):
 
 		# Cursor is not at indent0
 		if self.contents.index(ins).split('.')[1] != '0': return False
+		# Line has indentation
+		if self.contents.get('insert', 'insert +1c') in ['', ' ', '\t']:
+			return False
 
 		patt = r'^[[:blank:]]*[^[:blank:]#]'
 		pos = self.contents.search(patt, ins, stopindex='1.0',
@@ -5244,24 +5372,45 @@ class Editor(tkinter.Toplevel):
 			else:
 				returns False
 		'''
-		# Used before, left as Tcl/Tk regexp-example
-##		patt_indent = r'^[[:blank:]]*'
-##		# or symbol | accepts matchs in every branch so this matches
-##		# also strings like: async def class
-##		patt_keywords = r'((?:async[[:blank:]]+def)|(?:def)|(?:class)){1}'
-##		patt_space = r'[[:blank:]]+'
-##		patt_name = r'[[:alnum:]_]+(?:\()?(?::)?'
-##
-##		search_word = patt_indent + patt_keywords + patt_space + patt_name
 
 		pos = index
-
-		index_line_contents = self.contents.get( '%s linestart' % pos,
-			'%s display lineend' % pos )
-
-		# Indentation of pos line
-		ind_last_line = 0
 		scope_path = ''
+		ind_last_line = 0
+		index_line_contents = self.contents.get( '%s linestart' % pos,
+			'%s lineend' % pos )
+
+
+		# If posline is empty,
+		# Find next(up) non empty, uncommented line
+		#############################################
+		if index_line_contents.isspace() or index_line_contents == '':
+
+			blank_range = '{0,}'
+			p1 = r'^[[:blank:]]%s' % blank_range
+			# Not blank and not comment
+			p2 = r'[^[:blank:]#]+'
+
+			p = p1 + p2
+			res = False
+
+			try:
+				res = self.contents.search(p, pos, stopindex='1.0', backwards=True, regexp=True)
+
+			except tkinter.TclError as e:
+				print(e)
+
+
+			if not res:
+				scope_path = '__main__()'
+				if flag_only_one:
+					return scope_path, 0, '1.0'
+				return scope_path
+
+			pos = res
+			index_line_contents = self.contents.get( '%s linestart' % pos,
+				'%s lineend' % pos )
+			#########################
+
 
 		for char in index_line_contents:
 			if char in ['\t']: ind_last_line += 1
@@ -5275,6 +5424,40 @@ class Editor(tkinter.Toplevel):
 				return scope_path, 0, '1.0'
 
 			return scope_path
+		######################
+
+
+		# Check possible early defline, if started close below it from empty line
+		#######################################################################
+		def_line_contents = tmp = self.contents.get( pos, '%s display lineend' % pos )
+		tmp = tmp.strip()
+
+		if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
+			# Add to scopepath
+			patt_end = ':'
+			if '(' in tmp: patt_end = '('
+
+			if tmp[:5] == 'async':
+				tmp = tmp[5:].strip()
+
+			if tmp[:3] == 'def':
+				tmp = tmp[3:].strip()
+
+			if tmp[:5] == 'class':
+				tmp = tmp[5:].strip()
+
+			try:
+				e = tmp.index(patt_end)
+				tmp = tmp[:e]
+
+				scope_path = tmp
+				if flag_only_one:
+					return scope_path, ind_last_line, pos
+
+			except ValueError:
+				pass
+		############################
+		# Below this, real start
 
 
 		flag_finish = False
@@ -5350,12 +5533,15 @@ class Editor(tkinter.Toplevel):
 
 					# Question: Why not:
 					# 	pos = '%s -1c' % pos
-					# 	To avoiding rematching same line?
+					# 	To avoid rematching same line?
 					# Answer:
 					#	Search is backwards, so even if there is a match at pos,
-					#	(where search starts every round), it is not taken as match,
+					#	(where search 'starts' every round), it is not taken as match,
 					#	because it is considered to be completely outside of search-range,
-					#	which ends at pos, when searching backwards.
+					#	which 'ends' at pos, when searching backwards.
+					#
+					# For more info about searching, backwards, and indexes:
+					#	print_search_help()
 					continue
 
 
@@ -5392,10 +5578,13 @@ class Editor(tkinter.Toplevel):
 				patt = r'^[acd]'
 				flag_finish = True
 
+
 			# Question: Why not:
 			# 	pos = '%s -1c' % pos
-			# 	To avoiding rematching same line?
+			# 	To avoid rematching same line forever? (in a while-loop)
 			# Answer: See above
+			#
+			#### End of while-body ###########################
 
 
 		if scope_path == '':
@@ -5426,21 +5615,18 @@ class Editor(tkinter.Toplevel):
 		 	Goal is to get positions of function start and end.
 
 			On success:
-				Returns string: position of next uncommented line
+				Returns string: position of next(down from insert) uncommented line
 			Else:
 				Returns 'end'
 
-		'''
-		p1 = ''
-		# From start of line: Not blank and not comment
-		p2 = r'^[^[:blank:]#]+'
+			flag_get_next: will get index of next(up) non empty, not commented line
 
-		if ind_def_line > 0:
-			# Want: uncommented line with ind_def_line blanks or one less
-			blank_range = '{%d,%d}' % (ind_def_line-1, ind_def_line)
-			p1 = r'^[[:blank:]]%s' % blank_range
-			# Not blank and not comment
-			p2 = r'[^[:blank:]#]+'
+		'''
+		# Want: uncommented line with ind_def_line blanks or less
+		blank_range = '{0,%d}' % ind_def_line
+		p1 = r'^[[:blank:]]%s' % blank_range
+		# Not blank and not comment
+		p2 = r'[^[:blank:]#]+'
 
 
 		patt = p1 + p2
@@ -6210,6 +6396,8 @@ class Editor(tkinter.Toplevel):
 
 	def bookmark_animate(self, idx_linestart, remove=False):
 		''' Animate on Add/Remove bookmark
+
+			Called from: toggle_bookmark()
 		'''
 
 		s = idx_linestart
@@ -6363,10 +6551,15 @@ class Editor(tkinter.Toplevel):
 	def toggle_bookmark(self, event=None):
 		''' Add/Remove bookmark at cursor position
 		'''
+		tests = (
+				( self.state not in [ 'normal', 'search', 'replace' ] ),
+				( not self.contents.bbox('insert') )
+				)
 
-		if self.state not in [ 'normal', 'search', 'replace' ]:
+		if any(tests):
 			self.bell()
 			return "break"
+
 
 		pos = tkinter.INSERT
 		if self.state != 'normal':
