@@ -961,8 +961,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('calls', font=self.boldfont)
 
 		self.contents.tag_config('focus', underline=True)
+		self.contents.tag_config('animate')
 
-		# search tags have highest priority
+		# Search-tags have highest priority
 		self.contents.tag_raise('match')
 		self.contents.tag_raise('replaced')
 		self.contents.tag_raise('sel')
@@ -3840,7 +3841,7 @@ class Editor(tkinter.Toplevel):
 		i = self.contents.index(tkinter.INSERT)
 		t = self.contents.get('%s display linestart' % i, '%s lineend' % i)
 
-
+		self.wait_for(12)
 		if t.strip() != '':
 			s,_ = self.idx_linestart()
 			e = '%s lineend' % s
@@ -3848,15 +3849,18 @@ class Editor(tkinter.Toplevel):
 			tmp = self.contents.get(s,e)
 			self.contents.clipboard_clear()
 
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			self.contents.tag_add('sel', s, e)
+			bg, fg = self.themes[self.curtheme]['sel'][:]
+			self.contents.tag_config('animate', background=bg, foreground=fg)
+			self.contents.tag_raise('animate')
+			self.contents.tag_remove('animate', '1.0', tkinter.END)
+			self.contents.tag_add('animate', s, e)
 
 			if self.os_type != 'windows':
 				self.contents.clipboard_append(tmp)
 			else:
 				self.copy_windows(selection=tmp)
 
-			self.after(600, lambda args=['sel', '1.0', tkinter.END]:
+			self.after(600, lambda args=['animate', '1.0', tkinter.END]:
 					self.contents.tag_remove(*args) )
 
 
@@ -6470,8 +6474,11 @@ class Editor(tkinter.Toplevel):
 
 			e = self.idx_lineend()
 
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			self.contents.tag_raise('sel')
+			bg, fg = self.themes[self.curtheme]['sel'][:]
+			self.contents.tag_config('animate', background=bg, foreground=fg)
+			self.contents.tag_raise('animate')
+			self.contents.tag_remove('animate', '1.0', tkinter.END)
+
 
 			# Animate removing bookmark
 			if remove:
@@ -6483,7 +6490,7 @@ class Editor(tkinter.Toplevel):
 					p0 = '%s +%d chars' % (s, wanted_num_chars - i-1 )
 					p1 = '%s +%d chars' % (s, wanted_num_chars - i )
 
-					self.after( (i+1)*step, lambda args=['sel', p0, p1]:
+					self.after( (i+1)*step, lambda args=['animate', p0, p1]:
 							self.contents.tag_add(*args) )
 
 				# 2: Same story as when adding, just note some time has passed
@@ -6491,12 +6498,8 @@ class Editor(tkinter.Toplevel):
 					p0 = '%s +%d chars' % (s, wanted_num_chars - i-1 )
 					p1 = '%s +%d chars' % (s, wanted_num_chars - i )
 
-					self.after( ( time_wanted + (i+1)*step ), lambda args=['sel', p0, p1]:
+					self.after( ( time_wanted + (i+1)*step ), lambda args=['animate', p0, p1]:
 							self.contents.tag_remove(*args) )
-
-
-				self.after( (2*time_wanted + 20), lambda args=['focus']:
-						self.contents.tag_raise(*args) )
 
 
 				if flag_added_space:
@@ -6509,7 +6512,6 @@ class Editor(tkinter.Toplevel):
 
 
 
-
 			# Animate adding bookmark
 			else:
 				# Info is in remove-section above
@@ -6517,16 +6519,12 @@ class Editor(tkinter.Toplevel):
 					p0 = '%s +%d chars' % (s, i)
 					p1 = '%s +%d chars' % (s, i+1)
 
-					self.after( (i+1)*step, lambda args=['sel', p0, p1]:
+					self.after( (i+1)*step, lambda args=['animate', p0, p1]:
 							self.contents.tag_add(*args) )
 
 
-				self.after( (time_wanted + 300), lambda args=['sel', '1.0', tkinter.END]:
+				self.after( (time_wanted + 300), lambda args=['animate', '1.0', tkinter.END]:
 						self.contents.tag_remove(*args) )
-
-
-				self.after( (time_wanted + 320), lambda args=['focus']:
-						self.contents.tag_raise(*args) )
 
 
 				if flag_added_space:

@@ -314,8 +314,12 @@ check syntax of python-files in henxel in quit_me()
 e=henxel.Editor(debug=True)
 	done with: import ast
 #########################
+yank_line() and bookmark_animate(): not ideal usage of tag 'sel'
+--> use tag 'animate'
+#########################
 
 Below this: not done
+
 
 
 
@@ -520,9 +524,6 @@ automate exit editor, check syntax, reopen python and editor
 
 
 bind with eval from dict --> user editable binds
-
-
-yank_line etc. not ideal usage of tag 'sel' --> custom tag
 
 
 save file to disk when pressing save
