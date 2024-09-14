@@ -310,6 +310,7 @@ done ok?
 #########################
 yank when help done, ok?
 #########################
+automate exit editor, check syntax, reopen python and editor
 check syntax of python-files in henxel in quit_me()
 e=henxel.Editor(debug=True)
 	done with: import ast
@@ -317,6 +318,8 @@ e=henxel.Editor(debug=True)
 yank_line() and bookmark_animate(): not ideal usage of tag 'sel'
 --> use tag 'animate'
 #########################
+
+
 
 Below this: not done
 
@@ -335,8 +338,15 @@ Control-d not Control-c to quit multiline command --> help
 
 paste selection is sometimes wrong, maybe because idx_linestart?
 
+line is wrapped 3 lines:
+e.contents.count('insert linestart', 'insert +1 lines', 'displaylines')
+(3,)
+if not wrapped:
+(1,) even if empty
 
+wrapped definition
 
+bbox check
 broken:
 	idx_linestart() not done
 
@@ -397,8 +407,8 @@ fixed tag config -under --> -underline
 # Below this, not essential but wanted
 #######################################
 
-check syntax before quit? no?
-python -c "import ast; ast.parse(open('src/henxel/__init__.py').read())"
+automate exit editor, reopen python and editor
+done only for macos
 
 
 search:
@@ -518,9 +528,6 @@ search/next also in errors, help####################
 
 
 toggle indent with tabs --> space?
-
-
-automate exit editor, check syntax, reopen python and editor
 
 
 bind with eval from dict --> user editable binds

@@ -1284,6 +1284,11 @@ class Editor(tkinter.Toplevel):
 
 		self.__class__.alive = False
 
+		if self.debug and self.os_type == 'mac_os':
+			tmp = ['./dev/restart_editor.scpt']
+			subprocess.run(tmp)
+
+
 
 	def avoid_viewsync_mess(self, event=None):
 		# Avoid viewsync messing when cursor
@@ -3355,10 +3360,40 @@ class Editor(tkinter.Toplevel):
 		p = self.contents.index( '@0,%s' % y_cursor )
 		p2 = self.contents.index( '%s linestart' % p )
 		line_is_wrapped = False
+		line_started_from_curline = True
+
+
+		#########
+##		res = self.contents.count(
+##				'insert linestart', 'insert +1 lines', 'displaylines')
+##
+##		if res[0] > 1:
+##			line_is_wrapped = True
+##
+##			# Did line not start from current line?
+##			if self.contents.compare(
+##				'insert display linestart', '!=', 'insert linestart'):
+##				line_started_from_curline = False
+##				pos = self.contents.index( 'insert display linestart' )
+##
+##		if line_started_from_curline:
+##			tmp = self.contents.get( 'insert linestart', 'insert lineend' )
+##			tmp2 = tmp.lstrip()
+##			indent = tmp.index(tmp2)
+##			line = self.contents.index( 'insert' ).split('.')[0]
+##			pos = self.contents.index( '%i.%i' % (line, indent) )
+
+		#########
+
+
+
 
 		# Is line wrapped?
 		c1 = int(p.split('.')[1])
 		l2 = int(p2.split('.')[0])
+
+
+		# Yes, put cursor start of (display-) line, not the whole (=logical) line:# Yes, put cursor start of (display-) line, not the whole (=logical) line:# Yes, put cursor start of (display-) line, not the whole (=logical) line:
 
 		pos = False
 		# Yes, put cursor start of (display-) line, not the whole (=logical) line:
