@@ -151,6 +151,14 @@ class ExpandWord:
 		dictionary = {}
 
 
+		# Get atrributes of 'self' faster. For example, if want: self.attribute1,
+		# one writes any single letter, like 'a' and hits Tab, and gets 'self.'
+		# Then add 'a' --> prevword is now 'self.a'. Now continue Tabbing:
+		# --> self.attribute1 is now likely to appear soon.
+		if len(word) == 1 or word in ['se', 'sel']:
+			words.append('self.')
+
+
 		for w in all_words:
 			if dictionary.get(w):
 				continue

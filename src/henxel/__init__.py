@@ -46,6 +46,7 @@
 import tkinter.font
 import tkinter
 import pathlib
+import inspect
 import json
 import copy
 import ast
@@ -3325,92 +3326,71 @@ class Editor(tkinter.Toplevel):
 		return "break"
 
 
-	def idx_lineend(self):
-
-##		?submodifier? linestart
-##		Adjust the index to refer to the first index on the line. If the display submodifier is given, this is the first index on the display line, otherwise on the logical line.
-##
-##		?submodifier? lineend
-##		Adjust the index to refer to the last index on the line (the newline). If the display submodifier is given, this is the last index on the display line, otherwise on the logical line.
-
-		pos = self.contents.index( 'insert display lineend' )
-		return pos
+	def idx_lineend(self, index='insert'):
+		return  self.contents.index( '%s display lineend' % index )
 
 
-	def idx_linestart(self):
-		'''	Returns tuple:
+	def line_is_empty(self, index='insert'):
+		t = self.contents.get(
+			'%s display linestart' % index, '%s lineend' % index)
 
-			pos, line_is_wrapped
+		return t.strip() == ''
 
-			Where pos is tkinter.Text -index of linestart:
 
-			if line is wrapped:
-				pos = start of display-line
-			else:
-				pos = end of indentation if there is such.
+	def idx_linestart(self, index='insert'):
+		'''	Returns: pos, line_is_wrapped, line_starts_from_curline
 
-			If line is empty, pos = False
+			Where pos is tkinter.Text -index:
 
-			Wrapped line definition:
-			Line that has not started on (display-) line with cursor
+				if line starts from curline:
+					pos = end of indentation if there is such --> pos != indent0
+					(if there is no indentation, pos == indent0)
+				else:
+					pos = start of display-line == indent0
+
+
+			If line is empty, pos = start of display-line == indent0
+
+
+			indent0 definition, When:
+				1: Cursor is not at the first line of file
+				2: User presses arrow-left
+
+				If then: Cursor moves up one line,
+				it means the cursor was at indent0 before key-press.
+
 		'''
-
-		# In case of wrapped lines
-		y_cursor = self.contents.bbox('insert')[1]
-		p = self.contents.index( '@0,%s' % y_cursor )
-		p2 = self.contents.index( '%s linestart' % p )
+		pos = self.contents.index( 'insert linestart' )
+		line_starts_from_curline = True
 		line_is_wrapped = False
-		line_started_from_curline = True
 
 
-		#########
-##		res = self.contents.count(
-##				'insert linestart', 'insert +1 lines', 'displaylines')
-##
-##		if res[0] > 1:
-##			line_is_wrapped = True
-##
-##			# Did line not start from current line?
-##			if self.contents.compare(
-##				'insert display linestart', '!=', 'insert linestart'):
-##				line_started_from_curline = False
-##				pos = self.contents.index( 'insert display linestart' )
-##
-##		if line_started_from_curline:
-##			tmp = self.contents.get( 'insert linestart', 'insert lineend' )
-##			tmp2 = tmp.lstrip()
-##			indent = tmp.index(tmp2)
-##			line = self.contents.index( 'insert' ).split('.')[0]
-##			pos = self.contents.index( '%i.%i' % (line, indent) )
+		res = self.contents.count(
+				'insert linestart', 'insert +1 lines', 'displaylines')
 
-		#########
-
-
-
-
-		# Is line wrapped?
-		c1 = int(p.split('.')[1])
-		l2 = int(p2.split('.')[0])
-
-
-		# Yes, put cursor start of (display-) line, not the whole (=logical) line:# Yes, put cursor start of (display-) line, not the whole (=logical) line:# Yes, put cursor start of (display-) line, not the whole (=logical) line:
-
-		pos = False
-		# Yes, put cursor start of (display-) line, not the whole (=logical) line:
-		if c1 != 0:
-			pos = p
+		if res[0] > 1:
 			line_is_wrapped = True
 
-		# No, put cursor after indentation:
-		else:
-			tmp = self.contents.get( '%s linestart' % p2, '%s lineend' % p2 )
-			if len(tmp) > 0:
-				if not tmp.isspace():
-					tmp2 = tmp.lstrip()
-					indent = tmp.index(tmp2)
-					pos = self.contents.index( '%i.%i' % (l2, indent) )
+			# Did line not start from current line?
+			if self.contents.compare(
+				'insert display linestart', '!=', 'insert linestart'):
+				line_starts_from_curline = False
+				pos = self.contents.index( 'insert display linestart' )
 
-		return pos, line_is_wrapped
+
+		# Get idx_linestart
+		if (not self.line_is_empty()) and line_starts_from_curline:
+			patt = r'^[[:blank:]]*[^[:blank:]]'
+			pos = self.contents.search(patt, 'insert linestart', stopindex='insert lineend',
+				regexp=True, count=self.search_count_var)
+
+			# self.search_count_var.get() == indentation level +1
+			# because pattern matches: not blank at end of patt
+			ind = '%s +%d chars' % (pos, self.search_count_var.get()-1)
+			pos = self.contents.index(ind)
+
+
+		return pos, line_is_wrapped, line_starts_from_curline
 
 
 	def set_selection(self, pos, s, have_selection, selection_started_from_top,
@@ -3568,11 +3548,10 @@ class Editor(tkinter.Toplevel):
 			and moves cursor to it.
 		'''
 
-		idx_linestart, line_is_wrapped = self.idx_linestart()
+		idx_linestart, line_is_wrapped, line_started_from_curline = self.idx_linestart()
 		i_orig = self.contents.index('insert')
 
-		# Empty line
-		if not idx_linestart:
+		if self.line_is_empty():
 			# Go over empty space first
 			self.contents.event_generate('<<PrevWord>>')
 
@@ -3581,8 +3560,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', i_new)
 
 
-		# Is cursor on such line that has not started on that (display-) line?
-		elif line_is_wrapped:
+		elif not line_started_from_curline:
 
 			# At indent0, put cursor to line end of previous line
 			if self.contents.compare('insert', '==', idx_linestart):
@@ -3677,27 +3655,24 @@ class Editor(tkinter.Toplevel):
 		'''
 
 		# Get some basic indexes first
-		idx_linestart, line_is_wrapped = self.idx_linestart()
+		idx_linestart, line_is_wrapped, line_started_from_curline = self.idx_linestart()
 		i_orig = self.contents.index('insert')
+		e = self.idx_lineend()
 
-		# Get idx_lineend (of non empty line)
-		if idx_linestart:
-			e = self.idx_lineend()
 
-		# Empty line
-		if not idx_linestart:
+		if self.line_is_empty():
 			# Go over empty space first
 			self.contents.event_generate('<<NextWord>>')
 
 			# And put cursor to idx_linestart
-			i_new, line_is_wrapped = self.idx_linestart()
+			i_new,*_ = self.idx_linestart()
 
 			# Check not at fileend, if not then proceed
 			if i_new:
 				self.contents.mark_set('insert', i_new)
 
 
-		# Below this line is non empty
+		# Below this line is not empty
 		##################
 		# Cursor is at lineend, goto idx_linestart of next non empty line
 		elif i_orig == e:
@@ -3708,10 +3683,8 @@ class Editor(tkinter.Toplevel):
 				return pos
 
 			self.contents.event_generate('<<NextWord>>')
-			idx_linestart, line_is_wrapped = self.idx_linestart()
-
-			if idx_linestart:
-				self.contents.mark_set('insert', idx_linestart)
+			idx_linestart,*_ = self.idx_linestart()
+			self.contents.mark_set('insert', idx_linestart)
 
 
 		# Below this line cursor is before line end
@@ -3873,12 +3846,10 @@ class Editor(tkinter.Toplevel):
 			return "break"
 
 
-		i = self.contents.index(tkinter.INSERT)
-		t = self.contents.get('%s display linestart' % i, '%s lineend' % i)
-
 		self.wait_for(12)
-		if t.strip() != '':
-			s,_ = self.idx_linestart()
+
+		if not self.line_is_empty():
+			s,*_ = self.idx_linestart()
 			e = '%s lineend' % s
 
 			tmp = self.contents.get(s,e)
@@ -4029,59 +4000,33 @@ class Editor(tkinter.Toplevel):
 		# command-shift-arrowleft or right == 105
 		# Note: command-shift-a or e not binded.
 
-		# If want selection:
-		if event.state in [ 5 , 105, 13 ]:
+		if event.state in [ 5, 105, 13 ]:
 			want_selection = True
-			i = self.contents.index(tkinter.INSERT)
 
-			if len( self.contents.tag_ranges('sel') ) > 0:
-				# Need to know if selection started from top or bottom.
-
-
-				have_selection = True
-				s = self.contents.index(tkinter.SEL_FIRST)
-				e = self.contents.index(tkinter.SEL_LAST)
-
-				# Selection started from top
-				from_top = False
-				if self.contents.compare(s,'<',i):
-					from_top = True
-
-				# From bottom
-				# else:	from_top = False
-
-
-		# Dont want selection, ctrl/cmd-a/e:
+		# Ctrl/Cmd-a/e
 		else:
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 
 
+		[ i, have_selection, from_top, s, e ] = args = self.get_sel_info('up')
+
+
 		self.ensure_idx_visibility('insert')
 
-		pos, line_is_wrapped = self.idx_linestart()
-		if not pos:
+
+		if self.line_is_empty():
 			pos = self.contents.index( 'insert display linestart' )
+		else:
+			pos,*_ = self.idx_linestart()
 
 		self.contents.see(pos)
 		self.contents.mark_set('insert', pos)
 
+
 		if want_selection:
 
-			if have_selection:
-				self.contents.tag_remove('sel', '1.0', tkinter.END)
-
-				if from_top:
-					self.contents.mark_set(self.anchorname, s)
-					self.contents.tag_add('sel', s, 'insert')
-
-				# From bottom
-				else:
-					self.contents.mark_set(self.anchorname, e)
-					self.contents.tag_add('sel', 'insert', e)
-
-			else:
-				self.contents.mark_set(self.anchorname, i)
-				self.contents.tag_add('sel', 'insert', i)
+			args.insert(0, pos)
+			self.set_selection(*args, direction='up')
 
 
 		return "break"
@@ -4123,15 +4068,17 @@ class Editor(tkinter.Toplevel):
 					# same way than Alt-Shift-Left
 
 					# At idx_linestart of line that has indentation?
-					idx, line_is_wrapped = self.idx_linestart()
+					idx,*_ = self.idx_linestart()
+					tests = [not self.line_is_empty(),
+							self.contents.compare(idx, '==', 'insert' ),
+							idx.split('.')[1] != 0,
+							not len(self.contents.tag_ranges('sel')) > 0
+							]
 
-					if idx and self.contents.compare(idx, '==', 'insert' ):
-						have_selection = len(self.contents.tag_ranges('sel')) > 0
-
-						if idx.split('.')[1] != 0 and not have_selection:
-							pos = self.contents.index('%s linestart' % idx )
-							self.contents.mark_set(self.anchorname, 'insert')
-							self.contents.tag_add('sel', pos, 'insert')
+					if all(tests):
+						pos = self.contents.index('%s linestart' % idx )
+						self.contents.mark_set(self.anchorname, 'insert')
+						self.contents.tag_add('sel', pos, 'insert')
 
 					else:
 						self.goto_linestart(event=event)
@@ -4785,9 +4732,23 @@ class Editor(tkinter.Toplevel):
 
 		# Cursor is not at indent0
 		if self.contents.index(ins).split('.')[1] != '0': return False
+
+		res = self.contents.count(
+				'insert linestart', 'insert +1 lines', 'displaylines')
+
+		# Line is wrapped
+		if res[0] > 1: return False
+
+		tests = [not self.line_is_empty(),
+				self.contents.get('insert', 'insert +1c').isspace()
+				]
+
 		# Line has indentation
-		if self.contents.get('insert', 'insert +1c') in ['', ' ', '\t']:
-			return False
+		if all(tests): return False
+
+		if self.line_is_empty():
+			self.contents.delete('insert linestart', 'insert lineend')
+
 
 		patt = r'^[[:blank:]]*[^[:blank:]#]'
 		pos = self.contents.search(patt, ins, stopindex='1.0',
@@ -4920,7 +4881,8 @@ class Editor(tkinter.Toplevel):
 				if tmp[i] != '\t':
 					break
 
-			self.contents.insert(tkinter.INSERT, '\n') # Manual newline because return is overrided.
+			# Manual newline because return is overrided.
+			self.contents.insert(tkinter.INSERT, '\n')
 			self.contents.insert(tkinter.INSERT, i*'\t')
 			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
@@ -4968,14 +4930,13 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return 'break'
 
-		target=target.strip()
+		target = target.strip()
 
 		if not len(target) > 0:
 			self.bell()
 			return 'break'
 
 
-		import inspect
 		is_module = False
 
 		try:
@@ -6780,25 +6741,17 @@ class Editor(tkinter.Toplevel):
 		'''	Called from indent() and unindent()
 		'''
 		ins = tkinter.INSERT
-
 		# There should not be selection, checked before call in caller.
 
-		# Check if cursor not in indentation or not empty line
-		idx_s, _ = self.idx_linestart()
+		# Check previous char
+		idx = self.contents.index(ins)
+		col = int(idx.split(sep='.')[1])
 
-		if idx_s:
-			# Cursor is after indentation
-			if self.contents.compare(idx_s, '<', ins):
+		if col > 0:
+			prev_char = self.contents.get( ('%s -1 char') % ins, '%s' % ins )
 
-				# Check previous char
-				idx = self.contents.index(ins)
-				col = int(idx.split(sep='.')[1])
-
-				if col > 0:
-					prev_char = self.contents.get( ('%s -1 char') % ins, '%s' % ins )
-
-					if prev_char in self.expander.wordchars:
-						return True
+			if prev_char in self.expander.wordchars:
+				return True
 
 		return False
 

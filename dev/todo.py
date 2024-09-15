@@ -278,8 +278,15 @@ error: if want to search part of filepaths (select with mouse will open file)
 tab on line, if at indent0, move line to same indent than prevline
 	tab_over_indent, done ok?
 ###################
-wordexpand does not expand from single letter at indent0
+wordexpand now does expand from single letter at indent0
 	also removed re-import
+	# Get atrributes of 'self' faster. For example, if want: self.attribute1,
+	# one writes any single letter, like 'a' and hits Tab, and gets 'self.'
+	# Then add 'a' --> prevword is now 'self.a'. Now continue Tabbing:
+	# --> self.attribute1 is now likely to appear soon.
+	if len(word) == 1 or word in ['se', 'sel']:
+		words.append('self.')
+
 	done, ok?
 ###################
 yank whole line, done ok?
@@ -318,13 +325,15 @@ e=henxel.Editor(debug=True)
 yank_line() and bookmark_animate(): not ideal usage of tag 'sel'
 --> use tag 'animate'
 #########################
-
-
+idx_linestart() and bookmark_animate()
+were broken due self.contents.bbox('insert') --> None if cursor is offscreen
+	bbox() check done
+	idx_linestart() done
+	bookmark_animate(): done with this check at toggle_bookmark()
+		not self.contents.bbox('insert')
+#########################
 
 Below this: not done
-
-
-
 
 
 
@@ -336,27 +345,14 @@ uncomment '##' must be at indent0 or it can not be removed --> help?
 Control-d not Control-c to quit multiline command --> help
 
 
-paste selection is sometimes wrong, maybe because idx_linestart?
+after paste: selection is sometimes wrong, maybe because idx_linestart?
+check this
 
-line is wrapped 3 lines:
-e.contents.count('insert linestart', 'insert +1 lines', 'displaylines')
-(3,)
-if not wrapped:
-(1,) even if empty
 
-wrapped definition
+wrapped definition?
 
-bbox check
-broken:
-	idx_linestart() not done
 
-	bookmark_animate() done
-	tests = (
-			( self.state not in [ 'normal', 'search', 'replace' ] ),
-			( not self.contents.bbox('insert') )
-			)
-
-	self.contents.bbox('insert') --> None if cursor is offscreen
+stash if start fails?
 
 
 cmd-shift-()
