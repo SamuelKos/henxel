@@ -100,13 +100,13 @@ class ExpandWord:
 		editor = self.textwid.master
 
 		# On fail, scope_start == '1.0'
-		scope_path, ind_defline, scope_start = editor.get_scope_path('insert', flag_only_one=True)
+		scope_path, ind_defline, scope_start = editor.get_scope_start()
 
 		#print(scope_path, ind_defline, scope_start)
 		all_words = False
 
 		if scope_start != '1.0':
-			scope_end = editor.get_scope_end(ind_defline)
+			scope_end = editor.get_scope_end(ind_defline, scope_start)
 			#print(scope_end)
 			# Up: insert - scope_start == scope_start - insert reversed
 			p = patt_start + patt_end % (scope_start, '{insert wordstart}')

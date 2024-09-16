@@ -340,6 +340,12 @@ Below this: not done
 
 
 
+
+
+
+
+
+
 update help
 uncomment '##' must be at indent0 or it can not be removed --> help?
 Control-d not Control-c to quit multiline command --> help
@@ -349,19 +355,38 @@ after paste: selection is sometimes wrong, maybe because idx_linestart?
 check this
 
 
-wrapped definition?
+sel many lines:
+linenum yview_scroll etc:  center_view()
+
+
+
+handle_normal_entry
 
 
 stash if start fails?
 
 
+
+####################
 cmd-shift-()
 Alt-
 selecto_scope()
 goto_scope()
 goto_scope:
-	if at defline: goto scope-level up or down
-	else: goto next prev defline
+	goto next prev defline
+
+
+if in 'strings': continue
+
+@f1
+@f2
+def funcname[str]():
+
+
+get_scope_end() get_scope_start() get_scope_path()
+get_scope_start() must be separate of get_scope_path() done ok?
+
+########################
 
 
 

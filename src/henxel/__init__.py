@@ -350,7 +350,7 @@ class Editor(tkinter.Toplevel):
 		self.old_word = ''
 		self.new_word = ''
 
-		# Used in get_scope_path()
+		# Used for counting indentation
 		self.search_count_var = tkinter.IntVar()
 		# Search related variables End
 
@@ -1936,7 +1936,7 @@ class Editor(tkinter.Toplevel):
 				linecontents = None
 				#print('err')
 
-			# check if inside multiline string
+			# Check if inside multiline string
 			elif 'strings' in self.contents.tag_names(tkinter.INSERT) and \
 					not ( start_idx == '1.0' and end_idx == tkinter.END ):
 
@@ -2131,7 +2131,7 @@ class Editor(tkinter.Toplevel):
 
 		tags = None
 
-		# populate lists and return at first extra closer:
+		# Populate lists and return at first extra closer:
 		for i in range(len(lines)):
 
 			for j in range(len(lines[i])):
@@ -2139,7 +2139,7 @@ class Editor(tkinter.Toplevel):
 				patt = '%i.%i' % (startline+i, j)
 				tags = self.contents.tag_names(patt)
 
-				# skip if string or comment:
+				# Skip if string or comment:
 				if tags:
 					if 'strings' in tags or 'comments' in tags:
 						tags = None
@@ -3158,32 +3158,37 @@ class Editor(tkinter.Toplevel):
 		''' Goto scopestart or end
 		'''
 		(scope_path, ind_defline,
-		idx_scope_start ) = self.get_scope_path('insert', flag_only_one=True)
-
-		# Skip indentation
-		idx_scope_start = self.contents.index(idx_scope_start)
-		line = idx_scope_start.split('.')[0]
-		tmp = self.contents.get( '%s linestart' % idx_scope_start,
-			'%s lineend' % idx_scope_start )
-		tmp2 = tmp.lstrip()
-		indent = tmp.index(tmp2)
-		idx_scope_start = self.contents.index( '%s.%i' % (line, indent) )
-		self.contents.mark_set('insert', idx_scope_start)
+		idx_scope_start) =t= self.get_scope_start()
+		#print(t)
+		# search from default index == 'insert'
+		idx_scope_end = self.get_scope_end(ind_defline)
+		print(idx_scope_start, idx_scope_end)
 
 
-		if not end:
-			pos = idx_scope_start
-		else:
-			pos = idx_scope_end = self.get_scope_end(ind_defline)
-			pos = '%s -1c' % pos
-
-		try:
-			self.contents.mark_set('insert', pos)
-			self.wait_for(100)
-			self.ensure_idx_visibility(pos)
-
-		except tkinter.TclError as e:
-			print(e)
+##		# Skip indentation
+##		idx_scope_start = self.contents.index(idx_scope_start)
+##		line = idx_scope_start.split('.')[0]
+##		tmp = self.contents.get( '%s linestart' % idx_scope_start,
+##			'%s lineend' % idx_scope_start )
+##		tmp2 = tmp.lstrip()
+##		indent = tmp.index(tmp2)
+##		idx_scope_start = self.contents.index( '%s.%i' % (line, indent) )
+##		self.contents.mark_set('insert', idx_scope_start)
+##
+##
+##		if not end:
+##			pos = idx_scope_start
+##		else:
+##			pos = idx_scope_end = self.get_scope_end(ind_defline)
+##			pos = '%s -1c' % pos
+##
+##		try:
+##			self.contents.mark_set('insert', pos)
+##			self.wait_for(100)
+##			self.ensure_idx_visibility(pos)
+##
+##		except tkinter.TclError as e:
+##			print(e)
 
 		return "break"
 
@@ -3193,7 +3198,7 @@ class Editor(tkinter.Toplevel):
 		'''
 
 		(scope_path, ind_defline,
-		idx_scope_start ) = self.get_scope_path('insert', flag_only_one=True)
+		idx_scope_start ) = self.get_scope_path()
 
 		if not end:
 			print(idx_scope_start)
@@ -3360,28 +3365,29 @@ class Editor(tkinter.Toplevel):
 				it means the cursor was at indent0 before key-press.
 
 		'''
-		pos = self.contents.index( 'insert linestart' )
+		pos = self.contents.index( '%s linestart' % index)
 		line_starts_from_curline = True
 		line_is_wrapped = False
 
 
-		res = self.contents.count(
-				'insert linestart', 'insert +1 lines', 'displaylines')
+		res = self.contents.count('%s linestart' % index, '%s +1 lines' % index,
+				'displaylines')
 
 		if res[0] > 1:
 			line_is_wrapped = True
 
 			# Did line not start from current line?
 			if self.contents.compare(
-				'insert display linestart', '!=', 'insert linestart'):
+				'%s display linestart' % index, '!=', '%s linestart' % index):
 				line_starts_from_curline = False
-				pos = self.contents.index( 'insert display linestart' )
+				pos = self.contents.index( '%s display linestart' % index )
 
 
 		# Get idx_linestart
 		if (not self.line_is_empty()) and line_starts_from_curline:
 			patt = r'^[[:blank:]]*[^[:blank:]]'
-			pos = self.contents.search(patt, 'insert linestart', stopindex='insert lineend',
+			pos = self.contents.search(patt, '%s linestart' % index,
+				stopindex='%s lineend' % index,
 				regexp=True, count=self.search_count_var)
 
 			# self.search_count_var.get() == indentation level +1
@@ -5355,7 +5361,7 @@ class Editor(tkinter.Toplevel):
 		self.entry.insert(0, patt)
 
 
-	def get_scope_path(self, index, flag_only_one=False):
+	def get_scope_path(self, index):
 		''' Get info about function or class where insertion-cursor is in.
 
 			Index is tkinter.Text -index
@@ -5383,27 +5389,39 @@ class Editor(tkinter.Toplevel):
 		# If posline is empty,
 		# Find next(up) non empty, uncommented line
 		#############################################
-		if index_line_contents.isspace() or index_line_contents == '':
+		if index_line_contents.isspace() or index_line_contents == '' \
+			or index_line_contents.strip().startswith('#') \
+			or 'strings' in self.contents.tag_names(pos):
 
 			blank_range = '{0,}'
 			p1 = r'^[[:blank:]]%s' % blank_range
 			# Not blank and not comment
-			p2 = r'[^[:blank:]#]+'
+			p2 = r'[^[:blank:]#]'
 
 			p = p1 + p2
 			res = False
 
-			try:
-				res = self.contents.search(p, pos, stopindex='1.0', backwards=True, regexp=True)
+			while pos:
+				try:
+					pos = self.contents.search(p, pos, stopindex='1.0',
+							backwards=True, regexp=True)
+				except tkinter.TclError as e:
+					print(e)
+					break
 
-			except tkinter.TclError as e:
-				print(e)
+				if not pos: break
 
+				if 'strings' in self.contents.tag_names(pos):
+					print('strings1', pos)
+					continue
+
+				# exit
+				res = pos
+				break
+				#########
 
 			if not res:
 				scope_path = '__main__()'
-				if flag_only_one:
-					return scope_path, 0, '1.0'
 				return scope_path
 
 			pos = res
@@ -5412,25 +5430,16 @@ class Editor(tkinter.Toplevel):
 			#########################
 
 
+		# Check possible early defline
+		##################################################
 		for char in index_line_contents:
 			if char in ['\t']: ind_last_line += 1
 			else: break
 
-
-		if ind_last_line == 0:
-			scope_path = '__main__()'
-
-			if flag_only_one:
-				return scope_path, 0, '1.0'
-
-			return scope_path
-		######################
-
-
-		# Check possible early defline, if started close below it from empty line
-		#######################################################################
-		def_line_contents = tmp = self.contents.get( pos, '%s display lineend' % pos )
+		tmp = index_line_contents
 		tmp = tmp.strip()
+		flag_match = False
+
 
 		if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
 			# Add to scopepath
@@ -5449,13 +5458,20 @@ class Editor(tkinter.Toplevel):
 			try:
 				e = tmp.index(patt_end)
 				tmp = tmp[:e]
-
+				flag_match = True
 				scope_path = tmp
-				if flag_only_one:
-					return scope_path, ind_last_line, pos
 
 			except ValueError:
 				pass
+			######################
+		# Reached indent0,
+		# Since not actually looking next defline but scope-path of index
+		# --> exit
+		if ind_last_line == 0:
+			if scope_path == '':
+				scope_path = '__main__()'
+
+			return scope_path
 		############################
 		# Below this, real start
 
@@ -5494,8 +5510,11 @@ class Editor(tkinter.Toplevel):
 				print(e)
 				return False
 
-			if not pos:
-				break
+			if not pos: break
+
+			if 'strings' in self.contents.tag_names(pos):
+				print('strings2', pos)
+				continue
 
 			# -1: remove terminating char(not blank not #) from matched char count
 			# Check patt if interested.
@@ -5552,12 +5571,7 @@ class Editor(tkinter.Toplevel):
 				else:
 					scope_path = tmp
 
-					if flag_only_one:
-						return scope_path, ind_curline, pos
-
-
 				flag_match = True
-
 
 
 			# Update search pattern and indentation of matched pos line
@@ -5584,65 +5598,277 @@ class Editor(tkinter.Toplevel):
 			# 	To avoid rematching same line forever? (in a while-loop)
 			# Answer: See above
 			#
-			#### End of while-body ###########################
+			#### END OF WHILE ###########################
 
 
 		if scope_path == '':
 			scope_path = '__main__()'
-
-			if flag_only_one:
-				return scope_path, 0, '1.0'
-
 			return scope_path
-
 		else:
 			return scope_path + '()'
 
 
-	def get_scope_end(self, ind_def_line):
-		''' Get info about function or class where insertion-cursor is in.
-			That is, position of next(down) uncommented line == end of current scope
+	def get_scope_start(self, index='insert'):
 
-			Called from self.expander.expand_word()
+		# Stage 1: Search backwards(up) from index for:
+		# pos = Uncommented line with 0 blank or more
+		blank_range = '{0,}'
+		p1 = r'^[[:blank:]]%s' % blank_range
+		# Not blank
+		p2 = r'[^[:blank:]#]'
+
+		patt = p1 + p2
+		# Skip possible first defline at index
+		pos = '%s linestart' % index
+
+
+		while pos:
+			try:
+				pos = self.contents.search(patt, pos, stopindex='1.0',
+						regexp=True, backwards=True)
+
+			except tkinter.TclError as e:
+				print(e)
+				break
+
+			if not pos:
+				return '__main__()', 0, '1.0'
+
+			if 'strings' in self.contents.tag_names(pos):
+				#print('strings3', pos)
+				continue
+
+			break
+			###################
+
+		pos_line_contents = self.contents.get( '%s linestart' % pos,
+			'%s lineend' % pos )
+
+		ind_last_line = 0
+		for char in pos_line_contents:
+			if char in ['\t']: ind_last_line += 1
+			else: break
+
+
+		# Check if defline already
+		tmp = pos_line_contents.strip()
+		if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
+
+			patt_end = ':'
+			if '(' in tmp: patt_end = '('
+			if tmp[:5] == 'async':
+				tmp = tmp[5:].strip()
+			if tmp[:3] == 'def':
+				tmp = tmp[3:].strip()
+			if tmp[:5] == 'class':
+				tmp = tmp[5:].strip()
+			try:
+				e = tmp.index(patt_end)
+				tmp = tmp[:e]
+				idx = self.idx_linestart(index=pos)[0]
+				return tmp, ind_last_line, idx
+
+			except ValueError:
+				pass
+
+		### Stage 1 End ########
+
+
+		patt = r'^[acd]'
+
+		if ind_last_line == 1:
+			pass
+		else:
+			if ind_last_line > 1:
+				# Stage 2: Search backwards(up) from pos updating indentation level until:
+				# defline with ind_last_line-1 blanks or less
+				blank_range = '{0,%d}' % (ind_last_line - 1)
+
+			# ind_last_line == 0:
+			else:
+				# Curline is not defline
+				# --> can search with: '{1,}'
+				blank_range = '{1,}'
+
+
+			p1 = r'^[[:blank:]]%s' % blank_range
+			# Not blank
+			p2 = r'[^[:blank:]#]'
+			patt = p1 + p2
+
+
+		while pos:
+			try:
+				pos = self.contents.search(patt, pos, stopindex='1.0',
+						regexp=True, backwards=True, count=self.search_count_var)
+
+			except tkinter.TclError as e:
+				print(e)
+				break
+
+			if not pos:
+				return '__main__()', 0, '1.0'
+
+			if 'strings' in self.contents.tag_names(pos):
+				print('strings4', pos)
+				continue
+
+
+
+			################
+			# -1: remove terminating char(not blank not #) from matched char count
+			# Check patt if interested.
+			ind_curline = self.search_count_var.get() - 1
+
+			#print(pos, ind_curline, ind_last_line, flag_finish)
+
+			# Find previous line that:
+			# Has one (or more) indentation level smaller indentation than ind_last_line
+			# 	Then if it also is definition line --> add to scopepath
+			# 	update ind_last_line
+			def_line_contents = tmp = self.contents.get( pos, '%s display lineend' % pos )
+			tmp = tmp.strip()
+
+			if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
+				# Add to scopepath
+				patt_end = ':'
+				if '(' in tmp: patt_end = '('
+
+
+				if tmp[:5] == 'async':
+					tmp = tmp[5:].strip()
+
+				if tmp[:3] == 'def':
+					tmp = tmp[3:].strip()
+
+				if tmp[:5] == 'class':
+					tmp = tmp[5:].strip()
+
+				try:
+					e = tmp.index(patt_end)
+				except ValueError:
+					# Found line starting with keyword, but no patt_end
+					#print('Error message from get_scope_start(): ', pos)
+
+					# Question: Why not:
+					# 	pos = '%s -1c' % pos
+					# 	To avoid rematching same line?
+					# Answer:
+					#	Search is backwards, so even if there is a match at pos,
+					#	(where search 'starts' every round), it is not taken as match,
+					#	because it is considered to be completely outside of search-range,
+					#	which 'ends' at pos, when searching backwards.
+					#
+					# For more info about searching, backwards, and indexes:
+					#	print_search_help()
+					continue
+
+
+				# ON SUCCESS
+				tmp = tmp[:e]
+				idx = self.idx_linestart(index=pos)[0]
+
+				return tmp, ind_curline, idx
+
+
+			# Update search pattern and indentation of matched pos line
+			if ind_curline > 1:
+				patt = r'^[[:blank:]]{0,%d}[^[:blank:]#]' % (ind_curline-1)
+
+			# ind_last_line == 1
+			# No need to update indentation level of pos line anymore.
+			else:
+				patt = r'^[acd]'
+
+			### Stage 2 End ###
+
+
+		return '__main__()', 0, '1.0'
+
+
+	def get_scope_end(self, ind_def_line, index='insert'):
+		''' Called from: self.expander.expand_word, goto_scope, selecto_scope
 
 			ind_def_line is int which is supposed to tell indentation of function
 			or class -definition line, where insertion-cursor is currently in.
 			This ind_def_line can be getted with calling:
 
-				get_scope_path('insert', flag_only_one=True)
+				get_scope_start(index='insert')
 
 
 		 	Goal is to get positions of function start and end.
 
 			On success:
-				Returns string: position of next(down from insert) uncommented line
+				Returns string: pos
 			Else:
 				Returns 'end'
-
-			flag_get_next: will get index of next(up) non empty, not commented line
-
 		'''
-		# Want: uncommented line with ind_def_line blanks or less
+		# Stage 1: Search forwards(down) from index for:
+		# pos = Uncommented line with ind_def_line blanks or less
 		blank_range = '{0,%d}' % ind_def_line
 		p1 = r'^[[:blank:]]%s' % blank_range
-		# Not blank and not comment
-		p2 = r'[^[:blank:]#]+'
-
+		# Not blank
+		p2 = r'[^[:blank:]#]'
 
 		patt = p1 + p2
-		pos = False
+		# Skip possible defline at index
+		pos = '%s +1 chars' % index
+		res = False
 
-		try:
-			pos = self.contents.search(patt, 'insert', stopindex='end', regexp=True)
+		while pos:
+			try:
+				pos = self.contents.search(patt, pos, stopindex='end', regexp=True)
 
-		except tkinter.TclError as e:
-			print(e)
+			except tkinter.TclError as e:
+				print(e)
+				break
 
+			if not pos:
+				return 'end'
 
-		if not pos:
-			return 'end'
+			if 'strings' in self.contents.tag_names(pos):
+				print('strings3', pos)
+				# Dont want rematch curline
+				pos = '%s +1 chars' % index
+				continue
 
-		return pos
+			res = pos
+			break
+			### Stage 1 End ###
+
+		# Stage 2: Search backwards(up) from pos up to index for:
+		# Line with ind_def_line+1 blanks or more
+		blank_range = '{%d,}' % (ind_def_line + 1)
+		p1 = r'^[[:blank:]]%s' % blank_range
+		# Not blank
+		p2 = r'[^[:blank:]]'
+		patt = p1 + p2
+
+		pos = res
+		res = 'end'
+
+		while pos:
+			try:
+				pos = self.contents.search(patt, pos, stopindex=index,
+						regexp=True, backwards=True)
+
+			except tkinter.TclError as e:
+				print(e)
+				break
+
+			if not pos:
+				return 'end'
+
+			if 'strings' in self.contents.tag_names(pos):
+				print('strings4', pos)
+				continue
+
+			res = pos
+			break
+			### Stage 2 End ###
+
+		res = self.contents.index('%s lineend' % res)
+		return res
 
 
 ########## Utilities End
@@ -6165,8 +6391,8 @@ class Editor(tkinter.Toplevel):
 				self.tabs[self.tabindex].position = '1.0'
 
 
-
 		tmp = self.entry.get().strip()
+
 
 		if not isinstance(tmp, str) or tmp.isspace():
 			print('Give a valid filename')
