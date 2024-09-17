@@ -367,20 +367,36 @@ stash if start fails?
 
 
 
-####################
-cmd-shift-()
+#########################################
 Alt-
-selecto_scope()
-goto_scope()
-goto_scope:
-	goto next prev defline
+Cmd-shift-FC
+	select_scope()
+	F select cur scope
+	C select next class line
+
+Alt-
+Cmd-()
+	walk_scope()
+	( goto next defline
+	) goto prev defline
+
+
+
+async def only
+
+
+copy_scope		no?
+select_scope	done ok?
+
 
 
 if in 'strings': continue
+done ok?
+
 
 @f1
 @f2
-def funcname[str]():
+def funcname[str]():    not done #########################
 
 
 get_scope_end() get_scope_start() get_scope_path()
@@ -388,6 +404,15 @@ get_scope_start() must be separate of get_scope_path() done ok?
 
 ########################
 
+
+
+
+
+
+
+
+
+idx_lineend()  == display end
 
 
 python not remommended install with brew?
