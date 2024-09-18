@@ -370,23 +370,40 @@ stash if start fails?
 #########################################
 Alt-
 Cmd-shift-FC
-	select_scope()
+	select_scope() incremental
 	F select cur scope
 	C select next class line
 
-Alt-
-Cmd-()
-	walk_scope()
-	( goto next defline
-	) goto prev defline
+only Cmd-shift-F
 
+
+Control-89
+Cmd-()-89
+	walk_scope()
+	(8 goto next defline (rising)
+	)9 goto prev defline
+
+Cmd-Shift-89
+ goto absolutely_next defline (diving)
+
+
+alt --> ctrl done ok?
+save() end comments also selected ok
+
+check:
+if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def'
+
+if not ? update pos?
+
+
+
+
+line_is_defline() ?
 
 
 async def only
 
 
-copy_scope		no?
-select_scope	done ok?
 
 
 
@@ -421,6 +438,7 @@ python not remommended install with brew?
 get(elided)
 elided text is getted by default
 structure-viewer with taglinks
+linenumbers
 #####################################################
 replaced less yellow
 

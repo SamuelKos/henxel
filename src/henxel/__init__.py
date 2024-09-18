@@ -734,9 +734,14 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Control-Shift-Up>", self.move_many_lines)
 			self.contents.bind( "<Control-Shift-Down>", self.move_many_lines)
 
-			self.contents.bind( "<Alt-(>", self.walk_scope)
-			self.contents.bind( "<Alt-)>",
+			self.contents.bind( "<Control-8>", self.walk_scope)
+			self.contents.bind( "<Control-9>",
 				lambda event: self.walk_scope(event, **{'down':True}) )
+
+			self.contents.bind( "<Control-Shift-(>",
+				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
+			self.contents.bind( "<Control-Shift-)>",
+				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
 
 			self.contents.bind( "<Alt-Shift-F>", self.select_scope)
 			self.contents.bind( "<Alt-Shift-C>",
@@ -772,6 +777,11 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Mod1-Key-8>", self.walk_scope)
 			self.contents.bind( "<Mod1-Key-9>",
 				lambda event: self.walk_scope(event, **{'down':True}) )
+
+			self.contents.bind( "<Mod1-Shift-(>",
+				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
+			self.contents.bind( "<Mod1-Shift-)>",
+				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
 
 			self.contents.bind( "<Mod1-Shift-F>", self.select_scope)
 			self.contents.bind( "<Mod1-Shift-C>",
@@ -1295,15 +1305,14 @@ class Editor(tkinter.Toplevel):
 		# Avoid viewsync messing when cursor
 		# position is in line with multiline string marker:
 
-		if self.tabs[self.tabindex].filepath:
-			if self.can_do_syntax():
-				pos = self.tabs[self.tabindex].position
-				lineend = '%s lineend' % pos
-				linestart = '%s linestart' % pos
-				tmp = self.contents.get( linestart, lineend )
-				self.oldline = tmp
-				self.oldlinenum = pos.split('.')[0]
-				self.token_can_update = True
+		if self.can_do_syntax():
+			pos = self.tabs[self.tabindex].position
+			lineend = '%s lineend' % pos
+			linestart = '%s linestart' % pos
+			tmp = self.contents.get( linestart, lineend )
+			self.oldline = tmp
+			self.oldlinenum = pos.split('.')[0]
+			self.token_can_update = True
 
 
 	def viewsync(self, event=None):
@@ -1318,28 +1327,26 @@ class Editor(tkinter.Toplevel):
 		self.text_widget_height = self.scrollbar.winfo_height()
 		self.update_linenums()
 
-		if self.tabs[self.tabindex].filepath:
-			if self.can_do_syntax():
-				if self.token_can_update:
+		if self.can_do_syntax() and self.token_can_update:
 
-					#  tag alter triggers this event if font changes, like from normal to bold.
-					# --> need to check if line is changed to prevent self-trigger
-					line_idx = self.contents.index( tkinter.INSERT )
-					linenum = line_idx.split('.')[0]
-					#prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT )
+			#  tag alter triggers this event if font changes, like from normal to bold.
+			# --> need to check if line is changed to prevent self-trigger
+			line_idx = self.contents.index( tkinter.INSERT )
+			linenum = line_idx.split('.')[0]
+			#prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT )
 
 
-					lineend = '%s lineend' % line_idx
-					linestart = '%s linestart' % line_idx
+			lineend = '%s lineend' % line_idx
+			linestart = '%s linestart' % line_idx
 
-					tmp = self.contents.get( linestart, lineend )
+			tmp = self.contents.get( linestart, lineend )
 
-					if self.oldline != tmp or self.oldlinenum != linenum:
+			if self.oldline != tmp or self.oldlinenum != linenum:
 
-						#print('sync')
-						self.oldline = tmp
-						self.oldlinenum = linenum
-						self.update_tokens(start=linestart, end=lineend, line=tmp)
+				#print('sync')
+				self.oldline = tmp
+				self.oldlinenum = linenum
+				self.update_tokens(start=linestart, end=lineend, line=tmp)
 
 
 ############## Linenumbers Begin
@@ -1609,9 +1616,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
 
-		if self.tabs[self.tabindex].filepath:
-			if self.can_do_syntax():
-				self.update_tokens(start='1.0', end=tkinter.END, everything=True)
+		if self.can_do_syntax():
+			self.update_tokens(start='1.0', end=tkinter.END, everything=True)
 
 		# set cursor pos
 		line = self.tabs[self.tabindex].position
@@ -1889,27 +1895,35 @@ class Editor(tkinter.Toplevel):
 
 
 	def can_do_syntax(self):
+		flag_can = self.syntax
 
-		return '.py' in self.tabs[self.tabindex].filepath.suffix and self.syntax
+		if not flag_can:
+			pass
+
+		elif self.tabs[self.tabindex].filepath:
+			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+				flag_can = True
+
+		# This flag is set in insert_inspected()
+		elif hasattr(self.tabs[self.tabindex], 'inspected'):
+			flag_can = True
+
+		return flag_can
 
 
 	def do_syntax(self, everything=False):
 
-		if self.tabs[self.tabindex].filepath:
-			if self.can_do_syntax():
+		if self.can_do_syntax():
 
-				self.token_err = True
-				content_is_uptodate = everything
-				self.update_tokens(start='1.0', end=tkinter.END, everything=content_is_uptodate)
-				self.token_can_update = True
-
-			else:
-				self.token_err = False
-				self.token_can_update = False
+			self.token_err = True
+			content_is_uptodate = everything
+			self.update_tokens(start='1.0', end=tkinter.END, everything=content_is_uptodate)
+			self.token_can_update = True
 
 		else:
 			self.token_err = False
 			self.token_can_update = False
+
 
 
 	def update_tokens(self, start=None, end=None, line=None, everything=False):
@@ -3154,7 +3168,7 @@ class Editor(tkinter.Toplevel):
 ########## Run file Related End
 ########## Select and move Begin
 
-	def walk_scope(self, event=None, down=False):
+	def walk_scope(self, event=None, down=False, absolutely_next=False):
 		''' Walk definition lines up or down.
 
 			Walking has a rising tendency: if walking up
@@ -3165,11 +3179,19 @@ class Editor(tkinter.Toplevel):
 			down from last function definition of a class.
 			( And for nested functions )
 
+			When walking with absolutely_next-flag,
+			Cursor is moved to absolutely next defline.
+
 		'''
+
+		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search']):
+			self.bell()
+			return "break"
+
 
 		if not down:
 			(scope_line, ind_defline,
-			idx_scope_start) = self.get_scope_start()
+			idx_scope_start) = self.get_scope_start(absolutely_next=absolutely_next)
 
 			if scope_line == '__main__()':
 				self.bell()
@@ -3178,14 +3200,22 @@ class Editor(tkinter.Toplevel):
 			pos = idx_scope_start
 
 		else:
+			# +1 lines: Because cursor could be at defline, start at next line(down)
+			# for get_scope_start to catch defline
 			pos = 'insert +1 lines'
-			(scope_line, ind_defline,
-			idx_scope_start) = self.get_scope_start(pos)
+			if not absolutely_next:
+				(scope_line, ind_defline,
+				idx_scope_start) = self.get_scope_start(index=pos)
 
-			if scope_line != '__main__()':
-				idx_scope_end = pos = self.get_scope_end(ind_defline, index=idx_scope_start)
+				if scope_line != '__main__()':
+					idx_scope_end = pos = self.get_scope_end(ind_defline, index=idx_scope_start)
 
-			blank_range = '{0,%d}' % ind_defline
+
+			# Now have idx_scope_start, idx_scope_end of current scope.
+			# Below, searching for: idx_scope_start of next defline(down)
+			#####################################
+			if absolutely_next: blank_range = '{0,}'
+			else: blank_range = '{0,%d}' % ind_defline
 			p1 = r'^[[:blank:]]%s' % blank_range
 			p2  = r'[acd]'
 
@@ -3217,8 +3247,7 @@ class Editor(tkinter.Toplevel):
 				# Check if defline
 				tmp = pos_line_contents.strip()
 				if len(tmp) < 8:
-					pos = '%s +1 chars' % pos
-					continue
+					pass
 
 				if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
 
@@ -3238,12 +3267,11 @@ class Editor(tkinter.Toplevel):
 						break
 
 					except ValueError:
-						pos = '%s +1 chars' % pos
 						pass
 
+				pos = '%s +1 chars' % pos
 				##################################
-
-
+		# Put cursor on defline
 		try:
 			self.contents.mark_set('insert', pos)
 			self.wait_for(100)
@@ -3277,14 +3305,19 @@ class Editor(tkinter.Toplevel):
 
 		'''
 
+		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search']):
+			self.bell()
+			return "break"
+
+
 		pos = '%s +1 lines' % index
 		(scope_line, ind_defline,
-		idx_scope_start) = self.get_scope_start(pos)
+		idx_scope_start) = self.get_scope_start(index=pos)
 
 		if scope == 'class':
 			while scope_line[:5] != 'class' and scope_line != '__main__()':
 				(scope_line, ind_defline,
-				idx_scope_start) = self.get_scope_start(idx_scope_start)
+				idx_scope_start) = self.get_scope_start(index=idx_scope_start)
 
 
 		if scope_line != '__main__()':
@@ -4614,9 +4647,9 @@ class Editor(tkinter.Toplevel):
 		e = self.contents.index( '%d.0 lineend' % lastline )
 		t = self.contents.get( s, e )
 
-		if self.tabs[self.tabindex].filepath:
-			if self.can_do_syntax():
-				self.update_tokens( start=s, end=e, line=t )
+
+		if self.can_do_syntax():
+			self.update_tokens( start=s, end=e, line=t )
 
 
 		if have_selection:
@@ -4671,9 +4704,9 @@ class Editor(tkinter.Toplevel):
 			e = self.contents.index( 'insert lineend')
 			t = self.contents.get( s, e )
 
-			if self.tabs[self.tabindex].filepath:
-				if self.can_do_syntax():
-					self.update_tokens( start=s, end=e, line=t )
+
+			if self.can_do_syntax():
+				self.update_tokens( start=s, end=e, line=t )
 
 
 			if have_selection:
@@ -4695,9 +4728,9 @@ class Editor(tkinter.Toplevel):
 			e = self.contents.index( '%s lineend' % idx_ins)
 			t = self.contents.get( s, e )
 
-			if self.tabs[self.tabindex].filepath:
-				if self.can_do_syntax():
-					self.update_tokens( start=s, end=e, line=t )
+
+			if self.can_do_syntax():
+				self.update_tokens( start=s, end=e, line=t )
 
 
 			if have_selection:
@@ -5393,6 +5426,8 @@ class Editor(tkinter.Toplevel):
 	def handle_search_entry(self, search_pos, index):
 		''' Handle entry when searching/replacing
 
+			Called from: show_next() and show_prev()
+
 			Search_pos is position of current focus among search matches.
 			For example, if current search position would be
 			' 2/20' then search_pos would be 2.
@@ -5419,17 +5454,8 @@ class Editor(tkinter.Toplevel):
 		# a: Add scope_path
 		# Search backwards and get function/class names.
 		patt = ' '
-		flag_scope = False
 
-		if self.tabs[self.tabindex].filepath:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				flag_scope = True
-
-		# This flag is set in insert_inspected()
-		elif hasattr(self.tabs[self.tabindex], 'inspected'):
-			flag_scope = True
-
-		if flag_scope:
+		if self.can_do_syntax():
 			if scope_name := self.get_scope_path(index):
 				patt = ' @' + scope_name + ' @'
 
@@ -5692,7 +5718,7 @@ class Editor(tkinter.Toplevel):
 			return scope_path + '()'
 
 
-	def get_scope_start(self, index='insert'):
+	def get_scope_start(self, index='insert', absolutely_next=False):
 		''' Find next(up) function or class definition
 
 			On success returns:
@@ -5776,7 +5802,10 @@ class Editor(tkinter.Toplevel):
 
 		patt = r'^[acd]'
 
-		if ind_last_line == 1:
+		if absolutely_next:
+			patt = r'^[[:blank:]]{0,}[acd]'
+			pass
+		elif ind_last_line == 1:
 			pass
 		else:
 			if ind_last_line > 1:
@@ -5870,9 +5899,10 @@ class Editor(tkinter.Toplevel):
 
 				return def_line_contents.strip(), ind_curline, idx
 
-
+			if absolutely_next:
+				pass
 			# Update search pattern and indentation of matched pos line
-			if ind_curline > 1:
+			elif ind_curline > 1:
 				patt = r'^[[:blank:]]{0,%d}[^[:blank:]#]' % (ind_curline-1)
 
 			# ind_last_line == 1
@@ -5907,6 +5937,7 @@ class Editor(tkinter.Toplevel):
 				if scope_path == '__main__()':
 					do not call get_scope_end()
 		'''
+
 		# Stage 1: Search forwards(down) from index for:
 		# pos = Uncommented line with ind_def_line blanks or less
 		blank_range = '{0,%d}' % ind_def_line
@@ -5915,9 +5946,10 @@ class Editor(tkinter.Toplevel):
 		p2 = r'[^[:blank:]#]'
 
 		patt = p1 + p2
+
 		# Skip possible defline at index
 		pos = '%s +1 chars' % index
-		res = False
+
 
 		while pos:
 			try:
@@ -5925,10 +5957,11 @@ class Editor(tkinter.Toplevel):
 
 			except tkinter.TclError as e:
 				print(e)
+				pos = 'end'
 				break
 
 			if not pos:
-				res = pos = 'end'
+				pos = 'end'
 				break
 
 			if 'strings' in self.contents.tag_names(pos):
@@ -5937,7 +5970,6 @@ class Editor(tkinter.Toplevel):
 				pos = '%s +1 chars' % pos
 				continue
 
-			res = pos
 			break
 			### Stage 1 End ###
 
@@ -5949,8 +5981,6 @@ class Editor(tkinter.Toplevel):
 		p2 = r'[^[:blank:]]'
 		patt = p1 + p2
 
-		pos = res
-		res = 'end'
 
 		#print(patt, pos)
 		while pos:
@@ -5960,22 +5990,23 @@ class Editor(tkinter.Toplevel):
 
 			except tkinter.TclError as e:
 				print(e)
+				pos = 'end'
 				break
 
 			if not pos:
-				return 'end'
+				pos = 'end'
+				break
 
 			if 'strings' in self.contents.tag_names(pos):
 				#print('strings4', pos)
 				continue
 
 			# ON SUCCESS
-			res = pos
 			break
 			### Stage 2 End ###
 
-		res = self.contents.index('%s lineend' % res)
-		return res
+		pos = self.contents.index('%s lineend' % pos)
+		return pos
 
 
 ########## Utilities End
@@ -5986,7 +6017,7 @@ class Editor(tkinter.Toplevel):
 			go to function definition
 		'''
 
-		if self.state != 'normal':
+		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search']):
 			self.bell()
 			return "break"
 
@@ -7284,7 +7315,8 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert('%d.0' % linenum, '##')
 
 
-			self.update_tokens(start=startpos, end=endpos)
+			if self.can_do_syntax():
+				self.update_tokens(start=startpos, end=endpos)
 
 
 		# No selection, comment curline
@@ -7325,7 +7357,9 @@ class Editor(tkinter.Toplevel):
 
 
 			if changed:
-				self.update_tokens(start=startpos, end=endpos)
+				if self.can_do_syntax():
+					self.update_tokens(start=startpos, end=endpos)
+
 				self.contents.edit_separator()
 
 

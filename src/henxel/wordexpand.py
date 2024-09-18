@@ -83,60 +83,71 @@ class ExpandWord:
 		''' Return a list of words that match the prefix before the cursor.
 		'''
 
-		word = self.getprevword()
-		if not word:
-			return []
-
-
-		# Next, get words to list all_words
-		# First, try to append from current scope, function or class.
-		# Second, append from rest of file (or whole file is First fails)
-		####################################################################
-		patt_start = r'regexp -all -line -inline {\m%s[[:alnum:]_.]+} [%s' \
-				% (word, self.tcl_name_of_contents)
-
-		patt_end = ' get %s %s]'
-
 		editor = self.textwid.master
-
-		# On fail, scope_start == '1.0'
-		scope_line, ind_defline, scope_start = editor.get_scope_start()
-		scope_end = False
-		if scope_line != '__main__()':
-			scope_end = editor.get_scope_end(ind_defline, scope_start)
-
-		#print(scope_line, ind_defline, scope_start, scope_end)
 		all_words = False
-		l1 = False
-		l2 = False
-		l3 = False
-		l4 = False
+		word = self.getprevword()
+		words = []
 
-		if scope_end:
-			# Up: insert - scope_start == scope_start - insert reversed
-			p = patt_start + patt_end % (scope_start, '{insert wordstart}')
-			l1 = words_ins_def_up = self.textwid.tk.eval(p).split()
-			l1.reverse()
-
-			# Down: insert - scope_end
-			p = patt_start + patt_end % ('{insert wordend}', scope_end)
-			l2 = words_ins_def_down = self.textwid.tk.eval(p).split()
-
-			if scope_start != '1.0':
-				# Up: scope_start - filestart == filestart - scope_start reversed
-				p = patt_start + patt_end % ('1.0', scope_start)
-				l3 = words_def_up_filestart = self.textwid.tk.eval(p).split()
-				l3.reverse()
-
-			if scope_end != 'end':
-				# Down: scope_end - fileend
-				p = patt_start + patt_end % (scope_end, 'end')
-				l4 = words_def_down_fileend = self.textwid.tk.eval(p).split()
+		if not word: return words
 
 
-			all_words = l1 + l2
-			if l3: all_words += l3
-			if l4: all_words += l4
+		if editor.can_do_syntax():
+
+			# Get atrributes of 'self' faster. For example, if want: self.attribute1,
+			# one writes any single letter, like 'a' and hits Tab, and gets 'self.'
+			# Then add 'a' --> prevword is now 'self.a'. Now continue Tabbing:
+			# --> self.attribute1 is now likely to appear soon.
+			if len(word) == 1 or word in ['se', 'sel']:
+				words.append('self.')
+
+
+			# Next, get words to list all_words
+			# First, try to append from current scope, function or class.
+			# Second, append from rest of file (or whole file is First fails)
+			####################################################################
+			patt_start = r'regexp -all -line -inline {\m%s[[:alnum:]_.]+} [%s' \
+					% (word, self.tcl_name_of_contents)
+
+			patt_end = ' get %s %s]'
+
+
+			# On fail, scope_start == '1.0'
+			scope_line, ind_defline, scope_start = editor.get_scope_start()
+			scope_end = False
+			if scope_line != '__main__()':
+				scope_end = editor.get_scope_end(ind_defline, scope_start)
+
+			#print(scope_line, ind_defline, scope_start, scope_end)
+			l1 = False
+			l2 = False
+			l3 = False
+			l4 = False
+
+			if scope_end:
+				# Up: insert - scope_start == scope_start - insert reversed
+				p = patt_start + patt_end % (scope_start, '{insert wordstart}')
+				l1 = words_ins_def_up = self.textwid.tk.eval(p).split()
+				l1.reverse()
+
+				# Down: insert - scope_end
+				p = patt_start + patt_end % ('{insert wordend}', scope_end)
+				l2 = words_ins_def_down = self.textwid.tk.eval(p).split()
+
+				if scope_start != '1.0':
+					# Up: scope_start - filestart == filestart - scope_start reversed
+					p = patt_start + patt_end % ('1.0', scope_start)
+					l3 = words_def_up_filestart = self.textwid.tk.eval(p).split()
+					l3.reverse()
+
+				if scope_end != 'end':
+					# Down: scope_end - fileend
+					p = patt_start + patt_end % (scope_end, 'end')
+					l4 = words_def_down_fileend = self.textwid.tk.eval(p).split()
+
+
+				all_words = l1 + l2
+				if l3: all_words += l3
+				if l4: all_words += l4
 
 
 		# Tabbing at __main__()
@@ -152,17 +163,7 @@ class ExpandWord:
 		#######################
 
 
-		words = []
 		dictionary = {}
-
-
-		# Get atrributes of 'self' faster. For example, if want: self.attribute1,
-		# one writes any single letter, like 'a' and hits Tab, and gets 'self.'
-		# Then add 'a' --> prevword is now 'self.a'. Now continue Tabbing:
-		# --> self.attribute1 is now likely to appear soon.
-		if len(word) == 1 or word in ['se', 'sel']:
-			words.append('self.')
-
 
 		for w in all_words:
 			if dictionary.get(w):
