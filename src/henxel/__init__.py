@@ -1169,6 +1169,11 @@ class Editor(tkinter.Toplevel):
 
 
 	def ensure_idx_visibility(self, index, back=None):
+		''' Ensures index is visible on screen.
+
+			Puts insertion cursor to index.
+		'''
+
 		b=2
 		if back:
 			b=back
@@ -1894,21 +1899,22 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 
 
-	def can_do_syntax(self):
-		flag_can = self.syntax
+	def is_pyfile(self):
+		res = False
 
-		if not flag_can:
-			pass
-
-		elif self.tabs[self.tabindex].filepath:
+		if self.tabs[self.tabindex].filepath:
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				flag_can = True
+				res = True
 
 		# This flag is set in insert_inspected()
 		elif hasattr(self.tabs[self.tabindex], 'inspected'):
-			flag_can = True
+			res = True
 
-		return flag_can
+		return res
+
+
+	def can_do_syntax(self):
+		return self.syntax and self.is_pyfile()
 
 
 	def do_syntax(self, everything=False):
@@ -3168,6 +3174,40 @@ class Editor(tkinter.Toplevel):
 ########## Run file Related End
 ########## Select and move Begin
 
+	def line_is_defline(self, line):
+		''' Check if line is definition line of function or class.
+
+			On success, returns string: name of function
+			On fail, returns False
+
+			Called from: walk_scope, get_scope_start, get_scope_path
+		'''
+
+		tmp = line.strip()
+		res = False
+
+		if len(tmp) < 8:
+			pass
+
+		if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
+			patt_end = ':'
+			if '(' in tmp: patt_end = '('
+			if tmp[:5] == 'async':
+				tmp = tmp[5:].strip()
+			if tmp[:3] == 'def':
+				tmp = tmp[3:].strip()
+			if tmp[:5] == 'class':
+				tmp = tmp[5:].strip()
+			try:
+				e = tmp.index(patt_end)
+				res = tmp[:e]
+
+			except ValueError:
+				pass
+
+		return res
+
+
 	def walk_scope(self, event=None, down=False, absolutely_next=False):
 		''' Walk definition lines up or down.
 
@@ -3183,7 +3223,9 @@ class Editor(tkinter.Toplevel):
 			Cursor is moved to absolutely next defline.
 
 		'''
-
+		# Why can_do_syntax, instead of is_pyfile? Because tag: 'strings' is
+		# used while parsing. Tag exists only if synxtax-highlighting is on.
+		# This means one can not walk_scope without syntax-highlight.
 		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search']):
 			self.bell()
 			return "break"
@@ -3240,34 +3282,12 @@ class Editor(tkinter.Toplevel):
 					pos = '%s +1 chars' % pos
 					continue
 
-				pos_line_contents = self.contents.get( '%s linestart' % pos,
-					'%s lineend' % pos )
-
-
-				# Check if defline
-				tmp = pos_line_contents.strip()
-				if len(tmp) < 8:
-					pass
-
-				if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
-
-					patt_end = ':'
-					if '(' in tmp: patt_end = '('
-					if tmp[:5] == 'async':
-						tmp = tmp[5:].strip()
-					if tmp[:3] == 'def':
-						tmp = tmp[3:].strip()
-					if tmp[:5] == 'class':
-						tmp = tmp[5:].strip()
-					try:
-						e = tmp.index(patt_end)
-
-						# SUCCESS
-						pos = self.idx_linestart(index=pos)[0]
-						break
-
-					except ValueError:
-						pass
+				lineend = '%s lineend' % pos
+				linestart = '%s linestart' % pos
+				line = self.contents.get( linestart, lineend )
+				if res := self.line_is_defline(line):
+					pos = self.idx_linestart(pos)
+					break
 
 				pos = '%s +1 chars' % pos
 				##################################
@@ -3304,12 +3324,33 @@ class Editor(tkinter.Toplevel):
 				Class can be selected even after last line of scope
 
 		'''
-
+		# Why can_do_syntax, instead of is_pyfile? Because tag: 'strings' is
+		# used while parsing. Tag exists only if synxtax-highlighting is on.
+		# This means one can not walk_scope without syntax-highlight.
 		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search']):
 			self.bell()
 			return "break"
 
+##		####
+##		[ ins_old, have_selection, selection_started_from_top,
+##		sel_start, sel_end ] = args = self.get_sel_info()
+##
+##		if have_selection:
+##			lineend = '%s lineend' % ins_old
+##			linestart = '%s linestart' % ins_old
+##			contents_selstart = self.contents.get( linestart, lineend )
 
+
+
+
+
+
+
+
+
+
+
+		####
 		pos = '%s +1 lines' % index
 		(scope_line, ind_defline,
 		idx_scope_start) = self.get_scope_start(index=pos)
@@ -3588,46 +3629,27 @@ class Editor(tkinter.Toplevel):
 				self.contents.tag_add('sel', ins_new, ins_old)
 
 
-	def get_sel_info(self, direction):
-		''' direction is 'up' or 'down'
-
-			Called from select_by_words()
+	def get_sel_info(self):
+		''' Called from select_by_words, goto_linestart
 		'''
 		have_selection = len(self.contents.tag_ranges('sel')) > 0
-		ins_old = self.contents.index( 'insert')
+		ins_old = self.contents.index('insert')
 		selection_started_from_top = False
 		sel_start = False
 		sel_end = False
 
 
-		if direction == 'down':
-			# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
-			# no matter if selection started from top or bottom:
-			if have_selection:
-				sel_start = self.contents.index(tkinter.SEL_FIRST)
-				sel_end = self.contents.index(tkinter.SEL_LAST)
-				if ins_old == sel_end:
-					selection_started_from_top = True
-
-			else:
+		# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
+		# no matter if selection started from top or bottom:
+		if have_selection:
+			sel_start = self.contents.index(tkinter.SEL_FIRST)
+			sel_end = self.contents.index(tkinter.SEL_LAST)
+			if ins_old == sel_end:
 				selection_started_from_top = True
-				sel_start = ins_old
 
-			return [ins_old, have_selection, selection_started_from_top,
-					sel_start, sel_end ]
 
-		elif direction == 'up':
-			if have_selection:
-				sel_start = self.contents.index(tkinter.SEL_FIRST)
-				sel_end = self.contents.index(tkinter.SEL_LAST)
-				if ins_old != sel_start:
-					selection_started_from_top = True
-
-			else:
-				sel_end = ins_old
-
-			return [ins_old, have_selection, selection_started_from_top,
-					sel_start, sel_end ]
+		return [ins_old, have_selection, selection_started_from_top,
+				sel_start, sel_end ]
 
 
 	def select_by_words(self, event=None):
@@ -3647,19 +3669,17 @@ class Editor(tkinter.Toplevel):
 			if event.state not in [ 262157, 262149 ]: return
 
 
-		if event.keysym == 'Right':
-			[ ins_old, have_selection, selection_started_from_top,
-			sel_start, sel_end ] = args = self.get_sel_info('down')
+		[ ins_old, have_selection, selection_started_from_top,
+		sel_start, sel_end ] = args = self.get_sel_info()
 
+
+		if event.keysym == 'Right':
 			ins_new = self.move_by_words_right()
 			args.insert(0, ins_new)
 			self.set_selection(*args, direction='down')
 
 
 		elif event.keysym == 'Left':
-			[ ins_old, have_selection, selection_started_from_top,
-			sel_start, sel_end ] = args = self.get_sel_info('up')
-
 			ins_new = self.move_by_words_left()
 			args.insert(0, ins_new)
 			self.set_selection(*args, direction='up')
@@ -3790,7 +3810,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.event_generate('<<NextWord>>')
 
 			# And put cursor to idx_linestart
-			i_new,*_ = self.idx_linestart()
+			i_new = self.idx_linestart()[0]
 
 			# Check not at fileend, if not then proceed
 			if i_new:
@@ -3808,7 +3828,7 @@ class Editor(tkinter.Toplevel):
 				return pos
 
 			self.contents.event_generate('<<NextWord>>')
-			idx_linestart,*_ = self.idx_linestart()
+			idx_linestart = self.idx_linestart()[0]
 			self.contents.mark_set('insert', idx_linestart)
 
 
@@ -3974,7 +3994,7 @@ class Editor(tkinter.Toplevel):
 		self.wait_for(12)
 
 		if not self.line_is_empty():
-			s,*_ = self.idx_linestart()
+			s = self.idx_linestart()[0]
 			e = '%s lineend' % s
 
 			tmp = self.contents.get(s,e)
@@ -4133,7 +4153,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 
 
-		[ ins_old, have_selection, from_top, s, e ] = args = self.get_sel_info('up')
+		[ ins_old, have_selection, from_top, s, e ] = args = self.get_sel_info()
 
 
 		self.ensure_idx_visibility('insert')
@@ -4142,7 +4162,7 @@ class Editor(tkinter.Toplevel):
 		if self.line_is_empty():
 			ins_new = self.contents.index( 'insert display linestart' )
 		else:
-			ins_new,*_ = self.idx_linestart()
+			ins_new = self.idx_linestart()[0]
 
 		self.contents.see(ins_new)
 		self.contents.mark_set('insert', ins_new)
@@ -4193,7 +4213,7 @@ class Editor(tkinter.Toplevel):
 					# same way than Alt-Shift-Left
 
 					# At idx_linestart of line that has indentation?
-					idx,*_ = self.idx_linestart()
+					idx = self.idx_linestart()[0]
 					tests = [not self.line_is_empty(),
 							self.contents.compare(idx, '==', 'insert' ),
 							idx.split('.')[1] != 0,
@@ -4575,20 +4595,12 @@ class Editor(tkinter.Toplevel):
 		#print('paste ride')
 
 
-
-		have_selection = False
-
-		if len( self.contents.tag_ranges('sel') ) > 0:
-			selstart = self.contents.index( '%s' % tkinter.SEL_FIRST)
-			selend = self.contents.index( '%s' % tkinter.SEL_LAST)
-
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			have_selection = True
+		[ ins_old, have_selection, selection_started_from_top,
+		sel_start, sel_end ] = args = self.get_sel_info()
 
 
-		# Cursor index:
-		idx_insert_orig = self.contents.index(tkinter.INSERT)
-		idx_ins, col = map(int, idx_insert_orig.split('.'))
+		# Count indent diff of pasteline and copyline
+		idx_ins, col = map(int, ins_old.split('.'))
 		indent_cursor = col
 		indent_diff_cursor = indent_cursor - self.indent_selstart
 
@@ -4597,8 +4609,8 @@ class Editor(tkinter.Toplevel):
 		# and build string to be pasted.
 		tmp_orig = t.splitlines(keepends=True)
 		s = ''
+		# First line
 		s += tmp_orig[0]
-		lno = idx_ins + 1
 
 		for line in tmp_orig[1:]:
 
@@ -4626,46 +4638,35 @@ class Editor(tkinter.Toplevel):
 			#line == line
 			# same indentation level,
 			# so do nothing.
-
 			s += line
-			lno += 1
+
 
 		# Do paste string
-		self.contents.insert(idx_insert_orig, s)
-		lastline = lno - 1
-		len_lastline = len(line)
-		idx_insert_after = self.contents.index(
-			'%d.0 +%d chars' % (lastline, len_lastline) )
+		# Put mark, so one can get end index of new string
+		self.contents.mark_set('paste', ins_old)
+		self.contents.insert(ins_old, s)
 
 
-
-		tmp = t.splitlines(True)
-
-		# Taken from paste_fallback
-		##########################
-		s = self.contents.index( '%s linestart' % idx_insert_orig)
-		e = self.contents.index( '%d.0 lineend' % lastline )
-		t = self.contents.get( s, e )
-
-
+		start = self.contents.index( '%s linestart' % ins_old)
+		end = self.contents.index( 'paste lineend')
 		if self.can_do_syntax():
-			self.update_tokens( start=s, end=e, line=t )
+			self.update_tokens( start=start, end=end)
 
 
-		if have_selection:
-			self.contents.tag_add('sel', selstart, selend)
+		if not have_selection:
+			self.ensure_idx_visibility(ins_old)
+			self.wait_for(100)
+			self.contents.tag_add('sel', ins_old, 'paste')
+			self.contents.mark_set(self.anchorname, 'paste')
 
+		elif selection_started_from_top:
+				self.ensure_idx_visibility(ins_old)
 		else:
-			self.contents.tag_add('sel', idx_insert_orig, idx_insert_after)
+			self.ensure_idx_visibility('insert')
 
-		self.contents.mark_set('insert', idx_insert_orig)
-
-
-		self.wait_for(100)
-		self.ensure_idx_visibility(idx_insert_orig)
-		#####
 
 		self.contents.edit_separator()
+
 		return 'break'
 
 
@@ -5455,7 +5456,7 @@ class Editor(tkinter.Toplevel):
 		# Search backwards and get function/class names.
 		patt = ' '
 
-		if self.can_do_syntax():
+		if self.is_pyfile():
 			if scope_name := self.get_scope_path(index):
 				patt = ' @' + scope_name + ' @'
 
@@ -5509,14 +5510,16 @@ class Editor(tkinter.Toplevel):
 			p2 = r'[^[:blank:]#]'
 
 			p = p1 + p2
-			res = False
+
 
 			while pos:
 				try:
 					pos = self.contents.search(p, pos, stopindex='1.0',
 							backwards=True, regexp=True)
+
 				except tkinter.TclError as e:
 					print(e)
+					pos = False
 					break
 
 				if not pos: break
@@ -5525,62 +5528,33 @@ class Editor(tkinter.Toplevel):
 					#print('strings1', pos)
 					continue
 
-				# exit
-				res = pos
 				break
-				#########
+				#####
 
-			if not res:
+			if not pos:
 				scope_path = '__main__()'
 				return scope_path
 
-			pos = res
 			index_line_contents = self.contents.get( '%s linestart' % pos,
 				'%s lineend' % pos )
 			#########################
 
 
-		# Check possible early defline
-		##################################################
 		for char in index_line_contents:
 			if char in ['\t']: ind_last_line += 1
 			else: break
 
-		tmp = index_line_contents
-		tmp = tmp.strip()
 
-		if len(tmp) < 8:
-			pass
+		# Check possible early defline
+		##################################################
+		if scope_name := self.line_is_defline(index_line_contents):
+			scope_path = scope_name
 
-		elif tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
-			# Add to scopepath
-			patt_end = ':'
-			if '(' in tmp: patt_end = '('
-
-			if tmp[:5] == 'async':
-				tmp = tmp[5:].strip()
-
-			if tmp[:3] == 'def':
-				tmp = tmp[3:].strip()
-
-			if tmp[:5] == 'class':
-				tmp = tmp[5:].strip()
-
-			try:
-				e = tmp.index(patt_end)
-				tmp = tmp[:e]
-				scope_path = tmp
-
-			except ValueError:
-				pass
-			######################
 		# Reached indent0,
 		# Since not actually looking next defline but scope-path of index
 		# --> exit
 		if ind_last_line == 0:
-			if scope_path == '':
-				scope_path = '__main__()'
-
+			if not scope_path: scope_path = '__main__()'
 			return scope_path
 		############################
 		# Below this, real start
@@ -5606,7 +5580,6 @@ class Editor(tkinter.Toplevel):
 		flag_match = False
 
 		while pos:
-
 			try:
 				# Count is tkinter.IntVar which is used to
 				# count indentation level of matched line.
@@ -5619,7 +5592,7 @@ class Editor(tkinter.Toplevel):
 
 			if not pos: break
 
-			if 'strings' in self.contents.tag_names(pos):
+			elif 'strings' in self.contents.tag_names(pos):
 				#print('strings2', pos)
 				continue
 
@@ -5634,62 +5607,27 @@ class Editor(tkinter.Toplevel):
 			# 	Then if it also is definition line --> add to scopepath
 			# 	update ind_last_line
 			def_line_contents = tmp = self.contents.get( pos, '%s lineend' % pos )
-			tmp = tmp.strip()
 
-			if len(tmp) < 8:
-				pass
-
-			elif tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
-				# Add to scopepath
-				patt_end = ':'
-				if '(' in tmp: patt_end = '('
-
-
-				if tmp[:5] == 'async':
-					tmp = tmp[5:].strip()
-
-				if tmp[:3] == 'def':
-					tmp = tmp[3:].strip()
-
-				if tmp[:5] == 'class':
-					tmp = tmp[5:].strip()
-
-				try:
-					e = tmp.index(patt_end)
-				except ValueError:
-					# Found line starting with keyword, but no patt_end
-					#print('Error message from get_scope_path(): ', pos)
-
-					# Question: Why not:
-					# 	pos = '%s -1c' % pos
-					# 	To avoid rematching same line?
-					# Answer:
-					#	Search is backwards, so even if there is a match at pos,
-					#	(where search 'starts' every round), it is not taken as match,
-					#	because it is considered to be completely outside of search-range,
-					#	which 'ends' at pos, when searching backwards.
-					#
-					# For more info about searching, backwards, and indexes:
-					#	print_search_help()
-					continue
-
-
-				tmp = tmp[:e]
-
+			########
+			if scope_name := self.line_is_defline(def_line_contents):
 				if scope_path != '':
-					scope_path = tmp +'.'+ scope_path
+					scope_path = scope_name +'.'+ scope_path
 				else:
-					scope_path = tmp
+					scope_path = scope_name
 
 				flag_match = True
+			########
 
 
 			# Update search pattern and indentation of matched pos line
 			if not flag_finish: ind_last_line = ind_curline
 
 
-			# Exit
-			if flag_match and flag_finish: break
+			# SUCCESS
+			if flag_match and flag_finish:
+				break
+
+
 			flag_match = False
 
 
@@ -5702,13 +5640,20 @@ class Editor(tkinter.Toplevel):
 				patt = r'^[acd]'
 				flag_finish = True
 
-
 			# Question: Why not:
 			# 	pos = '%s -1c' % pos
-			# 	To avoid rematching same line forever? (in a while-loop)
-			# Answer: See above
+			# 	To avoid rematching same line?
 			#
-			#### END OF WHILE ###########################
+			# Answer:
+			#	Search is backwards, so even if there is a match at pos,
+			#	(where search 'starts' every round), it is not taken as match,
+			#	because it is considered to be completely outside of search-range,
+			#	which 'ends' at pos, when searching backwards.
+			#
+			# For more info about searching, backwards, and indexes:
+			#	print_search_help()
+			#
+			#### END OF WHILE #########
 
 
 		if scope_path == '':
@@ -5764,6 +5709,7 @@ class Editor(tkinter.Toplevel):
 			break
 			###################
 
+
 		pos_line_contents = self.contents.get( '%s linestart' % pos,
 			'%s lineend' % pos )
 
@@ -5772,30 +5718,10 @@ class Editor(tkinter.Toplevel):
 			if char in ['\t']: ind_last_line += 1
 			else: break
 
-
 		# Check if defline already
-		tmp = pos_line_contents.strip()
-		if len(tmp) < 8:
-			pass
-
-		elif tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
-
-			patt_end = ':'
-			if '(' in tmp: patt_end = '('
-			if tmp[:5] == 'async':
-				tmp = tmp[5:].strip()
-			if tmp[:3] == 'def':
-				tmp = tmp[3:].strip()
-			if tmp[:5] == 'class':
-				tmp = tmp[5:].strip()
-			try:
-				e = tmp.index(patt_end)
-				tmp = tmp[:e]
-				idx = self.idx_linestart(index=pos)[0]
-				return pos_line_contents.strip(), ind_last_line, idx
-
-			except ValueError:
-				pass
+		if res := self.line_is_defline(pos_line_contents):
+			idx = self.idx_linestart(index=pos)[0]
+			return pos_line_contents.strip(), ind_last_line, idx
 
 		### Stage 1 End ########
 
@@ -5838,11 +5764,9 @@ class Editor(tkinter.Toplevel):
 			if not pos:
 				return '__main__()', 0, '1.0'
 
-			if 'strings' in self.contents.tag_names(pos):
+			elif 'strings' in self.contents.tag_names(pos):
 				#print('strings4', pos)
 				continue
-
-
 
 			################
 			# -1: remove terminating char(not blank not #) from matched char count
@@ -5853,54 +5777,18 @@ class Editor(tkinter.Toplevel):
 			# Has one (or more) indentation level smaller indentation than ind_last_line
 			# 	Then if it also is definition line --> success
 			# 	update ind_last_line
-			def_line_contents = tmp = self.contents.get( pos, '%s lineend' % pos )
-			tmp = tmp.strip()
+			def_line_contents = self.contents.get( pos, '%s lineend' % pos )
 
-			if len(tmp) < 8:
-				pass
-
-			if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
-
-				patt_end = ':'
-				if '(' in tmp: patt_end = '('
-
-
-				if tmp[:5] == 'async':
-					tmp = tmp[5:].strip()
-
-				if tmp[:3] == 'def':
-					tmp = tmp[3:].strip()
-
-				if tmp[:5] == 'class':
-					tmp = tmp[5:].strip()
-
-				try:
-					e = tmp.index(patt_end)
-				except ValueError:
-					# Found line starting with keyword, but no patt_end
-					#
-					# Question: Why not:
-					# 	pos = '%s -1c' % pos
-					# 	To avoid rematching same line?
-					# Answer:
-					#	Search is backwards, so even if there is a match at pos,
-					#	(where search 'starts' every round), it is not taken as match,
-					#	because it is considered to be completely outside of search-range,
-					#	which 'ends' at pos, when searching backwards.
-					#
-					# For more info about searching, backwards, and indexes:
-					#	print_search_help()
-					continue
-
-
-				# ON SUCCESS
-				tmp = tmp[:e]
+			#####
+			if res := self.line_is_defline(def_line_contents):
 				idx = self.idx_linestart(index=pos)[0]
 
+				# SUCCESS
 				return def_line_contents.strip(), ind_curline, idx
+			#####
 
-			if absolutely_next:
-				pass
+			elif absolutely_next: pass
+
 			# Update search pattern and indentation of matched pos line
 			elif ind_curline > 1:
 				patt = r'^[[:blank:]]{0,%d}[^[:blank:]#]' % (ind_curline-1)
@@ -5912,7 +5800,7 @@ class Editor(tkinter.Toplevel):
 
 			### Stage 2 End ###
 
-		# ON FAIL
+		# FAIL
 		return '__main__()', 0, '1.0'
 
 
@@ -6017,7 +5905,7 @@ class Editor(tkinter.Toplevel):
 			go to function definition
 		'''
 
-		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search']):
+		if (not self.is_pyfile()) or (self.state not in ['normal', 'search']):
 			self.bell()
 			return "break"
 
@@ -7780,14 +7668,19 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				edit_search_setting( '-regexp' )
 
 
-			Example2, use regexp, include elided text, search only from cursor to fileend:
+			Example2, search backwards, give start-index if not sure what were old ones:
+
+				edit_search_setting( '-backwards -start end' )
+
+
+			Example3, use regexp, include elided text, search only from cursor to fileend:
 
 				my_settings = "-regexp -elide -start insert -end end"
 
 				edit_search_setting( my_settings )
 
 
-			Example3, exact (default) search, backwards from cursor to 50 lines up:
+			Example4, exact (default) search, backwards from cursor to 50 lines up:
 
 				my_settings = "-backwards -start insert -end insert -50 lines"
 

@@ -332,6 +332,14 @@ were broken due self.contents.bbox('insert') --> None if cursor is offscreen
 	bookmark_animate(): done with this check at toggle_bookmark()
 		not self.contents.bbox('insert')
 #########################
+after paste: selection is sometimes wrong
+fixed ok?
+#########################
+line_is_defline()
+tab is_pyfile()
+can_do_syntax()
+#########################
+
 
 Below this: not done
 
@@ -344,37 +352,109 @@ Below this: not done
 
 
 
-
-
-update help
-uncomment '##' must be at indent0 or it can not be removed --> help?
-Control-d not Control-c to quit multiline command --> help
-
-
-after paste: selection is sometimes wrong, maybe because idx_linestart?
-check this
-
-
-sel many lines:
-linenum yview_scroll etc:  center_view()
-
-
-
-handle_normal_entry
-
-
-stash if start fails?
-
-
-
-#########################################
+#########################################################################################
 Alt-
 Cmd-shift-FC
 	select_scope() incremental
 	F select cur scope
 	C select next class line
 
-only Cmd-shift-F
+only Cmd-shift-F ?
+
+
+
+###################################
+increment cur_ind only, up or down:
+Cmd-12?
++shift might be taken
+
+0: get_sel_info()
+
+if have_selection:
+
+	1: check if selection, on other or both ends, is not full function:
+
+		if sel_start != defline or sel_end != end of last function:
+			return True
+
+
+	2: check if selection starts at different scope than ends, for example
+		starts inside scope of method of a class, moves up over class definition line
+		and ends at there to some line with ind_level == class_level:
+
+		if ind_sel_start != ind_last_defline:
+			return True
+
+
+	if check 1 or 2: bell()
+
+
+
+
+	if direction of command == direction of selection:
+		get absolutely next defline of direction:
+		while ind_next_defline > ind_line_old: continue
+		elif ind_next_defline < ind_line_old: bell()
+		else:
+			# ind_defline_old == ind_defline_new
+			#get_sel_info()?
+			now have sel_range_old, ins_old, ins_new
+			see new defline
+			set_selection()
+			if both directions are up:
+				cursor to new defline
+			#if both directions are down:
+			else:
+				cursor to selend
+
+
+	elif direction of command is not direction of selection:
+
+		if direction of command is up and direction of selection is down:
+
+			as above, but after have next defline:
+				set_selection()
+				if not have_selection:
+					see sel_start_old
+					cursor to sel_start_old
+				else:
+					# just finding last defline in selection
+					get absolutely next defline:
+					while ind_next_defline > ind_line_old: continue
+					elif ind_next_defline < ind_line_old: bell()
+					else:
+						cursor not to new defline, only see new defline
+
+
+		elif direction of command is down and direction of selection is up:
+			as above, but after have next defline:
+				set_selection()
+				if have_selection:
+					see sel_start
+					cursor to sel_start
+
+				else:
+					see sel_start_old
+					cursor to sel_start_old
+
+
+
+
+
+
+####################################
+increment to next(less) ind, no direction:
+Cmd-3?
++ Shift is taken
+
+
+if have selection:
+	if sel_start is defline:
+		if ind_defline_old > ind_defline_new:
+			save idx_scopestart_old if want cancel
+			replace selection with new scope
+
+
 
 
 Control-89
@@ -387,28 +467,16 @@ Cmd-Shift-89
  goto absolutely_next defline (diving)
 
 
-alt --> ctrl done ok?
-save() end comments also selected ok
-
-check:
-if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def'
-
-if not ? update pos?
 
 
 
 
-line_is_defline() ?
+
+
+when select save() check done: end comments also selected ok
 
 
 async def only
-
-
-
-
-
-if in 'strings': continue
-done ok?
 
 
 @f1
@@ -417,9 +485,8 @@ def funcname[str]():    not done #########################
 
 
 get_scope_end() get_scope_start() get_scope_path()
-get_scope_start() must be separate of get_scope_path() done ok?
+################################################################################################
 
-########################
 
 
 
@@ -430,6 +497,28 @@ get_scope_start() must be separate of get_scope_path() done ok?
 
 
 idx_lineend()  == display end
+
+ensure_idx_visibility(index)
+puts always insert to index ###############################
+
+
+update help
+uncomment '##' must be at indent0 or it can not be removed --> help?
+Control-d not Control-c to quit multiline command --> help
+
+
+sel many lines:
+linenum yview_scroll etc:  center_view()
+
+
+handle_normal_entry
+
+
+searching, if scrolled manually to see next match and then ctrl-n,
+	then show_next is not ideal
+
+
+stash if start fails?
 
 
 python not remommended install with brew?
