@@ -1051,7 +1051,25 @@ class Editor(tkinter.Toplevel):
 		self.avoid_viewsync_mess()
 		self.update_idletasks()
 		self.viewsync()
+
 		self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
+
+		# Remove some unwanted key-sequences, which otherwise would
+		# mess with searching, from couple of virtual events.
+		tmp = list()
+		for seq in self.contents.event_info('<<NextLine>>'):
+			if seq != '<Control-Key-n>': tmp.append(seq)
+
+		self.contents.event_delete('<<NextLine>>')
+		self.contents.event_add('<<NextLine>>', *tmp)
+
+		tmp.clear()
+		for seq in self.contents.event_info('<<PrevLine>>'):
+			if seq != '<Control-Key-p>': tmp.append(seq)
+
+		self.contents.event_delete('<<PrevLine>>')
+		self.contents.event_add('<<PrevLine>>', *tmp)
+
 		self.__class__.alive = True
 		self.update_title()
 
@@ -1174,13 +1192,13 @@ class Editor(tkinter.Toplevel):
 			Puts insertion cursor to index.
 		'''
 
-		b=2
+		b = 2
 		if back:
-			b=back
+			b = back
 
-		self.contents.mark_set('insert', index)
-		s = self.contents.bbox('%s - %ilines' % (index,b))
-		e = self.contents.bbox('%s + 4lines' % index)
+		self.contents.mark_set( 'insert', index)
+		s = self.contents.bbox( '%s - %i lines' % (index, b) )
+		e = self.contents.bbox( '%s + 4 lines' % index)
 
 		tests = [
 				not s,
@@ -1189,9 +1207,9 @@ class Editor(tkinter.Toplevel):
 				]
 
 		if any(tests):
-			self.contents.see('%s - %ilines' % (index,b))
+			self.contents.see( '%s - %i lines' % (index, b) )
 			self.update_idletasks()
-			self.contents.see('%s + 4lines' % index)
+			self.contents.see( '%s + 4 lines' % index)
 
 
 	def quit_me(self, event=None):
@@ -7413,18 +7431,15 @@ class Editor(tkinter.Toplevel):
 		# self.search_focus is range of focus-tag.
 		self.search_focus = (start, end)
 
-
 		# idx: int
 		# start: tkinter.Text -index
 		self.handle_search_entry(idx, start)
 
-
-		# Is it viewable?
+		# Is it not viewable?
 		if not self.contents.bbox(start):
 			self.wait_for(100)
 
 		self.ensure_idx_visibility(start)
-
 
 		if self.entry.flag_start:
 			if self.state == 'search':
@@ -7943,7 +7958,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 				self.bid_show_next = self.bind("<Control-n>", self.show_next )
 				self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
-
 				self.entry.flag_start = True
 
 				self.contents.focus_set()
@@ -8080,9 +8094,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.bind( "<Return>", self.do_nothing_without_bell)
 
 
-		#self.wait_for(200)
-
-		# set cursor pos
+		# Set cursor pos
 		try:
 			if self.save_pos:
 				line = self.save_pos
@@ -8459,7 +8471,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		self.bid_show_next = self.bind("<Control-n>", self.show_next )
 		self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
-
 
 		self.entry.bind("<Return>", self.skip_bindlevel)
 		self.contents.bind("<Return>", self.skip_bindlevel)

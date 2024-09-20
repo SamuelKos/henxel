@@ -339,6 +339,14 @@ line_is_defline()
 tab is_pyfile()
 can_do_syntax()
 #########################
+searching, if scrolled manually to see next match and then ctrl-n,
+	-->show_next is not ideal
+
+	Control-np removed from NextLine PrevLine virtual events because of this
+	at end of init
+	done ok?
+#########################
+
 
 
 Below this: not done
@@ -491,11 +499,6 @@ get_scope_end() get_scope_start() get_scope_path()
 
 
 
-
-
-
-
-
 idx_lineend()  == display end
 
 ensure_idx_visibility(index)
@@ -512,10 +515,6 @@ linenum yview_scroll etc:  center_view()
 
 
 handle_normal_entry
-
-
-searching, if scrolled manually to see next match and then ctrl-n,
-	then show_next is not ideal
 
 
 stash if start fails?
@@ -618,8 +617,7 @@ when paste multiline, then undo that, then paste again same thing, then again un
 check is it necessary to check event.state in select_by_words etc
 
 
-fix arrow updown (put cursor to same col_nextline or
-	lineend if nextline is shorter than col_curline)
+show cursor when disabled state, no?
 
 
 bitmap check ensure width?
