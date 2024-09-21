@@ -735,17 +735,14 @@ class Editor(tkinter.Toplevel):
 			self.contents.bind( "<Control-Shift-Down>", self.move_many_lines)
 
 			self.contents.bind( "<Control-8>", self.walk_scope)
-			self.contents.bind( "<Control-9>",
-				lambda event: self.walk_scope(event, **{'down':True}) )
-
 			self.contents.bind( "<Control-Shift-(>",
 				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
+			self.contents.bind( "<Control-9>",
+				lambda event: self.walk_scope(event, **{'down':True}) )
 			self.contents.bind( "<Control-Shift-)>",
 				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
 
 			self.contents.bind( "<Alt-Shift-F>", self.select_scope)
-			self.contents.bind( "<Alt-Shift-C>",
-				lambda event: self.select_scope(event, **{'scope':'class'}) )
 
 
 			self.contents.bind("<Left>", self.check_sel)
@@ -772,20 +769,18 @@ class Editor(tkinter.Toplevel):
 			#self.contents.bind( "<Command-Key-k>", lambda event, arg=('AAA'): print(arg) )
 			#self.contents.bind( "<Mod1-Key-k>", lambda event, arg=('AAA'): print(arg) )
 
-			# 8,9 as '(' and ')' nordic
+			# 8,9 as '(' and ')' without Shift, nordic key-layout
 			# 9,0 in us/uk ?
 			self.contents.bind( "<Mod1-Key-8>", self.walk_scope)
-			self.contents.bind( "<Mod1-Key-9>",
-				lambda event: self.walk_scope(event, **{'down':True}) )
-
 			self.contents.bind( "<Mod1-Shift-(>",
 				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
+			self.contents.bind( "<Mod1-Key-9>",
+				lambda event: self.walk_scope(event, **{'down':True}) )
 			self.contents.bind( "<Mod1-Shift-)>",
 				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
 
 			self.contents.bind( "<Mod1-Shift-F>", self.select_scope)
-			self.contents.bind( "<Mod1-Shift-C>",
-				lambda event: self.select_scope(event, **{'scope':'class'}) )
+
 
 			self.contents.bind( "<Mod1-Key-y>", self.yank_line)
 			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
@@ -1398,7 +1393,7 @@ class Editor(tkinter.Toplevel):
 		col= ''
 		ln = ''
 
-		# line-height is used as step, it depends on font:
+		# line-height is used as step, it depends on font
 		step = self.bbox_height
 
 		nl = '\n'
@@ -1448,6 +1443,14 @@ class Editor(tkinter.Toplevel):
 			# (bbox is cell that holds a character)
 			# (x-offset, y-offset, width, height) in pixels
 			# Want y-offset of first visible line, and reverse it:
+
+			# NOTE ABOUT BBOX
+			# if used normal index like bbox('insert +2lines') or bbox('12.1')
+			# THen, if that index is not currently visible on screen,
+			# bbox returns: None
+
+			# index like '@0,0' are different by definition, they do not refer
+			# to content of Text-widget, but structure of widget window.
 
 			y_offset = self.contents.bbox('@0,0')[1]
 
@@ -2107,11 +2110,11 @@ class Editor(tkinter.Toplevel):
 				self.token_err = True
 
 
-		# from backspace_override:
 		if self.check_pars:
 			startl = self.check_pars
 			par_err = self.checkpars(startl)
 
+		# from backspace_override:
 		elif self.par_err:
 			startl = False
 			par_err = self.checkpars(startl)
@@ -2131,16 +2134,18 @@ class Editor(tkinter.Toplevel):
 
 
 	def checkpars(self, idx_start):
-		# possible par mismatch may be caused from another line,
+		''' idx_start: Text-index or False
+		'''
+		# Possible par mismatch may be caused from another line,
 		# so find current block: find first empty line before and after curline
 		# then count pars in it.
 
 		if not idx_start:
 			# line had nothing but brace in it and it were deleted
-			idx_start = self.contents.index(tkinter.INSERT)
+			idx_start = 'insert'
 
-		curline = int( idx_start.split('.')[0] )
-		startline, endline, lines = self.find_empty_lines(curline)
+		startline, lines = self.find_empty_lines(index=idx_start)
+		startline = int( self.contents.index(startline).split('.')[0] )
 		err_indexes = self.count_pars(startline, lines)
 
 		err = False
@@ -2154,7 +2159,6 @@ class Editor(tkinter.Toplevel):
 			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
 			self.contents.tag_add('mismatch', err_idx, '%s +1c' % err_idx)
 
-		#print(err)
 		return err
 
 
@@ -2217,7 +2221,7 @@ class Editor(tkinter.Toplevel):
 
 
 		# no extra closer in block.
-		# Return last extra opener:
+		# Return first extra opener:
 		idxlist = list()
 
 		for item in [ pars, bras, curls ]:
@@ -2240,80 +2244,44 @@ class Editor(tkinter.Toplevel):
 			return False
 
 
-	def find_empty_lines(self, lnstart):
+	def find_empty_lines(self, index='insert'):
 		'''	Finds first empty lines before and after current line
 
 			returns
 				linenumber of start and end of the block
 				and list of lines.
 
-			called from update_tokens
+			Called from check_pars()
 		'''
 
-		lines = list()
+		startline = index
+		patt = r'^[[:blank:]]*$'
+		pos = index
 
-		# first empty line before curline:
-		endln = 1
-		ln = lnstart
+		try:
+			pos = self.contents.search(patt, pos, stopindex='1.0', regexp=True, backwards=True)
+		except tkinter.TclError as e:
+			print(e)
+			self.bell()
 
-		if ln > endln:
-			ln -= 1
-			t = self.contents.get('%i.0' % ln, '%i.end' % ln)
+		if pos: startline = pos
+		#######################
 
-			while t != '' and not t.isspace():
-				lines.append(t)
-				ln -= 1
+		endline = 'end'
+		pos = index
 
-				if ln < endln:
-					break
+		try:
+			pos = self.contents.search(patt, pos, stopindex='end', regexp=True)
+		except tkinter.TclError as e:
+			print(e)
+			self.bell()
 
-				t = self.contents.get('%i.0' % ln, '%i.end' % ln)
-
-			ln += 1
-
-		else:
-			pass
-			# curline is firstline
-
-
-		# ln is now first empty linenum above curline or firstline
-		startline = ln
+		if pos: endline = pos
 
 
-		# add curline to list
-		ln = lnstart
-		lines.reverse()
-		t = self.contents.get('%i.0' % ln, '%i.end' % ln)
-		lines.append(t)
+		lines = self.contents.get('%s linestart' % startline, '%s lineend' % endline).splitlines()
 
-
-		# first empty line after curline:
-		endln = int( self.contents.index(tkinter.END).split('.')[0] )
-		ln += 1
-
-		if ln < endln:
-
-			t = self.contents.get('%i.0' % ln, '%i.end' % ln)
-
-			while  t != '' and not t.isspace():
-				lines.append(t)
-				ln += 1
-
-				if ln > endln:
-					break
-
-				t = self.contents.get('%i.0' % ln, '%i.end' % ln)
-
-			ln -= 1
-
-		else:
-			# curline is lastline
-			pass
-
-		# ln is now first empty linenum after curline or lastline
-		endline = ln
-
-		return startline, endline, lines
+		return startline, lines
 
 
 ########## Syntax highlight End
@@ -3269,6 +3237,8 @@ class Editor(tkinter.Toplevel):
 
 				if scope_line != '__main__()':
 					idx_scope_end = pos = self.get_scope_end(ind_defline, index=idx_scope_start)
+				# Q: Why not: else: return here, after if?
+				# A: 'insert' could be before(more up) than first defline
 
 
 			# Now have idx_scope_start, idx_scope_end of current scope.
@@ -3297,17 +3267,17 @@ class Editor(tkinter.Toplevel):
 				if 'strings' in self.contents.tag_names(pos):
 					#print('strings3', pos)
 					# Dont want rematch curline
-					pos = '%s +1 chars' % pos
+					pos = '%s +1 lines' % pos
 					continue
 
 				lineend = '%s lineend' % pos
 				linestart = '%s linestart' % pos
 				line = self.contents.get( linestart, lineend )
 				if res := self.line_is_defline(line):
-					pos = self.idx_linestart(pos)
+					pos = self.idx_linestart(index=pos)[0]
 					break
 
-				pos = '%s +1 chars' % pos
+				pos = '%s +1 lines' % pos
 				##################################
 		# Put cursor on defline
 		try:
@@ -3321,7 +3291,7 @@ class Editor(tkinter.Toplevel):
 		return "break"
 
 
-	def select_scope(self, event=None, index='insert', scope='func'):
+	def select_scope(self, event=None, index='insert'):
 		''' Select current scope, function or class.
 
 			Function can be selected if cursor is:
@@ -3332,14 +3302,11 @@ class Editor(tkinter.Toplevel):
 
 				Function can be selected even after return line
 
-
-			Class can be selected if cursor is:
-				1: At definition line
-
-				2: Below any line that directly or indirectly belongs to scope
-					of a class (== can belong to method for example)
-
-				Class can be selected even after last line of scope
+			Same is true for class but, since there usually is not
+			code at the end of class that does not belong to method:
+			When trying to select class at the end of class
+			--> get last method selected instead
+			--> goto class definition line, try again
 
 		'''
 		# Why can_do_syntax, instead of is_pyfile? Because tag: 'strings' is
@@ -3349,35 +3316,10 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return "break"
 
-##		####
-##		[ ins_old, have_selection, selection_started_from_top,
-##		sel_start, sel_end ] = args = self.get_sel_info()
-##
-##		if have_selection:
-##			lineend = '%s lineend' % ins_old
-##			linestart = '%s linestart' % ins_old
-##			contents_selstart = self.contents.get( linestart, lineend )
-
-
-
-
-
-
-
-
-
-
-
-		####
+		# +1 lines: Enable matching defline at insert
 		pos = '%s +1 lines' % index
 		(scope_line, ind_defline,
 		idx_scope_start) = self.get_scope_start(index=pos)
-
-		if scope == 'class':
-			while scope_line[:5] != 'class' and scope_line != '__main__()':
-				(scope_line, ind_defline,
-				idx_scope_start) = self.get_scope_start(index=idx_scope_start)
-
 
 		if scope_line != '__main__()':
 			idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
@@ -3388,7 +3330,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_remove('sel', '1.0', tkinter.END )
 		self.wait_for(20)
 
-		# Is start of selection viewable?
+		# Is start of selection not viewable?
 		if not self.contents.bbox(idx_scope_start):
 			self.wait_for(121)
 			self.ensure_idx_visibility(idx_scope_start, back=4)
@@ -4944,7 +4886,6 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			# Deleting one letter
 
-
 			# Rest is multiline string check
 			chars = self.contents.get( '%s - 3c' % tkinter.INSERT, '%s + 2c' % tkinter.INSERT )
 
@@ -4974,7 +4915,6 @@ class Editor(tkinter.Toplevel):
 			# To trigger parcheck if only one of these was in line and it was deleted:
 			if prev_char in pars:
 				self.par_err = True
-
 
 		#print('deleting')
 
@@ -5873,7 +5813,7 @@ class Editor(tkinter.Toplevel):
 			if 'strings' in self.contents.tag_names(pos):
 				#print('strings5', pos)
 				# Dont want rematch curline
-				pos = '%s +1 chars' % pos
+				pos = '%s +1 lines' % pos
 				continue
 
 			break

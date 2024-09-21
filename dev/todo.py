@@ -346,142 +346,39 @@ searching, if scrolled manually to see next match and then ctrl-n,
 	at end of init
 	done ok?
 #########################
+fixed find_empty_lines
+#########################
 
 
 
 Below this: not done
 
 
+check win linux:
+	self.contents.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
+	Alt-shift-F
+	etc?
 
-
-
-
-
-
-
-
-#########################################################################################
-Alt-
-Cmd-shift-FC
-	select_scope() incremental
-	F select cur scope
-	C select next class line
-
-only Cmd-shift-F ?
-
-
-
-###################################
-increment cur_ind only, up or down:
-Cmd-12?
-+shift might be taken
-
-0: get_sel_info()
-
-if have_selection:
-
-	1: check if selection, on other or both ends, is not full function:
-
-		if sel_start != defline or sel_end != end of last function:
-			return True
-
-
-	2: check if selection starts at different scope than ends, for example
-		starts inside scope of method of a class, moves up over class definition line
-		and ends at there to some line with ind_level == class_level:
-
-		if ind_sel_start != ind_last_defline:
-			return True
-
-
-	if check 1 or 2: bell()
-
-
-
-
-	if direction of command == direction of selection:
-		get absolutely next defline of direction:
-		while ind_next_defline > ind_line_old: continue
-		elif ind_next_defline < ind_line_old: bell()
-		else:
-			# ind_defline_old == ind_defline_new
-			#get_sel_info()?
-			now have sel_range_old, ins_old, ins_new
-			see new defline
-			set_selection()
-			if both directions are up:
-				cursor to new defline
-			#if both directions are down:
-			else:
-				cursor to selend
-
-
-	elif direction of command is not direction of selection:
-
-		if direction of command is up and direction of selection is down:
-
-			as above, but after have next defline:
-				set_selection()
-				if not have_selection:
-					see sel_start_old
-					cursor to sel_start_old
-				else:
-					# just finding last defline in selection
-					get absolutely next defline:
-					while ind_next_defline > ind_line_old: continue
-					elif ind_next_defline < ind_line_old: bell()
-					else:
-						cursor not to new defline, only see new defline
-
-
-		elif direction of command is down and direction of selection is up:
-			as above, but after have next defline:
-				set_selection()
-				if have_selection:
-					see sel_start
-					cursor to sel_start
-
-				else:
-					see sel_start_old
-					cursor to sel_start_old
-
-
-
-
-
-
-####################################
-increment to next(less) ind, no direction:
-Cmd-3?
-+ Shift is taken
-
-
-if have selection:
-	if sel_start is defline:
-		if ind_defline_old > ind_defline_new:
-			save idx_scopestart_old if want cancel
-			replace selection with new scope
-
-
+Cmd-shift-F
+select cur scope only
 
 
 Control-89
-Cmd-()-89
-	walk_scope()
-	(8 goto next defline (rising)
-	)9 goto prev defline
-
-Cmd-Shift-89
- goto absolutely_next defline (diving)
+Cmd-89
+	walk_scope() (rising tendency)
+	8 goto next(up) defline
+	9 goto prev(down) defline
 
 
+Control-Shift-()
+Cmd-Shift-()
+	walk_scope() (diving tendency)
+ 	( goto absolutely next(up) defline
+	) goto absolutely prev(down) defline
 
 
 
 
-
-
-when select save() check done: end comments also selected ok
 
 
 async def only
@@ -517,16 +414,27 @@ linenum yview_scroll etc:  center_view()
 handle_normal_entry
 
 
+tab_over, token no can update etc
+dump tokens, when view change
+load(tag1,list1,tag2,list2)
+
+def f1():
+	l1= ['insert','insert+1c','insert+2c','insert+3c']
+	tag1='calls'
+	s= tag1, *l1
+	e.contents.tag_add(*s)
+
+
 stash if start fails?
 
 
 python not remommended install with brew?
+pyenv
 
-
-get(elided)
+get(elided) -displaychars
 elided text is getted by default
-structure-viewer with taglinks
-linenumbers
+structure-viewer with taglinks?
+linenumbers works already?
 #####################################################
 replaced less yellow
 
