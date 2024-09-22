@@ -348,11 +348,28 @@ searching, if scrolled manually to see next match and then ctrl-n,
 #########################
 fixed find_empty_lines
 #########################
+load() check save active tab first
+save() :-1 when active tab
+########################
+paste multiline with empty lines between, to indent < indent_orig
+--> empty lines are stripped
 
+reason: not checked if line.isspace()
+done, ok?
+########################
 
 
 Below this: not done
 
+
+
+u+2026
+…
+u+203a
+›
+
+u+22c1
+u+02c5
 
 check win linux:
 	self.contents.bind( "<Alt-Key-BackSpace>", self.del_to_dot)

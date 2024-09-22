@@ -23,6 +23,7 @@
 # Save and Load
 # Bookmarks and Help
 # Indent and Comment
+# Elide
 # Search
 # Replace
 #
@@ -780,7 +781,7 @@ class Editor(tkinter.Toplevel):
 				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
 
 			self.contents.bind( "<Mod1-Shift-F>", self.select_scope)
-
+			self.contents.bind( "<Mod1-Shift-E>", self.elide_scope)
 
 			self.contents.bind( "<Mod1-Key-y>", self.yank_line)
 			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
@@ -967,6 +968,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('calls', font=self.boldfont)
 
 		self.contents.tag_config('focus', underline=True)
+		self.contents.tag_config('elided', elide=True)
 		self.contents.tag_config('animate')
 
 		# Search-tags have highest priority
@@ -4574,7 +4576,10 @@ class Editor(tkinter.Toplevel):
 
 		for line in tmp_orig[1:]:
 
-			if indent_diff_cursor > 0:
+			if line.isspace():
+				pass
+
+			elif indent_diff_cursor > 0:
 				# For example:
 				#
 				#	self.indent_selstart
@@ -6152,11 +6157,6 @@ class Editor(tkinter.Toplevel):
 
 			return
 
-		if self.tabs[self.tabindex].type == 'normal':
-			if not self.save(activetab=True):
-				self.bell()
-				return 'break'
-
 
 		# Using same tab:
 		try:
@@ -6223,6 +6223,11 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal':
 			self.bell()
 			return 'break'
+
+		elif self.tabs[self.tabindex].type == 'normal':
+			if not self.save(activetab=True):
+				self.bell()
+				return 'break'
 
 
 		# Pressed Open-button
@@ -6428,7 +6433,7 @@ class Editor(tkinter.Toplevel):
 						self.tabs[self.tabindex].type = 'normal'
 				except EnvironmentError as e:
 					print(e.__str__())
-					print(f'\n Could not save file: {fpath_in_entry}')
+					print(f'\n Could not create file: {fpath_in_entry}')
 					return False
 
 				if self.tabs[self.tabindex].filepath != None:
@@ -6449,7 +6454,7 @@ class Editor(tkinter.Toplevel):
 						pass
 				except EnvironmentError as e:
 					print(e.__str__())
-					print(f'\n Could not save file: {fpath_in_entry}')
+					print(f'\n Could not create file: {fpath_in_entry}')
 
 					if self.tabs[self.tabindex].filepath != None:
 						del_ins_move()
@@ -6481,7 +6486,7 @@ class Editor(tkinter.Toplevel):
 
 			# If closing tab or loading file:
 			if '.py' in self.tabs[self.tabindex].filepath.suffix:
-				# Check indent (tabify) and rstrip:
+				# Check indent (tabify) and strip
 				tmp = self.tabs[self.tabindex].contents.splitlines(True)
 				tmp[:] = [self.tabify(line) for line in tmp]
 				tmp = ''.join(tmp)[:-1]
@@ -6489,8 +6494,11 @@ class Editor(tkinter.Toplevel):
 				tmp = self.tabs[self.tabindex].contents
 				tmp = tmp[:-1]
 
-			if self.tabs[self.tabindex].contents == self.tabs[self.tabindex].oldcontents:
+
+			# [:-1]: text widget adds dummy newline at end of file when editing
+			if tmp == self.tabs[self.tabindex].oldcontents:
 				return True
+
 
 			try:
 				with open(self.tabs[self.tabindex].filepath, 'w', encoding='utf-8') as f:
@@ -7223,6 +7231,55 @@ class Editor(tkinter.Toplevel):
 		return "break"
 
 ########## Indent and Comment End
+################ Elide Begin
+
+	def elide_scope(self, event=None, index='insert'):
+		'''asd
+		'''
+		if (not self.can_do_syntax()) or (self.state not in ['normal']):
+			self.bell()
+			return "break"
+
+
+		self.contents.tag_remove('sel', '1.0', tkinter.END)
+		self.wait_for(50)
+
+		r = self.contents.tag_nextrange('elided', index, '%s +1 lines' % index)
+
+		# Show scope
+		if len(r) > 0:
+			line_next_elided = int(float(r[0]))
+			line_curline = int(float(self.contents.index(index)))
+
+			if line_curline == line_next_elided:
+				self.contents.tag_remove('elided', r[0], r[1])
+
+				return 'break'
+
+
+		# Hide scope
+		#
+		# +1 lines: Enable matching defline at insert
+		pos = '%s +1 lines' % index
+		(scope_line, ind_defline,
+		idx_scope_start) = self.get_scope_start(index=pos)
+
+		if scope_line != '__main__()':
+			idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
+		else:
+			self.bell()
+			return 'break'
+
+
+		s = '%s lineend' % idx_scope_start
+		e = idx_scope_end
+
+		self.contents.tag_add('elided', s, e)
+
+		return 'break'
+
+
+################ Elide End
 ################ Search Begin
 
 	def search_next(self, event=None, back=False):
