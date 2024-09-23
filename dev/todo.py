@@ -363,6 +363,25 @@ Below this: not done
 
 
 
+
+safe_index = get_safe_index(index)
+elide-safe indexing check:
+	Areas checked:
+		Elide
+
+	dont need safe-index as argument:
+		elide_scope()
+		line_is_defline()
+
+	needs safe-index as argument:
+		line_is_elided(safe_index)
+
+
+
+
+
+
+
 u+2026
 …
 u+203a
@@ -431,15 +450,10 @@ linenum yview_scroll etc:  center_view()
 handle_normal_entry
 
 
-tab_over, token no can update etc
-dump tokens, when view change
-load(tag1,list1,tag2,list2)
+tab_over, token no can update etc?
 
-def f1():
-	l1= ['insert','insert+1c','insert+2c','insert+3c']
-	tag1='calls'
-	s= tag1, *l1
-	e.contents.tag_add(*s)
+
+save file to disk when pressing save
 
 
 stash if start fails?
@@ -561,12 +575,6 @@ cmd-ae linestartend in python shell in macos?
 ensure in venv?
 
 
-check use of token_can_update += 1
-show closing paren, find empty lines regexp
-inspect syntax
-elif hasattr(self.tabs[self.tabindex], 'inspected')##
-
-
 animate walk_tab, save etc?
 
 
@@ -609,16 +617,14 @@ toggle indent with tabs --> space?
 bind with eval from dict --> user editable binds
 
 
-save file to disk when pressing save
-
-
-tuple after_cancel: (from_who, after_object_id)
+tuple after_cancel: (from_who, after_object_id) ?
 
 
 syntax highlight often slow, needs check
-tokens to list --> after cancel
-delete, cmd a, comment at linestart, no syntax
-clarify update_tokens marked spot
+after update --> to list --> after cancel ?
+update scope only if token.err ?
+check use of token_can_update += 1
+show closing paren
 
 
 check before copy, paste:

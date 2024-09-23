@@ -1985,7 +1985,11 @@ class Editor(tkinter.Toplevel):
 
 				try:
 					s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
-					# Clarify this:################################################
+					# Parse linenumbers of start and enf of range == s,e
+					# Then convert them to int. This could also be done with:
+					# int(float(s)) which would give linenumber of start as int,
+					# but is not much clearer.
+
 					l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
 
 					if l0 != l1:
@@ -3177,7 +3181,7 @@ class Editor(tkinter.Toplevel):
 		if len(tmp) < 8:
 			pass
 
-		if tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
+		elif tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
 			patt_end = ':'
 			if '(' in tmp: patt_end = '('
 			if tmp[:5] == 'async':
@@ -3486,20 +3490,40 @@ class Editor(tkinter.Toplevel):
 
 		'''
 		pos = self.contents.index( '%s linestart' % index)
+		line_started = self.contents.compare(
+			'%s display linestart' % index, '==', '%s linestart' % index)
+
 		line_starts_from_curline = True
 		line_is_wrapped = False
 
-
 		res = self.contents.count('%s linestart' % index, '%s +1 lines' % index,
 				'displaylines')
+		#print(res)
+		# res == None only if index is at such defline that is elided
+		# and index is not at end of line
+##		if not res:
+##			# Did line not start from current line?
+##			if not line_started:
+##				line_starts_from_curline = False
+##				line_is_wrapped = True
+##				pos = self.contents.index( '%s display linestart' % index )
+
 
 		if res[0] > 1:
 			line_is_wrapped = True
 			# Did line not start from current line?
-			if self.contents.compare(
-				'%s display linestart' % index, '!=', '%s linestart' % index):
+			if not line_started:
 				line_starts_from_curline = False
 				pos = self.contents.index( '%s display linestart' % index )
+
+		# res[0] == 1
+		# Check if index is at such defline that is elided
+		# and index is at end of line
+##		elif not line_started:
+##			line_starts_from_curline = False
+##			pos = self.contents.index( '%s display linestart' % index )
+##			print(pos)
+##			return 0,0,0
 
 
 		# Get idx_linestart
@@ -7233,48 +7257,110 @@ class Editor(tkinter.Toplevel):
 ########## Indent and Comment End
 ################ Elide Begin
 
+	def get_safe_index(self, index='insert'):
+		''' If at display lineend and line is not empty:
+
+			Return index that is moved one char left,
+			else: return index
+		'''
+
+		i = self.contents.index(index)
+		left = '%s -1 display char' % index
+
+		# Index is at after(right) display linestart
+		if self.contents.compare(
+				'%s display linestart' % index, '<', index):
+
+			# Index is not at display lineend
+			if self.contents.compare(
+					'%s display lineend' % index, '>', index):
+
+				#--> can move one display char right or left
+				return index
+
+			else:
+				# at display lineend
+				#--> move one display char left
+				return left
+
+		# Index is at display linestart but not at display lineend
+		elif self.contents.compare(
+				'%s display lineend' % index, '>', index):
+			#--> can move one display char right
+			return index
+
+		# Index is at both: display linestart and -end
+		# --> line is empty or empty and has elided text
+		else:
+			return index
+
+
+	def line_is_elided(self, index='insert'):
+
+		# Cursor is at elided defline
+		r = self.contents.tag_nextrange('elided', index)
+
+		if len(r) > 0:
+			if r[0].split('.')[0] == index.split('.')[0]:
+				return r
+
+		return False
+
+
 	def elide_scope(self, event=None, index='insert'):
-		'''asd
+		''' Fold/Unfold function or class if insertion cursor is at
+			definition line
 		'''
 		if (not self.can_do_syntax()) or (self.state not in ['normal']):
 			self.bell()
 			return "break"
 
+		ref = self.contents.index(index)
+		idx = self.contents.index( self.get_safe_index(index=index) )
+		patt = r'%s get {%s linestart} {%s lineend}' \
+				% (self.tcl_name_of_contents, idx, idx)
+
+		line = self.contents.tk.eval(patt)
+		#print(line)
+
+		if not self.line_is_defline(line):
+			return 'break'
 
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		self.wait_for(50)
 
-		r = self.contents.tag_nextrange('elided', index, '%s +1 lines' % index)
+		self.contents.mark_set('insert', idx)
+		#self.ensure_idx_visibility(line)
+
 
 		# Show scope
-		if len(r) > 0:
-			line_next_elided = int(float(r[0]))
-			line_curline = int(float(self.contents.index(index)))
-
-			if line_curline == line_next_elided:
-				self.contents.tag_remove('elided', r[0], r[1])
-
-				return 'break'
+		if r := self.line_is_elided(index=idx):
+			self.contents.tag_remove('elided', r[0], r[1])
 
 
 		# Hide scope
-		#
-		# +1 lines: Enable matching defline at insert
-		pos = '%s +1 lines' % index
-		(scope_line, ind_defline,
-		idx_scope_start) = self.get_scope_start(index=pos)
-
-		if scope_line != '__main__()':
-			idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
 		else:
-			self.bell()
-			return 'break'
+			#
+			# +1 lines: Enable matching defline at insert
+			pos = '%s lineend +1 chars' % index
+
+			(scope_line, ind_defline,
+			idx_scope_start) = self.get_scope_start(index=pos)
+
+			idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
 
 
-		s = '%s lineend' % idx_scope_start
-		e = idx_scope_end
+			s = '%s lineend' % idx_scope_start
+			e = idx_scope_end
 
-		self.contents.tag_add('elided', s, e)
+			self.contents.tag_add('elided', s, e)
+
+
+		if self.contents.compare(idx, '!=', ref):
+			# Q: Why not '%s lineend' % idx ?
+			# A: Currently, it seems that lineend is the end of last elided line.
+			# This really is strange, but display lineend does the trick.
+			self.contents.mark_set('insert', '%s display lineend' % idx)
 
 		return 'break'
 
