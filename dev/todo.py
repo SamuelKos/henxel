@@ -331,6 +331,8 @@ were broken due self.contents.bbox('insert') --> None if cursor is offscreen
 	idx_linestart() done
 	bookmark_animate(): done with this check at toggle_bookmark()
 		not self.contents.bbox('insert')
+
+idx_linestart() now returns pos, line_starts_from_curline
 #########################
 after paste: selection is sometimes wrong
 fixed ok?
@@ -369,9 +371,57 @@ elide-safe indexing check:
 	Areas checked:
 		Elide
 
+A always, O almost always
 	dont need safe-index as argument:
-		elide_scope()
-		line_is_defline()
+		get_safe_index()
+
+		elide_scope(),		calls:	get_safe_index A
+
+		line_is_defline(),	calls:	None
+		line_is_empty(),	calls:	get_safe_index A
+		idx_linestart(),	calls:	get_safe_index A,	line_is_empty O1, line_is_elided O1
+
+		get_scope_start(),	calls:	get_safe_index A,	line_is_elided O1,
+														line_is_defline O1,
+														idx_linestart O1,
+																			line_is_defline O2,
+																			idx_linestart O2
+
+		get_scope_end(),	calls:	get_safe_index A, line_is_elided A
+
+		move_by_words()
+		select_by_words()
+		goto_linestart()
+		goto_lineend()
+		copy, fallback
+		yank_line()
+		move_many_lines(), select
+
+
+
+
+		not checked:
+			walk_scope
+			select_scope
+			etc
+
+
+		move_by_words seems ok, but elided was not selected
+			--> copy() was not ok:
+			self.contents.selection_get() would not get elided text
+			--> self.contents.get('sel.first', 'sel.last')
+
+			same in yank_line()
+
+		#################################
+		# Q: Why not '%s lineend' % safe_idx ?
+		# A: That would put cursor inside elided text.
+		# 'display lineend' does the trick and jumps over elided lines.
+		# Yes this is difficult,
+		# maybe one does not get it but one can get it done with:
+		self.contents.mark_set('insert', '%s display lineend' % idx)
+		#################################
+
 
 	needs safe-index as argument:
 		line_is_elided(safe_index)
@@ -379,8 +429,13 @@ elide-safe indexing check:
 
 
 
+get_safe_index return contents.index()
+
+idx_lineend()  == display end, is ok?
 
 
+
+def myfunctionDef() ...
 
 u+2026
 …
@@ -429,10 +484,6 @@ get_scope_end() get_scope_start() get_scope_path()
 ################################################################################################
 
 
-
-
-
-idx_lineend()  == display end
 
 ensure_idx_visibility(index)
 puts always insert to index ###############################
