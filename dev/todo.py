@@ -413,14 +413,43 @@ A always, O almost always
 
 			same in yank_line()
 
-		#################################
-		# Q: Why not '%s lineend' % safe_idx ?
-		# A: That would put cursor inside elided text.
-		# 'display lineend' does the trick and jumps over elided lines.
-		# Yes this is difficult,
-		# maybe one does not get it but one can get it done with:
-		self.contents.mark_set('insert', '%s display lineend' % idx)
-		#################################
+
+		#######################################################
+		# If cursor was at defline lineend, it was moved 1 char left,
+		# put it back to lineend
+		if self.contents.compare(idx, '!=', ref):
+			# 	Q: Why not '%s lineend' % idx ?
+			#
+			# 	A:	s = '%s lineend' % idx_scope_start
+			#		self.contents.tag_add('elided', s, e)
+			#
+			# That says, the first index inside elided text is:
+			# 	'lineend' of definition line
+			#
+			# --> if cursor is put there, at 'lineend', it will be elided.
+			# --> in a way it is correct to say that definition line has now no end.
+			#
+			# But lines always have 'display lineend', And putting cursor
+			# there works.
+			#
+			# Q2: Were is cursor exactly if put there?
+			# A2: with some repetition
+			#	s = '%s lineend' % idx_scope_start
+			#	e = idx_scope_end
+			#
+			#	self.contents.tag_add('elided', s, e)
+			#
+			# One has to think what is the first display index after elided
+			# text. That is first index after 'e' and since one knows that
+			# 'idx_scope_end' is 'lineend' of the last line of scope
+			#
+			# --> cursor is there, since text-ranges excludes out ending index if
+			# one remembers right, cursor is exactly at 'idx_scope_end'
+
+			self.contents.mark_set('insert', '%s display lineend' % idx)
+
+			##################################################################
+
 
 
 	needs safe-index as argument:
@@ -435,15 +464,36 @@ idx_lineend()  == display end, is ok?
 
 
 
+
+center_view() when search?
+
+if not at git root, and debug, and restart:
+FileNotFoundError: [Errno 2] No such file or directory: './dev/restart_editor.scpt'
+
+
+backspace_override() removed do_syntax
+update_tokens()
+
+
+
+
+
 def myfunctionDef() ...
+
+
+chevron
+1fb94
+1fbca
 
 u+2026
 …
+
 u+203a
 ›
 
-u+22c1
-u+02c5
+u+2335
+⌵
+
 
 check win linux:
 	self.contents.bind( "<Alt-Key-BackSpace>", self.del_to_dot)

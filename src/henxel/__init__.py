@@ -1044,8 +1044,10 @@ class Editor(tkinter.Toplevel):
 		if diff > 0:
 			self.geometry('+%d+0' % diff )
 
+		if self.can_do_syntax():
+			self.avoid_viewsync_mess()
+			self.token_can_update = True
 
-		self.avoid_viewsync_mess()
 		self.update_idletasks()
 		self.viewsync()
 
@@ -1200,7 +1202,7 @@ class Editor(tkinter.Toplevel):
 		tests = [
 				not s,
 				not e,
-				( s and s[1] < 0 )
+				s and (s[1] < 0)
 				]
 
 		if any(tests):
@@ -1325,14 +1327,12 @@ class Editor(tkinter.Toplevel):
 		# Avoid viewsync messing when cursor
 		# position is in line with multiline string marker:
 
-		if self.can_do_syntax():
-			pos = self.tabs[self.tabindex].position
-			lineend = '%s lineend' % pos
-			linestart = '%s linestart' % pos
-			tmp = self.contents.get( linestart, lineend )
-			self.oldline = tmp
-			self.oldlinenum = pos.split('.')[0]
-			self.token_can_update = True
+		pos = self.tabs[self.tabindex].position
+		lineend = '%s lineend' % pos
+		linestart = '%s linestart' % pos
+		tmp = self.contents.get( linestart, lineend )
+		self.oldline = tmp
+		self.oldlinenum = pos.split('.')[0]
 
 
 	def viewsync(self, event=None):
@@ -1566,7 +1566,7 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
 
-
+		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
@@ -1589,8 +1589,10 @@ class Editor(tkinter.Toplevel):
 
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
+		if self.can_do_syntax():
+			self.avoid_viewsync_mess()
+			self.token_can_update = True
 
-		self.avoid_viewsync_mess()
 		self.update_title()
 
 		return 'break'
@@ -1645,7 +1647,7 @@ class Editor(tkinter.Toplevel):
 		self.restore_bookmarks()
 
 		if self.can_do_syntax():
-			self.update_tokens(start='1.0', end=tkinter.END, everything=True)
+			self.update_tokens(everything=True)
 
 		# set cursor pos
 		line = self.tabs[self.tabindex].position
@@ -1663,8 +1665,10 @@ class Editor(tkinter.Toplevel):
 
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
+		if self.can_do_syntax():
+			self.avoid_viewsync_mess()
+			self.token_can_update = True
 
-		self.avoid_viewsync_mess()
 		self.update_title()
 
 		return 'break'
@@ -1917,7 +1921,8 @@ class Editor(tkinter.Toplevel):
 
 		else:
 			self.syntax = True
-			self.do_syntax(everything=True)
+			self.token_can_update = True
+			self.do_syntax(start='1.0', end=tkinter.END)
 
 			return 'break'
 
@@ -1940,14 +1945,10 @@ class Editor(tkinter.Toplevel):
 		return self.syntax and self.is_pyfile()
 
 
-	def do_syntax(self, everything=False):
+	def do_syntax(self, **kwargs):
 
 		if self.can_do_syntax():
-
-			self.token_err = True
-			content_is_uptodate = everything
-			self.update_tokens(start='1.0', end=tkinter.END, everything=content_is_uptodate)
-			self.token_can_update = True
+			self.update_tokens(**kwargs)
 
 		else:
 			self.token_err = False
@@ -1966,8 +1967,8 @@ class Editor(tkinter.Toplevel):
 				linecontents = line
 				test1 = [
 					self.token_err,
-					( '"""' in linecontents and '#' in linecontents ),
-					( "'''" in linecontents and '#' in linecontents )
+					( '"""' in linecontents) and ('#' in linecontents ),
+					( "'''" in linecontents) and ('#' in linecontents )
 					]
 			else:
 				test1 = [self.token_err]
@@ -2008,6 +2009,8 @@ class Editor(tkinter.Toplevel):
 
 		else:
 			tmp = self.tabs[self.tabindex].contents
+			start_idx = '1.0'
+			end_idx = tkinter.END
 
 
 
@@ -2912,7 +2915,7 @@ class Editor(tkinter.Toplevel):
 		self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		self.entry.xview_moveto(1.0)
 
-
+		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
@@ -2925,8 +2928,7 @@ class Editor(tkinter.Toplevel):
 			tmp = self.contents.get( linestart, lineend )
 			self.oldline = tmp
 
-			self.token_err = True
-			self.update_tokens(start='1.0', end=tkinter.END)
+			self.update_tokens(everything=True)
 			self.token_can_update = True
 
 
@@ -3144,7 +3146,7 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
 
-
+		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
@@ -3161,6 +3163,11 @@ class Editor(tkinter.Toplevel):
 
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
+
+		if self.can_do_syntax():
+			self.avoid_viewsync_mess()
+			self.token_can_update = True
+
 
 
 ########## Run file Related End
@@ -4741,10 +4748,15 @@ class Editor(tkinter.Toplevel):
 
 		try:
 			self.wait_for(100)
+			self.token_can_update = False
+
 			self.contents.edit_undo()
 
-			self.do_syntax()
+			self.do_syntax(start='1.0', end=tkinter.END)
 
+			if self.can_do_syntax():
+				self.avoid_viewsync_mess()
+				self.token_can_update = True
 
 		except tkinter.TclError:
 			self.bell()
@@ -4759,9 +4771,15 @@ class Editor(tkinter.Toplevel):
 
 		try:
 			self.wait_for(100)
+			self.token_can_update = False
+
 			self.contents.edit_redo()
 
-			self.do_syntax()
+			self.do_syntax(start='1.0', end=tkinter.END)
+
+			if self.can_do_syntax():
+				self.avoid_viewsync_mess()
+				self.token_can_update = True
 
 
 		except tkinter.TclError:
@@ -4900,8 +4918,6 @@ class Editor(tkinter.Toplevel):
 
 			self.contents.delete( tkinter.SEL_FIRST, tkinter.SEL_LAST )
 
-			self.do_syntax()
-
 			return 'break'
 
 
@@ -4923,10 +4939,10 @@ class Editor(tkinter.Toplevel):
 			next_char = chars[-2:-1]
 
 			quote_tests = [
-						(prev_char == '#'),
-						(prev_3chars in triples),
-						( (prev_2chars in doubles) and (next_char in singles) ),
-						( (prev_char in singles) and (next_2chars in doubles) )
+						prev_char == '#',
+						prev_3chars in triples,
+						(prev_2chars in doubles) and (next_char in singles),
+						(prev_char in singles) and (next_2chars in doubles)
 						]
 
 			if any(quote_tests):
@@ -5077,22 +5093,22 @@ class Editor(tkinter.Toplevel):
 
 					self.tabs[self.tabindex].position = '1.0'
 					self.contents.focus_set()
-					self.contents.see('1.0')
+					self.contents.insert('1.0', self.tabs[self.tabindex].contents)
 					self.contents.mark_set('insert', '1.0')
-					self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+					self.contents.see('1.0')
 
 					if self.syntax:
-						self.token_err = True
-						self.update_tokens(start='1.0', end=tkinter.END)
-						self.token_can_update = True
-
-					else:
 						self.token_can_update = False
+						self.update_tokens(everything=True)
+
 
 					# This flag is used in handle_search_entry()
 					self.tabs[self.tabindex].inspected = True
 					self.contents.edit_reset()
 					self.contents.edit_modified(0)
+					if self.can_do_syntax():
+						self.avoid_viewsync_mess()
+						self.token_can_update = True
 
 					return 'break'
 
@@ -5135,22 +5151,22 @@ class Editor(tkinter.Toplevel):
 
 				self.tabs[self.tabindex].position = '1.0'
 				self.contents.focus_set()
-				self.contents.see('1.0')
+				self.contents.insert('1.0', self.tabs[self.tabindex].contents)
 				self.contents.mark_set('insert', '1.0')
-				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+				self.contents.see('1.0')
 
 				if self.syntax:
-					self.token_err = True
-					self.update_tokens(start='1.0', end=tkinter.END)
-					self.token_can_update = True
-
-				else:
 					self.token_can_update = False
+					self.update_tokens(everything=True)
+
 
 				# This flag is used in handle_search_entry()
 				self.tabs[self.tabindex].inspected = True
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
+				if self.can_do_syntax():
+					self.avoid_viewsync_mess()
+					self.token_can_update = True
 
 				return 'break'
 
@@ -6216,6 +6232,7 @@ class Editor(tkinter.Toplevel):
 				self.entry.xview_moveto(1.0)
 
 
+				self.token_can_update = False
 				self.contents.delete('1.0', tkinter.END)
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				self.remove_bookmarks(all_tabs=False)
@@ -6229,7 +6246,11 @@ class Editor(tkinter.Toplevel):
 
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
-				self.avoid_viewsync_mess()
+
+				if self.can_do_syntax():
+					self.avoid_viewsync_mess()
+					self.token_can_update = True
+
 
 		except (EnvironmentError, UnicodeDecodeError) as e:
 			print(e.__str__())
@@ -6467,12 +6488,17 @@ class Editor(tkinter.Toplevel):
 				if self.tabs[self.tabindex].filepath != None:
 					del_ins_move()
 
-					self.do_syntax()
+					self.do_syntax(everything=True)
 
 				set_cursor_pos()
 
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
+
+				if self.can_do_syntax():
+					self.avoid_viewsync_mess()
+					self.token_can_update = True
+
 
 
 			# Want to create new file with same contents:
@@ -6489,6 +6515,8 @@ class Editor(tkinter.Toplevel):
 
 					return False
 
+
+				self.token_can_update = False
 				self.new_tab()
 				self.tabs[self.tabindex].filepath = fpath_in_entry
 				self.tabs[self.tabindex].contents = tmp
@@ -6505,6 +6533,11 @@ class Editor(tkinter.Toplevel):
 
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
+
+				if self.can_do_syntax():
+					self.avoid_viewsync_mess()
+					self.token_can_update = True
+
 
 
 		else:
@@ -6792,8 +6825,8 @@ class Editor(tkinter.Toplevel):
 		''' Add/Remove bookmark at cursor position
 		'''
 		tests = (
-				( self.state not in [ 'normal', 'search', 'replace' ] ),
-				( not self.contents.bbox('insert') )
+				self.state not in [ 'normal', 'search', 'replace' ],
+				not self.contents.bbox('insert')
 				)
 
 		if any(tests):
@@ -6835,7 +6868,7 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
 
-		self.token_can_update = True
+		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
@@ -6856,7 +6889,10 @@ class Editor(tkinter.Toplevel):
 
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		self.avoid_viewsync_mess()
+
+		if self.can_do_syntax():
+			self.avoid_viewsync_mess()
+			self.token_can_update = True
 
 		self.bind("<Escape>", self.esc_override)
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
@@ -6957,8 +6993,8 @@ class Editor(tkinter.Toplevel):
 						indent = indent_1 - indent_0
 						#print(indent)
 						tests = [
-								( indent <= 0 ),
-								( not flag_space and indent > 1 )
+								indent <= 0,
+								(not flag_space) and (indent > 1)
 								]
 
 						if any(tests):
@@ -7312,7 +7348,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
 			self.wait_for(50)
 
-			# Protect cursor from being elided
+			# Protect cursor from being pushed down
 			self.contents.mark_set('insert', idx)
 
 			self.contents.tag_remove('elided', r[0], r[1])
@@ -7351,9 +7387,34 @@ class Editor(tkinter.Toplevel):
 		# If cursor was at defline lineend, it was moved 1 char left,
 		# put it back to lineend
 		if self.contents.compare(idx, '!=', ref):
-			# Q: Why not '%s lineend' % idx ?
-			# A: I really dont know but 'display lineend' does the trick.
-			# It sort of jumps over the elided part.
+			# 	Q: Why not '%s lineend' % idx ?
+			#
+			# 	A:	s = '%s lineend' % idx_scope_start
+			#		self.contents.tag_add('elided', s, e)
+			#
+			# That says, the first index inside elided text is:
+			# 	'lineend' of definition line
+			#
+			# --> if cursor is put there, at 'lineend', it will be elided.
+			# --> in a way it is correct to say that definition line has now no end.
+			#
+			# But lines always have 'display lineend', And putting cursor
+			# there works.
+			#
+			# Q2: Were is cursor exactly if put there?
+			# A2: with some repetition
+			#	s = '%s lineend' % idx_scope_start
+			#	e = idx_scope_end
+			#
+			#	self.contents.tag_add('elided', s, e)
+			#
+			# One has to think what is the first display index after elided
+			# text. That is first index after 'e' and since one knows that
+			# 'idx_scope_end' is 'lineend' of the last line of scope
+			#
+			# --> cursor is there, since text-ranges excludes out ending index if
+			# one remembers right, cursor is exactly at 'idx_scope_end'
+
 			self.contents.mark_set('insert', '%s display lineend' % idx)
 
 		return 'break'
@@ -8141,7 +8202,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 				self.state = 'normal'
 
-				self.do_syntax()
+				self.do_syntax(start='1.0', end=tkinter.END)
 
 
 		self.state = 'normal'
