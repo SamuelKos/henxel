@@ -60,7 +60,6 @@ import sys
 # Used in syntax highlight
 import tokenize
 import keyword
-import io
 
 # From current directory
 from . import wordexpand
@@ -983,9 +982,9 @@ class Editor(tkinter.Toplevel):
 		self.token_can_update = False
 		self.oldlinenum = self.contents.index(tkinter.INSERT).split('.')[0]
 
-		self.do_syntax(everything=True)
+		self.update_tokens(everything=True)
 
-		self.contents.bind( "<<WidgetViewSync>>", self.viewsync)
+		self.contents.bind( "<<WidgetViewSync>>", self.update_line)
 		# Viewsync-event does not trigger at window size changes,
 		# to get linenumbers right, one binds to this:
 		self.contents.bind("<Configure>", self.handle_window_resize)
@@ -1045,11 +1044,11 @@ class Editor(tkinter.Toplevel):
 			self.geometry('+%d+0' % diff )
 
 		if self.can_do_syntax():
-			self.avoid_viewsync_mess()
+			self.update_lineinfo()
 			self.token_can_update = True
 
 		self.update_idletasks()
-		self.viewsync()
+		self.update_line()
 
 		self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
 
@@ -1323,25 +1322,33 @@ class Editor(tkinter.Toplevel):
 
 
 
-	def avoid_viewsync_mess(self, event=None):
-		# Avoid viewsync messing when cursor
-		# position is in line with multiline string marker:
+	def update_lineinfo(self, event=None):
+		''' Update info about current line, which is used to determine if
+			tokens of the line has to be updated for syntax highlight.
+
+			When this is called, the info is up to date and thus
+			prevents update for the line (in update_line() ), which is the purpose.
+		'''
 
 		pos = self.tabs[self.tabindex].position
-		lineend = '%s lineend' % pos
 		linestart = '%s linestart' % pos
+		lineend = '%s lineend' % pos
 		tmp = self.contents.get( linestart, lineend )
 		self.oldline = tmp
 		self.oldlinenum = pos.split('.')[0]
 
 
-	def viewsync(self, event=None):
-		'''	Triggered when event is <<WidgetViewSync>>
-			Used to update linenumbers and syntax highlight.
+	def update_line(self, event=None):
+		'''	Triggers after event: <<WidgetViewSync>>
 
-			This event itself is generated *after* when inserting, deleting or on screen geometry change, but
-			not when just scrolling (like yview). Almost all font-changes also generates this event.
+			Used to update linenumbers and syntax highlighting of current line
+
+			The event itself is generated *after* when inserting, deleting
+			or on screen geometry change, but not when just scrolling (like yview).
+			Almost all font-changes also generate this event.
+
 		'''
+
 		# More info in update_linenums()
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
@@ -1566,12 +1573,13 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
 
+		self.token_err = False
 		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
 
-		self.do_syntax(everything=True)
+		self.update_tokens(everything=True)
 
 		# set cursor pos
 		line = self.tabs[self.tabindex].position
@@ -1590,7 +1598,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		if self.can_do_syntax():
-			self.avoid_viewsync_mess()
+			self.update_lineinfo()
 			self.token_can_update = True
 
 		self.update_title()
@@ -1641,6 +1649,7 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
 
+		self.token_err = False
 		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
@@ -1666,7 +1675,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 		if self.can_do_syntax():
-			self.avoid_viewsync_mess()
+			self.update_lineinfo()
 			self.token_can_update = True
 
 		self.update_title()
@@ -1922,7 +1931,7 @@ class Editor(tkinter.Toplevel):
 		else:
 			self.syntax = True
 			self.token_can_update = True
-			self.do_syntax(start='1.0', end=tkinter.END)
+			self.update_tokens(start='1.0', end=tkinter.END)
 
 			return 'break'
 
@@ -1945,18 +1954,27 @@ class Editor(tkinter.Toplevel):
 		return self.syntax and self.is_pyfile()
 
 
-	def do_syntax(self, **kwargs):
-
-		if self.can_do_syntax():
-			self.update_tokens(**kwargs)
-
-		else:
-			self.token_err = False
-			self.token_can_update = False
-
-
-
 	def update_tokens(self, start=None, end=None, line=None, everything=False):
+		''' Update syntax highlighting after some change in contents.
+
+			When flag: everything is True, text is not getted from widget but
+			from a record: tab.contents, because contents of widget gets deleted
+			at view changes. This happens for example in walk_tabs(), help() etc.
+
+			If there has been syntax error, flag self.token_err is set, and next
+			time when calling this, all contents will be used.
+			If all contents was checked and there were no errors, flag is set False.
+
+			If normally inserting and deleting etc text in same tab, caller
+			is update_line() with current line contents and indexes. Then if
+			all tests are passed, like there is no token_err, then only that line
+			will be updated.
+
+			Sometimes action is complicated and one does not know the indexes,
+			then all current content is updated with start='1.0' end='end'.
+			This is done for example in undo_override().
+
+		'''
 
 		start_idx = start
 		end_idx = end
@@ -2023,88 +2041,97 @@ class Editor(tkinter.Toplevel):
 		#print(self.token_err)
 
 
+
+		###### START ###########
+		par_err = None
+
+		# Was:
+		# with io.BytesIO( tmp.encode('utf-8') ) as fo:
+		#	tokens = tokenize.tokenize( fo.readline )
+
+		g = iter( tmp.splitlines(keepends=True) )
+		tokens = tokenize.generate_tokens( g.__next__ )
+
+		# Remove old tags:
+		for tag in self.tagnames:
+			self.contents.tag_remove( tag, start_idx, end_idx )
+
+		# Retag
+		idx_start = None
 		try:
-			par_err = None
+			for token in tokens:
+				#print(token)
 
-			with io.BytesIO( tmp.encode('utf-8') ) as fo:
+				# token.line contains line as string which contains token.
 
-				tokens = tokenize.tokenize( fo.readline )
+				if token.type == tokenize.NAME or \
+					( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
+					( token.exact_type == tokenize.LPAR ):
 
-				# Remove old tags:
-				for tag in self.tagnames:
-					self.contents.tag_remove( tag, start_idx, end_idx )
-
-				# Retag:
-				idx_start = None
-				for token in tokens:
-					#print(token)
-
-					# token.line contains line as string which contains token.
-
-					if token.type == tokenize.NAME or \
-						( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
-						( token.exact_type == tokenize.LPAR ):
-
-						# initiate indexes with correct linenum
-						s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
-						e0, e1 = map(str, [ token.end[0] + linenum - 1, token.end[1] ] )
-						idx_start = s0 + '.' + s1
-						idx_end = e0 + '.' + e1
+					# Initiate indexes with correct linenum
+					s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
+					e0, e1 = map(str, [ token.end[0] + linenum - 1, token.end[1] ] )
+					idx_start = s0 + '.' + s1
+					idx_end = e0 + '.' + e1
 
 
-						if token.type == tokenize.NAME:
+					if token.type == tokenize.NAME:
 
-							#lastoken = token
-							last_idx_start = idx_start
-							last_idx_end = idx_end
+						#lastoken = token
+						last_idx_start = idx_start
+						last_idx_end = idx_end
 
-							if token.string in self.keywords:
+						if token.string in self.keywords:
 
-								if token.string == 'self':
-									self.contents.tag_add('selfs', idx_start, idx_end)
+							if token.string == 'self':
+								self.contents.tag_add('selfs', idx_start, idx_end)
 
-								elif token.string in self.bools:
-									self.contents.tag_add('bools', idx_start, idx_end)
+							elif token.string in self.bools:
+								self.contents.tag_add('bools', idx_start, idx_end)
 
-##								elif token.string in self.tests:
-##									self.contents.tag_add('tests', idx_start, idx_end)
+##							elif token.string in self.tests:
+##							self.contents.tag_add('tests', idx_start, idx_end)
 
-								elif token.string in self.breaks:
-									self.contents.tag_add('breaks', idx_start, idx_end)
+							elif token.string in self.breaks:
+								self.contents.tag_add('breaks', idx_start, idx_end)
 
-								else:
-									self.contents.tag_add('keywords', idx_start, idx_end)
+							else:
+								self.contents.tag_add('keywords', idx_start, idx_end)
 
 
-						# calls
-						elif token.exact_type == tokenize.LPAR:
-							# Need to know if last char before ( was not empty.
-							# Previously used test was:
-							#if self.contents.get( '%s - 1c' % idx_start, idx_start ).strip():
+					# Calls
+					elif token.exact_type == tokenize.LPAR:
+						# Need to know if last char before ( was not empty.
+						# Previously used test was:
+						#if self.contents.get( '%s - 1c' % idx_start, idx_start ).strip():
 
-							# token.line contains line as string which contains token.
-							prev_char_idx = token.start[1]-1
-							if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
-								self.contents.tag_add('calls', last_idx_start, last_idx_end)
+						# token.line contains line as string which contains token.
+						prev_char_idx = token.start[1]-1
+						if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
+							self.contents.tag_add('calls', last_idx_start, last_idx_end)
 
-						elif token.type == tokenize.STRING:
-							self.contents.tag_add('strings', idx_start, idx_end)
+					elif token.type == tokenize.STRING:
+						self.contents.tag_add('strings', idx_start, idx_end)
 
-						elif token.type == tokenize.COMMENT:
-							self.contents.tag_add('comments', idx_start, idx_end)
+					elif token.type == tokenize.COMMENT:
+						self.contents.tag_add('comments', idx_start, idx_end)
 
-						# token.type == tokenize.NUMBER
-						else:
-							self.contents.tag_add('numbers', idx_start, idx_end)
+					# token.type == tokenize.NUMBER
+					else:
+						self.contents.tag_add('numbers', idx_start, idx_end)
+
+					################## END ####################
+
 
 
 		except IndentationError as e:
 ##			for attr in ['args', 'filename', 'lineno', 'msg', 'offset', 'text']:
 ##				item = getattr( e, attr)
 ##				print( attr,': ', item )
+##
+##			print( e.args[0], '\nIndentation errline: ',
+##			self.contents.index(tkinter.INSERT) )
 
-			# This Error needs info about whole block, one line is not enough, so quite rare.
-			#print( e.args[0], '\nIndentation errline: ', self.contents.index(tkinter.INSERT) )
 			flag_err = True
 			self.token_err = True
 
@@ -2119,11 +2146,12 @@ class Editor(tkinter.Toplevel):
 				self.token_err = True
 
 
+		##### Check parentheses ####
 		if self.check_pars:
 			startl = self.check_pars
 			par_err = self.checkpars(startl)
 
-		# from backspace_override:
+		# From backspace_override:
 		elif self.par_err:
 			startl = False
 			par_err = self.checkpars(startl)
@@ -2132,14 +2160,17 @@ class Editor(tkinter.Toplevel):
 		self.par_err = par_err
 
 		if not par_err:
-			# not always checking whole file for par mismatches, so clear
+			# Not always checking whole file for par mismatches, so clear
 			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
 
+			###### Check parentheses End ###########
 
 
 		if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
 			#print('ok')
 			self.token_err = False
+
+			##### update_tokens end #####################
 
 
 	def checkpars(self, idx_start):
@@ -2915,6 +2946,7 @@ class Editor(tkinter.Toplevel):
 		self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		self.entry.xview_moveto(1.0)
 
+		self.token_err = False
 		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
@@ -3146,12 +3178,13 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
 
+		self.token_err = False
 		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
 
-		self.do_syntax(everything=True)
+		self.update_tokens(everything=True)
 
 
 		# set cursor pos
@@ -3165,7 +3198,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.edit_modified(0)
 
 		if self.can_do_syntax():
-			self.avoid_viewsync_mess()
+			self.update_lineinfo()
 			self.token_can_update = True
 
 
@@ -4752,10 +4785,10 @@ class Editor(tkinter.Toplevel):
 
 			self.contents.edit_undo()
 
-			self.do_syntax(start='1.0', end=tkinter.END)
+			self.update_tokens(start='1.0', end=tkinter.END)
 
 			if self.can_do_syntax():
-				self.avoid_viewsync_mess()
+				self.update_lineinfo()
 				self.token_can_update = True
 
 		except tkinter.TclError:
@@ -4775,10 +4808,10 @@ class Editor(tkinter.Toplevel):
 
 			self.contents.edit_redo()
 
-			self.do_syntax(start='1.0', end=tkinter.END)
+			self.update_tokens(start='1.0', end=tkinter.END)
 
 			if self.can_do_syntax():
-				self.avoid_viewsync_mess()
+				self.update_lineinfo()
 				self.token_can_update = True
 
 
@@ -5098,6 +5131,7 @@ class Editor(tkinter.Toplevel):
 					self.contents.see('1.0')
 
 					if self.syntax:
+						self.token_err = False
 						self.token_can_update = False
 						self.update_tokens(everything=True)
 
@@ -5107,7 +5141,7 @@ class Editor(tkinter.Toplevel):
 					self.contents.edit_reset()
 					self.contents.edit_modified(0)
 					if self.can_do_syntax():
-						self.avoid_viewsync_mess()
+						self.update_lineinfo()
 						self.token_can_update = True
 
 					return 'break'
@@ -5156,6 +5190,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.see('1.0')
 
 				if self.syntax:
+					self.token_err = False
 					self.token_can_update = False
 					self.update_tokens(everything=True)
 
@@ -5165,7 +5200,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 				if self.can_do_syntax():
-					self.avoid_viewsync_mess()
+					self.update_lineinfo()
 					self.token_can_update = True
 
 				return 'break'
@@ -6231,13 +6266,13 @@ class Editor(tkinter.Toplevel):
 				self.entry.insert(0, filename)
 				self.entry.xview_moveto(1.0)
 
-
+				self.token_err = False
 				self.token_can_update = False
 				self.contents.delete('1.0', tkinter.END)
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 				self.remove_bookmarks(all_tabs=False)
 
-				self.do_syntax(everything=True)
+				self.update_tokens(everything=True)
 
 
 				self.contents.focus_set()
@@ -6248,7 +6283,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.edit_modified(0)
 
 				if self.can_do_syntax():
-					self.avoid_viewsync_mess()
+					self.update_lineinfo()
 					self.token_can_update = True
 
 
@@ -6488,16 +6523,19 @@ class Editor(tkinter.Toplevel):
 				if self.tabs[self.tabindex].filepath != None:
 					del_ins_move()
 
-					self.do_syntax(everything=True)
+					if self.can_do_syntax():
+
+						self.update_lineinfo()
+						self.token_err = False
+						self.token_can_update = False
+						self.update_tokens(everything=True)
+						self.token_can_update = True
+
 
 				set_cursor_pos()
 
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
-
-				if self.can_do_syntax():
-					self.avoid_viewsync_mess()
-					self.token_can_update = True
 
 
 
@@ -6516,7 +6554,9 @@ class Editor(tkinter.Toplevel):
 					return False
 
 
+				self.token_err = False
 				self.token_can_update = False
+
 				self.new_tab()
 				self.tabs[self.tabindex].filepath = fpath_in_entry
 				self.tabs[self.tabindex].contents = tmp
@@ -6526,18 +6566,17 @@ class Editor(tkinter.Toplevel):
 				del_ins_move()
 
 				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+				if self.can_do_syntax():
 
-				self.do_syntax(everything=True)
+					self.update_lineinfo()
+					self.update_tokens(everything=True)
+					self.token_can_update = True
+
 
 				set_cursor_pos()
 
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
-
-				if self.can_do_syntax():
-					self.avoid_viewsync_mess()
-					self.token_can_update = True
-
 
 
 		else:
@@ -6868,12 +6907,17 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
 
+		self.token_err = False
 		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.restore_bookmarks()
 
-		self.do_syntax(everything=True)
+		if self.can_do_syntax():
+
+			self.update_lineinfo()
+			self.update_tokens(everything=True)
+			self.token_can_update = True
 
 
 		# set cursor pos
@@ -6889,10 +6933,6 @@ class Editor(tkinter.Toplevel):
 
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-
-		if self.can_do_syntax():
-			self.avoid_viewsync_mess()
-			self.token_can_update = True
 
 		self.bind("<Escape>", self.esc_override)
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
@@ -7397,6 +7437,7 @@ class Editor(tkinter.Toplevel):
 			#
 			# --> if cursor is put there, at 'lineend', it will be elided.
 			# --> in a way it is correct to say that definition line has now no end.
+			#		(the index is there but not visible)
 			#
 			# But lines always have 'display lineend', And putting cursor
 			# there works.
@@ -7410,10 +7451,15 @@ class Editor(tkinter.Toplevel):
 			#
 			# One has to think what is the first display index after elided
 			# text. That is first index after 'e' and since one knows that
-			# 'idx_scope_end' is 'lineend' of the last line of scope
+			# 'idx_scope_end' is 'lineend' of the last line of scope:
 			#
 			# --> cursor is there, since text-ranges excludes out ending index if
-			# one remembers right, cursor is exactly at 'idx_scope_end'
+			# one remembers right, cursor is exactly at 'idx_scope_end'.
+			#
+			# Or more general, if elided part would end in the middle of line,
+			# then, current line would be extended with rest of that remaining line.
+			# Then if doing 'display lineend', cursor would just go to end of that line.
+
 
 			self.contents.mark_set('insert', '%s display lineend' % idx)
 
@@ -8202,7 +8248,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 				self.state = 'normal'
 
-				self.do_syntax(start='1.0', end=tkinter.END)
+				self.update_tokens(start='1.0', end=tkinter.END)
 
 
 		self.state = 'normal'

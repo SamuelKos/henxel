@@ -359,6 +359,17 @@ paste multiline with empty lines between, to indent < indent_orig
 reason: not checked if line.isspace()
 done, ok?
 ########################
+with io.BytesIO( tmp.encode('utf-8') ) as fo:
+	tokens = tokenize.tokenize( fo.readline )
+-->
+g = iter( tmp.splitlines(keepends=True) )
+tokens = tokenize.generate_tokens( g.__next__ )
+removed import io
+removed do_syntax
+avoid_viewsync_mess --> update_lineinfo
+viewsync --> update_line
+
+#######################
 
 
 Below this: not done
@@ -414,41 +425,48 @@ A always, O almost always
 			same in yank_line()
 
 
-		#######################################################
-		# If cursor was at defline lineend, it was moved 1 char left,
-		# put it back to lineend
-		if self.contents.compare(idx, '!=', ref):
-			# 	Q: Why not '%s lineend' % idx ?
-			#
-			# 	A:	s = '%s lineend' % idx_scope_start
-			#		self.contents.tag_add('elided', s, e)
-			#
-			# That says, the first index inside elided text is:
-			# 	'lineend' of definition line
-			#
-			# --> if cursor is put there, at 'lineend', it will be elided.
-			# --> in a way it is correct to say that definition line has now no end.
-			#
-			# But lines always have 'display lineend', And putting cursor
-			# there works.
-			#
-			# Q2: Were is cursor exactly if put there?
-			# A2: with some repetition
-			#	s = '%s lineend' % idx_scope_start
-			#	e = idx_scope_end
-			#
-			#	self.contents.tag_add('elided', s, e)
-			#
-			# One has to think what is the first display index after elided
-			# text. That is first index after 'e' and since one knows that
-			# 'idx_scope_end' is 'lineend' of the last line of scope
-			#
-			# --> cursor is there, since text-ranges excludes out ending index if
-			# one remembers right, cursor is exactly at 'idx_scope_end'
+#######################################################
+# If cursor was at defline lineend, it was moved 1 char left,
+# put it back to lineend
+if self.contents.compare(idx, '!=', ref):
+	#
+	# 	Q: Why not '%s lineend' % idx ?
+	#
+	# 	A:	s = '%s lineend' % idx_scope_start
+	#		self.contents.tag_add('elided', s, e)
+	#
+	# That says, the first index inside elided text is:
+	# 	'lineend' of definition line
+	#
+	# --> if cursor is put there, at 'lineend', it will be elided.
+	# --> in a way it is correct to say that definition line has now no end.
+	#		(the index is there but not visible)
+	#
+	# But lines always have 'display lineend', And putting cursor
+	# there works.
+	#
+	# Q2: Were is cursor exactly if put there?
+	# A2: with some repetition
+	#	s = '%s lineend' % idx_scope_start
+	#	e = idx_scope_end
+	#
+	#	self.contents.tag_add('elided', s, e)
+	#
+	# One has to think what is the first display index after elided
+	# text. That is first index after 'e' and since one knows that
+	# 'idx_scope_end' is 'lineend' of the last line of scope
+	#
+	# --> cursor is there, since text-ranges excludes out ending index if
+	# one remembers right, cursor is exactly at 'idx_scope_end'
 
-			self.contents.mark_set('insert', '%s display lineend' % idx)
+	self.contents.mark_set('insert', '%s display lineend' % idx)
 
-			##################################################################
+	#
+	# Or more general, if elided part would end in the middle of line,
+	# then, current line would be extended with rest of that remaining line.
+	# Then if doing 'display lineend', cursor would just go to end of that line.
+	#
+	##################################################################
 
 
 
@@ -471,8 +489,37 @@ if not at git root, and debug, and restart:
 FileNotFoundError: [Errno 2] No such file or directory: './dev/restart_editor.scpt'
 
 
+
 backspace_override() removed do_syntax
 update_tokens()
+
+
+bind to <<Modified>> updateline?
+
+write in docstring of update_tokens
+--> syntax end in test1
+
+
+if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
+or not flag_err and (everything==True)
+	self.token_err = False
+
+
+
+self.tabs[self.tabindex] --> tab
+
+
+check use of: self.token_err  ###############
+
+
+
+sel.first last edit_search_setting ?
+
+
+
+handle_viewchange?
+
+
 
 
 
