@@ -91,6 +91,11 @@ class ExpandWord:
 		if not word: return words
 
 
+		patt_end = ' get %s %s]'
+		patt_start = r'regexp -all -line -inline {\m%s[[:alnum:]_.]+} [%s' \
+				% (word, self.tcl_name_of_contents)
+
+
 		if editor.can_do_syntax():
 
 			# Get atrributes of 'self' faster. For example, if want: self.attribute1,
@@ -100,16 +105,10 @@ class ExpandWord:
 			if len(word) == 1 or word in ['se', 'sel']:
 				words.append('self.')
 
-
 			# Next, get words to list all_words
 			# First, try to append from current scope, function or class.
 			# Second, append from rest of file (or whole file is First fails)
 			####################################################################
-			patt_start = r'regexp -all -line -inline {\m%s[[:alnum:]_.]+} [%s' \
-					% (word, self.tcl_name_of_contents)
-
-			patt_end = ' get %s %s]'
-
 
 			# On fail, scope_start == '1.0'
 			scope_line, ind_defline, scope_start = editor.get_scope_start()
@@ -150,7 +149,7 @@ class ExpandWord:
 				if l4: all_words += l4
 
 
-		# Tabbing at __main__()
+		# For example: Tabbing at __main__() or in non py-file
 		if not all_words:
 			p = patt_start + patt_end % ('1.0', '{insert wordstart}')
 			l1 = words_ins_filestart = self.textwid.tk.eval(p).split()

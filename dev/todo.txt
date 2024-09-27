@@ -370,9 +370,66 @@ avoid_viewsync_mess --> update_lineinfo
 viewsync --> update_line
 
 #######################
+self.tabs[self.tabindex] --> tab, curtab, newtab, oldtab
+done ok?
+#######################
+check use of: self.token_err
+done ok?
+
+also checked in update_tokens:
+if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
+# line below is covered with condition up, because gets same indexes
+or not flag_err and (everything==True)
+	self.token_err = False
+
+#######################
 
 
 Below this: not done
+
+
+uncomment(), if no selection, check
+paste_fallback() fix
+
+
+########################
+restore_bookmarks(tab)
+save_bookmarks(tab)
+done ok ?
+
+self.clear_bookmarks() removed from restore_bookmarks
+	now:
+	self.clear_bookmarks()
+	self.restore_bookmarks
+	done ok?
+
+	
+clear_bookmarks(self):
+	Unsets bookmarks from current tab.
+	Does NOT do: tab.bookmarks.clear()
+	
+	
+TO NOTES
+bookmarks check:
+	view changes, after open tab, restore_bookmarks() is used in:
+		walk_tabs *
+		del_tab *
+		
+		run *
+		show_errors *
+		stop_show_errors *
+		
+		help *
+		stop_help *
+		
+		new_tab *
+		tag_link *
+		loadfile *
+		save *
+		
+		
+		
+		
 
 
 
@@ -492,6 +549,8 @@ FileNotFoundError: [Errno 2] No such file or directory: './dev/restart_editor.sc
 
 backspace_override() removed do_syntax
 update_tokens()
+	iter keepends=True is needed
+
 
 
 bind to <<Modified>> updateline?
@@ -500,16 +559,9 @@ write in docstring of update_tokens
 --> syntax end in test1
 
 
-if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
-or not flag_err and (everything==True)
-	self.token_err = False
 
-
-
-self.tabs[self.tabindex] --> tab
-
-
-check use of: self.token_err  ###############
+todo.py --> todo.txt?
+done ok?
 
 
 

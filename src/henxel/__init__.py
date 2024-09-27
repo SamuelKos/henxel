@@ -982,7 +982,10 @@ class Editor(tkinter.Toplevel):
 		self.token_can_update = False
 		self.oldlinenum = self.contents.index(tkinter.INSERT).split('.')[0]
 
-		self.update_tokens(everything=True)
+		if self.can_do_syntax():
+			self.update_lineinfo()
+			self.update_tokens(everything=True)
+			self.token_can_update = True
 
 		self.contents.bind( "<<WidgetViewSync>>", self.update_line)
 		# Viewsync-event does not trigger at window size changes,
@@ -1042,10 +1045,6 @@ class Editor(tkinter.Toplevel):
 		diff = self.winfo_screenwidth() - self.winfo_width()
 		if diff > 0:
 			self.geometry('+%d+0' % diff )
-
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.token_can_update = True
 
 		self.update_idletasks()
 		self.update_line()
@@ -1242,9 +1241,9 @@ class Editor(tkinter.Toplevel):
 
 
 		tab = self.tabs[self.tabindex]
-		tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
-
+		self.save_bookmarks(tab)
 		self.save_config()
+
 
 		# Affects color, fontchoose, load:
 		for widget in self.to_be_closed:
@@ -1497,7 +1496,7 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 
 
-		if len(self.tabs) > 0  and not error:
+		if len(self.tabs) > 0 and not error:
 			try:
 				pos = self.contents.index(tkinter.INSERT)
 
@@ -1511,7 +1510,11 @@ class Editor(tkinter.Toplevel):
 			self.tabs[self.tabindex].contents = tmp[:-1]
 
 			tab = self.tabs[self.tabindex]
-			tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
+			self.save_bookmarks(tab)
+			self.clear_bookmarks()
+
+		# Fix for tag_link
+		elif len(self.tabs) > 0 and error:
 			self.clear_bookmarks()
 
 
@@ -1538,7 +1541,7 @@ class Editor(tkinter.Toplevel):
 
 
 	def del_tab(self, event=None, save=True):
-		''' save=False from cmd/Control-Q
+		''' save=False from cmd/Control-Shift-Q
 		'''
 
 		if self.state != 'normal':
@@ -1557,7 +1560,9 @@ class Editor(tkinter.Toplevel):
 				self.bell()
 				return 'break'
 
+
 		self.tabs.pop(self.tabindex)
+
 
 		if (len(self.tabs) == 0):
 			newtab = Tab()
@@ -1566,23 +1571,30 @@ class Editor(tkinter.Toplevel):
 		if self.tabindex > 0:
 			self.tabindex -= 1
 
-		self.tabs[self.tabindex].active = True
+		tab = self.tabs[self.tabindex]
+
+		tab.active = True
 		self.entry.delete(0, tkinter.END)
 
-		if self.tabs[self.tabindex].filepath:
-			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+		if tab.filepath:
+			self.entry.insert(0, tab.filepath)
 			self.entry.xview_moveto(1.0)
 
 		self.token_err = False
 		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
-		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-		self.restore_bookmarks()
+		self.contents.insert(tkinter.INSERT, tab.contents)
+		self.clear_bookmarks()
+		self.restore_bookmarks(tab)
 
-		self.update_tokens(everything=True)
+		if self.can_do_syntax():
+			self.update_lineinfo()
+			self.update_tokens(everything=True)
+			self.token_can_update = True
 
-		# set cursor pos
-		line = self.tabs[self.tabindex].position
+
+		# Set cursor pos
+		line = tab.position
 		self.contents.focus_set()
 
 		try:
@@ -1591,16 +1603,12 @@ class Editor(tkinter.Toplevel):
 
 		except tkinter.TclError:
 			self.contents.mark_set('insert', '1.0')
-			self.tabs[self.tabindex].position = '1.0'
+			tab.position = '1.0'
 			self.contents.see('1.0')
 
 
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.token_can_update = True
-
 		self.update_title()
 
 		return 'break'
@@ -1612,21 +1620,21 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return "break"
 
-
-		self.tabs[self.tabindex].active = False
+		oldtab = self.tabs[self.tabindex]
+		oldtab.active = False
 
 		try:
 			pos = self.contents.index(tkinter.INSERT)
 		except tkinter.TclError:
 			pos = '1.0'
 
-		self.tabs[self.tabindex].position = pos
+		oldtab.position = pos
 
 		tmp = self.contents.get('1.0', tkinter.END)
 		# [:-1]: remove unwanted extra newline
-		self.tabs[self.tabindex].contents = tmp[:-1]
-		tab = self.tabs[self.tabindex]
-		tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
+		oldtab.contents = tmp[:-1]
+		self.save_bookmarks(oldtab)
+
 
 		idx = self.tabindex
 
@@ -1641,25 +1649,32 @@ class Editor(tkinter.Toplevel):
 			idx += 1
 
 		self.tabindex = idx
-		self.tabs[self.tabindex].active = True
+
+
+		newtab = self.tabs[self.tabindex]
+
+		newtab.active = True
 		self.entry.delete(0, tkinter.END)
 
-
-		if self.tabs[self.tabindex].filepath:
-			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+		if newtab.filepath:
+			self.entry.insert(0, newtab.filepath)
 			self.entry.xview_moveto(1.0)
 
 		self.token_err = False
 		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
-		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-		self.restore_bookmarks()
+		self.contents.insert(tkinter.INSERT, newtab.contents)
+		self.clear_bookmarks()
+		self.restore_bookmarks(newtab)
 
 		if self.can_do_syntax():
+			self.update_lineinfo()
 			self.update_tokens(everything=True)
+			self.token_can_update = True
 
-		# set cursor pos
-		line = self.tabs[self.tabindex].position
+
+		# Set cursor pos
+		line = newtab.position
 		self.contents.focus_set()
 
 		try:
@@ -1668,16 +1683,12 @@ class Editor(tkinter.Toplevel):
 
 		except tkinter.TclError:
 			self.contents.mark_set('insert', '1.0')
-			self.tabs[self.tabindex].position = '1.0'
+			newtab.position = '1.0'
 			self.contents.see('1.0')
 
 
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.token_can_update = True
-
 		self.update_title()
 
 		return 'break'
@@ -1904,10 +1915,12 @@ class Editor(tkinter.Toplevel):
 		self.btn_git.config(font=self.menufont)
 		self.popup.config(font=self.menufont)
 
-		if self.tabs[self.tabindex].type == 'normal':
-			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-			self.restore_bookmarks()
-			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+		curtab = self.tabs[self.tabindex]
+
+		if curtab.type == 'normal':
+			self.contents.insert(tkinter.INSERT, curtab.contents)
+			self.restore_bookmarks(curtab)
+			self.entry.insert(0, curtab.filepath)
 			self.entry.xview_moveto(1.0)
 
 
@@ -1930,21 +1943,27 @@ class Editor(tkinter.Toplevel):
 
 		else:
 			self.syntax = True
-			self.token_can_update = True
-			self.update_tokens(start='1.0', end=tkinter.END)
+			self.token_err = False
+			self.token_can_update = False
+
+			if self.can_do_syntax():
+				self.update_lineinfo()
+				self.update_tokens(start='1.0', end=tkinter.END)
+				self.token_can_update = True
 
 			return 'break'
 
 
 	def is_pyfile(self):
 		res = False
+		tab = self.tabs[self.tabindex]
 
-		if self.tabs[self.tabindex].filepath:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+		if tab.filepath:
+			if '.py' in tab.filepath.suffix:
 				res = True
 
 		# This flag is set in insert_inspected()
-		elif hasattr(self.tabs[self.tabindex], 'inspected'):
+		elif hasattr(tab, 'inspected'):
 			res = True
 
 		return res
@@ -2166,6 +2185,7 @@ class Editor(tkinter.Toplevel):
 			###### Check parentheses End ###########
 
 
+		#  not flag_err and ( everything==True ) is same, because gets same indexes
 		if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
 			#print('ok')
 			self.token_err = False
@@ -2914,26 +2934,31 @@ class Editor(tkinter.Toplevel):
 			try:
 				with open(filepath, 'r', encoding='utf-8') as f:
 					tmp = f.read()
+
+					# Bookmarks of oldtab are already saved, unsetting old marks is done
+					# in self.new_tab with self.clear_bookmarks
 					self.new_tab(error=True)
-					self.tabs[self.tabindex].oldcontents = tmp
+
+					newtab = self.tabs[self.tabindex]
+					newtab.oldcontents = tmp
 
 					if '.py' in filepath.suffix:
 						indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
 
 						if indentation_is_alien:
-							tmp = self.tabs[self.tabindex].oldcontents.splitlines(True)
+							tmp = newtab.oldcontents.splitlines(True)
 							tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 							tmp = ''.join(tmp)
-							self.tabs[self.tabindex].contents = tmp
+							newtab.contents = tmp
 
 						else:
-							self.tabs[self.tabindex].contents = self.tabs[self.tabindex].oldcontents
+							newtab.contents = newtab.oldcontents
 					else:
-						self.tabs[self.tabindex].contents = self.tabs[self.tabindex].oldcontents
+						newtab.contents = newtab.oldcontents
 
 
-					self.tabs[self.tabindex].filepath = filepath
-					self.tabs[self.tabindex].type = 'normal'
+					newtab.filepath = filepath
+					newtab.type = 'normal'
 
 			except (EnvironmentError, UnicodeDecodeError) as e:
 				print(e.__str__())
@@ -2950,19 +2975,13 @@ class Editor(tkinter.Toplevel):
 		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-		self.restore_bookmarks()
+		self.clear_bookmarks()
+		self.restore_bookmarks(self.tabs[self.tabindex])
 
-		if self.syntax:
-
-			lineend = '%s lineend' % tkinter.INSERT
-			linestart = '%s linestart' % tkinter.INSERT
-
-			tmp = self.contents.get( linestart, lineend )
-			self.oldline = tmp
-
+		if self.can_do_syntax():
+			self.update_lineinfo()
 			self.update_tokens(everything=True)
 			self.token_can_update = True
-
 
 		# Set cursor pos
 		line = errline + '.0'
@@ -2998,7 +3017,8 @@ class Editor(tkinter.Toplevel):
 			errors in your program, you should use logging (in except-block)
 			if you are not 100% sure about your code in except-block.
 		'''
-		if (self.state != 'normal') or (self.tabs[self.tabindex].type == 'newtab'):
+		curtab = self.tabs[self.tabindex]
+		if (self.state != 'normal') or (curtab.type == 'newtab'):
 			self.bell()
 			return 'break'
 
@@ -3008,22 +3028,24 @@ class Editor(tkinter.Toplevel):
 
 		# https://docs.python.org/3/library/subprocess.html
 
-		res = subprocess.run(['python', self.tabs[self.tabindex].filepath], stderr=subprocess.PIPE).stderr
+		res = subprocess.run(['python', curtab.filepath], stderr=subprocess.PIPE).stderr
 
 		err = res.decode()
 
 		if len(err) != 0:
 			self.bind("<Escape>", self.stop_show_errors)
 			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
+			try: pos = self.contents.index(tkinter.INSERT)
+			except tkinter.TclError: pos = '1.0'
+			curtab.position = pos
 			self.state = 'error'
 
 			self.taglinks = dict()
 			self.errlines = list()
 			openfiles = [tab.filepath for tab in self.tabs]
+			self.save_bookmarks(curtab)
 
-			tab = self.tabs[self.tabindex]
-			tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
-
+			self.token_can_update = False
 			self.contents.delete('1.0', tkinter.END)
 
 			for tag in self.contents.tag_names():
@@ -3075,9 +3097,7 @@ class Editor(tkinter.Toplevel):
 						self.contents.tag_config(tagname, foreground='brown1')
 						self.contents.tag_raise(tagname)
 
-
 					self.contents.insert(tkinter.INSERT, '\n')
-
 
 				else:
 					self.contents.insert(tkinter.INSERT, tmp +"\n")
@@ -3088,8 +3108,9 @@ class Editor(tkinter.Toplevel):
 						start = self.contents.index('insert -1 lines linestart')
 						end = self.contents.index('insert -1 lines lineend')
 
+						self.update_lineinfo()
 						self.update_tokens(start=start, end=end, line=line)
-
+						self.token_can_update = True
 
 		return 'break'
 
@@ -3104,18 +3125,19 @@ class Editor(tkinter.Toplevel):
 			self.state = 'error'
 
 			tmp = self.contents.get('1.0', tkinter.END)
+			curtab = self.tabs[self.tabindex]
 			# [:-1]: remove unwanted extra newline
-			self.tabs[self.tabindex].contents = tmp[:-1]
+			curtab.contents = tmp[:-1]
 
 			try:
 				pos = self.contents.index(tkinter.INSERT)
 			except tkinter.TclError:
 				pos = '1.0'
 
-			self.tabs[self.tabindex].position = pos
-			tab = self.tabs[self.tabindex]
-			tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
+			curtab.position = pos
+			self.save_bookmarks(curtab)
 
+			self.token_can_update = False
 			self.contents.delete('1.0', tkinter.END)
 			openfiles = [tab.filepath for tab in self.tabs]
 
@@ -3162,7 +3184,9 @@ class Editor(tkinter.Toplevel):
 						start = self.contents.index('insert -1 lines linestart')
 						end = self.contents.index('insert -1 lines lineend')
 
+						self.update_lineinfo()
 						self.update_tokens(start=start, end=end, line=line)
+						self.token_can_update = True
 
 
 
@@ -3173,22 +3197,26 @@ class Editor(tkinter.Toplevel):
 			lambda event: self.raise_popup(event))
 
 		self.entry.delete(0, tkinter.END)
+		curtab = self.tabs[self.tabindex]
 
-		if self.tabs[self.tabindex].type == 'normal':
-			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+		if curtab.type == 'normal':
+			self.entry.insert(0, curtab.filepath)
 			self.entry.xview_moveto(1.0)
 
 		self.token_err = False
 		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
-		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-		self.restore_bookmarks()
+		self.contents.insert(tkinter.INSERT, curtab.contents)
+		self.clear_bookmarks()
+		self.restore_bookmarks(curtab)
 
-		self.update_tokens(everything=True)
+		if self.can_do_syntax():
+			self.update_lineinfo()
+			self.update_tokens(everything=True)
+			self.token_can_update = True
 
-
-		# set cursor pos
-		line = self.tabs[self.tabindex].position
+		# Set cursor pos
+		line = curtab.position
 		self.contents.focus_set()
 		self.contents.mark_set('insert', line)
 		self.ensure_idx_visibility(line)
@@ -3196,11 +3224,6 @@ class Editor(tkinter.Toplevel):
 
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.token_can_update = True
-
 
 
 ########## Run file Related End
@@ -4665,14 +4688,18 @@ class Editor(tkinter.Toplevel):
 
 		# Do paste string
 		# Put mark, so one can get end index of new string
+		self.token_can_update = False
 		self.contents.mark_set('paste', ins_old)
 		self.contents.insert(ins_old, s)
 
 
 		start = self.contents.index( '%s linestart' % ins_old)
 		end = self.contents.index( 'paste lineend')
+
 		if self.can_do_syntax():
 			self.update_tokens( start=start, end=end)
+			self.update_lineinfo()
+			self.token_can_update = True
 
 
 		if not have_selection:
@@ -4705,6 +4732,7 @@ class Editor(tkinter.Toplevel):
 			# is empty
 			return 'break'
 
+		self.token_can_update = False
 		have_selection = False
 
 		if len( self.contents.tag_ranges('sel') ) > 0:
@@ -4729,7 +4757,9 @@ class Editor(tkinter.Toplevel):
 
 
 			if self.can_do_syntax():
+				self.update_lineinfo()
 				self.update_tokens( start=s, end=e, line=t )
+				self.token_can_update = True
 
 
 			if have_selection:
@@ -4753,7 +4783,9 @@ class Editor(tkinter.Toplevel):
 
 
 			if self.can_do_syntax():
+				self.update_lineinfo()
 				self.update_tokens( start=s, end=e, line=t )
+				self.token_can_update = True
 
 
 			if have_selection:
@@ -4766,6 +4798,15 @@ class Editor(tkinter.Toplevel):
 
 
 		else:
+			s = self.contents.index( '%s linestart' % idx_ins)
+			e = self.contents.index( 'insert lineend')
+			t = self.contents.get( s, e )
+
+			if self.can_do_syntax():
+				self.update_lineinfo()
+				self.update_tokens( start=s, end=e, line=t )
+				self.token_can_update = True
+
 			if have_selection:
 				self.contents.tag_add('sel', selstart, selend)
 				self.contents.mark_set('insert', idx_ins)
@@ -4785,10 +4826,9 @@ class Editor(tkinter.Toplevel):
 
 			self.contents.edit_undo()
 
-			self.update_tokens(start='1.0', end=tkinter.END)
-
 			if self.can_do_syntax():
 				self.update_lineinfo()
+				self.update_tokens(start='1.0', end=tkinter.END)
 				self.token_can_update = True
 
 		except tkinter.TclError:
@@ -4808,10 +4848,9 @@ class Editor(tkinter.Toplevel):
 
 			self.contents.edit_redo()
 
-			self.update_tokens(start='1.0', end=tkinter.END)
-
 			if self.can_do_syntax():
 				self.update_lineinfo()
+				self.update_tokens(start='1.0', end=tkinter.END)
 				self.token_can_update = True
 
 
@@ -5109,8 +5148,14 @@ class Editor(tkinter.Toplevel):
 				with open(filepath, 'r', encoding='utf-8') as f:
 					fcontents = f.read()
 
+					self.token_err = False
+					self.token_can_update = False
+
+					# Bookmarks of oldtab are saved in self.new_tab
+					# and marks are cleared with self.clear_bookmarks
 					self.new_tab()
 
+					curtab = self.tabs[self.tabindex]
 
 					if '.py' in filepath:
 						indentation_is_alien, indent_depth = self.check_indent_depth(fcontents)
@@ -5118,31 +5163,28 @@ class Editor(tkinter.Toplevel):
 						tmp = fcontents.splitlines(True)
 						tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 						tmp = ''.join(tmp)
-						self.tabs[self.tabindex].contents = tmp
+						curtab.contents = tmp
+
+						# This flag is used in handle_search_entry()
+						curtab.inspected = True
 
 					else:
-						self.tabs[self.tabindex].contents = fcontents
+						curtab.contents = fcontents
 
 
-					self.tabs[self.tabindex].position = '1.0'
+					curtab.position = '1.0'
 					self.contents.focus_set()
-					self.contents.insert('1.0', self.tabs[self.tabindex].contents)
+					self.contents.insert('1.0', curtab.contents)
 					self.contents.mark_set('insert', '1.0')
 					self.contents.see('1.0')
 
-					if self.syntax:
-						self.token_err = False
-						self.token_can_update = False
-						self.update_tokens(everything=True)
-
-
-					# This flag is used in handle_search_entry()
-					self.tabs[self.tabindex].inspected = True
-					self.contents.edit_reset()
-					self.contents.edit_modified(0)
 					if self.can_do_syntax():
 						self.update_lineinfo()
+						self.update_tokens(everything=True)
 						self.token_can_update = True
+
+					self.contents.edit_reset()
+					self.contents.edit_modified(0)
 
 					return 'break'
 
@@ -5172,7 +5214,15 @@ class Editor(tkinter.Toplevel):
 				l = inspect.getsourcelines(target_object)
 				t = ''.join(l[0])
 
+
+				self.token_err = False
+				self.token_can_update = False
+
+				# Bookmarks of oldtab are saved in self.new_tab
+				# and marks are cleared with self.clear_bookmarks
 				self.new_tab()
+
+				curtab = self.tabs[self.tabindex]
 
 
 				indentation_is_alien, indent_depth = self.check_indent_depth(t)
@@ -5180,28 +5230,24 @@ class Editor(tkinter.Toplevel):
 				tmp = t.splitlines(True)
 				tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 				tmp = ''.join(tmp)
-				self.tabs[self.tabindex].contents = tmp
+				curtab.contents = tmp
 
 
-				self.tabs[self.tabindex].position = '1.0'
+				curtab.position = '1.0'
 				self.contents.focus_set()
-				self.contents.insert('1.0', self.tabs[self.tabindex].contents)
+				self.contents.insert('1.0', curtab.contents)
 				self.contents.mark_set('insert', '1.0')
 				self.contents.see('1.0')
-
-				if self.syntax:
-					self.token_err = False
-					self.token_can_update = False
-					self.update_tokens(everything=True)
-
-
 				# This flag is used in handle_search_entry()
-				self.tabs[self.tabindex].inspected = True
-				self.contents.edit_reset()
-				self.contents.edit_modified(0)
+				curtab.inspected = True
+
 				if self.can_do_syntax():
 					self.update_lineinfo()
+					self.token_can_update = False
 					self.token_can_update = True
+
+				self.contents.edit_reset()
+				self.contents.edit_modified(0)
 
 				return 'break'
 
@@ -5242,19 +5288,23 @@ class Editor(tkinter.Toplevel):
 
 			tmp = ''.join(tmp)
 
+
+			self.token_can_update = False
 			self.contents.delete(start, end)
 			self.contents.insert(start, tmp)
 
-
-			self.update_tokens(start=start, end=end)
-
+			if self.can_do_syntax():
+				self.update_tokens(start=start, end=end)
+				self.update_lineinfo()
+				self.token_can_update = True
 
 			self.contents.edit_separator()
-			return "break"
+
 
 		except tkinter.TclError as e:
-			#print(e)
-			return "break"
+			print(e)
+
+		return "break"
 
 
 	def tabify(self, line, width=None):
@@ -6096,15 +6146,16 @@ class Editor(tkinter.Toplevel):
 
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
+		curtab = self.tabs[self.tabindex]
 
-		if self.tabs[self.tabindex].filepath:
-			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+		if curtab.filepath:
+			self.entry.insert(0, curtab.filepath)
 			self.entry.xview_moveto(1.0)
 
 
 		# Set cursor pos
 		try:
-			line = self.tabs[self.tabindex].position
+			line = curtab.position
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
 			self.wait_for(100)
@@ -6114,7 +6165,7 @@ class Editor(tkinter.Toplevel):
 
 
 		except tkinter.TclError:
-			self.tabs[self.tabindex].position = '1.0'
+			curtab.position = '1.0'
 
 		return "break"
 
@@ -6216,10 +6267,13 @@ class Editor(tkinter.Toplevel):
 	def loadfile(self, filepath):
 		''' filepath is pathlib.Path
 			If filepath is python-file, convert indentation to tabs.
+
+			File is always opened to *current* tab
 		'''
 
 		filename = filepath
 		openfiles = [tab.filepath for tab in self.tabs]
+		curtab = self.tabs[self.tabindex]
 
 		for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
 			widget.config(state='normal')
@@ -6230,50 +6284,52 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			self.entry.delete(0, tkinter.END)
 
-			if self.tabs[self.tabindex].filepath != None:
-				self.entry.insert(0, self.tabs[self.tabindex].filepath)
+			if curtab.filepath != None:
+				self.entry.insert(0, curtab.filepath)
 				self.entry.xview_moveto(1.0)
 
 			return
 
 
-		# Using same tab:
+		# Using *same* tab:
 		try:
 			with open(filename, 'r', encoding='utf-8') as f:
 				tmp = f.read()
-				self.tabs[self.tabindex].oldcontents = tmp
+				curtab.oldcontents = tmp
 
 				if '.py' in filename.suffix:
 					indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
 
 					if indentation_is_alien:
-						tmp = self.tabs[self.tabindex].oldcontents.splitlines(True)
+						tmp = curtab.oldcontents.splitlines(True)
 						tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 						tmp = ''.join(tmp)
-						self.tabs[self.tabindex].contents = tmp
+						curtab.contents = tmp
 
 					else:
-						self.tabs[self.tabindex].contents = self.tabs[self.tabindex].oldcontents
+						curtab.contents = curtab.oldcontents
 				else:
-					self.tabs[self.tabindex].contents = self.tabs[self.tabindex].oldcontents
-
+					curtab.contents = curtab.oldcontents
 
 
 				self.entry.delete(0, tkinter.END)
-				self.tabs[self.tabindex].filepath = filename
-				self.tabs[self.tabindex].type = 'normal'
-				self.tabs[self.tabindex].position = '1.0'
+				curtab.filepath = filename
+				curtab.type = 'normal'
+				curtab.position = '1.0'
 				self.entry.insert(0, filename)
 				self.entry.xview_moveto(1.0)
 
 				self.token_err = False
 				self.token_can_update = False
 				self.contents.delete('1.0', tkinter.END)
-				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+				self.contents.insert(tkinter.INSERT, curtab.contents)
 				self.remove_bookmarks(all_tabs=False)
+				self.clear_bookmarks()
 
-				self.update_tokens(everything=True)
-
+				if self.can_do_syntax():
+					self.update_lineinfo()
+					self.update_tokens(everything=True)
+					self.token_can_update = True
 
 				self.contents.focus_set()
 				self.contents.see('1.0')
@@ -6282,18 +6338,14 @@ class Editor(tkinter.Toplevel):
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 
-				if self.can_do_syntax():
-					self.update_lineinfo()
-					self.token_can_update = True
-
 
 		except (EnvironmentError, UnicodeDecodeError) as e:
 			print(e.__str__())
 			print(f'\n Could not open file: {filename}')
 			self.entry.delete(0, tkinter.END)
 
-			if self.tabs[self.tabindex].filepath != None:
-				self.entry.insert(0, self.tabs[self.tabindex].filepath)
+			if curtab.filepath != None:
+				self.entry.insert(0, curtab.filepath)
 				self.entry.xview_moveto(1.0)
 
 		return
@@ -6302,6 +6354,8 @@ class Editor(tkinter.Toplevel):
 	def load(self, event=None):
 		'''	Get just the filename,
 			on success, pass it to loadfile()
+
+			File is always opened to *current* tab
 		'''
 
 		if self.state != 'normal':
@@ -6375,7 +6429,7 @@ class Editor(tkinter.Toplevel):
 			# Is state actually changing, or is it stuck == there is a bug
 			# --> cancel
 			if self.state == last_state:
-				print(r'\nState is not changing, currenty: ', self.state)
+				print(r'\nState is not changing, currently: ', self.state)
 
 				return False
 
@@ -6447,7 +6501,7 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 
 		# Used below
-		def del_ins_move():
+		def entry_del_ins_move():
 			self.entry.delete(0, tkinter.END)
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
@@ -6464,38 +6518,41 @@ class Editor(tkinter.Toplevel):
 				self.tabs[self.tabindex].position = '1.0'
 
 
-		tmp = self.entry.get().strip()
-
-
-		if not isinstance(tmp, str) or tmp.isspace():
+		tmp_entry = self.entry.get().strip()
+		if not isinstance(tmp_entry, str) or tmp_entry.isspace():
 			print('Give a valid filename')
 			self.bell()
 			return False
 
-		fpath_in_entry = pathlib.Path().cwd() / tmp
+
+		fpath_in_entry = pathlib.Path().cwd() / tmp_entry
+		##############
 
 		try:
 			pos = self.contents.index(tkinter.INSERT)
 		except tkinter.TclError:
 			pos = '1.0'
 
-		tmp = self.contents.get('1.0', tkinter.END)
 
-		self.tabs[self.tabindex].position = pos
-		self.tabs[self.tabindex].contents = tmp
+		oldtab = self.tabs[self.tabindex]
+		oldtab.position = pos
+
+		cur_contents = oldtab.contents = self.contents.get('1.0', tkinter.END)
+		##############################
+
 
 		openfiles = [tab.filepath for tab in self.tabs]
 
 
 		# Creating a new file
-		if fpath_in_entry != self.tabs[self.tabindex].filepath and not activetab:
+		if fpath_in_entry != oldtab.filepath and not activetab:
 
 			if fpath_in_entry in openfiles:
 				self.bell()
 				print(f'\nFile: {fpath_in_entry} already opened')
 
-				if self.tabs[self.tabindex].filepath != None:
-					del_ins_move()
+				if oldtab.filepath != None:
+					entry_del_ins_move()
 
 				return False
 
@@ -6503,28 +6560,27 @@ class Editor(tkinter.Toplevel):
 				self.bell()
 				print(f'\nCan not overwrite file: {fpath_in_entry}')
 
-				if self.tabs[self.tabindex].filepath != None:
-					del_ins_move()
+				if oldtab.filepath != None:
+					entry_del_ins_move()
 
 				return False
 
-			if self.tabs[self.tabindex].type == 'newtab':
+			if oldtab.type == 'newtab':
 
 				# Avoiding disk-writes, just checking filepath:
 				try:
 					with open(fpath_in_entry, 'w', encoding='utf-8') as f:
-						self.tabs[self.tabindex].filepath = fpath_in_entry
-						self.tabs[self.tabindex].type = 'normal'
+						oldtab.filepath = fpath_in_entry
+						oldtab.type = 'normal'
 				except EnvironmentError as e:
 					print(e.__str__())
 					print(f'\n Could not create file: {fpath_in_entry}')
 					return False
 
-				if self.tabs[self.tabindex].filepath != None:
-					del_ins_move()
+				if oldtab.filepath != None:
+					entry_del_ins_move()
 
 					if self.can_do_syntax():
-
 						self.update_lineinfo()
 						self.token_err = False
 						self.token_can_update = False
@@ -6533,7 +6589,6 @@ class Editor(tkinter.Toplevel):
 
 
 				set_cursor_pos()
-
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 
@@ -6548,8 +6603,8 @@ class Editor(tkinter.Toplevel):
 					print(e.__str__())
 					print(f'\n Could not create file: {fpath_in_entry}')
 
-					if self.tabs[self.tabindex].filepath != None:
-						del_ins_move()
+					if oldtab.filepath != None:
+						entry_del_ins_move()
 
 					return False
 
@@ -6557,24 +6612,28 @@ class Editor(tkinter.Toplevel):
 				self.token_err = False
 				self.token_can_update = False
 
+				# Bookmarks of oldtab are saved in self.new_tab
+				# and marks are cleared with self.clear_bookmarks
 				self.new_tab()
-				self.tabs[self.tabindex].filepath = fpath_in_entry
-				self.tabs[self.tabindex].contents = tmp
-				self.tabs[self.tabindex].position = pos
-				self.tabs[self.tabindex].type = 'normal'
+				newtab = self.tabs[self.tabindex]
 
-				del_ins_move()
+				newtab.filepath = fpath_in_entry
+				# Q: Why not newtab.oldcontents = cur_contents?
+				# A: Because not writing to disk now, want to keep difference, for
+				#    forced save to work with this tab.
+				newtab.contents = cur_contents
+				newtab.position = pos
+				newtab.type = 'normal'
+				entry_del_ins_move()
 
-				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+				self.contents.insert(tkinter.INSERT, newtab.contents)
+
 				if self.can_do_syntax():
-
 					self.update_lineinfo()
 					self.update_tokens(everything=True)
 					self.token_can_update = True
 
-
 				set_cursor_pos()
-
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 
@@ -6584,29 +6643,30 @@ class Editor(tkinter.Toplevel):
 			if not activetab:
 				return True
 
+			# NOTE: oldtab.contents was updated at the beginning,
 			# If closing tab or loading file:
-			if '.py' in self.tabs[self.tabindex].filepath.suffix:
+			if '.py' in oldtab.filepath.suffix:
 				# Check indent (tabify) and strip
-				tmp = self.tabs[self.tabindex].contents.splitlines(True)
+				tmp = oldtab.contents.splitlines(True)
 				tmp[:] = [self.tabify(line) for line in tmp]
 				tmp = ''.join(tmp)[:-1]
 			else:
-				tmp = self.tabs[self.tabindex].contents
+				tmp = oldtab.contents
 				tmp = tmp[:-1]
 
 
 			# [:-1]: text widget adds dummy newline at end of file when editing
-			if tmp == self.tabs[self.tabindex].oldcontents:
+			if tmp == oldtab.oldcontents:
 				return True
 
 
 			try:
-				with open(self.tabs[self.tabindex].filepath, 'w', encoding='utf-8') as f:
+				with open(oldtab.filepath, 'w', encoding='utf-8') as f:
 					f.write(tmp)
 
 			except EnvironmentError as e:
 				print(e.__str__())
-				print(f'\n Could not save file: {self.tabs[self.tabindex].filepath}')
+				print(f'\n Could not save file: {oldtab.filepath}')
 				return False
 
 
@@ -6656,20 +6716,36 @@ class Editor(tkinter.Toplevel):
 
 
 	def clear_bookmarks(self):
+		''' Unsets bookmarks from current tab.
+
+			Does NOT do: tab.bookmarks.clear()
+		'''
 		for mark in self.contents.mark_names():
 			if 'bookmark' in mark:
 				self.contents.mark_unset(mark)
 
 
-	def restore_bookmarks(self):
-		''' When view changes, after tab has its contents again,
+	def save_bookmarks(self, tab):
+		''' tab: Tab
 
-			restore tabs bookmarks
+			Info is in restore_bookmarks
+		'''
+		tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
+
+
+	def restore_bookmarks(self, tab):
+		''' tab: Tab
+
+			When view changes, like in walk_tab(),
+			before contents of oldtab gets deleted, its bookmarks
+			are saved, but only their index position, not names:
+
+			oldtab.bookmarks[:] = [self.contents.index(mark) for mark in oldtab.bookmarks]
+
+			And after tab has its contents again,
+			bookmarks are restored here and tab.bookmarks holds again the names of bookmarks.
 		'''
 
-		self.clear_bookmarks()
-
-		tab = self.tabs[self.tabindex]
 		for i, pos in enumerate(tab.bookmarks):
 			self.contents.mark_set('bookmark%d' % i, pos)
 
@@ -6681,10 +6757,8 @@ class Editor(tkinter.Toplevel):
 
 
 	def remove_bookmarks(self, all_tabs=True):
-		''' Removes bookmarks from current tab
-			or from all tabs.
+		''' Removes bookmarks from current tab/all tabs
 		'''
-		self.clear_bookmarks()
 
 		tabs = [self.tabs[self.tabindex]]
 		if all_tabs: tabs = self.tabs
@@ -6702,9 +6776,16 @@ class Editor(tkinter.Toplevel):
 			tab = self.tabs[self.tabindex]
 			tab.bookmarks.remove(mark_name)
 
-			# Fix naming of bookmarks in tab.bookmarks
+			# Fix naming of bookmarks in tab.bookmarks, Explanation:
+			# For example: if last bookmark before deletion is bookmark3 and then,
+			# now here, bookmark2 would be deleted. If then, later, adding new bookmark
+			# (in toggle_bookmark), it would be named bookmark3 because naming depends
+			# on the lenght of list: tab.bookmarks. So there would be two bookmark3 in the list,
+			# except that there would not. Instead, the position of
+			# bookmark3 would just be changed to this 'new' mark.
+			# For preventing this, all marks are renamed at below.
 			tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
-			self.restore_bookmarks()
+			self.restore_bookmarks(tab)
 
 			return True
 
@@ -6862,6 +6943,9 @@ class Editor(tkinter.Toplevel):
 
 	def toggle_bookmark(self, event=None):
 		''' Add/Remove bookmark at cursor position
+
+			Bookmark is string, name of tk text mark like: 'bookmark11'
+			It is appended to tab.bookmarks
 		'''
 		tests = (
 				self.state not in [ 'normal', 'search', 'replace' ],
@@ -6887,9 +6971,10 @@ class Editor(tkinter.Toplevel):
 			return "break"
 
 
-		new_mark = 'bookmark' + str(len(self.tabs[self.tabindex].bookmarks))
+		curtab = self.tabs[self.tabindex]
+		new_mark = 'bookmark' + str(len(curtab.bookmarks))
 		self.contents.mark_set( new_mark, s )
-		self.tabs[self.tabindex].bookmarks.append(new_mark)
+		curtab.bookmarks.append(new_mark)
 
 		self.bookmark_animate(s)
 		return "break"
@@ -6903,32 +6988,34 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 
-		if self.tabs[self.tabindex].filepath:
-			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+		curtab = self.tabs[self.tabindex]
+
+		if curtab.filepath:
+			self.entry.insert(0, curtab.filepath)
 			self.entry.xview_moveto(1.0)
 
 		self.token_err = False
 		self.token_can_update = False
 		self.contents.delete('1.0', tkinter.END)
-		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-		self.restore_bookmarks()
+		self.contents.insert(tkinter.INSERT, curtab.contents)
+		self.clear_bookmarks()
+		self.restore_bookmarks(curtab)
 
 		if self.can_do_syntax():
-
 			self.update_lineinfo()
 			self.update_tokens(everything=True)
 			self.token_can_update = True
 
 
-		# set cursor pos
+		# Set cursor pos
 		try:
-			line = self.tabs[self.tabindex].position
+			line = curtab.position
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
 			self.ensure_idx_visibility(line)
 
 		except tkinter.TclError:
-			self.tabs[self.tabindex].position = '1.0'
+			curtab.position = '1.0'
 
 
 		self.contents.edit_reset()
@@ -6951,12 +7038,12 @@ class Editor(tkinter.Toplevel):
 		except tkinter.TclError:
 			pos = '1.0'
 
-		self.tabs[self.tabindex].position = pos
+		curtab = self.tabs[self.tabindex]
+		curtab.position = pos
 		tmp = self.contents.get('1.0', tkinter.END)
 		# [:-1]: remove unwanted extra newline
-		self.tabs[self.tabindex].contents = tmp[:-1]
-		tab = self.tabs[self.tabindex]
-		tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
+		curtab.contents = tmp[:-1]
+		self.save_bookmarks(curtab)
 
 		self.token_can_update = False
 
@@ -7272,9 +7359,11 @@ class Editor(tkinter.Toplevel):
 			for linenum in range(startline, endline+1):
 				self.contents.insert('%d.0' % linenum, '##')
 
-
+			self.token_can_update = False
 			if self.can_do_syntax():
+				self.update_lineinfo()
 				self.update_tokens(start=startpos, end=endpos)
+				self.token_can_update = True
 
 
 		# No selection, comment curline
@@ -7315,8 +7404,11 @@ class Editor(tkinter.Toplevel):
 
 
 			if changed:
+				self.token_can_update = False
 				if self.can_do_syntax():
+					self.update_lineinfo()
 					self.update_tokens(start=startpos, end=endpos)
+					self.token_can_update = False
 
 				self.contents.edit_separator()
 
@@ -8235,8 +8327,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
 
-		if self.tabs[self.tabindex].filepath:
-			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+		curtab = self.tabs[self.tabindex]
+
+		if curtab.filepath:
+			self.entry.insert(0, curtab.filepath)
 			self.entry.xview_moveto(1.0)
 
 		self.new_word = ''
@@ -8248,7 +8342,11 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 				self.state = 'normal'
 
-				self.update_tokens(start='1.0', end=tkinter.END)
+				self.token_can_update = False
+				if self.can_do_syntax():
+					self.update_lineinfo()
+					self.update_tokens(start='1.0', end=tkinter.END)
+					self.token_can_update = True
 
 
 		self.state = 'normal'
@@ -8282,10 +8380,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		try:
 			if self.save_pos:
 				line = self.save_pos
-				self.tabs[self.tabindex].position = line
+				curtab.position = line
 				self.save_pos = None
 			else:
-				line = self.tabs[self.tabindex].position
+				line = curtab.position
 
 			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
@@ -8294,7 +8392,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				self.ensure_idx_visibility(line)
 
 		except tkinter.TclError:
-			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
+			curtab.position = self.contents.index(tkinter.INSERT)
 
 		# Release space
 		self.wait_for(200)
