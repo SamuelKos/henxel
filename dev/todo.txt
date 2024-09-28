@@ -9,43 +9,36 @@ bookmark Begin
 when view changes, before close curtab:
 	tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
 
+restore_bookmarks(tab)
+save_bookmarks(tab)
 
-when view changes, after open tab:
-	restore_bookmarks()
-	# Restore bookmarks
-	for i, pos in enumerate(self.tabs[self.tabindex].bookmarks):
-		self.contents.mark_set('bookmark%d' % i, pos)
+self.clear_bookmarks() removed from restore_bookmarks
+	now:
+	self.clear_bookmarks()
+	self.restore_bookmarks
 
-	self.tabs[self.tabindex].bookmarks.clear()
-
-	for mark in self.contents.mark_names():
-		if 'bookmark' in mark:
-			self.tabs[self.tabindex].bookmarks.append(mark)
-
-view changes, after open tab, restore_bookmarks() is used in:
-	walk_tab
-	del_tab
-	new_tab
-	tag_link
-	stop_show_errors
-	loadfile
-	stop_help
-
-	done ok?
+	
+if deleting and adding bookmarks, then printing them
+--> print is not correct, one must change view to get print correct
+marks are correct still
+remove_single_bookmark:
+# Keeping right naming of bookmarks in tab.bookmarks is quite tricky
+# when removing and adding bookmarks in the same tab, without changing view.
+# Seems like the line: self.clear_bookmarks solves the issue.
+# Bookmarks where working right, but if doing self.print_bookmarks
+# after removing and adding bookmarks, it would look odd with ghost duplicates.
 
 
-animate add/remove bookmark		done ok?
+animate: add/remove bookmark
 
-toggle bookmark cmd/alt-p		done ok?
-walk bookmarks cmd/Control-bB	done ok?
+toggle_bookmark cmd/alt-p
+walk_bookmarks cmd/Control-bB
 
-delete_all_bookmarks		no shortcut
-print_bookmarks				no shortcut
+remove_bookmarks(all_tabs=True)	no shortcut, default=all_tabs
+print_bookmarks		no shortcut
 
 
 tab.bookmarks = list()
-add_bookmark --> tab.bookmarks.append(pos)
-must be updated before view change etc
 have to use real marks because of empty lines
 currently marks persist in conf
 
@@ -393,22 +386,8 @@ paste_fallback() fix
 
 
 ########################
-restore_bookmarks(tab)
-save_bookmarks(tab)
-done ok ?
+			
 
-self.clear_bookmarks() removed from restore_bookmarks
-	now:
-	self.clear_bookmarks()
-	self.restore_bookmarks
-	done ok?
-
-	
-clear_bookmarks(self):
-	Unsets bookmarks from current tab.
-	Does NOT do: tab.bookmarks.clear()
-	
-	
 TO NOTES
 bookmarks check:
 	view changes, after open tab, restore_bookmarks() is used in:
@@ -542,6 +521,7 @@ idx_lineend()  == display end, is ok?
 
 center_view() when search?
 
+
 if not at git root, and debug, and restart:
 FileNotFoundError: [Errno 2] No such file or directory: './dev/restart_editor.scpt'
 
@@ -557,11 +537,6 @@ bind to <<Modified>> updateline?
 
 write in docstring of update_tokens
 --> syntax end in test1
-
-
-
-todo.py --> todo.txt?
-done ok?
 
 
 

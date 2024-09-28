@@ -5238,12 +5238,13 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert('1.0', curtab.contents)
 				self.contents.mark_set('insert', '1.0')
 				self.contents.see('1.0')
+
 				# This flag is used in handle_search_entry()
 				curtab.inspected = True
 
 				if self.can_do_syntax():
 					self.update_lineinfo()
-					self.token_can_update = False
+					self.update_tokens(everything=True)
 					self.token_can_update = True
 
 				self.contents.edit_reset()
@@ -6501,7 +6502,7 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 
 		# Used below
-		def entry_del_ins_move():
+		def update_entry():
 			self.entry.delete(0, tkinter.END)
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			self.entry.xview_moveto(1.0)
@@ -6552,7 +6553,7 @@ class Editor(tkinter.Toplevel):
 				print(f'\nFile: {fpath_in_entry} already opened')
 
 				if oldtab.filepath != None:
-					entry_del_ins_move()
+					update_entry()
 
 				return False
 
@@ -6561,7 +6562,7 @@ class Editor(tkinter.Toplevel):
 				print(f'\nCan not overwrite file: {fpath_in_entry}')
 
 				if oldtab.filepath != None:
-					entry_del_ins_move()
+					update_entry()
 
 				return False
 
@@ -6578,7 +6579,7 @@ class Editor(tkinter.Toplevel):
 					return False
 
 				if oldtab.filepath != None:
-					entry_del_ins_move()
+					update_entry()
 
 					if self.can_do_syntax():
 						self.update_lineinfo()
@@ -6604,7 +6605,7 @@ class Editor(tkinter.Toplevel):
 					print(f'\n Could not create file: {fpath_in_entry}')
 
 					if oldtab.filepath != None:
-						entry_del_ins_move()
+						update_entry()
 
 					return False
 
@@ -6624,7 +6625,7 @@ class Editor(tkinter.Toplevel):
 				newtab.contents = cur_contents
 				newtab.position = pos
 				newtab.type = 'normal'
-				entry_del_ins_move()
+				update_entry()
 
 				self.contents.insert(tkinter.INSERT, newtab.contents)
 
@@ -6676,14 +6677,15 @@ class Editor(tkinter.Toplevel):
 ########## Save and Load End
 ########## Bookmarks and Help Begin
 
+
 	def print_bookmarks(self):
 
 		self.wait_for(100)
 
-		for mark in self.contents.mark_names():
-			if 'bookmark' in mark:
-				i = self.contents.index(mark)
-				print(mark, i)
+		l = sorted([ (mark, self.contents.index(mark)) for mark in self.contents.mark_names() if 'bookmark' in mark], key=lambda x:float(x[1]) )
+
+		for (mark, pos) in l:
+			print(mark, pos)
 
 		tab = self.tabs[self.tabindex]
 		print(tab.bookmarks)
@@ -6730,7 +6732,8 @@ class Editor(tkinter.Toplevel):
 
 			Info is in restore_bookmarks
 		'''
-		tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
+		tab.bookmarks = list({ self.contents.index(mark) for mark in tab.bookmarks })
+		tab.bookmarks.sort()
 
 
 	def restore_bookmarks(self, tab):
@@ -6738,9 +6741,9 @@ class Editor(tkinter.Toplevel):
 
 			When view changes, like in walk_tab(),
 			before contents of oldtab gets deleted, its bookmarks
-			are saved, but only their index position, not names:
+			are saved, but only their index position, not names, about like this:
 
-			oldtab.bookmarks[:] = [self.contents.index(mark) for mark in oldtab.bookmarks]
+			oldtab.bookmarks = [ self.contents.index(mark) for mark in oldtab.bookmarks ]
 
 			And after tab has its contents again,
 			bookmarks are restored here and tab.bookmarks holds again the names of bookmarks.
@@ -6766,6 +6769,8 @@ class Editor(tkinter.Toplevel):
 		for tab in tabs:
 			tab.bookmarks.clear()
 
+		self.clear_bookmarks()
+
 
 	def remove_single_bookmark(self):
 		pos_cursor = self.contents.index(tkinter.INSERT)
@@ -6776,21 +6781,58 @@ class Editor(tkinter.Toplevel):
 			tab = self.tabs[self.tabindex]
 			tab.bookmarks.remove(mark_name)
 
-			# Fix naming of bookmarks in tab.bookmarks, Explanation:
-			# For example: if last bookmark before deletion is bookmark3 and then,
-			# now here, bookmark2 would be deleted. If then, later, adding new bookmark
-			# (in toggle_bookmark), it would be named bookmark3 because naming depends
-			# on the lenght of list: tab.bookmarks. So there would be two bookmark3 in the list,
-			# except that there would not. Instead, the position of
-			# bookmark3 would just be changed to this 'new' mark.
-			# For preventing this, all marks are renamed at below.
-			tab.bookmarks[:] = [ self.contents.index(mark) for mark in tab.bookmarks ]
+			# Keeping right naming of bookmarks in tab.bookmarks is quite tricky
+			# when removing and adding bookmarks in the same tab, without changing view.
+			# Seems like the line: self.clear_bookmarks solves the issue.
+			# Bookmarks where working right, but if doing self.print_bookmarks
+			# after removing and adding bookmarks, it would look odd with ghost duplicates.
+			self.save_bookmarks(tab)
+			self.clear_bookmarks()
 			self.restore_bookmarks(tab)
 
 			return True
 
 		else:
 			return False
+
+
+	def toggle_bookmark(self, event=None):
+		''' Add/Remove bookmark at cursor position
+
+			Bookmark is string, name of tk text mark like: 'bookmark11'
+			It is appended to tab.bookmarks
+		'''
+		tests = (
+				self.state not in [ 'normal', 'search', 'replace' ],
+				not self.contents.bbox('insert')
+				)
+
+		if any(tests):
+			self.bell()
+			return "break"
+
+
+		pos = tkinter.INSERT
+		if self.state != 'normal':
+			# 'focus'
+			pos = self.search_focus[0]
+
+
+		s = self.contents.index('%s display linestart' % pos)
+
+		# If there is bookmark, remove it
+		if self.remove_single_bookmark():
+			self.bookmark_animate(s, remove=True)
+			return "break"
+
+
+		curtab = self.tabs[self.tabindex]
+		new_mark = 'bookmark' + str(len(curtab.bookmarks))
+		self.contents.mark_set( new_mark, s )
+		curtab.bookmarks.append(new_mark)
+
+		self.bookmark_animate(s)
+		return "break"
 
 
 	def bookmark_animate(self, idx_linestart, remove=False):
@@ -6939,45 +6981,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.edit_separator()
 
 		######## bookmark_animate End #######
-
-
-	def toggle_bookmark(self, event=None):
-		''' Add/Remove bookmark at cursor position
-
-			Bookmark is string, name of tk text mark like: 'bookmark11'
-			It is appended to tab.bookmarks
-		'''
-		tests = (
-				self.state not in [ 'normal', 'search', 'replace' ],
-				not self.contents.bbox('insert')
-				)
-
-		if any(tests):
-			self.bell()
-			return "break"
-
-
-		pos = tkinter.INSERT
-		if self.state != 'normal':
-			# 'focus'
-			pos = self.search_focus[0]
-
-
-		s = self.contents.index('%s display linestart' % pos)
-
-		# If there is bookmark, remove it
-		if self.remove_single_bookmark():
-			self.bookmark_animate(s, remove=True)
-			return "break"
-
-
-		curtab = self.tabs[self.tabindex]
-		new_mark = 'bookmark' + str(len(curtab.bookmarks))
-		self.contents.mark_set( new_mark, s )
-		curtab.bookmarks.append(new_mark)
-
-		self.bookmark_animate(s)
-		return "break"
 
 
 	def stop_help(self, event=None):
