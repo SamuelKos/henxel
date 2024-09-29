@@ -58,6 +58,9 @@ if (res = one) then
 		keystroke "e=henxel.Editor"
 		key down {return}
 		key up {return}
+	
+	end tell
+
 
 else
 	#log res
