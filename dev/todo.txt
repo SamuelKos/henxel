@@ -409,6 +409,62 @@ bookmarks check:
 		
 		
 		
+######
+update_tokens()
+if flag_err:
+	update only to tokens idx_start
+	except one cant update longer since for loop breaks for exception
+
+--> append to lists
+	#check diff
+	#tag diff
+	#update old lists
+	
+	
+self.tagnames = [
+		'keywords',
+		'numbers',
+		'bools',
+		'strings',
+		'comments',
+		'breaks',
+		'calls',
+		'selfs'
+		]
+
+
+self.tags = dict()
+for tag in self.tagnames:
+	self.tags[tag] = list()
+	
+self.tags['selfs'].append(idx_start, idx_end)
+
+update_tokens ==
+	get_tokens ( same args as update_tokens )
+	insert_tokens ( tokens, linenum, start_idx, end_idx, 
+	
+view change ==
+	get_tokens
+	delete
+	insert
+	insert_tokens
+	
+walk_tabs
+	
+
+######
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -623,9 +679,6 @@ linenum yview_scroll etc:  center_view()
 
 
 handle_normal_entry
-
-
-tab_over, token no can update etc?
 
 
 save file to disk when pressing save

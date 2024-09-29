@@ -38,7 +38,7 @@
 #
 # Todo is located at, counted from the root of repo:
 #
-#	dev/todo.py
+#	dev/todo.txt
 #
 ############ TODO End
 ############ Imports Begin
@@ -299,6 +299,7 @@ class Editor(tkinter.Toplevel):
 		super().__init__(self.root, *args, class_='Henxel', bd=4, **kwargs)
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		self.debug = debug
+
 
 		# Other widgets
 		self.to_be_closed = list()
@@ -1150,7 +1151,11 @@ class Editor(tkinter.Toplevel):
 
 
 	def wait_for(self, ms):
-		# This is important, 'cancel' all bindings which checks the state.
+		''' Block until ms milliseconds have passed
+
+			NOTE: 'cancel' all bindings, which checks the state,
+			for waiting time duration. It may be what one wants.
+		'''
 		state = self.state
 		self.state = 'waiting'
 
@@ -1223,7 +1228,6 @@ class Editor(tkinter.Toplevel):
 				if item.is_file() and '.py' in item.suffix:
 
 					try:
-						#print(item)
 						f = item.__str__()
 						ast.parse(open(f).read(), filename=f)
 
@@ -1320,7 +1324,6 @@ class Editor(tkinter.Toplevel):
 			subprocess.run(tmp)
 
 
-
 	def update_lineinfo(self, event=None):
 		''' Update info about current line, which is used to determine if
 			tokens of the line has to be updated for syntax highlight.
@@ -1355,7 +1358,7 @@ class Editor(tkinter.Toplevel):
 
 		if self.can_do_syntax() and self.token_can_update:
 
-			#  tag alter triggers this event if font changes, like from normal to bold.
+			# Tag alter triggers this event if font changes, like from normal to bold.
 			# --> need to check if line is changed to prevent self-trigger
 			line_idx = self.contents.index( tkinter.INSERT )
 			linenum = line_idx.split('.')[0]
@@ -1660,18 +1663,15 @@ class Editor(tkinter.Toplevel):
 			self.entry.insert(0, newtab.filepath)
 			self.entry.xview_moveto(1.0)
 
+
+		######################
 		self.token_err = False
 		self.token_can_update = False
+
+
+		dictionary = self.get_tokens(everything=True)
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, newtab.contents)
-		self.clear_bookmarks()
-		self.restore_bookmarks(newtab)
-
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.update_tokens(everything=True)
-			self.token_can_update = True
-
 
 		# Set cursor pos
 		line = newtab.position
@@ -1685,6 +1685,20 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', '1.0')
 			newtab.position = '1.0'
 			self.contents.see('1.0')
+
+
+		if self.can_do_syntax():
+			self.update_lineinfo()
+			self.insert_tokens(dictionary)
+
+			#self.update_tokens(everything=True)
+			self.token_can_update = True
+
+		#######################
+
+
+		self.clear_bookmarks()
+		self.restore_bookmarks(newtab)
 
 
 		self.contents.edit_reset()
@@ -1971,6 +1985,219 @@ class Editor(tkinter.Toplevel):
 
 	def can_do_syntax(self):
 		return self.syntax and self.is_pyfile()
+
+
+	def get_tokens(self, start=None, end=None, line=None, everything=False ):
+		''' Get info about tokens for insert_tokens()
+
+			Called from: walk_tabs
+		'''
+
+		start_idx = start
+		end_idx = end
+		linecontents = None
+
+		if not everything:
+			if line:
+				linecontents = line
+				test1 = [
+					self.token_err,
+					( '"""' in linecontents) and ('#' in linecontents ),
+					( "'''" in linecontents) and ('#' in linecontents )
+					]
+			else:
+				test1 = [self.token_err]
+
+
+			if any(test1):
+				start_idx = '1.0'
+				end_idx = tkinter.END
+				linecontents = None
+				#print('err')
+
+			# Check if inside multiline string
+			elif 'strings' in self.contents.tag_names(tkinter.INSERT) and \
+					not ( start_idx == '1.0' and end_idx == tkinter.END ):
+
+				try:
+					s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
+					# Parse linenumbers of start and enf of range == s,e
+					# Then convert them to int. This could also be done with:
+					# int(float(s)) which would give linenumber of start as int,
+					# but is not much clearer.
+
+					l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
+
+					if l0 != l1:
+						start_idx, end_idx = (s, e)
+						linecontents = None
+
+				except ValueError:
+					pass
+
+
+			if not linecontents:
+				tmp = self.contents.get( start_idx, end_idx )
+
+			else:
+				tmp = linecontents
+
+		else:
+			tmp = self.tabs[self.tabindex].contents
+			start_idx = '1.0'
+			end_idx = tkinter.END
+
+
+
+		prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
+		if prev_char in [ '(', ')', '[', ']' , '{', '}' ]:
+			self.par_err = True
+
+		linenum = int(start_idx.split('.')[0])
+
+
+		# Was:
+		# with io.BytesIO( tmp.encode('utf-8') ) as fo:
+		#	tokens = tokenize.tokenize( fo.readline )
+
+		g = iter( tmp.splitlines(keepends=True) )
+		tokens = tokenize.generate_tokens( g.__next__ )
+
+		return ( tokens, linenum, start_idx, end_idx )
+
+
+	def insert_tokens(self, args):
+		''' Update tokens with info from get_tokens()
+
+			Called from: walk_tabs
+		'''
+		tokens, linenum, start_idx, end_idx = args
+
+		###### START ###########
+		flag_err = False
+		par_err = None
+
+
+		# Remove old tags:
+		for tag in self.tagnames:
+			self.contents.tag_remove( tag, start_idx, end_idx )
+
+		# Retag
+		idx_start = None
+		try:
+			for token in tokens:
+				#print(token)
+
+				# token.line contains line as string which contains token.
+
+				if token.type == tokenize.NAME or \
+					( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
+					( token.exact_type == tokenize.LPAR ):
+
+					# Initiate indexes with correct linenum
+					s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
+					e0, e1 = map(str, [ token.end[0] + linenum - 1, token.end[1] ] )
+					idx_start = s0 + '.' + s1
+					idx_end = e0 + '.' + e1
+
+
+					if token.type == tokenize.NAME:
+
+						#lastoken = token
+						last_idx_start = idx_start
+						last_idx_end = idx_end
+
+						if token.string in self.keywords:
+
+							if token.string == 'self':
+								self.contents.tag_add('selfs', idx_start, idx_end)
+
+							elif token.string in self.bools:
+								self.contents.tag_add('bools', idx_start, idx_end)
+
+##							elif token.string in self.tests:
+##							self.contents.tag_add('tests', idx_start, idx_end)
+
+							elif token.string in self.breaks:
+								self.contents.tag_add('breaks', idx_start, idx_end)
+
+							else:
+								self.contents.tag_add('keywords', idx_start, idx_end)
+
+
+					# Calls
+					elif token.exact_type == tokenize.LPAR:
+						# Need to know if last char before ( was not empty.
+						# Previously used test was:
+						#if self.contents.get( '%s - 1c' % idx_start, idx_start ).strip():
+
+						# token.line contains line as string which contains token.
+						prev_char_idx = token.start[1]-1
+						if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
+							self.contents.tag_add('calls', last_idx_start, last_idx_end)
+
+					elif token.type == tokenize.STRING:
+						self.contents.tag_add('strings', idx_start, idx_end)
+
+					elif token.type == tokenize.COMMENT:
+						self.contents.tag_add('comments', idx_start, idx_end)
+
+					# token.type == tokenize.NUMBER
+					else:
+						self.contents.tag_add('numbers', idx_start, idx_end)
+
+					################## END ####################
+
+
+
+		except IndentationError as e:
+##			for attr in ['args', 'filename', 'lineno', 'msg', 'offset', 'text']:
+##				item = getattr( e, attr)
+##				print( attr,': ', item )
+##
+##			print( e.args[0], '\nIndentation errline: ',
+##			self.contents.index(tkinter.INSERT) )
+
+			flag_err = True
+			self.token_err = True
+
+
+		except tokenize.TokenError as ee:
+
+			if 'EOF in multi-line statement' in ee.args[0]:
+				self.check_pars = idx_start
+
+			elif 'multi-line string' in ee.args[0]:
+				flag_err = True
+				self.token_err = True
+
+
+		##### Check parentheses ####
+		if self.check_pars:
+			start_line = self.check_pars
+			par_err = self.checkpars(start_line)
+
+		# From backspace_override:
+		elif self.par_err:
+			start_line = False
+			par_err = self.checkpars(start_line)
+
+		self.check_pars = False
+		self.par_err = par_err
+
+		if not par_err:
+			# Not always checking whole file for par mismatches, so clear
+			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
+
+			###### Check parentheses end ###########
+
+
+		#  not flag_err and ( everything==True ) is same, because gets same indexes
+		if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
+			#print('ok')
+			self.token_err = False
+
+			##### insert_tokens end #####################
 
 
 	def update_tokens(self, start=None, end=None, line=None, everything=False):
@@ -4960,7 +5187,7 @@ class Editor(tkinter.Toplevel):
 	def del_to_dot(self, event):
 		""" Delete previous word
 		"""
-		# No need to check of event.state?
+		# No need to check event.state?
 		if self.state != 'normal': return
 		if len( self.contents.tag_ranges('sel') ) > 0:
 			self.contents.tag_remove('sel', '1.0', tkinter.END)
