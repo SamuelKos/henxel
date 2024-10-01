@@ -1,0 +1,18 @@
+These files were used for testing how to launch editor after some erronous updates, that were
+not detected by ast.parse but which prevents editor from launching.
+--> normally one uses some other editor to make fix so that editor starts again.
+
+0a: First, script logs out from current python console session.
+0b: Second, script executes couple of shell scripts,
+    which are getting the return code of test-launching editor, and the error message.
+    This was the hardest part.
+
+If test-launch was not succesful:
+1: git stash to revert temporarily to last commit
+2: import editor
+3: bringing changes back by: git stash pop
+4: launch editor.
+
+
+This finally was working but One got a better approach,
+so this is considered as garbage, but is left here as notes.

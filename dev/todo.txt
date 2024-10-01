@@ -376,13 +376,41 @@ or not flag_err and (everything==True)
 	self.token_err = False
 
 #######################
+new dev/stash_start folder, basicly garbage
+
+restart_editor.scpt --> back to previous
+restart scripts are now in /src/henxel
+updated MANIFEST.in for that
+
+
+created new placeholder module, importflags, for test-launch
+https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
+-->
+src/importflags
+	__init__.py
+		FLAGS=False
+		
+henxel:
+import importflags
+FLAGS = importflags.FLAGS
+
+cls.flags = FLAGS
+
+if cls.flags:
+	no subprocess
+	etc
+
+import shlex --> parse python command string for subprocess
+#######################
+
+
 
 
 Below this: not done
 
 
-
-
+wordexpand:
+	strip to dot
 
 
 

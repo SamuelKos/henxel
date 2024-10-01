@@ -69,9 +69,17 @@ from . import fdialog
 # For executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
 import subprocess
+import shlex
 
 # For making paste to work in Windows
 import threading
+
+
+# https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
+# These are currently used only when debugging.
+# Look in: beginning of quit_me(): in debug-block
+import importflags
+FLAGS = importflags.FLAGS
 
 ############ Imports End
 ############ Class Tab Begin
@@ -131,6 +139,10 @@ CONFPATH = 'editor.cnf'
 ICONPATH = 'editor.png'
 HELPPATH = 'help.txt'
 HELP_MAC = 'help_mac.txt'
+START_MAC = 'restart_editor.scpt'
+START_WIN = 'restart_editor_todo.bat'
+START_LINUX = 'restart_editor_todo.sh'
+
 
 VERSION = importlib.metadata.version(__name__)
 
@@ -159,6 +171,11 @@ GOODFONTS = [
 
 class Editor(tkinter.Toplevel):
 
+	# import flags
+	flags = FLAGS
+	restart_script = None
+
+	# Normal stuff
 	alive = False
 
 	pkg_contents = None
@@ -177,8 +194,8 @@ class Editor(tkinter.Toplevel):
 	elif sys.platform.count('linux'): os_type = 'linux'
 	else: os_type = 'linux'
 
-
-	if os_type == 'mac_os':
+	if flags and flags['launch_test'] == True: pass
+	elif os_type == 'mac_os':
 		# macOS: Get name of terminal App.
 		# Used to give focus back to it when closing editor, in quit_me()
 
@@ -252,6 +269,19 @@ class Editor(tkinter.Toplevel):
 
 		if cls.pkg_contents:
 
+			if debug and not cls.restart_script:
+				startfile = False
+				if cls.os_type == 'mac_os': startfile = START_MAC
+				elif cls.os_type == 'windows': startfile = START_WIN
+				else: startfile = START_LINUX
+
+				if not startfile: pass
+				else:
+					for item in cls.pkg_contents.iterdir():
+						if item.name == startfile:
+							cls.restart_script = item.resolve()
+							break
+
 			if cls.no_icon:
 				for item in cls.pkg_contents.iterdir():
 
@@ -296,10 +326,14 @@ class Editor(tkinter.Toplevel):
 	def __init__(self, *args, debug=False, **kwargs):
 
 		self.root = self.__class__.root
-		super().__init__(self.root, *args, class_='Henxel', bd=4, **kwargs)
-		self.protocol("WM_DELETE_WINDOW", self.quit_me)
+		self.flags = self.__class__.flags
+		self.restart_script = self.__class__.restart_script
 		self.debug = debug
 
+		super().__init__(self.root, *args, class_='Henxel', bd=4, **kwargs)
+		self.protocol("WM_DELETE_WINDOW", self.quit_me)
+
+		if self.flags and not self.flags['launch_test_is_visible']: self.withdraw()
 
 		# Other widgets
 		self.to_be_closed = list()
@@ -328,12 +362,15 @@ class Editor(tkinter.Toplevel):
 		self.font = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
 		self.menufont = tkinter.font.Font(family='TkDefaulFont', size=10, name='menufont')
 
-		# get current git-branch
-		try:
-			self.branch = subprocess.run('git branch --show-current'.split(),
-					check=True, capture_output=True).stdout.decode().strip()
-		except Exception as e:
-			pass
+
+		if self.flags and self.flags['launch_test'] == True: pass
+		else:
+			# Get current git-branch
+			try:
+				self.branch = subprocess.run('git branch --show-current'.split(),
+						check=True, capture_output=True).stdout.decode().strip()
+			except Exception as e:
+				pass
 
 
 		# Search related variables Begin
@@ -392,8 +429,11 @@ class Editor(tkinter.Toplevel):
 		# Initiate widgets
 		####################################
 		self.btn_git = tkinter.Button(self, takefocus=0, font=self.menufont, relief='flat', highlightthickness=0, padx=0, state='disabled')
-		# Put branch name, if on one
-		self.restore_btn_git()
+
+		if self.flags and self.flags['launch_test'] == True: pass
+		else:
+			# Put branch name, if on one
+			self.restore_btn_git()
 
 		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, takefocus=0)
 		if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
@@ -524,8 +564,6 @@ class Editor(tkinter.Toplevel):
 		d['normal_text'] = [white, black]
 		n['normal_text'] = [black, white]
 
-		# if background is same as sel background, change
-
 		d['keywords'] = ['', orange]
 		n['keywords'] = ['', 'deep sky blue']
 		d['numbers'] = ['', red]
@@ -558,7 +596,7 @@ class Editor(tkinter.Toplevel):
 		n['sel'] = ['#c3c3c3', black]
 
 
-		# if no conf:
+		# No conf:
 		if self.tabindex == None:
 
 			self.tabindex = -1
@@ -1071,6 +1109,9 @@ class Editor(tkinter.Toplevel):
 		self.__class__.alive = True
 		self.update_title()
 
+		if self.flags and self.flags['launch_test_report_success'] == True:
+			print('LAUNCHTEST: SUCCESS')# self.oldlinenum, self.oldline, self.anchorname
+
 		############################# init End ##########################
 
 
@@ -1217,9 +1258,10 @@ class Editor(tkinter.Toplevel):
 	def quit_me(self, event=None):
 
 		if not self.save_forced():
-			self.wait_for(30)
+			self.wait_for(33)
 			self.bell()
 			return 'break'
+
 
 		if self.debug:
 			flag_cancel = False
@@ -1239,9 +1281,33 @@ class Editor(tkinter.Toplevel):
 						continue
 
 			if flag_cancel:
-				self.wait_for(30)
+				self.wait_for(33)
 				self.bell()
 				return 'break'
+
+
+			# Test-launch Editor (it is set to non visible, but flags can here be edited)
+			# https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
+			flag_string = 'dict(launch_test=True, launch_test_is_visible=False, launch_test_report_success=False)'
+
+			patt = 'python -c "import importflags; importflags.FLAGS=%s; import henxel; a=henxel.Editor()"' % flag_string
+			tmp = shlex.split(patt)
+
+			d = dict(capture_output=True)
+			p = subprocess.run(tmp, **d)
+
+			try: p.check_returncode()
+
+			except subprocess.CalledProcessError:
+				self.wait_for(33)
+				self.bell()
+				print('LAUNCHTEST: FAIL')
+				print('\n\n' + p.stderr.decode().strip())
+				return 'break'
+
+			print(p.stdout.decode().strip())
+
+			### Debug End ##############
 
 
 		tab = self.tabs[self.tabindex]
@@ -1319,9 +1385,11 @@ class Editor(tkinter.Toplevel):
 
 		self.__class__.alive = False
 
-		if self.debug and self.os_type == 'mac_os':
-			tmp = ['./dev/restart_editor.scpt']
+		if self.debug and self.restart_script:
+			tmp = [self.restart_script]
 			subprocess.run(tmp)
+
+		#### quit_me End ##############
 
 
 	def update_lineinfo(self, event=None):

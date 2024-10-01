@@ -7,32 +7,48 @@ tell application "System Events"
 	key up {control}
 end tell
 
+set gitroot to do shell script "git rev-parse --show-toplevel"
+set file1 to gitroot & "/dev/launch_test.sh"
+set file2 to gitroot & "/dev/launch_test_err_msg.sh"
+set file3 to "python " & gitroot & "/dev/launch_test.py"
+
+#display dialog res
+#log file1
+#log file2
 
 # Do launch-test
 set one to "1"
-set res to do shell script "./launch_test.sh"
+set zero to "0"
+set res to do shell script file1
 
+#log res
+#log "jou"
 
 # Did not launch
 if (res = one) then
-
+	#log "is one"
+	#log res
+	
 	# Get err msg
-	set errmesg to do shell script "./launch_test_err_msg.sh"
+	set errmesg to do shell script file2
+	#set err to do shell script file3
 	
 	# print error message to console
+	#log err
 	log errmesg
-	log "--------------------------------------------"
+	
+	log "------------------------------------------------------"
 	log "Editor did not launch after last updates."
 	log "Error message is above. Going to stash-start editor now."
 	log " --> files are up-to date, editor is from last commit"
-	log "--------------------------------------------"
+	log "------------------------------------------------------"
 	
-	tell application "System Events"
+	tell application "System Events"	
 	
 		keystroke "python"
 		key down {return}
 		key up {return}
-
+		
 		keystroke "import subprocess"
 		key down {return}
 		key up {return}
@@ -47,22 +63,22 @@ if (res = one) then
 		keystroke "import henxel"
 		key down {return}
 		key up {return}
-	
+		
 		# 2: Bring back what was stashed, that is,
 		# everything is like before stashing. 
 		keystroke "subprocess.run('git stash pop -q'.split())"
 		key down {return}
 		key up {return}
-
+		
 		# Launch
-		keystroke "e=henxel.Editor"
+		keystroke "e=henxel.Editor(debug=True)"
 		key down {return}
 		key up {return}
-	
 	end tell
+	
 
-
-else
+else if (res = zero) then
+	#log "is zero"
 	#log res
 	
 	# Editor is launchable
@@ -79,6 +95,11 @@ else
 		key down {return}
 		key up {return}
 	end tell
+	
+	
+else
+	log "is something else"
+	log res
 	
 end if
 
