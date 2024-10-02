@@ -1,10 +1,10 @@
-# You might want first check undo_no_separators.py
+# First, check undo_no_separators.py
 # Then return
 
 
 # Applies self-made undo-mechanism to tkinter.Text -widget.
 # Usage outside testing is not recommended.
-# In my opinion adds noticeable overhead to event handling, like scrolling with touchpad.
+# Adds noticeable overhead to event handling, like scrolling with touchpad.
 
 # Usage in python-console:
 
@@ -34,8 +34,8 @@ import tkinter
 ##
 ##	But there can, and will be situations where this kind of functions makes calls to other
 ##	such functions which set this flag by themselves. This is why need to know who made the
-##	initial flag-setting. We can handle this by making flag a tuple. But this alone is not
-##	enough. There must be can_add_separator() -function:
+##	initial flag-setting. This is solved by making flag a tuple. But that alone is not
+##	enough. There must be a can_add_separator() -function:
 ##
 ##	initial setting in __init__:
 ##		flag_separators = (True, None)
@@ -71,7 +71,7 @@ class UndoText(tkinter.Text):
 	def __init__(self, master=None, **kw):
 		tkinter.Text.__init__(self, master, undo=False, **kw)
 
-		# these need to change when view(object who owns the undo-stack) changes:
+		# These need to change when view(object who owns the undo-stack) changes:
 		self._undo_stack = []
 		self._redo_stack = []
 		self.action_count = 0
@@ -81,10 +81,10 @@ class UndoText(tkinter.Text):
 		self.flag_separators = (True, None)
 		self.max_action_count = 8
 
-		# do _not_ touch this
+		# Do _not_ touch this
 		self._undo_separator = tuple(( (0,0),(0,0) ))
 
-		# create proxy
+		# Create proxy
 		self._orig = self._w + "_orig"
 		self.tk.call("rename", self._w, self._orig)
 		self.tk.createcommand(self._w, self._proxy)
@@ -125,31 +125,31 @@ class UndoText(tkinter.Text):
 
 
 	def action_is_important(self, *args):
-		''' Should we put separator before this one letter insert- or delete-action
+		''' Should one put separator before this one letter insert- or delete-action
 		'''
 
-		# There is already separator:
+		# There already is separator:
 		if self._undo_stack[-1][0][0] == 0:
 			return False
 
 		line, col = map( int, self.index(args[1]).split('.') )
 		lastline, lastcol = map( int, self._undo_stack[-1][1][1].split('.') )
 
-		# action is on different line than previous one letter action
+		# Action is on different line than previous one letter action
 		if line != lastline:
 			return True
 
-		# action is in the same line than previous action:
+		# Action is in the same line than previous action:
 		else:
-			# but it is not the same type:
+			# But it is not the same type:
 			if self._undo_stack[-1][1][0] != args[0]:
 				return True
 
-			# same type but not near last action:
+			# Same type but not near last action:
 			elif col not in [ lastcol-1, lastcol, lastcol+1 ]:
 				return True
 
-			# action is near last action and it is the same type:
+			# Action is near last action and it is the same type:
 			else:
 				return False
 
@@ -162,7 +162,7 @@ class UndoText(tkinter.Text):
 			else:
 				return False
 
-		# delete:
+		# Delete:
 		else:
 			if 'sel.first' in args:
 				return True
@@ -198,7 +198,7 @@ class UndoText(tkinter.Text):
 				self.action_count += 1
 
 
-		# action lenght > 1:
+		# Action lenght > 1:
 		elif self.action_is_long(*args):
 
 			need_separator_in_start = True
@@ -207,13 +207,13 @@ class UndoText(tkinter.Text):
 
 
 		elif self.action_is_important(*args):
-			# action is one letter lenght but needs to be separated from previous action
+			# Action is one letter lenght but needs to be separated from previous action
 			need_separator_in_start = True
 			self.action_count = 0
 
 
 		else:
-			# want to collect more actions
+			# Want to collect more actions
 			self.action_count += 1
 
 			if self.action_count > self.max_action_count:
@@ -245,16 +245,16 @@ class UndoText(tkinter.Text):
 					args = (a0,a1,a2)
 
 			else:
-				# deleted selection
-				# fix insert when has selection:
+				# Deleted selection
+				# Fix insert when has selection:
 				if 'sel.first' in args:
 					a0 = args[0]
 					a1 = self.index(args[1])
 					a2 = self.index(args[2])
 					args = (a0,a1,a2)
 
-				# pressed backspace
-				# fix 'insert-1c' as index:
+				# Pressed backspace
+				# Fix 'insert-1c' as index:
 				elif 'insert-1c' in args:
 					a0 = args[0]
 					a1 = self.index(args[1])
@@ -276,13 +276,13 @@ class UndoText(tkinter.Text):
 			############################### Put action to undo_stack end
 
 
-		# back to normal action handling
+		# Back to normal action handling
 		result = self.tk.call((self._orig,) + args)
 		return result
 
 
 	def undo(self, event=None):
-		# info:
+		# Info:
 		# self._undo_stack[-1][0] == undo_args
 
 		undo_args = (0,0)
@@ -329,7 +329,7 @@ class UndoText(tkinter.Text):
 		for action in action_list:
 			self.tk.call((self._orig,) + action)
 
-		# update cursor pos
+		# Update cursor pos
 		if action[0] == 'insert':
 			pos = f"{action[1]}+{len(action[2])}c"
 		else:
@@ -342,7 +342,7 @@ class UndoText(tkinter.Text):
 
 
 	def redo(self, event=None):
-		# info:
+		# Info:
 		# self._redo_stack[-1][1] == redo_args
 
 		redo_args = (0,0)

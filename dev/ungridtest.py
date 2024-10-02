@@ -1,6 +1,6 @@
 # Run: python3 name_of_this_file.py
 
-# demonstrates switching between two text-widgets
+# Demonstrates switching between two text-widgets
 # Control-l 	(as lemon) to switch
 
 # Switch is no more blinky, because background color of toplevel widget
@@ -22,7 +22,8 @@ class Ed(tkinter.Toplevel):
 
 
 	def __init__(self):
-		self.root = tkinter.Tk().withdraw()
+		self.root = tkinter.Tk()
+		self.root.withdraw()
 		super().__init__(self.root)
 		self.__class__.editors.append(self)
 
@@ -88,8 +89,7 @@ class Ed(tkinter.Toplevel):
 		self.btn_test.config(font=self.font)
 		self.lb.config(font=self.font, state='disabled')
 
-		# Changing the settings to make the scrolling work
-
+		# Make scrolling work
 		self.scrollbar['command'] = self.contents.yview
 		self.t1['yscrollcommand'] = self.scrollbar.set
 		self.t2['yscrollcommand'] = self.scrollbar.set
@@ -102,7 +102,6 @@ class Ed(tkinter.Toplevel):
 
 		# Needed in updateLineNumbers(), there is more info.
 		# y_extra_offset is 3 but why, dont know:
-
 		self.update_idletasks()
 		_, self.y_extra_offset, _,  self.bbox_height = self.contents.bbox('1.0')
 
@@ -111,7 +110,7 @@ class Ed(tkinter.Toplevel):
 
 
 	def f1(self, event=None):
-		# to force scrollbar size update, bit blinky:
+		# Force scrollbar size update, bit blinky:
 		self.scrollbar.destroy()
 
 		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL)
@@ -127,7 +126,6 @@ class Ed(tkinter.Toplevel):
 		self.t2['yscrollcommand'] = self.scrollbar.set
 
 		self.contents.focus_set()
-
 
 		return 'break'
 
@@ -150,7 +148,6 @@ class Ed(tkinter.Toplevel):
 
 		self.contents.focus_set()
 
-
 		return 'break'
 
 
@@ -162,14 +159,14 @@ class Ed(tkinter.Toplevel):
 		col= ''
 		ln = ''
 
-		# line-height is used as step, it depends on font:
+		# Line-height is used as step, it depends on font:
 		step = self.bbox_height
 
 		nl = '\n'
 		lineMask = '    %s\n'
 
 		# @x,y is tkinter text-index:
-		# The character that covers the (x,y) -coordinate within the text's window.
+		# The character that covers the (x,y) -coordinate within Text-widget window
 		indexMask = '@0,%d'
 
 		for i in range(0, self.contents.winfo_height(), step):

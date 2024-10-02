@@ -14,5 +14,5 @@ If test-launch was not succesful:
 4: launch editor.
 
 
-This finally was working but One got a better approach,
+This finally was working but one got a better approach,
 so this is considered as garbage, but is left here as notes.

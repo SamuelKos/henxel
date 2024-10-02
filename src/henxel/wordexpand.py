@@ -67,6 +67,23 @@ class ExpandWord:
 			index = 0
 			self.bell()
 
+
+		#######################
+		# Test-area
+		# Test completion inside this area, at empty line.
+		# Insert 's', then press Tab etc.
+		# Remove line after test.
+		########################
+		# s = lkajsd
+		# se = aklsjd
+		# ranges('sel', asd)
+		# asd(self, asd)
+
+		# self.textwid.delete(as,ads)
+		# self.textwid.insert(as,ads)
+		###########################
+
+
 		#print(word, len(word), newword)
 		self.textwid.delete("insert - %d chars" % len(word), "insert")
 		self.textwid.insert("insert", newword)
@@ -99,10 +116,10 @@ class ExpandWord:
 		if editor.can_do_syntax():
 
 			# Get atrributes of 'self' faster. For example, if want: self.attribute1,
-			# one writes any single letter, like 'a' and hits Tab, and gets 'self.'
+			# one writes single s-letter and hits Tab, and gets 'self.'
 			# Then add 'a' --> prevword is now 'self.a'. Now continue Tabbing:
 			# --> self.attribute1 is now likely to appear soon.
-			if len(word) == 1 or word in ['se', 'sel']:
+			if word in ['s', 'se', 'sel']:
 				words.append('self.')
 
 			# Next, get words to list all_words
@@ -170,7 +187,6 @@ class ExpandWord:
 
 			words.append(w)
 			dictionary[w] = w
-
 
 		words.append(word)
 		return words

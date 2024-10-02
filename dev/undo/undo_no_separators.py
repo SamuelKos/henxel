@@ -1,7 +1,7 @@
-# to run: python3 name_of_this_file.py
+# Run: python3 name_of_this_file.py
 
 
-# If you find hard to understand this, try to think why we want undo-stack
+# One should first think, why want undo-stack
 # in the first place, then why redo-stack.
 
 
@@ -14,7 +14,7 @@
 
 ## init: created undo and redo stacks
 ##
-## 0: if action(event) in [list of interesting actions like insert and delete]:
+## 0: If action(event) in [list of interesting actions like insert and delete]:
 ##
 ##		1: build undo-action for the action
 ##
@@ -24,7 +24,7 @@
 ##
 ##
 ##
-## Then make undo and redo -functions and bind to them like in below.
+## Then make undo and redo -functions and bind to them like is done below.
 
 
 
@@ -39,7 +39,7 @@ class MyText(tk.Text):
 		self._undo_stack = []
 		self._redo_stack = []
 
-		# create proxy
+		# Create proxy
 		self._orig = self._w + "_orig"
 		self.tk.call("rename", self._w, self._orig)
 		self.tk.createcommand(self._w, self._proxy)
@@ -62,16 +62,16 @@ class MyText(tk.Text):
 					args = (a0,a1,a2)
 
 			else:
-				# deleted selection
-				# fix insert when has selection:
+				# Deleted selection
+				# Fix insert when has selection:
 				if 'sel.first' in args:
 					a0 = args[0]
 					a1 = self.index(args[1])
 					a2 = self.index(args[2])
 					args = (a0,a1,a2)
 
-				# pressed backspace
-				# fix 'insert-1c' as index:
+				# Pressed backspace
+				# Fix 'insert-1c' as index:
 				elif 'insert-1c' in args:
 					a0 = args[0]
 					a1 = self.index(args[1])
@@ -125,7 +125,7 @@ class MyText(tk.Text):
 
 		self.tk.call((self._orig,) + redo_args)
 
-		# update cursor pos
+		# Update cursor pos
 		if redo_args[0] == 'insert':
 			pos = f"{redo_args[1]}+{len(redo_args[2])}c"
 		else:

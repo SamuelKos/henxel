@@ -331,7 +331,8 @@ class Editor(tkinter.Toplevel):
 		self.debug = debug
 
 		super().__init__(self.root, *args, class_='Henxel', bd=4, **kwargs)
-		self.protocol("WM_DELETE_WINDOW", self.quit_me)
+		self.protocol("WM_DELETE_WINDOW",
+			lambda kwargs={'quit_debug':True}: self.quit_me(**kwargs))
 
 		if self.flags and not self.flags['launch_test_is_visible']: self.withdraw()
 
@@ -1255,7 +1256,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.see( '%s + 4 lines' % index)
 
 
-	def quit_me(self, event=None):
+	def quit_me(self, event=None, quit_debug=False):
 
 		if not self.save_forced():
 			self.wait_for(33)
@@ -1285,29 +1286,30 @@ class Editor(tkinter.Toplevel):
 				self.bell()
 				return 'break'
 
+			# Close-Button, quit_debug=True
+			if quit_debug: pass
+			else:
+				# Test-launch Editor (it is set to non visible, but flags can here be edited)
+				# https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
+				flag_string = 'dict(launch_test=True, launch_test_is_visible=False, launch_test_report_success=True)'
 
-			# Test-launch Editor (it is set to non visible, but flags can here be edited)
-			# https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
-			flag_string = 'dict(launch_test=True, launch_test_is_visible=False, launch_test_report_success=False)'
+				patt = 'python -c "import importflags; importflags.FLAGS=%s; import henxel; a=henxel.Editor()"' % flag_string
+				tmp = shlex.split(patt)
 
-			patt = 'python -c "import importflags; importflags.FLAGS=%s; import henxel; a=henxel.Editor()"' % flag_string
-			tmp = shlex.split(patt)
+				d = dict(capture_output=True)
+				p = subprocess.run(tmp, **d)
 
-			d = dict(capture_output=True)
-			p = subprocess.run(tmp, **d)
+				try: p.check_returncode()
 
-			try: p.check_returncode()
+				except subprocess.CalledProcessError:
+					self.wait_for(33)
+					self.bell()
+					print('LAUNCHTEST: FAIL')
+					print('\n\n' + p.stderr.decode().strip())
+					return 'break'
 
-			except subprocess.CalledProcessError:
-				self.wait_for(33)
-				self.bell()
-				print('LAUNCHTEST: FAIL')
-				print('\n\n' + p.stderr.decode().strip())
-				return 'break'
-
-			print(p.stdout.decode().strip())
-
-			### Debug End ##############
+				print(p.stdout.decode().strip())
+				### Debug End ##############
 
 
 		tab = self.tabs[self.tabindex]
@@ -1385,7 +1387,10 @@ class Editor(tkinter.Toplevel):
 
 		self.__class__.alive = False
 
-		if self.debug and self.restart_script:
+
+		# quit_debug: Allow quitting debug-session without closing
+		# Python console, by clicking close-button.
+		if not quit_debug and self.debug and self.restart_script:
 			tmp = [self.restart_script]
 			subprocess.run(tmp)
 

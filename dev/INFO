@@ -33,12 +33,12 @@ to the next bindtag: 'Text' which has all the default bindings for a Text-class.
 After that the event would be going to the parent widget, Editor-widget etc.
 
 
-What is this for? Say we have a widget: Text-widget and binding to its parent Editor-widget like:
+What is this for? Say one has a widget: Text-widget and binding to its parent Editor-widget like:
 	self.bind( "<Return>", self.return_override_editor)
 And there would not be binding like:
 	self.contents.bind( "<Return>", self.return_override_text)
 But then if Text-widget has focus and pressed Return: 'Text' class-bindings are executed before
-Editor-widget and this might not be what we wanted:
+Editor-widget and this might not be what one wants:
 ('.!editor.!text2', 'Text', '.!editor', 'all')
 
 But that event can be unbinded, Example: Print current bindings for a class:

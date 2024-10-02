@@ -1,4 +1,4 @@
-# run from editor to test error-view
+# Run from editor to test error-view
 
 import aa
 print('before')

@@ -1,4 +1,4 @@
-# to run: python3 name_of_this_file.py
+# Run: python3 name_of_this_file.py
 
 # Only scrolling down is 'implemented', as it has momemtum
 # and it stops at any key or button.
@@ -7,8 +7,6 @@
 # Try scrolling down with touchpad and wait it stop and repeat.
 # Notice that after couple of scrolls, it wont scroll anymore
 # without tapping the pad first.
-
-# Also im getting to like the default scroll behaviour
 
 
 import tkinter

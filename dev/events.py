@@ -36,16 +36,16 @@ textwid.pack()
 
 pat = '''
 Press keys in text-area and look for keysym in terminal. If certain
-key gets hijacked by OS before we get keysym you can mask it by for example
+key gets hijacked by OS before getting keysym, one can mask it, by for example
 if such a key would be windows-key, press AND hold some state-changing key
 like shift, alt, etc and then try again pressing that windows-key or whatever.
 
-It seems that you should not bind: Shift-somekey but instead
+It seems that one should not bind: Shift-somekey but instead
 bind: Somekey if that is what it reads in keysym when pressing shift-somekey.
 but other state-changing keys are more easy:
-like if you press: ctrl-alt-somekey then you bind: ctrl-alt-somekey
+like if pressing: ctrl-alt-somekey then bind: ctrl-alt-somekey
 
-You can combine keys with mouse keys, I think.
+Combining keys with mouse events might also work.
 '''
 
 label = tkinter.Label(root, text=pat)

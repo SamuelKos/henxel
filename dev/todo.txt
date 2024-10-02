@@ -401,23 +401,31 @@ if cls.flags:
 	etc
 
 import shlex --> parse python command string for subprocess
+quit_debug: can quit debug by pressing close button --> no close python console
+	(or by closing python console)
 #######################
-
-
+removed requirements.txt because github was confused by it and it was unneeded
+#######################
+only single 's' expands to self. not all single letters
+	done ok?
+#######################
 
 
 Below this: not done
 
 
-wordexpand:
-	strip to dot
+
+
+
+
+
+
 
 
 
 
 uncomment(), if no selection, check
 paste_fallback() fix
-
 
 ########################
 			

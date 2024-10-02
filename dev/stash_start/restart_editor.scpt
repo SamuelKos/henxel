@@ -10,7 +10,7 @@ end tell
 set gitroot to do shell script "git rev-parse --show-toplevel"
 set file1 to gitroot & "/dev/launch_test.sh"
 set file2 to gitroot & "/dev/launch_test_err_msg.sh"
-set file3 to "python " & gitroot & "/dev/launch_test.py"
+#set file3 to "python " & gitroot & "/dev/launch_test.py"
 
 #display dialog res
 #log file1
@@ -31,10 +31,8 @@ if (res = one) then
 	
 	# Get err msg
 	set errmesg to do shell script file2
-	#set err to do shell script file3
 	
 	# print error message to console
-	#log err
 	log errmesg
 	
 	log "------------------------------------------------------"
