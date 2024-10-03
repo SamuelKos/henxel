@@ -1262,6 +1262,8 @@ class Editor(tkinter.Toplevel):
 
 			returns: byte-string, suitable as input for: 'python -',
 			which is used in subprocess.run -call in quit_me()
+
+			Info on usage: help(henxel.importflags)
 		'''
 
 		# Test-launch Editor (it is set to non visible, but flags can here be edited)
@@ -1313,33 +1315,27 @@ class Editor(tkinter.Toplevel):
 		flags = ['launch_test=True',
 				'launch_test_is_visible=False',
 				'launch_test_report_success=True',
-				'test_string="jou"'
+				'test_func=print_jou'
 				]
 
 		flags_as_string = ', '.join(flags)
 		flag_string = 'dict(%s)' % flags_as_string
 
 
-		# pass is used just to get to indent0 here.
-		# First line could also be commented with '#' in place of pass
-		# but that would not be much more clearer.
-		#
 		# Basicly, one can do *anything* here, do imports, make
 		# function or class definitions on the fly, pass those as values
 		# in importflags.FLAGS, then use them in actual code even at import-time!
-		launch_test_as_string = '''pass
+		launch_test_as_string = '''
 
-##for i in range(6):
-##	if i < 4:
-##		print('small', i)
-##	else:
-##		print('big', i)
+def print_jou():
+	print('jou')
 
 import importflags
 importflags.FLAGS=%s
-print(importflags.FLAGS['test_string'])
 
 import henxel
+henxel.importflags.FLAGS['test_func']()
+
 a=henxel.Editor()''' % flag_string
 
 		return bytes(launch_test_as_string, 'utf-8')

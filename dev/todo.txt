@@ -418,17 +418,20 @@ in quit_me:
 	d = dict(capture_output=True)
 	p = subprocess.run(['python','-'], input=tmp, **d)
 #######################
-
+pyproject.toml + setup.cfg --> pyproject.toml
+#######################
 
 Below this: not done
 
 
 
+#pip install build setuptools
+#python -m build -nx
+
 
 
 token_can_update --> line_can_update
 
-rm manifest test build
 
 
 

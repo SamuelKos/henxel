@@ -1,6 +1,32 @@
 [build-system]
-requires = [
-	"setuptools>=69",
-	"wheel"
-]
+requires = ["setuptools>=74"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "henxel"
+version = "0.3.2"
+requires-python = ">=3.11"
+authors = [{name = "SamuelKos", email = "koskinens371@gmail.com"}]
+description = "GUI-editor for Python development."
+readme = "README.md"
+keywords = ["henxel", "editor", "editors", "tkinter", "GUI"]
+classifiers = [
+	"Programming Language :: Python :: 3",
+	"License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+	"Operating System :: Microsoft :: Windows",
+	"Operating System :: POSIX :: Linux",
+	"Operating System :: MacOS",
+	"Intended Audience :: Developers",
+	"Topic :: Software Development",
+	"Topic :: Text Editors"
+]
+
+[project.urls]
+Homepage = "https://github.com/SamuelKos/henxel"
+Changelog = "https://github.com/SamuelKos/henxel/blob/main/CHANGELOG"
+
+
+
+
+
+
