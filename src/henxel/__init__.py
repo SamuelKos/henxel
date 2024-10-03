@@ -69,15 +69,14 @@ from . import fdialog
 # For executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
 import subprocess
-import shlex
 
 # For making paste to work in Windows
 import threading
 
 
 # https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
-# These are currently used only when debugging.
-# Look in: beginning of quit_me(): in debug-block
+# These are currently used only when debugging, and even then only when doing test-launch.
+# Look in: build_launch_test()
 import importflags
 FLAGS = importflags.FLAGS
 
@@ -194,6 +193,9 @@ class Editor(tkinter.Toplevel):
 	elif sys.platform.count('linux'): os_type = 'linux'
 	else: os_type = 'linux'
 
+	# No need App-name at launch-test, also this would deadlock the editor
+	# in last call to subprocess with osascript. Value of mac_term would be 'Python'
+	# when doing launch-test, that might be the reason.
 	if flags and flags['launch_test'] == True: pass
 	elif os_type == 'mac_os':
 		# macOS: Get name of terminal App.
@@ -430,11 +432,8 @@ class Editor(tkinter.Toplevel):
 		# Initiate widgets
 		####################################
 		self.btn_git = tkinter.Button(self, takefocus=0, font=self.menufont, relief='flat', highlightthickness=0, padx=0, state='disabled')
-
-		if self.flags and self.flags['launch_test'] == True: pass
-		else:
-			# Put branch name, if on one
-			self.restore_btn_git()
+		# Put branch name, if on one
+		self.restore_btn_git()
 
 		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, takefocus=0)
 		if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
@@ -1256,6 +1255,96 @@ class Editor(tkinter.Toplevel):
 			self.contents.see( '%s + 4 lines' % index)
 
 
+	def build_launch_test(self):
+		''' Used only if debug=True and even then only when doing launch-test
+
+			Called from quit_me()
+
+			returns: byte-string, suitable as input for: 'python -',
+			which is used in subprocess.run -call in quit_me()
+		'''
+
+		# Test-launch Editor (it is set to non visible, but flags can here be edited)
+		###################################################################
+		# ABOUT TEST-LAUNCH
+		# Note that currently, quit_me()
+		#				(and everything called from there, like this build_launch_test()
+		#				or save_forced() etc.)
+		# that currently, quit_me() executes the code that was there at previous import.
+		#
+		#
+		# This means, when one changes flags here,
+		#		(or even some normal code, in for example quit_me or save_forced)
+		# When one makes changes here, and does cmd-q
+		# 		--> old flags/code are still used in *executing test-launch*,
+		# 									that is, executing quit_me().
+		#
+		# On the other hand, everything that was saved in save_forced, AND
+		# executed in launch-test, DOES use the new code, it is the meaning of
+		# launch-test. That is, executed stuff in: launch_test_as_string below.
+		###############################################################
+		# But after next cmd-q, new flags/code (in quit_me etc) are binded, and used.
+		# In short:	When changing flags, and want to see the difference:
+		# 			do cmd-q two times! (and maybe clear console after first one)
+		###################################################################
+
+
+
+		# Currently used flags are in list below. These have to be in flag_string.
+		###################################################################
+		# Want to remove some flag completely:
+		# 1: Remove/edit all related lines of code, most likely tests like this:
+		# 	if self.flags and not self.flags['launch_test_is_visible']: self.withdraw()
+		# 2: Remove related line from list below: 'launch_test_is_visible=False'
+		###################################################################
+		# Want to add new flag: 1: add line in list below: 'my_flag=True'
+		# 	Flag can be any object: 'my_flag=MyClass(myargs)'
+		# 2: Add/edit lines of code one wants to change if this flag is set,
+		# most likely tests like this:
+		# 	if self.flags and self.flags['my_flag']: self.do_something()
+		###################################################################
+		# Just want to change a flag: 1: edit line in list below:
+		# 	'launch_test_report_success=True'
+		###################################################################
+		# And when doing any of above, to see the difference:
+		# 	do cmd-q two times! (and maybe clear console after first one)
+		###################################################################
+
+		flags = ['launch_test=True',
+				'launch_test_is_visible=False',
+				'launch_test_report_success=True',
+				'test_string="jou"'
+				]
+
+		flags_as_string = ', '.join(flags)
+		flag_string = 'dict(%s)' % flags_as_string
+
+
+		# pass is used just to get to indent0 here.
+		# First line could also be commented with '#' in place of pass
+		# but that would not be much more clearer.
+		#
+		# Basicly, one can do *anything* here, do imports, make
+		# function or class definitions on the fly, pass those as values
+		# in importflags.FLAGS, then use them in actual code even at import-time!
+		launch_test_as_string = '''pass
+
+##for i in range(6):
+##	if i < 4:
+##		print('small', i)
+##	else:
+##		print('big', i)
+
+import importflags
+importflags.FLAGS=%s
+print(importflags.FLAGS['test_string'])
+
+import henxel
+a=henxel.Editor()''' % flag_string
+
+		return bytes(launch_test_as_string, 'utf-8')
+
+
 	def quit_me(self, event=None, quit_debug=False):
 
 		if not self.save_forced():
@@ -1289,15 +1378,12 @@ class Editor(tkinter.Toplevel):
 			# Close-Button, quit_debug=True
 			if quit_debug: pass
 			else:
-				# Test-launch Editor (it is set to non visible, but flags can here be edited)
-				# https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
-				flag_string = 'dict(launch_test=True, launch_test_is_visible=False, launch_test_report_success=True)'
-
-				patt = 'python -c "import importflags; importflags.FLAGS=%s; import henxel; a=henxel.Editor()"' % flag_string
-				tmp = shlex.split(patt)
+				# Next, do test-launch before actually quitting,
+				# so one can fix errors which prevent editor from launching
+				tmp = self.build_launch_test()
 
 				d = dict(capture_output=True)
-				p = subprocess.run(tmp, **d)
+				p = subprocess.run(['python','-'], input=tmp, **d)
 
 				try: p.check_returncode()
 
@@ -1381,6 +1467,7 @@ class Editor(tkinter.Toplevel):
 		del self.btn_save
 		del self.btn_git
 		del self.contents
+		del self.expander
 		del self.ln_widget
 		del self.scrollbar
 		del self.popup

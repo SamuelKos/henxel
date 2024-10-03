@@ -397,7 +397,7 @@ FLAGS = importflags.FLAGS
 cls.flags = FLAGS
 
 if cls.flags:
-	no subprocess
+	skip some subprocess calls (subprocess in subprocess does work)
 	etc
 
 import shlex --> parse python command string for subprocess
@@ -409,6 +409,15 @@ removed requirements.txt because github was confused by it and it was unneeded
 only single 's' expands to self. not all single letters
 	done ok?
 #######################
+removed shlex ok?
+
+self.build_launch_test() --> byte-string: launch-test
+
+in quit_me:
+	tmp = self.build_launch_test()
+	d = dict(capture_output=True)
+	p = subprocess.run(['python','-'], input=tmp, **d)
+#######################
 
 
 Below this: not done
@@ -417,6 +426,9 @@ Below this: not done
 
 
 
+token_can_update --> line_can_update
+
+rm manifest test build
 
 
 
@@ -430,8 +442,30 @@ paste_fallback() fix
 ########################
 			
 
-TO NOTES
-bookmarks check:
+
+
+########################
+TO NOTES START
+
+- test-launch: subprocess in subprocess does work!
+	But at start of class Editor:
+		No need App-name at launch-test, also this would deadlock the editor
+		in last call to subprocess with osascript. Value of mac_term would be 'Python'
+		when doing launch-test, that might be the reason.
+	
+	in quit_me:
+	# Test-launch Editor (it is set to non visible, but flags can here be edited)
+	###################################################################
+	# Note that currently this callback(quit_me) is binded with old flags.
+	# --> If one changes flags here, and does cmd-q, old flags are still used
+	# in test-launch. But after next cmd-q, new flags are binded, and used.
+	# In short:	If changing flags, and want to see the difference:
+	# 			do cmd-q two times! (and maybe clear console after first one)
+	###################################################################
+	# https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
+	
+	
+- bookmarks check:
 	view changes, after open tab, restore_bookmarks() is used in:
 		walk_tabs *
 		del_tab *
@@ -447,6 +481,11 @@ bookmarks check:
 		tag_link *
 		loadfile *
 		save *
+		
+		
+TO NOTES END
+########################
+		
 		
 		
 		
