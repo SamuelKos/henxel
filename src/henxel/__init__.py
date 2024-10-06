@@ -3,6 +3,7 @@
 # Stucture briefing
 # TODO
 # Imports
+# Module Utilities
 # Class Tab
 
 ####################
@@ -81,6 +82,33 @@ import importflags
 FLAGS = importflags.FLAGS
 
 ############ Imports End
+############ Module Utilities Begin
+
+def stash_pop():
+	''' When Editor did not launch after recent updates
+		Note: This assumes last commit was launchable
+
+		0: Copy error messages! For fixing.
+
+		1: In shell: "git stash"
+			  Files are now at last commit, changes are put in some tmp-branch or whatever.
+
+		2: Launch python: "python"
+
+		3: Import henxel: "import henxel"
+			  Now Editor is set to last commit, so one can:
+
+		4: Bring all files back to current state: "henxel.stash_pop()"
+
+		5: Launch Editor: "e=henxel.Editor()"
+
+		--> Editor and all the code executed, is from last commit!
+		--> Files in the repo are up-to-date!
+		--> Start fixing that error
+	'''
+	subprocess.run('git stash pop -q'.split())
+
+############ Module Utilities End
 ############ Class Tab Begin
 
 class Tab:
@@ -677,8 +705,17 @@ class Editor(tkinter.Toplevel):
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
 
+
+##		self.flags['launch_test_is_visible'] == True or False:
+##			self.bbox_height == 1,  self.text_widget_height == 1
+##			--> not mapped
+
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 
+
+##			# Do binds
+##			#####################
+##			binder.do_binds(self)
 
 
 
@@ -995,6 +1032,9 @@ class Editor(tkinter.Toplevel):
 				'selfs'
 				]
 
+		self.tags = dict()
+		for tag in self.tagnames: self.tags[tag] = list()
+
 
 		self.boldfont = self.font.copy()
 		self.boldfont.config(weight='bold')
@@ -1020,6 +1060,11 @@ class Editor(tkinter.Toplevel):
 		self.token_err = False
 		self.token_can_update = False
 		self.oldlinenum = self.contents.index(tkinter.INSERT).split('.')[0]
+
+##		self.flags['launch_test_is_visible'] == True or False:
+##			self.bbox_height == 1,  self.text_widget_height == 1
+##			--> not mapped
+
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
@@ -1109,6 +1154,10 @@ class Editor(tkinter.Toplevel):
 		self.__class__.alive = True
 		self.update_title()
 
+##		self.flags['launch_test_is_visible'] == True or False:
+##			self.bbox_height == 25,  self.text_widget_height == 616
+##			--> mapped
+
 		if self.flags and self.flags['launch_test_report_success'] == True:
 			print('LAUNCHTEST: SUCCESS')# self.oldlinenum, self.oldline, self.anchorname
 
@@ -1142,6 +1191,29 @@ class Editor(tkinter.Toplevel):
 
 
 		self.text_widget_height = self.scrollbar.winfo_height()
+##		# Not used, left as example on how to always know the current number of screenlines.
+##		# Count number of screen-lines,
+##		# from text-widgets (internal) x,y-position x=0 and y=0-65535.
+##		# End y-position could be something more realistic, like:
+##		#       self.text_widget_height = self.scrollbar.winfo_height(),
+##		# but with this magic number 65535, one possible winfo_height()-call
+##		# is avoided. But Still, if dont want magics:
+##		# self.contents.count('@0,0', '@0,%s' % self.text_widget_height, 'displaylines')[0]
+##		#       or if in doubt is that up-to-date(it is, see above):
+##		# self.contents.count('@0,0', '@0,%s' % self.scrollbar.winfo_height(), 'displaylines')[0]
+##
+##		# Note that result is None if widget is not yet fully started, below is solution to that.
+##		if tmp := self.contents.count('@0,0', '@0,65535', 'displaylines')[0]:
+##			# Here one can do things like find the maximum number of screen lines etc
+##			# if tmp > self.max_screen_lines: self.max_screen_lines = tmp
+##			self.screen_lines = tmp
+##
+##		else:
+##			# Geometry manager hasn't run yet, most likely doing still init
+##			# Note that this is not realistic value, but a future value if everything wents ok.
+##			# Correct value would be 0
+##			self.screen_lines = int(self.contents['height'])
+
 		self.update_linenums()
 
 
@@ -1334,11 +1406,56 @@ import importflags
 importflags.FLAGS=%s
 
 import henxel
-henxel.importflags.FLAGS['test_func']()
+henxel.FLAGS['test_func']()
 
 a=henxel.Editor()''' % flag_string
 
 		return bytes(launch_test_as_string, 'utf-8')
+
+
+	def test_launch_is_ok(self):
+		''' Called from quit_me()
+		'''
+
+		tmp = self.build_launch_test()
+		flag_success = True
+
+		d = dict(capture_output=True)
+		p = subprocess.run(['python','-'], input=tmp, **d)
+
+		try: p.check_returncode()
+
+		except subprocess.CalledProcessError:
+			self.wait_for(33)
+			self.bell()
+			print('LAUNCHTEST: FAIL')
+			print('\n\n' + p.stderr.decode().strip())
+			flag_success = False
+
+		out = p.stdout.decode().strip()
+		print(out)
+
+		return flag_success
+
+
+	def package_has_syntax_error(self):
+		flag_cancel = False
+
+		for item in self.__class__.pkg_contents.iterdir():
+			if item.is_file() and '.py' in item.suffix:
+
+				try:
+					f = item.__str__()
+					ast.parse(open(f).read(), filename=f)
+
+				except Exception as e:
+					err = '\t' +  e.__str__() + '\n'
+					print( '\nIn: ', item.resolve().__str__() )
+					print(err)
+					flag_cancel = True
+					continue
+
+		return flag_cancel
 
 
 	def quit_me(self, event=None, quit_debug=False):
@@ -1351,6 +1468,13 @@ a=henxel.Editor()''' % flag_string
 
 		if self.debug:
 			flag_cancel = False
+##			if self.package_has_syntax_error():
+##				self.wait_for(33)
+##			if not self.test_launch_is_ok():
+##				self.wait_for(33)
+##				self.bell()
+##				return 'break'
+#Pressed cmd-q, but dont apply(restart) new code every time
 
 			for item in self.__class__.pkg_contents.iterdir():
 				if item.is_file() and '.py' in item.suffix:
