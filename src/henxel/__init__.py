@@ -515,11 +515,18 @@ class Editor(tkinter.Toplevel):
 
 		self.popup = tkinter.Menu(self.contents, tearoff=0, bd=0, activeborderwidth=0)
 		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
-		self.popup.add_command(label="         run", command=self.run)
-		self.popup.add_command(label="        copy", command=self.copy)
-		self.popup.add_command(label="       paste", command=self.paste)
-		self.popup.add_command(label="##   comment", command=self.comment)
-		self.popup.add_command(label="   uncomment", command=self.uncomment)
+
+		if self.debug:
+			self.popup.add_command(label="        test", command=self.quit_me)
+			self.popup.add_command(label="     restart", command=self.quit_me)
+
+		else:
+			self.popup.add_command(label="         run", command=self.run)
+			self.popup.add_command(label="        copy", command=self.copy)
+			self.popup.add_command(label="       paste", command=self.paste)
+			self.popup.add_command(label="##   comment", command=self.comment)
+			self.popup.add_command(label="   uncomment", command=self.uncomment)
+
 		self.popup.add_command(label="  select all", command=self.select_all)
 		self.popup.add_command(label="     inspect", command=self.insert_inspected)
 		self.popup.add_command(label="      errors", command=self.show_errors)
@@ -706,16 +713,13 @@ class Editor(tkinter.Toplevel):
 		self.text_widget_height = self.scrollbar.winfo_height()
 
 
-##		self.flags['launch_test_is_visible'] == True or False:
+
+##		if self.flags and self.flags['launch_test_is_visible'] == True:# or False:
+##			print(self.bbox_height,  self.text_widget_height)
 ##			self.bbox_height == 1,  self.text_widget_height == 1
-##			--> not mapped
+##			--> self.contents is not mapped
 
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
-
-
-##			# Do binds
-##			#####################
-##			binder.do_binds(self)
 
 
 
@@ -1058,18 +1062,19 @@ class Editor(tkinter.Toplevel):
 
 		self.oldline = ''
 		self.token_err = False
-		self.token_can_update = False
+		self.line_can_update = False
 		self.oldlinenum = self.contents.index(tkinter.INSERT).split('.')[0]
 
-##		self.flags['launch_test_is_visible'] == True or False:
+##		if self.flags and self.flags['launch_test_is_visible'] == True:# or False:
+##			print(self.bbox_height,  self.text_widget_height)
 ##			self.bbox_height == 1,  self.text_widget_height == 1
-##			--> not mapped
+##			--> self.contents is not mapped
 
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
 			self.update_tokens(everything=True)
-			self.token_can_update = True
+			self.line_can_update = True
 
 		self.contents.bind( "<<WidgetViewSync>>", self.update_line)
 		# Viewsync-event does not trigger at window size changes,
@@ -1154,9 +1159,12 @@ class Editor(tkinter.Toplevel):
 		self.__class__.alive = True
 		self.update_title()
 
+
+##		if self.flags and self.flags['launch_test_is_visible'] == True:# or False:
+##			print(self.bbox_height,  self.text_widget_height)
 ##		self.flags['launch_test_is_visible'] == True or False:
 ##			self.bbox_height == 25,  self.text_widget_height == 616
-##			--> mapped
+##			--> self.contents is mapped
 
 		if self.flags and self.flags['launch_test_report_success'] == True:
 			print('LAUNCHTEST: SUCCESS')# self.oldlinenum, self.oldline, self.anchorname
@@ -1458,12 +1466,15 @@ a=henxel.Editor()''' % flag_string
 		return flag_cancel
 
 
-	def quit_me(self, event=None, quit_debug=False):
+	def quit_me(self, event=None, quit_debug=False, restart=False):
 
-		if not self.save_forced():
-			self.wait_for(33)
+		def delayed_break(delay):
+			self.wait_for(delay)
 			self.bell()
 			return 'break'
+
+		if self.state != 'normal': return delayed_break(33)
+		if not self.save_forced(): return delayed_break(33)
 
 
 		if self.debug:
@@ -1490,10 +1501,7 @@ a=henxel.Editor()''' % flag_string
 						flag_cancel = True
 						continue
 
-			if flag_cancel:
-				self.wait_for(33)
-				self.bell()
-				return 'break'
+			if flag_cancel: return delayed_break(33)
 
 			# Close-Button, quit_debug=True
 			if quit_debug: pass
@@ -1508,20 +1516,18 @@ a=henxel.Editor()''' % flag_string
 				try: p.check_returncode()
 
 				except subprocess.CalledProcessError:
-					self.wait_for(33)
-					self.bell()
 					print('LAUNCHTEST: FAIL')
 					print('\n\n' + p.stderr.decode().strip())
-					return 'break'
+					return delayed_break(33)
 
 				print(p.stdout.decode().strip())
 				### Debug End ##############
 
 
+
 		tab = self.tabs[self.tabindex]
 		self.save_bookmarks(tab)
 		self.save_config()
-
 
 		# Affects color, fontchoose, load:
 		for widget in self.to_be_closed:
@@ -1636,7 +1642,7 @@ a=henxel.Editor()''' % flag_string
 		self.text_widget_height = self.scrollbar.winfo_height()
 		self.update_linenums()
 
-		if self.can_do_syntax() and self.token_can_update:
+		if self.can_do_syntax() and self.line_can_update:
 
 			# Tag alter triggers this event if font changes, like from normal to bold.
 			# --> need to check if line is changed to prevent self-trigger
@@ -1864,7 +1870,7 @@ a=henxel.Editor()''' % flag_string
 			self.entry.xview_moveto(1.0)
 
 		self.token_err = False
-		self.token_can_update = False
+		self.line_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, tab.contents)
 		self.clear_bookmarks()
@@ -1873,7 +1879,7 @@ a=henxel.Editor()''' % flag_string
 		if self.can_do_syntax():
 			self.update_lineinfo()
 			self.update_tokens(everything=True)
-			self.token_can_update = True
+			self.line_can_update = True
 
 
 		# Set cursor pos
@@ -1946,7 +1952,7 @@ a=henxel.Editor()''' % flag_string
 
 		######################
 		self.token_err = False
-		self.token_can_update = False
+		self.line_can_update = False
 
 
 		dictionary = self.get_tokens(everything=True)
@@ -1972,7 +1978,7 @@ a=henxel.Editor()''' % flag_string
 			self.insert_tokens(dictionary)
 
 			#self.update_tokens(everything=True)
-			self.token_can_update = True
+			self.line_can_update = True
 
 		#######################
 
@@ -2228,7 +2234,7 @@ a=henxel.Editor()''' % flag_string
 
 		if self.syntax:
 			self.syntax = False
-			self.token_can_update = False
+			self.line_can_update = False
 
 			for tag in self.tagnames:
 				self.contents.tag_remove( tag, '1.0', tkinter.END )
@@ -2238,12 +2244,12 @@ a=henxel.Editor()''' % flag_string
 		else:
 			self.syntax = True
 			self.token_err = False
-			self.token_can_update = False
+			self.line_can_update = False
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens(start='1.0', end=tkinter.END)
-				self.token_can_update = True
+				self.line_can_update = True
 
 			return 'break'
 
@@ -3479,7 +3485,7 @@ a=henxel.Editor()''' % flag_string
 		self.entry.xview_moveto(1.0)
 
 		self.token_err = False
-		self.token_can_update = False
+		self.line_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.clear_bookmarks()
@@ -3488,7 +3494,7 @@ a=henxel.Editor()''' % flag_string
 		if self.can_do_syntax():
 			self.update_lineinfo()
 			self.update_tokens(everything=True)
-			self.token_can_update = True
+			self.line_can_update = True
 
 		# Set cursor pos
 		line = errline + '.0'
@@ -3552,7 +3558,7 @@ a=henxel.Editor()''' % flag_string
 			openfiles = [tab.filepath for tab in self.tabs]
 			self.save_bookmarks(curtab)
 
-			self.token_can_update = False
+			self.line_can_update = False
 			self.contents.delete('1.0', tkinter.END)
 
 			for tag in self.contents.tag_names():
@@ -3617,7 +3623,7 @@ a=henxel.Editor()''' % flag_string
 
 						self.update_lineinfo()
 						self.update_tokens(start=start, end=end, line=line)
-						self.token_can_update = True
+						self.line_can_update = True
 
 		return 'break'
 
@@ -3644,7 +3650,7 @@ a=henxel.Editor()''' % flag_string
 			curtab.position = pos
 			self.save_bookmarks(curtab)
 
-			self.token_can_update = False
+			self.line_can_update = False
 			self.contents.delete('1.0', tkinter.END)
 			openfiles = [tab.filepath for tab in self.tabs]
 
@@ -3693,7 +3699,7 @@ a=henxel.Editor()''' % flag_string
 
 						self.update_lineinfo()
 						self.update_tokens(start=start, end=end, line=line)
-						self.token_can_update = True
+						self.line_can_update = True
 
 
 
@@ -3711,7 +3717,7 @@ a=henxel.Editor()''' % flag_string
 			self.entry.xview_moveto(1.0)
 
 		self.token_err = False
-		self.token_can_update = False
+		self.line_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, curtab.contents)
 		self.clear_bookmarks()
@@ -3720,7 +3726,7 @@ a=henxel.Editor()''' % flag_string
 		if self.can_do_syntax():
 			self.update_lineinfo()
 			self.update_tokens(everything=True)
-			self.token_can_update = True
+			self.line_can_update = True
 
 		# Set cursor pos
 		line = curtab.position
@@ -5195,7 +5201,7 @@ a=henxel.Editor()''' % flag_string
 
 		# Do paste string
 		# Put mark, so one can get end index of new string
-		self.token_can_update = False
+		self.line_can_update = False
 		self.contents.mark_set('paste', ins_old)
 		self.contents.insert(ins_old, s)
 
@@ -5206,7 +5212,7 @@ a=henxel.Editor()''' % flag_string
 		if self.can_do_syntax():
 			self.update_tokens( start=start, end=end)
 			self.update_lineinfo()
-			self.token_can_update = True
+			self.line_can_update = True
 
 
 		if not have_selection:
@@ -5239,7 +5245,7 @@ a=henxel.Editor()''' % flag_string
 			# is empty
 			return 'break'
 
-		self.token_can_update = False
+		self.line_can_update = False
 		have_selection = False
 
 		if len( self.contents.tag_ranges('sel') ) > 0:
@@ -5266,7 +5272,7 @@ a=henxel.Editor()''' % flag_string
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens( start=s, end=e, line=t )
-				self.token_can_update = True
+				self.line_can_update = True
 
 
 			if have_selection:
@@ -5292,7 +5298,7 @@ a=henxel.Editor()''' % flag_string
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens( start=s, end=e, line=t )
-				self.token_can_update = True
+				self.line_can_update = True
 
 
 			if have_selection:
@@ -5312,7 +5318,7 @@ a=henxel.Editor()''' % flag_string
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens( start=s, end=e, line=t )
-				self.token_can_update = True
+				self.line_can_update = True
 
 			if have_selection:
 				self.contents.tag_add('sel', selstart, selend)
@@ -5329,14 +5335,14 @@ a=henxel.Editor()''' % flag_string
 
 		try:
 			self.wait_for(100)
-			self.token_can_update = False
+			self.line_can_update = False
 
 			self.contents.edit_undo()
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens(start='1.0', end=tkinter.END)
-				self.token_can_update = True
+				self.line_can_update = True
 
 		except tkinter.TclError:
 			self.bell()
@@ -5351,14 +5357,14 @@ a=henxel.Editor()''' % flag_string
 
 		try:
 			self.wait_for(100)
-			self.token_can_update = False
+			self.line_can_update = False
 
 			self.contents.edit_redo()
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens(start='1.0', end=tkinter.END)
-				self.token_can_update = True
+				self.line_can_update = True
 
 
 		except tkinter.TclError:
@@ -5656,7 +5662,7 @@ a=henxel.Editor()''' % flag_string
 					fcontents = f.read()
 
 					self.token_err = False
-					self.token_can_update = False
+					self.line_can_update = False
 
 					# Bookmarks of oldtab are saved in self.new_tab
 					# and marks are cleared with self.clear_bookmarks
@@ -5688,7 +5694,7 @@ a=henxel.Editor()''' % flag_string
 					if self.can_do_syntax():
 						self.update_lineinfo()
 						self.update_tokens(everything=True)
-						self.token_can_update = True
+						self.line_can_update = True
 
 					self.contents.edit_reset()
 					self.contents.edit_modified(0)
@@ -5723,7 +5729,7 @@ a=henxel.Editor()''' % flag_string
 
 
 				self.token_err = False
-				self.token_can_update = False
+				self.line_can_update = False
 
 				# Bookmarks of oldtab are saved in self.new_tab
 				# and marks are cleared with self.clear_bookmarks
@@ -5752,7 +5758,7 @@ a=henxel.Editor()''' % flag_string
 				if self.can_do_syntax():
 					self.update_lineinfo()
 					self.update_tokens(everything=True)
-					self.token_can_update = True
+					self.line_can_update = True
 
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
@@ -5797,14 +5803,14 @@ a=henxel.Editor()''' % flag_string
 			tmp = ''.join(tmp)
 
 
-			self.token_can_update = False
+			self.line_can_update = False
 			self.contents.delete(start, end)
 			self.contents.insert(start, tmp)
 
 			if self.can_do_syntax():
 				self.update_tokens(start=start, end=end)
 				self.update_lineinfo()
-				self.token_can_update = True
+				self.line_can_update = True
 
 			self.contents.edit_separator()
 
@@ -6828,7 +6834,7 @@ a=henxel.Editor()''' % flag_string
 				self.entry.xview_moveto(1.0)
 
 				self.token_err = False
-				self.token_can_update = False
+				self.line_can_update = False
 				self.contents.delete('1.0', tkinter.END)
 				self.contents.insert(tkinter.INSERT, curtab.contents)
 				self.remove_bookmarks(all_tabs=False)
@@ -6837,7 +6843,7 @@ a=henxel.Editor()''' % flag_string
 				if self.can_do_syntax():
 					self.update_lineinfo()
 					self.update_tokens(everything=True)
-					self.token_can_update = True
+					self.line_can_update = True
 
 				self.contents.focus_set()
 				self.contents.see('1.0')
@@ -7091,9 +7097,9 @@ a=henxel.Editor()''' % flag_string
 					if self.can_do_syntax():
 						self.update_lineinfo()
 						self.token_err = False
-						self.token_can_update = False
+						self.line_can_update = False
 						self.update_tokens(everything=True)
-						self.token_can_update = True
+						self.line_can_update = True
 
 
 				set_cursor_pos()
@@ -7118,7 +7124,7 @@ a=henxel.Editor()''' % flag_string
 
 
 				self.token_err = False
-				self.token_can_update = False
+				self.line_can_update = False
 
 				# Bookmarks of oldtab are saved in self.new_tab
 				# and marks are cleared with self.clear_bookmarks
@@ -7139,7 +7145,7 @@ a=henxel.Editor()''' % flag_string
 				if self.can_do_syntax():
 					self.update_lineinfo()
 					self.update_tokens(everything=True)
-					self.token_can_update = True
+					self.line_can_update = True
 
 				set_cursor_pos()
 				self.contents.edit_reset()
@@ -7505,7 +7511,7 @@ a=henxel.Editor()''' % flag_string
 			self.entry.xview_moveto(1.0)
 
 		self.token_err = False
-		self.token_can_update = False
+		self.line_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, curtab.contents)
 		self.clear_bookmarks()
@@ -7514,7 +7520,7 @@ a=henxel.Editor()''' % flag_string
 		if self.can_do_syntax():
 			self.update_lineinfo()
 			self.update_tokens(everything=True)
-			self.token_can_update = True
+			self.line_can_update = True
 
 
 		# Set cursor pos
@@ -7555,7 +7561,7 @@ a=henxel.Editor()''' % flag_string
 		curtab.contents = tmp[:-1]
 		self.save_bookmarks(curtab)
 
-		self.token_can_update = False
+		self.line_can_update = False
 
 		self.entry.delete(0, tkinter.END)
 		self.contents.delete('1.0', tkinter.END)
@@ -7869,11 +7875,11 @@ a=henxel.Editor()''' % flag_string
 			for linenum in range(startline, endline+1):
 				self.contents.insert('%d.0' % linenum, '##')
 
-			self.token_can_update = False
+			self.line_can_update = False
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens(start=startpos, end=endpos)
-				self.token_can_update = True
+				self.line_can_update = True
 
 
 		# No selection, comment curline
@@ -7914,11 +7920,11 @@ a=henxel.Editor()''' % flag_string
 
 
 			if changed:
-				self.token_can_update = False
+				self.line_can_update = False
 				if self.can_do_syntax():
 					self.update_lineinfo()
 					self.update_tokens(start=startpos, end=endpos)
-					self.token_can_update = False
+					self.line_can_update = False
 
 				self.contents.edit_separator()
 
@@ -8852,11 +8858,11 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 				self.state = 'normal'
 
-				self.token_can_update = False
+				self.line_can_update = False
 				if self.can_do_syntax():
 					self.update_lineinfo()
 					self.update_tokens(start='1.0', end=tkinter.END)
-					self.token_can_update = True
+					self.line_can_update = True
 
 
 		self.state = 'normal'
