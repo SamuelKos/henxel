@@ -1505,7 +1505,7 @@ a=henxel.Editor()''' % flag_string
 			self.bell()
 			return 'break'
 
-		if self.state != 'normal' or not self.save_forced(): return delayed_break(33)
+		if not self.save_forced(): return delayed_break(33)
 
 
 		if self.debug:
@@ -6853,6 +6853,9 @@ a=henxel.Editor()''' % flag_string
 
 			If python-file, convert indentation to tabs.
 		'''
+		# Dont do anything when widget is not visible
+		if not self.contents.winfo_ismapped(): return False
+
 		# Dont want contents to be replaced with errorlines or help.
 		last_state = self.state
 

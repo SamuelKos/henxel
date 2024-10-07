@@ -584,7 +584,72 @@ self.tagnames = [
 		]
 
 
-reproduce bad bug command lambda kwargs popup #################
+quick first fix for issue below
+at start of save_forced():
+	# Dont do anything when widget is not visible
+	if not self.contents.winfo_ismapped(): return False
+		
+reproduce bad bug command lambda kwargs popup ############		
+##########################################################
+*functools*
+from functool import partial
+kwargs={'quit_me':True}
+my_command=partial(self.quit_me, kwargs)
+self.popup.add_command(label="restart2",
+		command=lambda: self.after_idle(my_command))
+
+ast does not help,
+launch test ok, because it is not debug=True ######### should test with debug also?
+--> it is new editor, with incomplete init, stopped at popup creation
+--> first error message 111111
+--> WMDELETE WINDOW is binded to quit_me at start of init, with quit_debug flag
+--> config is loaded just before popup bug --> active tab at danger
+--> boldfont is after popup and never get created
+
+Now if pressed window close -button: quit_me with quit_debug-flag:
+--> save_forced, activetab: contents.get('1.0', tkinter.END)
+--> gets nothing (but that one extra newline) --> content is changed: saved
+--> ast passes happily empty file
+--> no test-launch on empty file, because quit_debug
+--> deleting attributes begin, boldfont is first that dont exist
+--> second error message 222222
+
+
+restart -->
+##########
+after restart: 
+before closing empty window:
+raceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py", line 532, in __init__
+    from functool import partial
+ModuleNotFoundError: No module named 'functool'
+>>> 
+
+after closing window
+	lose active window data
+
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "/usr/local/Cellar/python@3.12/3.12.3/Frameworks/Python.framework/Versions/3.12/lib/python3.12/tkinter/__init__.py", line 1967, in __call__
+    return self.func(*args)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py", line 367, in <lambda>
+  File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py", line 1587, in quit_me
+AttributeError: 'Editor' object has no attribute 'boldfont'
+
+--> 0
+
+if no close
+	no lose active window data
+##################################
+
+
+
+
+
+
+
 
 
 debug help 
