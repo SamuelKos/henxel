@@ -91,7 +91,7 @@ def stash_pop():
 		0: Copy error messages! For fixing.
 
 		1: In shell: "git stash"
-			  Files are now at last commit, changes are put in some tmp-branch or whatever.
+			  Files are now at last commit, changes are put in sort of tmp-branch.
 
 		2: Launch python: "python"
 
@@ -273,7 +273,7 @@ class Editor(tkinter.Toplevel):
 	def __new__(cls, *args, debug=False, **kwargs):
 
 		if not cls.root:
-			# Q: Does launch-test have own root? A: Yes:
+			# Q: Does launch-test have its own root? A: Yes:
 ##			if flags and flags['launch_test'] == True:
 ##				print('BBBB')
 			# Was earlier v.0.2.2 in init:
@@ -366,7 +366,7 @@ class Editor(tkinter.Toplevel):
 		self.protocol("WM_DELETE_WINDOW",
 			lambda kwargs={'quit_debug':True}: self.quit_me(**kwargs))
 
-		if self.flags and not self.flags['launch_test_is_visible']: self.withdraw()
+		if self.flags and not self.flags['test_is_visible']: self.withdraw()
 
 		# Other widgets
 		self.to_be_closed = list()
@@ -476,7 +476,7 @@ class Editor(tkinter.Toplevel):
 		string_representation = None
 		data = None
 
-		if self.flags and self.flags['launch_test'] == True: pass
+		if self.flags and self.flags['test_skip_conf'] == True: pass
 		else:
 			# Try to apply saved configurations:
 			if self.env:
@@ -721,12 +721,17 @@ class Editor(tkinter.Toplevel):
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
 
+##		# Real widget visibility-check
+##		if self.flags and self.flags['launch_test']:
+##			a = self.contents.winfo_ismapped()
+##			b = self.contents.winfo_viewable()# checks also if ancestors ar mapped
+##			print(a,b) # 0 0
 
-
-##		if self.flags and self.flags['launch_test_is_visible'] == True:# or False:
+##		# Note also this
+##		if self.flags and self.flags['launch_test']:
 ##			print(self.bbox_height,  self.text_widget_height)
-##			self.bbox_height == 1,  self.text_widget_height == 1
-##			--> self.contents is not mapped
+##			# self.bbox_height == 1,  self.text_widget_height == 1
+##			# --> self.contents is not yet 'packed' by (grid) geometry-manager
 
 		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 
@@ -1075,11 +1080,17 @@ class Editor(tkinter.Toplevel):
 		self.oldlinenum = self.contents.index(tkinter.INSERT).split('.')[0]
 		self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
 
+##		# Real widget visibility-check
+##		if self.flags and self.flags['launch_test']:
+##			a = self.contents.winfo_ismapped()
+##			b = self.contents.winfo_viewable()# checks also if ancestors ar mapped
+##			print(a,b) # 0 0
 
-##		if self.flags and self.flags['launch_test_is_visible'] == True:# or False:
+##		# Note also this
+##		if self.flags and self.flags['launch_test']:
 ##			print(self.bbox_height,  self.text_widget_height)
-##			self.bbox_height == 1,  self.text_widget_height == 1
-##			--> self.contents is not mapped
+##			# self.bbox_height == 1,  self.text_widget_height == 1
+##			# --> self.contents is not yet 'packed' by (grid) geometry-manager
 
 
 		if self.can_do_syntax():
@@ -1170,15 +1181,20 @@ class Editor(tkinter.Toplevel):
 		self.__class__.alive = True
 		self.update_title()
 
+##		# Real widget visibility-check
+##		if self.flags and self.flags['launch_test']:
+##			a = self.contents.winfo_ismapped()
+##			b = self.contents.winfo_viewable()#check also if ancestors ar mapped
+##			print(a,b)
 
-##		if self.flags and self.flags['launch_test_is_visible'] == True:# or False:
+##		# Note also this
+##		if self.flags and self.flags['launch_test']:
 ##			print(self.bbox_height,  self.text_widget_height)
-##		self.flags['launch_test_is_visible'] == True or False:
-##			self.bbox_height == 25,  self.text_widget_height == 616
-##			--> self.contents is mapped
+##			# self.bbox_height == 25,  self.text_widget_height == 616
+##			# --> self.contents is now 'packed' by (grid) geometry-manager
 
-		if self.flags and self.flags['launch_test_report_success'] == True:
-			print('LAUNCHTEST: SUCCESS')# self.oldlinenum, self.oldline, self.anchorname
+		if self.flags and self.flags['test_report_success'] == True:
+			print('LAUNCHTEST: OK')# self.oldlinenum, self.oldline, self.anchorname
 
 		############################# init End ##########################
 
@@ -1347,14 +1363,15 @@ class Editor(tkinter.Toplevel):
 
 
 	def build_launch_test(self):
-		''' Used only if debug=True and even then only when doing launch-test
+		''' Used only if debug=True and even then *only* when doing launch-test
 
-			Called from quit_me()
+			Called from test_launch_is_ok()
 
 			returns: byte-string, suitable as input for: 'python -',
-			which is used in subprocess.run -call in quit_me()
+			which is used in subprocess.run -call in test_launch_is_ok()
 
 			Info on usage: help(henxel.importflags)
+			Read before things go wrong: help(henxel.stash_pop)
 		'''
 
 		# Test-launch Editor (it is set to non visible, but flags can here be edited)
@@ -1368,7 +1385,7 @@ class Editor(tkinter.Toplevel):
 		#
 		# This means, when one changes flags here,
 		#		(or even some normal code, in for example quit_me or save_forced)
-		# When one makes changes here, and does cmd-q
+		# When one makes changes here, and does launch-test or restart
 		# 		--> old flags/code are still used in *executing test-launch*,
 		# 									that is, executing quit_me().
 		#
@@ -1376,9 +1393,9 @@ class Editor(tkinter.Toplevel):
 		# executed in launch-test, DOES use the new code, it is the meaning of
 		# launch-test. That is, executed stuff in: launch_test_as_string below.
 		###############################################################
-		# But after next cmd-q, new flags/code (in quit_me etc) are binded, and used.
+		# But after next restart, new flags/code (in quit_me etc) are binded, and used.
 		# In short:	When changing flags, and want to see the difference:
-		# 			do cmd-q two times! (and maybe clear console after first one)
+		#			1: restart 2: see the difference at next test-launch
 		###################################################################
 
 
@@ -1387,8 +1404,8 @@ class Editor(tkinter.Toplevel):
 		###################################################################
 		# Want to remove some flag completely:
 		# 1: Remove/edit all related lines of code, most likely tests like this:
-		# 	if self.flags and not self.flags['launch_test_is_visible']: self.withdraw()
-		# 2: Remove related line from list below: 'launch_test_is_visible=False'
+		# 	if self.flags and not self.flags['test_is_visible']: self.withdraw()
+		# 2: Remove related line from list below: 'test_is_visible=False'
 		###################################################################
 		# Want to add new flag: 1: add line in list below: 'my_flag=True'
 		# 	Flag can be any object: 'my_flag=MyClass(myargs)'
@@ -1396,16 +1413,17 @@ class Editor(tkinter.Toplevel):
 		# most likely tests like this:
 		# 	if self.flags and self.flags['my_flag']: self.do_something()
 		###################################################################
-		# Just want to change a flag: 1: edit line in list below:
-		# 	'launch_test_report_success=True'
+		# Just want to change a flag: edit line in list below:
+		# 	'test_report_success=True'
 		###################################################################
 		# And when doing any of above, to see the difference:
-		# 	do cmd-q two times! (and maybe clear console after first one)
+		# 	1: restart 2: see the difference at next test-launch
 		###################################################################
 
 		flags = ['launch_test=True',
-				'launch_test_is_visible=False',
-				'launch_test_report_success=True',
+				'test_is_visible=False',
+				'test_report_success=True',
+				'test_skip_conf=True',
 				'test_func=print_jou'
 				]
 
@@ -2249,7 +2267,7 @@ a=henxel.Editor()''' % flag_string
 
 
 	def get_tokens(self, update=False):
-		''' Get info about tokens for insert_tokens()
+		''' Get syntax-tokens for insert_tokens()
 
 			Called from: walk_tabs
 		'''
@@ -2263,12 +2281,14 @@ a=henxel.Editor()''' % flag_string
 
 
 	def insert_tokens(self, tokens):
-		''' Update tokens with info from get_tokens()
+		''' Syntax-highlight text
+
+			syntax-tokens are from get_tokens()
 
 			Called from: walk_tabs
 		'''
 
-		patt = '%s tag add ' % self.tcl_name_of_contents
+		patt = f'{self.tcl_name_of_contents} tag add '
 		flag_err = False
 		par_err = None
 
@@ -2351,9 +2371,10 @@ a=henxel.Editor()''' % flag_string
 
 		for tag in self.tags:
 			if len(self.tags[tag]) > 0:
+
 				tk_command = patt + tag
-				for r in self.tags[tag]:
-					tk_command += ' %i.%i %i.%i' % (r[0][0], r[0][1], r[1][0], r[1][1])
+				for ((s0,s1), (e0,e1)) in self.tags[tag]:
+					tk_command += f' {s0}.{s1} {e0}.{e1}'
 
 				self.tk.eval(tk_command)
 

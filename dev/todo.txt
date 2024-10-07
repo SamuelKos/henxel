@@ -421,15 +421,13 @@ in quit_me:
 pyproject.toml + setup.cfg --> pyproject.toml
 #######################
 token_can_update --> line_can_update
-#######################
-henxel.stash_pop()
-#######################
-pass conf if test-launch done ok?
 #######################	
-when debug different popup, test, restart
-test: do testlaunch in quit_me
-restart: everything in quit_me and restart
+when debug, different popup, test, restart
+test: do test-launch in quit_me
+restart: everything in quit_me, and restart
 Close-Button, quit_debug=True does not do test-launch, ok?
+flag skip conf done ok? pass conf if test-launch done ok?
+henxel.stash_pop()
 #######################	
 
 
@@ -569,7 +567,7 @@ walk_tabs:
 	1: get tokens of curtab
 	2: delete, insert
 	3: insert_syntags(): eval nexttab.tk_command
-	4: self.after_idle(update oldtab.tk_command
+	4: after_idle: update oldtab.tk_command
 		
 
 
@@ -586,6 +584,14 @@ self.tagnames = [
 		]
 
 
+reproduce bad bug command lambda kwargs popup #################
+
+
+debug help 
+
+check:
+	if 'EOF in multi-line statement' in ee.args[0]:
+
 
 
 tab.cache = dict()
@@ -595,10 +601,10 @@ for tag in self.tagnames:
 
 len(tab.cache) > 0: --> dict is not empty
 tab.cache.clear() --> clear dict
-tab.cache['contents'] updated at viewchange
+tab.cache['contents'] update at viewchange
 
 
-tab.cache['tags'] == list of tk_commands, updated at viewchange
+tab.cache['tags'] == list of tk_commands, update at viewchange
 	tk_command = patt + tag
 	for ((s0,s1), (e0,e1)) in self.tags[tag]:
 		tk_command += f' {s0}.{s1} {e0}.{e1}'
@@ -611,7 +617,6 @@ for command in tab.cache['tags']:
 should be tcl proc?, nested array: tabs(filepath)(tagname) --> list of indexes or empty
 r'set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} before {^.*(\w\W|\W\w)}] ')
 ('array set ::tcl::WordBreakRE $l3 ')
-how to update array? how to call proc?
 
 
 tabs = array of arrays(tabs): filepath-string as key, tab-array as value
@@ -637,16 +642,19 @@ quit_me docstring
 
 
 git diff -b --ignore-blank-lines
-quit_me return break? no?
 
+
+when debug show somewhere
 
 
 binder.py --> searching no find everything ################
+removed for that, ok?
 
-check syntax no debug?
+check syntax when no debug?
+quit_me return break? no?
 
 #################
-eval in init
+in init
 
 
 proc addtags {widget array filepath} {
@@ -656,13 +664,7 @@ proc addtags {widget array filepath} {
 }
 
 
-proc updatetags {widget array filepath} {
-	foreach  $array($filepath) {
-		$widget tag add $tag $indexlist
-	}
-}
-
-in update tokens
+in update_tokens
 array unset tabs(filepath-string%s) # like clear
 array set tabs(filepath-string%s) long %s-string tag1 indexes tag2 indexes
 
@@ -670,8 +672,10 @@ array set tabs(filepath-string%s) long %s-string tag1 indexes tag2 indexes
 
 
 update_tokens ==
-	get_tokens ( same args as update_tokens )
-	insert_tokens ( tokens, linenum, start_idx, end_idx, 
+	get_tokens(update=False) --> tokens of tab 
+				tab.contents, if update: get(1.0, end)
+	
+	insert_tokens(tokens)
 	
 	
 when view change:
