@@ -345,6 +345,7 @@ class Editor(tkinter.Toplevel):
 
 
 		if not cls.alive:
+
 			return super(Editor, cls).__new__(cls, *args, **kwargs)
 
 		else:
@@ -528,6 +529,9 @@ class Editor(tkinter.Toplevel):
 			# dont try them before git commit first
 			self.popup.add_command(label="     restart",
 					command=lambda: self.after_idle(self.restart_editor))
+
+			# Left for testing purposes, will produce error, dont uncomment
+			#from functool import partial
 
 		else:
 			self.popup.add_command(label="         run", command=self.run)
@@ -1193,9 +1197,6 @@ class Editor(tkinter.Toplevel):
 ##			# self.bbox_height == 25,  self.text_widget_height == 616
 ##			# --> self.contents is now 'packed' by (grid) geometry-manager
 
-		if self.flags and self.flags['test_report_success'] == True:
-			print('LAUNCHTEST: OK')# self.oldlinenum, self.oldline, self.anchorname
-
 		############################# init End ##########################
 
 
@@ -1362,10 +1363,10 @@ class Editor(tkinter.Toplevel):
 			self.contents.see( '%s + 4 lines' % index)
 
 
-	def build_launch_test(self):
+	def build_launch_test(self, mode):
 		''' Used only if debug=True and even then *only* when doing launch-test
 
-			Called from test_launch_is_ok()
+			Called from test_launch_is_ok(), mode is "NORMAL" or "DEBUG"
 
 			returns: byte-string, suitable as input for: 'python -',
 			which is used in subprocess.run -call in test_launch_is_ok()
@@ -1413,8 +1414,9 @@ class Editor(tkinter.Toplevel):
 		# most likely tests like this:
 		# 	if self.flags and self.flags['my_flag']: self.do_something()
 		###################################################################
-		# Just want to change a flag: edit line in list below:
-		# 	'test_report_success=True'
+		# Just want to change a flag: edit line in list below,
+		# when editing conf-related stuff, for example, one would:
+		# 	'test_skip_conf=False'
 		###################################################################
 		# And when doing any of above, to see the difference:
 		# 	1: restart 2: see the difference at next test-launch
@@ -1422,13 +1424,14 @@ class Editor(tkinter.Toplevel):
 
 		flags = ['launch_test=True',
 				'test_is_visible=False',
-				'test_report_success=True',
 				'test_skip_conf=True',
 				'test_func=print_jou'
 				]
 
 		flags_as_string = ', '.join(flags)
 		flag_string = 'dict(%s)' % flags_as_string
+		mode_string = ''
+		if mode == 'DEBUG': mode_string = 'debug=True'
 
 
 		# Basicly, one can do *anything* here, do imports, make
@@ -1445,7 +1448,7 @@ importflags.FLAGS=%s
 import henxel
 #henxel.FLAGS['test_func']()
 
-a=henxel.Editor()''' % flag_string
+a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		return bytes(launch_test_as_string, 'utf-8')
 
@@ -1453,24 +1456,32 @@ a=henxel.Editor()''' % flag_string
 	def test_launch_is_ok(self):
 		''' Called from quit_me()
 		'''
+		success_all = True
 
-		tmp = self.build_launch_test()
-		flag_success = True
+		print()
+		for mode in ['NORMAL', 'DEBUG']:
+			flag_success = True
+			print('LAUNCHTEST, %s, START' % mode)
 
-		d = dict(capture_output=True)
-		p = subprocess.run(['python','-'], input=tmp, **d)
+			tmp = self.build_launch_test(mode)
+			d = dict(capture_output=True)
+			p = subprocess.run(['python','-'], input=tmp, **d)
 
-		try: p.check_returncode()
+			try: p.check_returncode()
 
-		except subprocess.CalledProcessError:
-			print('LAUNCHTEST: FAIL')
-			print('\n\n' + p.stderr.decode().strip())
-			flag_success = False
+			except subprocess.CalledProcessError:
+				print('\n' + p.stderr.decode().strip())
+				print('\nLAUNCHTEST, %s, FAIL' % mode)
+				print(30*'-')
+				flag_success = success_all = False
 
-		out = p.stdout.decode().strip()
-		print(out)
+			out = p.stdout.decode().strip()
+			if len(out) > 0: print(out)
+			if flag_success:
+				print('LAUNCHTEST, %s, OK' % mode)
+				print(30*'-')
 
-		return flag_success
+		return success_all
 
 
 	def package_has_syntax_error(self):

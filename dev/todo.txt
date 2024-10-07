@@ -428,8 +428,16 @@ restart: everything in quit_me, and restart
 Close-Button, quit_debug=True does not do test-launch, ok?
 flag skip conf done ok? pass conf if test-launch done ok?
 henxel.stash_pop()
-#######################	
-
+#######################
+quick first fix for issue below
+At start of save_forced():
+	# Dont do anything when widget is not visible
+	if not self.contents.winfo_ismapped(): return False
+#######################
+for mode in [normal, debug]: build test, do test
+	for fixing bad bug told below
+	done ok?
+#######################
 
 
 
@@ -442,11 +450,15 @@ Below this: not done
 #python -m build -nx
 
 
+###
+bigbug:
 
+To Notes:
+	File "<stdin>", line 12, in <module>
+	is last line of launch_test_as_string in build_launch_test()
 
-
-
-
+debug: show errors
+###
 
 
 
@@ -477,30 +489,6 @@ return top, bot
 ##
 test-launch has own root
 ##
-
-
-####
-self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
-	solved:
-	
-Exception in Tkinter callback
-Traceback (most recent call last):
-  File "/usr/local/Cellar/python@3.12/3.12.3/Frameworks/Python.framework/Versions/3.12/lib/python3.12/tkinter/__init__.py", line 1967, in __call__
-    return self.func(*args)
-           ^^^^^^^^^^^^^^^^
-  File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py", line 4993, in raise_popup
-    self.popup.focus_set() # Needed to remove popup when clicked outside.
-    ^^^^^^^^^^
-AttributeError: 'Editor' object has no attribute 'popup'
-	
-	was: self.popup.add_command(label="test", command=self.quit_me)
-
-### note also:
-lambda keyword is *dangerous* with: command= quit_me 
-	commit before testing
-###
-
-####
 
 
 
@@ -584,6 +572,9 @@ self.tagnames = [
 		]
 
 
+
+########## remove below at some next commit ########
+
 quick first fix for issue below
 at start of save_forced():
 	# Dont do anything when widget is not visible
@@ -644,7 +635,31 @@ if no close
 	no lose active window data
 ##################################
 
+also was this:
+####
+self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
+	solved:
+	
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "/usr/local/Cellar/python@3.12/3.12.3/Frameworks/Python.framework/Versions/3.12/lib/python3.12/tkinter/__init__.py", line 1967, in __call__
+    return self.func(*args)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py", line 4993, in raise_popup
+    self.popup.focus_set() # Needed to remove popup when clicked outside.
+    ^^^^^^^^^^
+AttributeError: 'Editor' object has no attribute 'popup'
+	
+	was: self.popup.add_command(label="test", command=self.quit_me)
 
+### note also:
+lambda keyword is *dangerous* with: command= quit_me 
+	commit before testing
+###
+
+####
+
+########## remove above at some next commit #########
 
 
 
