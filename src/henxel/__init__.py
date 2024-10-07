@@ -273,7 +273,9 @@ class Editor(tkinter.Toplevel):
 	def __new__(cls, *args, debug=False, **kwargs):
 
 		if not cls.root:
-			#print('BBBB')
+			# Q: Does launch-test have own root? A: Yes:
+##			if flags and flags['launch_test'] == True:
+##				print('BBBB')
 			# Was earlier v.0.2.2 in init:
 
 			# self.root = tkinter.Tk().withdraw()
@@ -474,20 +476,22 @@ class Editor(tkinter.Toplevel):
 		string_representation = None
 		data = None
 
-		# Try to apply saved configurations:
-		if self.env:
-			p = pathlib.Path(self.env) / CONFPATH
+		if self.flags and self.flags['launch_test'] == True: pass
+		else:
+			# Try to apply saved configurations:
+			if self.env:
+				p = pathlib.Path(self.env) / CONFPATH
 
-		if self.env and p.exists():
-			try:
-				with open(p, 'r', encoding='utf-8') as f:
-					string_representation = f.read()
-					data = json.loads(string_representation)
+			if self.env and p.exists():
+				try:
+					with open(p, 'r', encoding='utf-8') as f:
+						string_representation = f.read()
+						data = json.loads(string_representation)
 
-			except EnvironmentError as e:
-				print(e.__str__())	# __str__() is for user (print to screen)
-				#print(e.__repr__())	# __repr__() is for developer (log to file)
-				print(f'\n Could not load existing configuration file: {p}')
+				except EnvironmentError as e:
+					print(e.__str__())	# __str__() is for user (print to screen)
+					#print(e.__repr__())	# __repr__() is for developer (log to file)
+					print(f'\n Could not load existing configuration file: {p}')
 
 		if data:
 			self.oldconf = string_representation
@@ -517,7 +521,9 @@ class Editor(tkinter.Toplevel):
 		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
 
 		if self.debug:
-			self.popup.add_command(label="        test", command=self.quit_me)
+			self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
+			# Next line left as example of what does not work
+			#self.popup.add_command(label="        test", command=self.quit_me)
 			self.popup.add_command(label="     restart", command=self.quit_me)
 
 		else:
@@ -1414,7 +1420,7 @@ import importflags
 importflags.FLAGS=%s
 
 import henxel
-henxel.FLAGS['test_func']()
+#henxel.FLAGS['test_func']()
 
 a=henxel.Editor()''' % flag_string
 
@@ -1434,8 +1440,6 @@ a=henxel.Editor()''' % flag_string
 		try: p.check_returncode()
 
 		except subprocess.CalledProcessError:
-			self.wait_for(33)
-			self.bell()
 			print('LAUNCHTEST: FAIL')
 			print('\n\n' + p.stderr.decode().strip())
 			flag_success = False
@@ -1453,8 +1457,8 @@ a=henxel.Editor()''' % flag_string
 			if item.is_file() and '.py' in item.suffix:
 
 				try:
-					f = item.__str__()
-					ast.parse(open(f).read(), filename=f)
+					file_contents = item.read_text()
+					ast.parse(file_contents, filename=item.resolve())
 
 				except Exception as e:
 					err = '\t' +  e.__str__() + '\n'
@@ -1473,55 +1477,15 @@ a=henxel.Editor()''' % flag_string
 			self.bell()
 			return 'break'
 
-		if self.state != 'normal': return delayed_break(33)
-		if not self.save_forced(): return delayed_break(33)
+		if self.state != 'normal' or not self.save_forced(): return delayed_break(33)
 
 
 		if self.debug:
-			flag_cancel = False
-##			if self.package_has_syntax_error():
-##				self.wait_for(33)
-##			if not self.test_launch_is_ok():
-##				self.wait_for(33)
-##				self.bell()
-##				return 'break'
-#Pressed cmd-q, but dont apply(restart) new code every time
-
-			for item in self.__class__.pkg_contents.iterdir():
-				if item.is_file() and '.py' in item.suffix:
-
-					try:
-						f = item.__str__()
-						ast.parse(open(f).read(), filename=f)
-
-					except Exception as e:
-						err = '\t' + e.__str__() + '\n'
-						print( '\nIn: ', item.resolve().__str__() )
-						print(err)
-						flag_cancel = True
-						continue
-
-			if flag_cancel: return delayed_break(33)
-
+			if self.package_has_syntax_error(): return delayed_break(33)
 			# Close-Button, quit_debug=True
-			if quit_debug: pass
-			else:
-				# Next, do test-launch before actually quitting,
-				# so one can fix errors which prevent editor from launching
-				tmp = self.build_launch_test()
-
-				d = dict(capture_output=True)
-				p = subprocess.run(['python','-'], input=tmp, **d)
-
-				try: p.check_returncode()
-
-				except subprocess.CalledProcessError:
-					print('LAUNCHTEST: FAIL')
-					print('\n\n' + p.stderr.decode().strip())
-					return delayed_break(33)
-
-				print(p.stdout.decode().strip())
-				### Debug End ##############
+			elif quit_debug: pass
+			elif not self.test_launch_is_ok(): return delayed_break(33)
+			else: pass
 
 
 

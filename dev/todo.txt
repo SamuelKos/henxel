@@ -591,11 +591,41 @@ foreach tab $tabs {parray $tab}
 
 cmd-q launch test only no restart
 
+quit_me docstring
+test-launch has own root
+pass conf if test-launch
+
+####
+self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
+solved:
+Exception in Tkinter callback
+Traceback (most recent call last):
+  File "/usr/local/Cellar/python@3.12/3.12.3/Frameworks/Python.framework/Versions/3.12/lib/python3.12/tkinter/__init__.py", line 1967, in __call__
+    return self.func(*args)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py", line 4993, in raise_popup
+    self.popup.focus_set() # Needed to remove popup when clicked outside.
+    ^^^^^^^^^^
+AttributeError: 'Editor' object has no attribute 'popup'
+was: self.popup.add_command(label="test", command=self.quit_me)
+####
+
+
+git diff -b --ignore-blank-lines
+quit_me return break? no?
+
 debug:
 	cmd-q bind do_launch_test
 	cmd-Q? do_launch_test and restart?
 	
-debug diff popup
+when debug different popup, test, restart
+test: do testlaunch in quit_me
+restart: everything in quit_me and restart
+
+lambda keyword is dangerous in quit_me #########################
+commit before testing
+
+
 Close-Button, quit_debug=True does not do test-launch, ok?
 
 binder.py --> searching no find everything ################
