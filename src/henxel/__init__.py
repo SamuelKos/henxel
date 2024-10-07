@@ -1928,7 +1928,7 @@ a=henxel.Editor()''' % flag_string
 		self.line_can_update = False
 
 
-		dictionary = self.get_tokens(everything=True)
+		tokens = self.get_tokens()
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, newtab.contents)
 
@@ -1948,7 +1948,7 @@ a=henxel.Editor()''' % flag_string
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
-			self.insert_tokens(dictionary)
+			self.insert_tokens(tokens)
 
 			#self.update_tokens(everything=True)
 			self.line_can_update = True
@@ -2246,100 +2246,29 @@ a=henxel.Editor()''' % flag_string
 		return self.syntax and self.is_pyfile()
 
 
-	def get_tokens(self, start=None, end=None, line=None, everything=False ):
+	def get_tokens(self, update=False):
 		''' Get info about tokens for insert_tokens()
 
 			Called from: walk_tabs
 		'''
-
-		start_idx = start
-		end_idx = end
-		linecontents = None
-
-		if not everything:
-			if line:
-				linecontents = line
-				test1 = [
-					self.token_err,
-					( '"""' in linecontents) and ('#' in linecontents ),
-					( "'''" in linecontents) and ('#' in linecontents )
-					]
-			else:
-				test1 = [self.token_err]
-
-
-			if any(test1):
-				start_idx = '1.0'
-				end_idx = tkinter.END
-				linecontents = None
-				#print('err')
-
-			# Check if inside multiline string
-			elif 'strings' in self.contents.tag_names(tkinter.INSERT) and \
-					not ( start_idx == '1.0' and end_idx == tkinter.END ):
-
-				try:
-					s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
-					# Parse linenumbers of start and enf of range == s,e
-					# Then convert them to int. This could also be done with:
-					# int(float(s)) which would give linenumber of start as int,
-					# but is not much clearer.
-
-					l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
-
-					if l0 != l1:
-						start_idx, end_idx = (s, e)
-						linecontents = None
-
-				except ValueError:
-					pass
-
-
-			if not linecontents:
-				tmp = self.contents.get( start_idx, end_idx )
-
-			else:
-				tmp = linecontents
-
-		else:
-			tmp = self.tabs[self.tabindex].contents
-			start_idx = '1.0'
-			end_idx = tkinter.END
-
-
-
-		prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
-		if prev_char in [ '(', ')', '[', ']' , '{', '}' ]:
-			self.par_err = True
-
-		linenum = int(start_idx.split('.')[0])
-
-
-		# Was:
-		# with io.BytesIO( tmp.encode('utf-8') ) as fo:
-		#	tokens = tokenize.tokenize( fo.readline )
+		if update: tmp = self.contents.get('1.0', 'end')
+		else: tmp = self.tabs[self.tabindex].contents
 
 		g = iter( tmp.splitlines(keepends=True) )
 		tokens = tokenize.generate_tokens( g.__next__ )
 
-		return ( tokens, linenum, start_idx, end_idx )
+		return tokens
 
 
-	def insert_tokens(self, args):
+	def insert_tokens(self, tokens):
 		''' Update tokens with info from get_tokens()
 
 			Called from: walk_tabs
 		'''
-		tokens, linenum, start_idx, end_idx = args
 
 		###### START ###########
 		flag_err = False
 		par_err = None
-
-
-		# Remove old tags:
-		for tag in self.tagnames:
-			self.contents.tag_remove( tag, start_idx, end_idx )
 
 		# Retag
 		idx_start = None
@@ -2354,8 +2283,8 @@ a=henxel.Editor()''' % flag_string
 					( token.exact_type == tokenize.LPAR ):
 
 					# Initiate indexes with correct linenum
-					s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
-					e0, e1 = map(str, [ token.end[0] + linenum - 1, token.end[1] ] )
+					s0, s1 = map(str, [ token.start[0], token.start[1] ] )
+					e0, e1 = map(str, [ token.end[0], token.end[1] ] )
 					idx_start = s0 + '.' + s1
 					idx_end = e0 + '.' + e1
 
