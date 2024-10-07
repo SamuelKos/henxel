@@ -2266,73 +2266,59 @@ a=henxel.Editor()''' % flag_string
 			Called from: walk_tabs
 		'''
 
-		###### START ###########
+		patt = '%s tag add ' % self.tcl_name_of_contents
 		flag_err = False
 		par_err = None
 
-		# Retag
-		idx_start = None
+		for tag in self.tagnames: self.tags[tag].clear()
+
 		try:
 			for token in tokens:
 				#print(token)
-
-				# token.line contains line as string which contains token.
 
 				if token.type == tokenize.NAME or \
 					( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
 					( token.exact_type == tokenize.LPAR ):
 
-					# Initiate indexes with correct linenum
-					s0, s1 = map(str, [ token.start[0], token.start[1] ] )
-					e0, e1 = map(str, [ token.end[0], token.end[1] ] )
-					idx_start = s0 + '.' + s1
-					idx_end = e0 + '.' + e1
-
 
 					if token.type == tokenize.NAME:
 
-						#lastoken = token
-						last_idx_start = idx_start
-						last_idx_end = idx_end
+						last_token = token
 
 						if token.string in self.keywords:
 
 							if token.string == 'self':
-								self.contents.tag_add('selfs', idx_start, idx_end)
+								self.tags['selfs'].append((token.start, token.end))
 
 							elif token.string in self.bools:
-								self.contents.tag_add('bools', idx_start, idx_end)
+								self.tags['bools'].append((token.start, token.end))
 
 ##							elif token.string in self.tests:
-##							self.contents.tag_add('tests', idx_start, idx_end)
+##								self.tags['tests'].append((token.start, token.end))
 
 							elif token.string in self.breaks:
-								self.contents.tag_add('breaks', idx_start, idx_end)
+								self.tags['breaks'].append((token.start, token.end))
 
 							else:
-								self.contents.tag_add('keywords', idx_start, idx_end)
-
+								self.tags['keywords'].append((token.start, token.end))
 
 					# Calls
 					elif token.exact_type == tokenize.LPAR:
-						# Need to know if last char before ( was not empty.
-						# Previously used test was:
-						#if self.contents.get( '%s - 1c' % idx_start, idx_start ).strip():
-
+						# Need to know if last char before '(' was not empty.
 						# token.line contains line as string which contains token.
 						prev_char_idx = token.start[1]-1
 						if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
-							self.contents.tag_add('calls', last_idx_start, last_idx_end)
+							self.tags['calls'].append((last_token.start, last_token.end))
 
 					elif token.type == tokenize.STRING:
-						self.contents.tag_add('strings', idx_start, idx_end)
+						self.tags['strings'].append((token.start, token.end))
 
 					elif token.type == tokenize.COMMENT:
-						self.contents.tag_add('comments', idx_start, idx_end)
+						self.tags['comments'].append((token.start, token.end))
 
 					# token.type == tokenize.NUMBER
 					else:
-						self.contents.tag_add('numbers', idx_start, idx_end)
+						self.tags['numbers'].append((token.start, token.end))
 
 					################## END ####################
 
@@ -2353,11 +2339,21 @@ a=henxel.Editor()''' % flag_string
 		except tokenize.TokenError as ee:
 
 			if 'EOF in multi-line statement' in ee.args[0]:
+				idx_start = str(last_token.start[0]) + '.0'
 				self.check_pars = idx_start
 
 			elif 'multi-line string' in ee.args[0]:
 				flag_err = True
 				self.token_err = True
+
+
+		for tag in self.tags:
+			if len(self.tags[tag]) > 0:
+				tk_command = patt + tag
+				for r in self.tags[tag]:
+					tk_command += ' %i.%i %i.%i' % (r[0][0], r[0][1], r[1][0], r[1][1])
+
+				self.tk.eval(tk_command)
 
 
 		##### Check parentheses ####
@@ -2379,9 +2375,7 @@ a=henxel.Editor()''' % flag_string
 
 			###### Check parentheses end ###########
 
-
-		#  not flag_err and ( everything==True ) is same, because gets same indexes
-		if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
+		if not flag_err:
 			#print('ok')
 			self.token_err = False
 
