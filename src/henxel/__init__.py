@@ -1073,6 +1073,8 @@ class Editor(tkinter.Toplevel):
 		self.token_err = False
 		self.line_can_update = False
 		self.oldlinenum = self.contents.index(tkinter.INSERT).split('.')[0]
+		self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
+
 
 ##		if self.flags and self.flags['launch_test_is_visible'] == True:# or False:
 ##			print(self.bbox_height,  self.text_widget_height)
@@ -1082,7 +1084,8 @@ class Editor(tkinter.Toplevel):
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
-			self.update_tokens(everything=True)
+			self.insert_tokens(self.get_tokens())
+			#self.update_tokens(everything=True)
 			self.line_can_update = True
 
 		self.contents.bind( "<<WidgetViewSync>>", self.update_line)
@@ -1147,7 +1150,6 @@ class Editor(tkinter.Toplevel):
 		self.update_idletasks()
 		self.update_line()
 
-		self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
 
 		# Remove some unwanted key-sequences, which otherwise would
 		# mess with searching, from couple of virtual events.
