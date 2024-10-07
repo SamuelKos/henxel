@@ -524,7 +524,10 @@ class Editor(tkinter.Toplevel):
 			self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
 			# Next line left as example of what does not work
 			#self.popup.add_command(label="        test", command=self.quit_me)
-			self.popup.add_command(label="     restart", command=self.quit_me)
+			# Note, lambdas with args or kwargs here can be very dangerous,
+			# dont try them before git commit first
+			self.popup.add_command(label="     restart",
+					command=lambda: self.after_idle(self.restart_editor))
 
 		else:
 			self.popup.add_command(label="         run", command=self.run)
@@ -1470,6 +1473,11 @@ a=henxel.Editor()''' % flag_string
 		return flag_cancel
 
 
+	def restart_editor(self, event=None):
+		self.quit_me(restart=True)
+		return 'break'
+
+
 	def quit_me(self, event=None, quit_debug=False, restart=False):
 
 		def delayed_break(delay):
@@ -1485,7 +1493,7 @@ a=henxel.Editor()''' % flag_string
 			# Close-Button, quit_debug=True
 			elif quit_debug: pass
 			elif not self.test_launch_is_ok(): return delayed_break(33)
-			else: pass
+			elif not restart: return 'break'
 
 
 
@@ -1567,7 +1575,8 @@ a=henxel.Editor()''' % flag_string
 
 		# quit_debug: Allow quitting debug-session without closing
 		# Python console, by clicking close-button.
-		if not quit_debug and self.debug and self.restart_script:
+		tests = [not quit_debug, self.debug, restart, self.restart_script]
+		if all(tests):
 			tmp = [self.restart_script]
 			subprocess.run(tmp)
 
