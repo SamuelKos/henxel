@@ -351,851 +351,869 @@ class Editor(tkinter.Toplevel):
 		else:
 			print('Instance of ', cls, ' already running!\n')
 
-			# By raising error the object creation is totally aborted.
+			# By raising error here, one avoids this situation:
+			# Editor was called with: e=henxel.Editor() and there
+			# already was Editor. Then, if not raising error here:
+			# 'e' would then be Nonetype, but old Editor would survive.
+			# To avoid that type-change, one raises the error
 			raise ValueError()
 
 
-
 	def __init__(self, *args, debug=False, **kwargs):
-
-		self.root = self.__class__.root
-		self.flags = self.__class__.flags
-		self.restart_script = self.__class__.restart_script
-		self.debug = debug
-
-		super().__init__(self.root, *args, class_='Henxel', bd=4, **kwargs)
-		self.protocol("WM_DELETE_WINDOW",
-			lambda kwargs={'quit_debug':True}: self.quit_me(**kwargs))
-
-		if self.flags and not self.flags['test_is_visible']: self.withdraw()
-
-		# Other widgets
-		self.to_be_closed = list()
-
-		# Used in check_caps
-		self.to_be_cancelled = list()
-
-		self.ln_string = ''
-		self.want_ln = True
-		self.syntax = True
-		self.oldconf = None
-		self.tab_char = TAB_WIDTH_CHAR
-
-		if sys.prefix != sys.base_prefix:
-			self.env = sys.prefix
-		else:
-			self.env = None
-
-		self.tabs = list()
-		self.tabindex = None
-		self.branch = None
-		self.version = VERSION
-		self.os_type = self.__class__.os_type
-
-
-		self.font = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
-		self.menufont = tkinter.font.Font(family='TkDefaulFont', size=10, name='menufont')
-
-
-		if self.flags and self.flags['launch_test'] == True: pass
-		else:
-			# Get current git-branch
-			try:
-				self.branch = subprocess.run('git branch --show-current'.split(),
-						check=True, capture_output=True).stdout.decode().strip()
-			except Exception as e:
-				pass
-
-
-		# Search related variables Begin
-		# This marks range of focus-tag:
-		self.search_focus = ('1.0', '1.0')
-		self.mark_indexes = list() # of int
-		self.match_lenghts = list() # of int
-		self.match_lenghts_var = tkinter.StringVar()
-
-		self.search_settings = False
-		self.search_starts_at = '1.0'
-		self.search_ends_at = False
-
-		self.search_matches = 0
-		self.old_word = ''
-		self.new_word = ''
-
-		# Used for counting indentation
-		self.search_count_var = tkinter.IntVar()
-		# Search related variables End
-
-		self.errlines = list()
-
-		# When clicked with mouse button 1 while searching
-		# to set cursor position to that position clicked.
-		self.save_pos = None
-
-		# Used in load()
-		self.tracevar_filename = tkinter.StringVar()
-		self.tracefunc_name = None
-		self.lastdir = None
-
-		self.check_pars = False
-		self.par_err = False
-
-		# Used in copy() and paste()
-		self.flag_fix_indent = False
-		self.checksum_fix_indent = False
-
-		self.waitvar = tkinter.IntVar()
-		self.fullscreen = False
-		self.state = 'normal'
-
-
-		self.helptxt = 'Could not load help-file. Press ESC to return.'
-
-		if self.__class__.helptxt:
-			self.helptxt = self.__class__.helptxt
-
 		try:
-			self.tk.call('wm','iconphoto', self._w, self.__class__.pic)
-		except tkinter.TclError as e:
-			print(e)
+			self.root = self.__class__.root
+			self.flags = self.__class__.flags
+			self.restart_script = self.__class__.restart_script
+			self.debug = debug
+
+			super().__init__(self.root, *args, class_='Henxel', bd=4, **kwargs)
+			self.protocol("WM_DELETE_WINDOW",
+				lambda kwargs={'quit_debug':True}: self.quit_me(**kwargs))
+
+			if self.flags and not self.flags['test_is_visible']: self.withdraw()
+
+			# Other widgets
+			self.to_be_closed = list()
+
+			# Used in check_caps
+			self.to_be_cancelled = list()
+
+			self.ln_string = ''
+			self.want_ln = True
+			self.syntax = True
+			self.oldconf = None
+			self.tab_char = TAB_WIDTH_CHAR
+
+			if sys.prefix != sys.base_prefix:
+				self.env = sys.prefix
+			else:
+				self.env = None
+
+			self.tabs = list()
+			self.tabindex = None
+			self.branch = None
+			self.version = VERSION
+			self.os_type = self.__class__.os_type
 
 
-		# Initiate widgets
-		####################################
-		self.btn_git = tkinter.Button(self, takefocus=0, font=self.menufont, relief='flat', highlightthickness=0, padx=0, state='disabled')
-		# Put branch name, if on one
-		self.restore_btn_git()
+			self.font = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
+			self.menufont = tkinter.font.Font(family='TkDefaulFont', size=10, name='menufont')
+			self.boldfont = self.font.copy()
+			self.boldfont.config(weight='bold')
 
-		self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, takefocus=0)
-		if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
-		self.entry.bind("<Return>", self.load)
 
-		self.btn_open=tkinter.Button(self, takefocus=0, text='Open', bd=4, highlightthickness=0, command=self.load)
-		self.btn_save=tkinter.Button(self, takefocus=0, text='Save', bd=4, highlightthickness=0, command=self.save)
-
-		# Get conf:
-		string_representation = None
-		data = None
-
-		if self.flags and self.flags['test_skip_conf'] == True: pass
-		else:
-			# Try to apply saved configurations:
-			if self.env:
-				p = pathlib.Path(self.env) / CONFPATH
-
-			if self.env and p.exists():
+			if self.flags and self.flags['launch_test'] == True: pass
+			else:
+				# Get current git-branch
 				try:
-					with open(p, 'r', encoding='utf-8') as f:
-						string_representation = f.read()
-						data = json.loads(string_representation)
-
-				except EnvironmentError as e:
-					print(e.__str__())	# __str__() is for user (print to screen)
-					#print(e.__repr__())	# __repr__() is for developer (log to file)
-					print(f'\n Could not load existing configuration file: {p}')
-
-		if data:
-			self.oldconf = string_representation
-			self.load_config(data)
+					self.branch = subprocess.run('git branch --show-current'.split(),
+							check=True, capture_output=True).stdout.decode().strip()
+				except Exception as e:
+					pass
 
 
-		self.ln_widget = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4)
-		self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
+			# Search related variables Begin
+			# This marks range of focus-tag:
+			self.search_focus = ('1.0', '1.0')
+			self.mark_indexes = list() # of int
+			self.match_lenghts = list() # of int
+			self.match_lenghts_var = tkinter.StringVar()
 
-		# Disable copying linenumbers:
-		shortcut = '<Mod1-Key-c>'
-		if self.os_type != 'mac_os': shortcut = '<Control-c>'
-		self.ln_widget.bind(shortcut, self.do_nothing_without_bell)
+			self.search_settings = False
+			self.search_starts_at = '1.0'
+			self.search_ends_at = False
 
-		self.contents = tkinter.Text(self, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
+			self.search_matches = 0
+			self.old_word = ''
+			self.new_word = ''
 
-		self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, takefocus=0, command = self.contents.yview)
+			# Used for counting indentation
+			self.search_count_var = tkinter.IntVar()
+			# Search related variables End
 
-		# Tab-completion, used in indent() and unindent()
-		self.expander = wordexpand.ExpandWord(self.contents)
+			self.errlines = list()
 
+			# When clicked with mouse button 1 while searching
+			# to set cursor position to that position clicked.
+			self.save_pos = None
 
-		# Needed in leave() taglink in: Run file Related
-		self.name_of_cursor_in_text_widget = self.contents['cursor']
+			# Used in load()
+			self.tracevar_filename = tkinter.StringVar()
+			self.tracefunc_name = None
+			self.lastdir = None
 
-		self.popup = tkinter.Menu(self.contents, tearoff=0, bd=0, activeborderwidth=0)
-		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
+			self.check_pars = False
+			self.par_err = False
 
-		if self.debug:
-			self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
-			# Next line left as example of what does not work
-			#self.popup.add_command(label="test", command=self.quit_me)
+			# Used in copy() and paste()
+			self.flag_fix_indent = False
+			self.checksum_fix_indent = False
 
-			self.popup.add_command(label="     restart",
-					command=lambda: self.after_idle(self.restart_editor))
-
-			if self.flags and self.flags['test_fake_error']: this_func_no_exist()
-
-		else:
-			self.popup.add_command(label="         run", command=self.run)
-			self.popup.add_command(label="        copy", command=self.copy)
-			self.popup.add_command(label="       paste", command=self.paste)
-			self.popup.add_command(label="##   comment", command=self.comment)
-			self.popup.add_command(label="   uncomment", command=self.uncomment)
-
-		self.popup.add_command(label="  select all", command=self.select_all)
-		self.popup.add_command(label="     inspect", command=self.insert_inspected)
-		self.popup.add_command(label="      errors", command=self.show_errors)
-		self.popup.add_command(label="        help", command=self.help)
+			self.waitvar = tkinter.IntVar()
+			self.fullscreen = False
+			self.state = 'normal'
 
 
-		# Get anchor-name of selection-start.
-		# Used in for example select_by_words():
-		self.contents.insert(1.0, 'asd')
-		# This is needed to get some tcl-objects created,
-		# ::tcl::WordBreakRE and self.anchorname
-		self.contents.event_generate('<<SelectNextWord>>')
-		# This is needed to clear selection
-		# otherwise left at the end of file:
-		self.contents.event_generate('<<PrevLine>>')
+			self.helptxt = 'Could not load help-file. Press ESC to return.'
 
-		# Now also this array is created which is needed
-		# in RE-fixing ctrl-leftright behaviour in Windows below.
-		# self.tk.eval('parray ::tcl::WordBreakRE')
+			if self.__class__.helptxt:
+				self.helptxt = self.__class__.helptxt
 
-		self.anchorname = None
-		for item in self.contents.mark_names():
-			if 'tk::' in item:
-				self.anchorname = item
-				break
-
-		self.contents.delete('1.0', '1.3')
-
-		# In Win11 event: <<NextWord>> does not work (as supposed) but does so in Linux and macOS
-		# https://www.tcl.tk/man/tcl9.0/TclCmd/tclvars.html
-		# https://www.tcl.tk/man/tcl9.0/TclCmd/library.html
-
-		if self.os_type == 'windows':
-
-			# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
-			# replace proc tk::TextNextWord with newer version which was looked in Debian 12
-			# Need for some reason generate event: <<NextWord>> before this,
-			# because array ::tcl::WordBreakRE does not exist yet,
-			# but after this event it does. This was done above.
-
-			self.tk.eval(r'set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
-			self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
-			self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
+			try:
+				self.tk.call('wm','iconphoto', self._w, self.__class__.pic)
+			except tkinter.TclError as e:
+				print(e)
 
 
-		if data:
-			self.apply_config()
+			# Initiate widgets
+			####################################
+			self.btn_git = tkinter.Button(self, takefocus=0, font=self.menufont, relief='flat', highlightthickness=0, padx=0, state='disabled')
+			# Put branch name, if on one
+			self.restore_btn_git()
 
-			# Hide selection in linenumbers
-			self.ln_widget.config( selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
+			self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, takefocus=0)
+			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
+			self.entry.bind("<Return>", self.load)
 
-
-		# Colors Begin #######################
-
-		red = r'#c01c28'
-		cyan = r'#2aa1b3'
-		magenta = r'#a347ba'
-		green = r'#26a269'
-		orange = r'#e95b38'
-		gray = r'#508490'
-		black = r'#000000'
-		white = r'#d3d7cf'
+			self.btn_open=tkinter.Button(self, takefocus=0, text='Open', bd=4, highlightthickness=0, command=self.load)
+			self.btn_save=tkinter.Button(self, takefocus=0, text='Save', bd=4, highlightthickness=0, command=self.save)
 
 
-		self.default_themes = dict()
-		self.default_themes['day'] = d = dict()
-		self.default_themes['night'] = n = dict()
+			# Get conf:
+			string_representation = None
+			data = None
 
-		# self.default_themes[self.curtheme][tagname] = [backgroundcolor, foregroundcolor]
-		d['normal_text'] = [white, black]
-		n['normal_text'] = [black, white]
+			if self.flags and self.flags['test_skip_conf'] == True: pass
+			else:
+				# Try to apply saved configurations:
+				if self.env:
+					p = pathlib.Path(self.env) / CONFPATH
 
-		d['keywords'] = ['', orange]
-		n['keywords'] = ['', 'deep sky blue']
-		d['numbers'] = ['', red]
-		n['numbers'] = ['', red]
-		d['bools'] = ['', magenta]
-		n['bools'] = ['', magenta]
-		d['strings'] = ['', green]
-		n['strings'] = ['', green]
-		d['comments'] = ['', gray]
-		n['comments'] = ['', gray]
-		d['calls'] = ['', cyan]
-		n['calls'] = ['', cyan]
-		d['breaks'] = ['', orange]
-		n['breaks'] = ['', orange]
-		d['selfs'] = ['', gray]
-		n['selfs'] = ['', gray]
+				if self.env and p.exists():
+					try:
+						with open(p, 'r', encoding='utf-8') as f:
+							string_representation = f.read()
+							data = json.loads(string_representation)
 
-		d['match'] = ['lightyellow', 'black']
-		n['match'] = ['lightyellow', 'black']
-		d['focus'] = ['lightgreen', 'black']
-		n['focus'] = ['lightgreen', 'black']
+					except EnvironmentError as e:
+						print(e.__str__())	# __str__() is for user (print to screen)
+						#print(e.__repr__())	# __repr__() is for developer (log to file)
+						print(f'\n Could not load existing configuration file: {p}')
 
-		d['replaced'] = ['yellow', 'black']
-		n['replaced'] = ['yellow', 'black']
-
-		d['mismatch'] = ['brown1', 'white']
-		n['mismatch'] = ['brown1', 'white']
-
-		d['sel'] = ['#c3c3c3', black]
-		n['sel'] = ['#c3c3c3', black]
+			if data:
+				self.oldconf = string_representation
+				self.load_config(data)
+				self.boldfont.config(**self.font.config())
+				self.boldfont.config(weight='bold')
 
 
-		# No conf:
-		if self.tabindex == None:
 
-			self.tabindex = -1
-			self.new_tab()
+			self.ln_widget = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4)
+			self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
 
-			self.curtheme = 'night'
-			self.themes = copy.deepcopy(self.default_themes)
+			# Disable copying linenumbers:
+			shortcut = '<Mod1-Key-c>'
+			if self.os_type != 'mac_os': shortcut = '<Control-c>'
+			self.ln_widget.bind(shortcut, self.do_nothing_without_bell)
 
-			for tagname in self.themes[self.curtheme]:
-				bg, fg = self.themes[self.curtheme][tagname][:]
-				self.contents.tag_config(tagname, background=bg, foreground=fg)
+			self.contents = tkinter.Text(self, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10)
+
+			self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, takefocus=0, command = self.contents.yview)
+
+			# Tab-completion, used in indent() and unindent()
+			self.expander = wordexpand.ExpandWord(self.contents)
 
 
-			self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
+			# Needed in leave() taglink in: Run file Related
+			self.name_of_cursor_in_text_widget = self.contents['cursor']
+
+			self.popup = tkinter.Menu(self.contents, tearoff=0, bd=0, activeborderwidth=0)
+			self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
+
+			if self.debug:
+				self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
+				# Next line left as example of what does not work
+				#self.popup.add_command(label="test", command=self.quit_me)
+
+				self.popup.add_command(label="     restart",
+						command=lambda: self.after_idle(self.restart_editor))
+
+				if self.flags and self.flags['test_fake_error']: this_func_no_exist()
+				#this_func_no_exist()
+
+			else:
+				self.popup.add_command(label="         run", command=self.run)
+				self.popup.add_command(label="        copy", command=self.copy)
+				self.popup.add_command(label="       paste", command=self.paste)
+				self.popup.add_command(label="##   comment", command=self.comment)
+				self.popup.add_command(label="   uncomment", command=self.uncomment)
+
+			self.popup.add_command(label="  select all", command=self.select_all)
+			self.popup.add_command(label="     inspect", command=self.insert_inspected)
+			self.popup.add_command(label="      errors", command=self.show_errors)
+			self.popup.add_command(label="        help", command=self.help)
 
 
-			# Set Font Begin ##################################################
-			fontname = None
+			# Get anchor-name of selection-start.
+			# Used in for example select_by_words():
+			self.contents.insert(1.0, 'asd')
+			# This is needed to get some tcl-objects created,
+			# ::tcl::WordBreakRE and self.anchorname
+			self.contents.event_generate('<<SelectNextWord>>')
+			# This is needed to clear selection
+			# otherwise left at the end of file:
+			self.contents.event_generate('<<PrevLine>>')
 
-			fontfamilies = [f for f in tkinter.font.families()]
+			# Now also this array is created which is needed
+			# in RE-fixing ctrl-leftright behaviour in Windows below.
+			# self.tk.eval('parray ::tcl::WordBreakRE')
 
-			for font in GOODFONTS:
-				if font in fontfamilies:
-					fontname = font
+			self.anchorname = None
+			for item in self.contents.mark_names():
+				if 'tk::' in item:
+					self.anchorname = item
 					break
 
-			if not fontname:
-				fontname = 'TkDefaulFont'
+			self.contents.delete('1.0', '1.3')
 
+			# In Win11 event: <<NextWord>> does not work (as supposed) but does so in Linux and macOS
+			# https://www.tcl.tk/man/tcl9.0/TclCmd/tclvars.html
+			# https://www.tcl.tk/man/tcl9.0/TclCmd/library.html
 
-			size0, size1 = 12, 10
-			# There is no font-scaling in macOS?
-			if self.os_type == 'mac_os': size0, size1 = 22, 16
+			if self.os_type == 'windows':
 
+				# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
+				# replace proc tk::TextNextWord with newer version which was looked in Debian 12
+				# Need for some reason generate event: <<NextWord>> before this,
+				# because array ::tcl::WordBreakRE does not exist yet,
+				# but after this event it does. This was done above.
 
-			# Initialize rest of configurables
-			self.font.config(family=fontname, size=size0)
-			self.menufont.config(family=fontname, size=size1)
+				self.tk.eval(r'set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
 
-			self.scrollbar_width, self.elementborderwidth = 16, 2
-			if self.os_type == 'linux': self.scrollbar_width, self.elementborderwidth = 30, 4
 
-			self.scrollbar.config(width=self.scrollbar_width)
-			self.scrollbar.config(elementborderwidth=self.elementborderwidth)
+			if data:
+				self.apply_config()
 
-			self.ind_depth = TAB_WIDTH
-			self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
+				# Hide selection in linenumbers
+				self.ln_widget.config( selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
 
 
+			# Colors Begin #######################
 
-			# One char lenght is: self.tab_width // self.ind_depth
-			# Use this in measuring padding
-			pad_x =  self.tab_width // self.ind_depth // 3
-			pad_y = pad_x
+			red = r'#c01c28'
+			cyan = r'#2aa1b3'
+			magenta = r'#a347ba'
+			green = r'#26a269'
+			orange = r'#e95b38'
+			gray = r'#508490'
+			black = r'#000000'
+			white = r'#d3d7cf'
 
 
-			self.contents.config(font=self.font, foreground=self.fgcolor,
-				background=self.bgcolor, insertbackground=self.fgcolor,
-				tabs=(self.tab_width, ), padx=pad_x, pady=pad_y)
+			self.default_themes = dict()
+			self.default_themes['day'] = d = dict()
+			self.default_themes['night'] = n = dict()
 
-			self.entry.config(font=self.menufont)
-			self.btn_open.config(font=self.menufont)
-			self.btn_save.config(font=self.menufont)
-			self.popup.config(font=self.menufont)
+			# self.default_themes[self.curtheme][tagname] = [backgroundcolor, foregroundcolor]
+			d['normal_text'] = [white, black]
+			n['normal_text'] = [black, white]
 
-			self.btn_git.config(font=self.menufont)
+			d['keywords'] = ['', orange]
+			n['keywords'] = ['', 'deep sky blue']
+			d['numbers'] = ['', red]
+			n['numbers'] = ['', red]
+			d['bools'] = ['', magenta]
+			n['bools'] = ['', magenta]
+			d['strings'] = ['', green]
+			n['strings'] = ['', green]
+			d['comments'] = ['', gray]
+			n['comments'] = ['', gray]
+			d['calls'] = ['', cyan]
+			n['calls'] = ['', cyan]
+			d['breaks'] = ['', orange]
+			n['breaks'] = ['', orange]
+			d['selfs'] = ['', gray]
+			n['selfs'] = ['', gray]
 
-			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled', padx=pad_x, pady=pad_y)
+			d['match'] = ['lightyellow', 'black']
+			n['match'] = ['lightyellow', 'black']
+			d['focus'] = ['lightgreen', 'black']
+			n['focus'] = ['lightgreen', 'black']
 
+			d['replaced'] = ['yellow', 'black']
+			n['replaced'] = ['yellow', 'black']
 
-		# Widgets are initiated, now more configuration
-		################################################
-		# Needed in update_linenums(), there is more info.
-		self.update_idletasks()
-		# if self.y_extra_offset > 0, it needs attention
-		self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
-		# Needed in update_linenums() and sbset_override()
-		self.bbox_height = self.contents.bbox('@0,0')[3]
-		self.text_widget_height = self.scrollbar.winfo_height()
+			d['mismatch'] = ['brown1', 'white']
+			n['mismatch'] = ['brown1', 'white']
 
-##		# Real widget visibility-check
-##		if self.flags and self.flags['launch_test']:
-##			a = self.contents.winfo_ismapped()
-##			b = self.contents.winfo_viewable()# checks also if ancestors ar mapped
-##			print(a,b) # 0 0
+			d['sel'] = ['#c3c3c3', black]
+			n['sel'] = ['#c3c3c3', black]
 
-##		# Note also this
-##		if self.flags and self.flags['launch_test']:
-##			print(self.bbox_height,  self.text_widget_height)
-##			# self.bbox_height == 1,  self.text_widget_height == 1
-##			# --> self.contents is not yet 'packed' by (grid) geometry-manager
 
-		self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
+			# No conf:
+			if self.tabindex == None:
 
+				self.tabindex = -1
+				self.new_tab()
 
+				self.curtheme = 'night'
+				self.themes = copy.deepcopy(self.default_themes)
 
-		# Bindigs Begin
-		####################################################
-		self.right_mousebutton_num = 3
+				for tagname in self.themes[self.curtheme]:
+					bg, fg = self.themes[self.curtheme][tagname][:]
+					self.contents.tag_config(tagname, background=bg, foreground=fg)
 
-		if self.os_type == 'mac_os':
-			self.right_mousebutton_num = 2
 
-			# Default cmd-q does not trigger quit_me
-			# Override Cmd-Q:
-			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
-			self.root.createcommand("tk::mac::Quit", self.quit_me)
-			#self.root.createcommand("tk::mac::OnHide", self.test_hide)
+				self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
 
-		self.contents.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
 
-		if self.os_type == 'linux':
-			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
-		else:
-			self.contents.bind( "<Shift-Tab>", self.unindent)
+				# Set Font Begin ##################################################
+				fontname = None
 
+				fontfamilies = [f for f in tkinter.font.families()]
 
-		############################################################
-		# In macOS all Alt-shortcuts makes some special symbol.
-		# Have to bind to this symbol-name to get Alt-shorcuts work.
-		# For example binding to Alt-f:
-		# self.contents.bind( "<function>", self.font_choose)
+				for font in GOODFONTS:
+					if font in fontfamilies:
+						fontname = font
+						break
 
-		# Except that tkinter does not give all symbol names, like
-		# Alt-x or l
-		# which makes these key-combinations quite unbindable.
-		# It would be much easier if one could do bindings normally:
-		# Alt-SomeKey
-		# like in Linux and Windows.
-
-		# Also binding to combinations which has Command-key (apple-key)
-		# (or Meta-key as reported by events.py)
-		# must use Mod1-Key as modifier name:
-		# Mod1-Key-n == Command-Key-n
-
-		# fn-key -bindings have to be done by checking the state of the event
-		# in proxy-callback: mac_cmd_overrides
-
-		# In short, In macOS one can not just bind like:
-		# Command-n
-		# fn-f
-		# Alt-f
-
-		# This is the reason why below is some extra
-		# and strange looking binding-lines when using macOS.
-		##############################################################
-		if self.os_type != 'mac_os':
-
-			self.bind( "<Alt-n>", self.new_tab)
-			self.bind( "<Control-q>", self.quit_me)
-
-			self.contents.bind( "<Control-b>", self.goto_bookmark)
-			self.contents.bind( "<Control-B>",
-				lambda event: self.goto_bookmark(event, **{'back':True}) )
-
-			self.contents.bind( "<Control-l>", self.gotoline)
-			self.contents.bind( "<Control-g>", self.goto_def)
-			self.contents.bind( "<Alt-p>", self.toggle_bookmark)
-
-			self.contents.bind( "<Alt-s>", self.color_choose)
-			self.contents.bind( "<Alt-t>", self.toggle_color)
-
-			self.bind( "<Alt-w>", self.walk_tabs)
-			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
-
-			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
-			self.contents.bind( "<Alt-l>", self.toggle_ln)
-			self.contents.bind( "<Alt-x>", self.toggle_syntax)
-			self.contents.bind( "<Alt-f>", self.font_choose)
-
-			self.contents.bind( "<Control-c>", self.copy)
-			self.contents.bind( "<Control-v>", self.paste)
-			self.contents.bind( "<Control-x>",
-				lambda event: self.copy(event, **{'flag_cut':True}) )
-
-			self.contents.bind( "<Control-y>", self.yank_line)
-
-			self.contents.bind( "<Control-Left>", self.move_by_words)
-			self.contents.bind( "<Control-Right>", self.move_by_words)
-			self.contents.bind( "<Control-Shift-Left>", self.select_by_words)
-			self.contents.bind( "<Control-Shift-Right>", self.select_by_words)
-
-			self.contents.bind( "<Control-Up>", self.move_many_lines)
-			self.contents.bind( "<Control-Down>", self.move_many_lines)
-			self.contents.bind( "<Control-Shift-Up>", self.move_many_lines)
-			self.contents.bind( "<Control-Shift-Down>", self.move_many_lines)
-
-			self.contents.bind( "<Control-8>", self.walk_scope)
-			self.contents.bind( "<Control-Shift-(>",
-				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
-			self.contents.bind( "<Control-9>",
-				lambda event: self.walk_scope(event, **{'down':True}) )
-			self.contents.bind( "<Control-Shift-)>",
-				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
-
-			self.contents.bind( "<Alt-Shift-F>", self.select_scope)
-
-
-			self.contents.bind("<Left>", self.check_sel)
-			self.contents.bind("<Right>", self.check_sel)
-			self.entry.bind("<Left>", self.check_sel)
-			self.entry.bind("<Right>", self.check_sel)
-
-
-		# self.os_type == 'mac_os':
-		else:
-			self.contents.bind( "<Left>", self.mac_cmd_overrides)
-			self.contents.bind( "<Right>", self.mac_cmd_overrides)
-			self.contents.bind( "<Up>", self.mac_cmd_overrides)
-			self.contents.bind( "<Down>", self.mac_cmd_overrides)
-
-			self.entry.bind( "<Right>", self.mac_cmd_overrides)
-			self.entry.bind( "<Left>", self.mac_cmd_overrides)
-
-			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
-
-			# Have to bind using Mod1 as modifier name if want bind to Command-key,
-			# Last line is the only one working:
-			#self.contents.bind( "<Meta-Key-k>", lambda event, arg=('AAA'): print(arg) )
-			#self.contents.bind( "<Command-Key-k>", lambda event, arg=('AAA'): print(arg) )
-			#self.contents.bind( "<Mod1-Key-k>", lambda event, arg=('AAA'): print(arg) )
-
-			# 8,9 as '(' and ')' without Shift, nordic key-layout
-			# 9,0 in us/uk ?
-			self.contents.bind( "<Mod1-Key-8>", self.walk_scope)
-			self.contents.bind( "<Mod1-Shift-(>",
-				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
-			self.contents.bind( "<Mod1-Key-9>",
-				lambda event: self.walk_scope(event, **{'down':True}) )
-			self.contents.bind( "<Mod1-Shift-)>",
-				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
-
-			self.contents.bind( "<Mod1-Shift-F>", self.select_scope)
-			self.contents.bind( "<Mod1-Shift-E>", self.elide_scope)
+				if not fontname:
+					fontname = 'TkDefaulFont'
 
-			self.contents.bind( "<Mod1-Key-y>", self.yank_line)
-			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
 
-			self.contents.bind( "<Mod1-Key-f>", self.search)
-			self.contents.bind( "<Mod1-Key-r>", self.replace)
-			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
+				size0, size1 = 12, 10
+				# There is no font-scaling in macOS?
+				if self.os_type == 'mac_os': size0, size1 = 22, 16
 
-			self.contents.bind( "<Mod1-Key-c>", self.copy)
-			self.contents.bind( "<Mod1-Key-v>", self.paste)
-			self.contents.bind( "<Mod1-Key-x>",
-				lambda event: self.copy(event, **{'flag_cut':True}) )
 
-			self.contents.bind( "<Mod1-Key-b>", self.goto_bookmark)
-			self.contents.bind( "<Mod1-Key-B>",
-				lambda event: self.goto_bookmark(event, **{'back':True}) )
+				# Initialize rest of configurables
+				self.font.config(family=fontname, size=size0)
+				self.menufont.config(family=fontname, size=size1)
+				self.boldfont.config(**self.font.config())
+				self.boldfont.config(weight='bold')
 
-			self.contents.bind( "<Mod1-Key-p>", self.toggle_bookmark)
-			self.contents.bind( "<Mod1-Key-g>", self.goto_def)
-			self.contents.bind( "<Mod1-Key-l>", self.gotoline)
-			self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
-			self.contents.bind( "<Mod1-Key-e>", self.goto_lineend)
 
-			self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
-			self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
-
-			self.contents.bind( "<Mod1-Key-z>", self.undo_override)
-			self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
-
-			# Could not get keysym for Alt-l and x, so use ctrl
-			self.contents.bind( "<Control-l>", self.toggle_ln)
-			self.contents.bind( "<Control-x>", self.toggle_syntax)
+				self.scrollbar_width, self.elementborderwidth = 16, 2
+				if self.os_type == 'linux': self.scrollbar_width, self.elementborderwidth = 30, 4
 
-			# have to bind to symbol name to get Alt-shorcuts work in macOS
-			# This is: Alt-f
-			self.contents.bind( "<function>", self.font_choose)		# Alt-f
-			self.contents.bind( "<dagger>", self.toggle_color)		# Alt-t
-			self.contents.bind( "<ssharp>", self.color_choose)		# Alt-s
+				self.scrollbar.config(width=self.scrollbar_width)
+				self.scrollbar.config(elementborderwidth=self.elementborderwidth)
 
+				self.ind_depth = TAB_WIDTH
+				self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
 
-		#######################################################
 
 
-		# Arrange detection of CapsLock-state.
-		self.capslock = 'init'
-		self.motion_bind = self.bind('<Motion>', self.check_caps)
-		if self.os_type != 'mac_os':
-			self.bind('<Caps_Lock>', self.check_caps)
-		else:
-			self.bind('<KeyPress-Caps_Lock>', self.check_caps)
-			self.bind('<KeyRelease-Caps_Lock>', self.check_caps)
-
-
-		self.bind( "<Control-R>", self.replace_all)
-		self.bind( "<Control-r>", self.replace)
-
-		self.bind( "<Escape>", self.esc_override )
-		self.bind( "<Return>", self.do_nothing_without_bell)
-		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
-		self.bind( "<Control-plus>", self.increase_scrollbar_width)
-
-		self.ln_widget.bind("<Control-n>", self.do_nothing_without_bell)
-		self.ln_widget.bind("<Control-p>", self.do_nothing_without_bell)
-
-		self.contents.bind( "<Control-a>", self.goto_linestart)
-		self.contents.bind( "<Control-e>", self.goto_lineend)
-		self.contents.bind( "<Control-A>", self.goto_linestart)
-		self.contents.bind( "<Control-E>", self.goto_lineend)
-
-		if self.os_type == 'windows':
-			self.entry.bind( "<Control-E>",
-				lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
-			self.entry.bind( "<Control-A>",
-				lambda event, arg=('<<SelectLineStart>>'): self.entry.event_generate)
-
-			self.entry.bind( "<Control-c>", self.copy_windows)
-			self.entry.bind( "<Control-x>",
-				lambda event: self.copy_windows(event, **{'flag_cut':True}) )
-
-
-		self.contents.bind( "<Control-j>", self.center_view)
-		self.contents.bind( "<Control-u>",
-			lambda event: self.center_view(event, **{'up':True}) )
-
-		self.contents.bind( "<Control-d>", self.del_tab)
-		self.contents.bind( "<Control-Q>",
-			lambda event: self.del_tab(event, **{'save':False}) )
-
-		self.contents.bind( "<Shift-Return>", self.comment)
-		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
-		self.contents.bind( "<Tab>", self.indent)
-
-		self.contents.bind( "<Control-Tab>", self.insert_tab)
-
-		self.contents.bind( "<Control-t>", self.tabify_lines)
-		self.contents.bind( "<Control-z>", self.undo_override)
-		self.contents.bind( "<Control-Z>", self.redo_override)
-		self.contents.bind( "<Control-f>", self.search)
-
-		self.contents.bind( "<Return>", self.return_override)
-		self.contents.bind( "<BackSpace>", self.backspace_override)
-
-		if self.os_type == 'mac_os':
-			self.contents.bind( "<Mod1-Key-BackSpace>", self.del_to_dot)
-		else:
-			self.contents.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
-
-		# Used in searching
-		self.bid_space = self.contents.bind( "<space>", self.space_override)
-
-		self.contents.bind( "<Control-n>", self.search_next)
-		self.contents.bind( "<Control-p>",
-				lambda event: self.search_next(event, **{'back':True}) )
-
-
-		# Unbind some default bindings
-		# Paragraph-bindings: too easy to press by accident
-		self.contents.unbind_class('Text', '<<NextPara>>')
-		self.contents.unbind_class('Text', '<<PrevPara>>')
-		self.contents.unbind_class('Text', '<<SelectNextPara>>')
-		self.contents.unbind_class('Text', '<<SelectPrevPara>>')
-
-		# LineStart and -End:
-		# fix goto_linestart-end and
-		# enable tab-walking in mac_os with cmd-left-right
-		self.contents.unbind_class('Text', '<<LineStart>>')
-		self.contents.unbind_class('Text', '<<LineEnd>>')
-		self.contents.unbind_class('Text', '<<SelectLineEnd>>')
-		self.contents.unbind_class('Text', '<<SelectLineStart>>')
-
-
-		# Register validation-functions, note the tuple-syntax:
-		self.validate_gotoline = (self.register(self.do_validate_gotoline), '%i', '%S', '%P')
-		self.validate_search = (self.register(self.do_validate_search), '%i', '%s', '%S')
-
-
-		self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
-
-		# Widgets are configured
-		###############################
-		#
-		# Syntax-highlight Begin #################
-		self.keywords = keyword.kwlist
-		self.keywords.insert(0, 'self')
-
-		self.bools = [ 'False', 'True', 'None' ]
-		self.breaks = [
-						'break',
-						'return',
-						'continue',
-						'pass',
-						'raise',
-						'assert',
-						'yield'
+				# One char lenght is: self.tab_width // self.ind_depth
+				# Use this in measuring padding
+				pad_x =  self.tab_width // self.ind_depth // 3
+				pad_y = pad_x
+
+
+				self.contents.config(font=self.font, foreground=self.fgcolor,
+					background=self.bgcolor, insertbackground=self.fgcolor,
+					tabs=(self.tab_width, ), padx=pad_x, pady=pad_y)
+
+				self.entry.config(font=self.menufont)
+				self.btn_open.config(font=self.menufont)
+				self.btn_save.config(font=self.menufont)
+				self.popup.config(font=self.menufont)
+
+				self.btn_git.config(font=self.menufont)
+
+				self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled', padx=pad_x, pady=pad_y)
+
+
+			# Widgets are initiated, now more configuration
+			################################################
+			# Needed in update_linenums(), there is more info.
+			self.update_idletasks()
+			# if self.y_extra_offset > 0, it needs attention
+			self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
+			# Needed in update_linenums() and sbset_override()
+			self.bbox_height = self.contents.bbox('@0,0')[3]
+			self.text_widget_height = self.scrollbar.winfo_height()
+
+##			# Real widget visibility-check
+##			if self.flags and self.flags['launch_test']:
+##				a = self.contents.winfo_ismapped()
+##				b = self.contents.winfo_viewable()# checks also if ancestors ar mapped
+##				print(a,b) # 0 0
+##
+##			# Note also this
+##			if self.flags and self.flags['launch_test']:
+##				print(self.bbox_height,  self.text_widget_height)
+##				# self.bbox_height == 1,  self.text_widget_height == 1
+##				# --> self.contents is not yet 'packed' by (grid) geometry-manager
+
+			self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
+
+
+
+			# Bindigs Begin
+			####################################################
+			self.right_mousebutton_num = 3
+
+			if self.os_type == 'mac_os':
+				self.right_mousebutton_num = 2
+
+				# Default cmd-q does not trigger quit_me
+				# Override Cmd-Q:
+				# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
+				self.root.createcommand("tk::mac::Quit", self.quit_me)
+				#self.root.createcommand("tk::mac::OnHide", self.test_hide)
+
+			self.contents.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
+
+			if self.os_type == 'linux':
+				self.contents.bind( "<ISO_Left_Tab>", self.unindent)
+			else:
+				self.contents.bind( "<Shift-Tab>", self.unindent)
+
+
+			############################################################
+			# In macOS all Alt-shortcuts makes some special symbol.
+			# Have to bind to this symbol-name to get Alt-shorcuts work.
+			# For example binding to Alt-f:
+			# self.contents.bind( "<function>", self.font_choose)
+
+			# Except that tkinter does not give all symbol names, like
+			# Alt-x or l
+			# which makes these key-combinations quite unbindable.
+			# It would be much easier if one could do bindings normally:
+			# Alt-SomeKey
+			# like in Linux and Windows.
+
+			# Also binding to combinations which has Command-key (apple-key)
+			# (or Meta-key as reported by events.py)
+			# must use Mod1-Key as modifier name:
+			# Mod1-Key-n == Command-Key-n
+
+			# fn-key -bindings have to be done by checking the state of the event
+			# in proxy-callback: mac_cmd_overrides
+
+			# In short, In macOS one can not just bind like:
+			# Command-n
+			# fn-f
+			# Alt-f
+
+			# This is the reason why below is some extra
+			# and strange looking binding-lines when using macOS.
+			##############################################################
+			if self.os_type != 'mac_os':
+
+				self.bind( "<Alt-n>", self.new_tab)
+				self.bind( "<Control-q>", self.quit_me)
+
+				self.contents.bind( "<Control-b>", self.goto_bookmark)
+				self.contents.bind( "<Control-B>",
+					lambda event: self.goto_bookmark(event, **{'back':True}) )
+
+				self.contents.bind( "<Control-l>", self.gotoline)
+				self.contents.bind( "<Control-g>", self.goto_def)
+				self.contents.bind( "<Alt-p>", self.toggle_bookmark)
+
+				self.contents.bind( "<Alt-s>", self.color_choose)
+				self.contents.bind( "<Alt-t>", self.toggle_color)
+
+				self.bind( "<Alt-w>", self.walk_tabs)
+				self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
+
+				self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
+				self.contents.bind( "<Alt-l>", self.toggle_ln)
+				self.contents.bind( "<Alt-x>", self.toggle_syntax)
+				self.contents.bind( "<Alt-f>", self.font_choose)
+
+				self.contents.bind( "<Control-c>", self.copy)
+				self.contents.bind( "<Control-v>", self.paste)
+				self.contents.bind( "<Control-x>",
+					lambda event: self.copy(event, **{'flag_cut':True}) )
+
+				self.contents.bind( "<Control-y>", self.yank_line)
+
+				self.contents.bind( "<Control-Left>", self.move_by_words)
+				self.contents.bind( "<Control-Right>", self.move_by_words)
+				self.contents.bind( "<Control-Shift-Left>", self.select_by_words)
+				self.contents.bind( "<Control-Shift-Right>", self.select_by_words)
+
+				self.contents.bind( "<Control-Up>", self.move_many_lines)
+				self.contents.bind( "<Control-Down>", self.move_many_lines)
+				self.contents.bind( "<Control-Shift-Up>", self.move_many_lines)
+				self.contents.bind( "<Control-Shift-Down>", self.move_many_lines)
+
+				self.contents.bind( "<Control-8>", self.walk_scope)
+				self.contents.bind( "<Control-Shift-(>",
+					lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
+				self.contents.bind( "<Control-9>",
+					lambda event: self.walk_scope(event, **{'down':True}) )
+				self.contents.bind( "<Control-Shift-)>",
+					lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
+
+				self.contents.bind( "<Alt-Shift-F>", self.select_scope)
+
+
+				self.contents.bind("<Left>", self.check_sel)
+				self.contents.bind("<Right>", self.check_sel)
+				self.entry.bind("<Left>", self.check_sel)
+				self.entry.bind("<Right>", self.check_sel)
+
+
+			# self.os_type == 'mac_os':
+			else:
+				self.contents.bind( "<Left>", self.mac_cmd_overrides)
+				self.contents.bind( "<Right>", self.mac_cmd_overrides)
+				self.contents.bind( "<Up>", self.mac_cmd_overrides)
+				self.contents.bind( "<Down>", self.mac_cmd_overrides)
+
+				self.entry.bind( "<Right>", self.mac_cmd_overrides)
+				self.entry.bind( "<Left>", self.mac_cmd_overrides)
+
+				self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
+
+				# Have to bind using Mod1 as modifier name if want bind to Command-key,
+				# Last line is the only one working:
+				#self.contents.bind( "<Meta-Key-k>", lambda event, arg=('AAA'): print(arg) )
+				#self.contents.bind( "<Command-Key-k>", lambda event, arg=('AAA'): print(arg) )
+				#self.contents.bind( "<Mod1-Key-k>", lambda event, arg=('AAA'): print(arg) )
+
+				# 8,9 as '(' and ')' without Shift, nordic key-layout
+				# 9,0 in us/uk ?
+				self.contents.bind( "<Mod1-Key-8>", self.walk_scope)
+				self.contents.bind( "<Mod1-Shift-(>",
+					lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
+				self.contents.bind( "<Mod1-Key-9>",
+					lambda event: self.walk_scope(event, **{'down':True}) )
+				self.contents.bind( "<Mod1-Shift-)>",
+					lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
+
+				self.contents.bind( "<Mod1-Shift-F>", self.select_scope)
+				self.contents.bind( "<Mod1-Shift-E>", self.elide_scope)
+
+				self.contents.bind( "<Mod1-Key-y>", self.yank_line)
+				self.contents.bind( "<Mod1-Key-n>", self.new_tab)
+
+				self.contents.bind( "<Mod1-Key-f>", self.search)
+				self.contents.bind( "<Mod1-Key-r>", self.replace)
+				self.contents.bind( "<Mod1-Key-R>", self.replace_all)
+
+				self.contents.bind( "<Mod1-Key-c>", self.copy)
+				self.contents.bind( "<Mod1-Key-v>", self.paste)
+				self.contents.bind( "<Mod1-Key-x>",
+					lambda event: self.copy(event, **{'flag_cut':True}) )
+
+				self.contents.bind( "<Mod1-Key-b>", self.goto_bookmark)
+				self.contents.bind( "<Mod1-Key-B>",
+					lambda event: self.goto_bookmark(event, **{'back':True}) )
+
+				self.contents.bind( "<Mod1-Key-p>", self.toggle_bookmark)
+				self.contents.bind( "<Mod1-Key-g>", self.goto_def)
+				self.contents.bind( "<Mod1-Key-l>", self.gotoline)
+				self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
+				self.contents.bind( "<Mod1-Key-e>", self.goto_lineend)
+
+				self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
+				self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
+
+				self.contents.bind( "<Mod1-Key-z>", self.undo_override)
+				self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
+
+				# Could not get keysym for Alt-l and x, so use ctrl
+				self.contents.bind( "<Control-l>", self.toggle_ln)
+				self.contents.bind( "<Control-x>", self.toggle_syntax)
+
+				# have to bind to symbol name to get Alt-shorcuts work in macOS
+				# This is: Alt-f
+				self.contents.bind( "<function>", self.font_choose)		# Alt-f
+				self.contents.bind( "<dagger>", self.toggle_color)		# Alt-t
+				self.contents.bind( "<ssharp>", self.color_choose)		# Alt-s
+
+
+			#######################################################
+
+
+			# Arrange detection of CapsLock-state.
+			self.capslock = 'init'
+			self.motion_bind = self.bind('<Motion>', self.check_caps)
+			if self.os_type != 'mac_os':
+				self.bind('<Caps_Lock>', self.check_caps)
+			else:
+				self.bind('<KeyPress-Caps_Lock>', self.check_caps)
+				self.bind('<KeyRelease-Caps_Lock>', self.check_caps)
+
+
+			self.bind( "<Control-R>", self.replace_all)
+			self.bind( "<Control-r>", self.replace)
+
+			self.bind( "<Escape>", self.esc_override )
+			self.bind( "<Return>", self.do_nothing_without_bell)
+			self.bind( "<Control-minus>", self.decrease_scrollbar_width)
+			self.bind( "<Control-plus>", self.increase_scrollbar_width)
+
+			self.ln_widget.bind("<Control-n>", self.do_nothing_without_bell)
+			self.ln_widget.bind("<Control-p>", self.do_nothing_without_bell)
+
+			self.contents.bind( "<Control-a>", self.goto_linestart)
+			self.contents.bind( "<Control-e>", self.goto_lineend)
+			self.contents.bind( "<Control-A>", self.goto_linestart)
+			self.contents.bind( "<Control-E>", self.goto_lineend)
+
+			if self.os_type == 'windows':
+				self.entry.bind( "<Control-E>",
+					lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
+				self.entry.bind( "<Control-A>",
+					lambda event, arg=('<<SelectLineStart>>'): self.entry.event_generate)
+
+				self.entry.bind( "<Control-c>", self.copy_windows)
+				self.entry.bind( "<Control-x>",
+					lambda event: self.copy_windows(event, **{'flag_cut':True}) )
+
+
+			self.contents.bind( "<Control-j>", self.center_view)
+			self.contents.bind( "<Control-u>",
+				lambda event: self.center_view(event, **{'up':True}) )
+
+			self.contents.bind( "<Control-d>", self.del_tab)
+			self.contents.bind( "<Control-Q>",
+				lambda event: self.del_tab(event, **{'save':False}) )
+
+			self.contents.bind( "<Shift-Return>", self.comment)
+			self.contents.bind( "<Shift-BackSpace>", self.uncomment)
+			self.contents.bind( "<Tab>", self.indent)
+
+			self.contents.bind( "<Control-Tab>", self.insert_tab)
+
+			self.contents.bind( "<Control-t>", self.tabify_lines)
+			self.contents.bind( "<Control-z>", self.undo_override)
+			self.contents.bind( "<Control-Z>", self.redo_override)
+			self.contents.bind( "<Control-f>", self.search)
+
+			self.contents.bind( "<Return>", self.return_override)
+			self.contents.bind( "<BackSpace>", self.backspace_override)
+
+			if self.os_type == 'mac_os':
+				self.contents.bind( "<Mod1-Key-BackSpace>", self.del_to_dot)
+			else:
+				self.contents.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
+
+			# Used in searching
+			self.bid_space = self.contents.bind( "<space>", self.space_override)
+
+			self.contents.bind( "<Control-n>", self.search_next)
+			self.contents.bind( "<Control-p>",
+					lambda event: self.search_next(event, **{'back':True}) )
+
+
+			# Unbind some default bindings
+			# Paragraph-bindings: too easy to press by accident
+			self.contents.unbind_class('Text', '<<NextPara>>')
+			self.contents.unbind_class('Text', '<<PrevPara>>')
+			self.contents.unbind_class('Text', '<<SelectNextPara>>')
+			self.contents.unbind_class('Text', '<<SelectPrevPara>>')
+
+			# LineStart and -End:
+			# fix goto_linestart-end and
+			# enable tab-walking in mac_os with cmd-left-right
+			self.contents.unbind_class('Text', '<<LineStart>>')
+			self.contents.unbind_class('Text', '<<LineEnd>>')
+			self.contents.unbind_class('Text', '<<SelectLineEnd>>')
+			self.contents.unbind_class('Text', '<<SelectLineStart>>')
+
+
+			# Register validation-functions, note the tuple-syntax:
+			self.validate_gotoline = (self.register(self.do_validate_gotoline), '%i', '%S', '%P')
+			self.validate_search = (self.register(self.do_validate_search), '%i', '%s', '%S')
+
+
+			self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
+
+			# Widgets are configured
+			###############################
+			#
+			# Syntax-highlight Begin #################
+			self.keywords = keyword.kwlist
+			self.keywords.insert(0, 'self')
+
+			self.bools = [ 'False', 'True', 'None' ]
+			self.breaks = [
+							'break',
+							'return',
+							'continue',
+							'pass',
+							'raise',
+							'assert',
+							'yield'
+							]
+
+			self.tests = [
+						'not',
+						'or',
+						'and',
+						'in',
+						'as'
 						]
 
-		self.tests = [
-					'not',
-					'or',
-					'and',
-					'in',
-					'as'
+			self.tagnames = [
+					'keywords',
+					'numbers',
+					'bools',
+					'strings',
+					'comments',
+					'breaks',
+					'calls',
+					'selfs'
 					]
 
-		self.tagnames = [
-				'keywords',
-				'numbers',
-				'bools',
-				'strings',
-				'comments',
-				'breaks',
-				'calls',
-				'selfs'
-				]
-
-		self.tags = dict()
-		for tag in self.tagnames: self.tags[tag] = list()
+			self.tags = dict()
+			for tag in self.tagnames: self.tags[tag] = list()
 
 
-		self.boldfont = self.font.copy()
-		self.boldfont.config(weight='bold')
+			self.contents.tag_config('keywords', font=self.boldfont)
+			self.contents.tag_config('numbers', font=self.boldfont)
+			self.contents.tag_config('comments', font=self.boldfont)
+			self.contents.tag_config('breaks', font=self.boldfont)
+			self.contents.tag_config('calls', font=self.boldfont)
 
-		self.contents.tag_config('keywords', font=self.boldfont)
-		self.contents.tag_config('numbers', font=self.boldfont)
-		self.contents.tag_config('comments', font=self.boldfont)
-		self.contents.tag_config('breaks', font=self.boldfont)
-		self.contents.tag_config('calls', font=self.boldfont)
+			self.contents.tag_config('focus', underline=True)
+			self.contents.tag_config('elided', elide=True)
+			self.contents.tag_config('animate')
 
-		self.contents.tag_config('focus', underline=True)
-		self.contents.tag_config('elided', elide=True)
-		self.contents.tag_config('animate')
-
-		# Search-tags have highest priority
-		self.contents.tag_raise('match')
-		self.contents.tag_raise('replaced')
-		self.contents.tag_raise('sel')
-		self.contents.tag_raise('focus')
+			# Search-tags have highest priority
+			self.contents.tag_raise('match')
+			self.contents.tag_raise('replaced')
+			self.contents.tag_raise('sel')
+			self.contents.tag_raise('focus')
 
 
-		self.oldline = ''
-		self.token_err = False
-		self.line_can_update = False
-		self.oldlinenum = self.contents.index(tkinter.INSERT).split('.')[0]
-		self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
+			self.oldline = ''
+			self.token_err = False
+			self.line_can_update = False
+			self.oldlinenum = self.contents.index(tkinter.INSERT).split('.')[0]
+			self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
 
-##		# Real widget visibility-check
-##		if self.flags and self.flags['launch_test']:
-##			a = self.contents.winfo_ismapped()
-##			b = self.contents.winfo_viewable()# checks also if ancestors ar mapped
-##			print(a,b) # 0 0
-
-##		# Note also this
-##		if self.flags and self.flags['launch_test']:
-##			print(self.bbox_height,  self.text_widget_height)
-##			# self.bbox_height == 1,  self.text_widget_height == 1
-##			# --> self.contents is not yet 'packed' by (grid) geometry-manager
-
-
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.insert_tokens(self.get_tokens())
-			#self.update_tokens(everything=True)
-			self.line_can_update = True
-
-		self.contents.bind( "<<WidgetViewSync>>", self.update_line)
-		# Viewsync-event does not trigger at window size changes,
-		# to get linenumbers right, one binds to this:
-		self.contents.bind("<Configure>", self.handle_window_resize)
+##			# Real widget visibility-check
+##			if self.flags and self.flags['launch_test']:
+##				a = self.contents.winfo_ismapped()
+##				b = self.contents.winfo_viewable()# checks also if ancestors ar mapped
+##				print(a,b) # 0 0
+##
+##			# Note also this
+##			if self.flags and self.flags['launch_test']:
+##				print(self.bbox_height,  self.text_widget_height)
+##				# self.bbox_height == 1,  self.text_widget_height == 1
+##				# --> self.contents is not yet 'packed' by (grid) geometry-manager
 
 
-		####  Syntax-highlight End  ######################################
+			if self.can_do_syntax():
+				self.update_lineinfo()
+				self.insert_tokens(self.get_tokens())
+				#self.update_tokens(everything=True)
+				self.line_can_update = True
 
-		# Layout Begin
-		################################
-		self.rowconfigure(1, weight=1)
-		self.columnconfigure(1, weight=1)
-
-		# It seems that widget is shown on screen when doing grid_configure
-		self.btn_git.grid_configure(row=0, column = 0, sticky='nsew')
-		self.entry.grid_configure(row=0, column = 1, sticky='nsew')
-		self.btn_open.grid_configure(row=0, column = 2, sticky='nsew')
-		self.btn_save.grid_configure(row=0, column = 3, columnspan=2, sticky='nsew')
+			self.contents.bind( "<<WidgetViewSync>>", self.update_line)
+			# Viewsync-event does not trigger at window size changes,
+			# to get linenumbers right, one binds to this:
+			self.contents.bind("<Configure>", self.handle_window_resize)
 
 
-		self.ln_widget.grid_configure(row=1, column = 0, sticky='nswe')
+			####  Syntax-highlight End  ######################################
 
-		# If want linenumbers:
-		if self.want_ln:
-			self.contents.grid_configure(row=1, column=1, columnspan=3, sticky='nswe')
+			# Layout Begin
+			################################
+			self.rowconfigure(1, weight=1)
+			self.columnconfigure(1, weight=1)
 
-		else:
-			self.contents.grid_configure(row=1, column=0, columnspan=4, sticky='nswe')
-			self.ln_widget.grid_remove()
+			# It seems that widget is shown on screen when doing grid_configure
+			self.btn_git.grid_configure(row=0, column = 0, sticky='nsew')
+			self.entry.grid_configure(row=0, column = 1, sticky='nsew')
+			self.btn_open.grid_configure(row=0, column = 2, sticky='nsew')
+			self.btn_save.grid_configure(row=0, column = 3, columnspan=2, sticky='nsew')
 
-		self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
+
+			self.ln_widget.grid_configure(row=1, column = 0, sticky='nswe')
+
+			# If want linenumbers:
+			if self.want_ln:
+				self.contents.grid_configure(row=1, column=1, columnspan=3, sticky='nswe')
+
+			else:
+				self.contents.grid_configure(row=1, column=0, columnspan=4, sticky='nswe')
+				self.ln_widget.grid_remove()
+
+			self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 
 
 
-		# Set cursor pos:
-		line = self.tabs[self.tabindex].position
+			# Set cursor pos:
+			line = self.tabs[self.tabindex].position
 
-		if self.os_type == 'windows':
-			self.contents.focus_force()
-		else:
-			self.contents.focus_set()
+			if self.os_type == 'windows':
+				self.contents.focus_force()
+			else:
+				self.contents.focus_set()
 
-		try:
-			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
+			try:
+				self.contents.mark_set('insert', line)
+				self.ensure_idx_visibility(line)
 
-		except tkinter.TclError:
-			self.contents.mark_set('insert', '1.0')
-			self.tabs[self.tabindex].position = '1.0'
-			self.contents.see('1.0')
-
-
-		# Sticky top right corner, to get some space for console on left
-		# Next line seems not to work in macos12 consistently.
-		#self.geometry('-0+0')
-		diff = self.winfo_screenwidth() - self.winfo_width()
-		if diff > 0:
-			self.geometry('+%d+0' % diff )
-
-		self.update_idletasks()
-		self.update_line()
+			except tkinter.TclError:
+				self.contents.mark_set('insert', '1.0')
+				self.tabs[self.tabindex].position = '1.0'
+				self.contents.see('1.0')
 
 
-		# Remove some unwanted key-sequences, which otherwise would
-		# mess with searching, from couple of virtual events.
-		tmp = list()
-		for seq in self.contents.event_info('<<NextLine>>'):
-			if seq != '<Control-Key-n>': tmp.append(seq)
+			# Sticky top right corner, to get some space for console on left
+			# Next line seems not to work in macos12 consistently.
+			#self.geometry('-0+0')
+			diff = self.winfo_screenwidth() - self.winfo_width()
+			if diff > 0:
+				self.geometry('+%d+0' % diff )
 
-		self.contents.event_delete('<<NextLine>>')
-		self.contents.event_add('<<NextLine>>', *tmp)
+			self.update_idletasks()
+			self.update_line()
 
-		tmp.clear()
-		for seq in self.contents.event_info('<<PrevLine>>'):
-			if seq != '<Control-Key-p>': tmp.append(seq)
 
-		self.contents.event_delete('<<PrevLine>>')
-		self.contents.event_add('<<PrevLine>>', *tmp)
+			# Remove some unwanted key-sequences, which otherwise would
+			# mess with searching, from couple of virtual events.
+			tmp = list()
+			for seq in self.contents.event_info('<<NextLine>>'):
+				if seq != '<Control-Key-n>': tmp.append(seq)
 
-		self.__class__.alive = True
-		self.update_title()
+			self.contents.event_delete('<<NextLine>>')
+			self.contents.event_add('<<NextLine>>', *tmp)
 
-##		# Real widget visibility-check
-##		if self.flags and self.flags['launch_test']:
-##			a = self.contents.winfo_ismapped()
-##			b = self.contents.winfo_viewable()#check also if ancestors ar mapped
-##			print(a,b)
+			tmp.clear()
+			for seq in self.contents.event_info('<<PrevLine>>'):
+				if seq != '<Control-Key-p>': tmp.append(seq)
 
-##		# Note also this
-##		if self.flags and self.flags['launch_test']:
-##			print(self.bbox_height,  self.text_widget_height)
-##			# self.bbox_height == 25,  self.text_widget_height == 616
-##			# --> self.contents is now 'packed' by (grid) geometry-manager
+			self.contents.event_delete('<<PrevLine>>')
+			self.contents.event_add('<<PrevLine>>', *tmp)
 
-		############################# init End ##########################
+			self.__class__.alive = True
+			self.update_title()
+
+##			# Real widget visibility-check
+##			if self.flags and self.flags['launch_test']:
+##				a = self.contents.winfo_ismapped()
+##				b = self.contents.winfo_viewable()#check also if ancestors ar mapped
+##				print(a,b)
+##
+##			# Note also this
+##			if self.flags and self.flags['launch_test']:
+##				print(self.bbox_height,  self.text_widget_height)
+##				# self.bbox_height == 25,  self.text_widget_height == 616
+##				# --> self.contents is now 'packed' by (grid) geometry-manager
+
+		except Exception as init_err:
+			try: self.cleanup()
+			except Exception as err:
+				# Some object, that cleanup tried to delete,
+				# did not yet had been created.
+				print(err)
+			raise init_err
+
+			############################# init End ##########################
 
 
 	def update_title(self, event=None):
@@ -1577,20 +1595,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.tracefunc_name:
 			self.tracevar_filename.trace_remove('write', self.tracefunc_name)
 
-		del self.font
-		del self.menufont
-		del self.boldfont
+		# To maximize amount of deleted objects, in case of incomplete init,
+		# Remove in creation order
+		# Object			Line(order)
+		del self.font		#399
+		del self.menufont	#400
+		del self.boldfont	#401
 
-		# This is maybe not necessary
-		del self.entry
-		del self.btn_open
-		del self.btn_save
-		del self.btn_git
-		del self.contents
-		del self.expander
-		del self.ln_widget
-		del self.scrollbar
-		del self.popup
+		del self.btn_git	#468
+		del self.entry		#472
+		del self.btn_open	#476
+		del self.btn_save	#477
+		del self.ln_widget	#505
+		del self.contents	#513
+		del self.scrollbar	#515
+		del self.expander	#518
+		del self.popup		#524
+		#print('cleanup: All removed')
 
 
 	def quit_me(self, event=None, quit_debug=False, restart=False):
@@ -1616,7 +1637,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.debug:
 			if self.package_has_syntax_error(): return delayed_break(33)
 			# Close-Button, quit_debug=True
-			elif quit_debug: pass
+			# pass tests if closing editor or restarting
+			elif quit_debug or restart: pass
 			elif not self.test_launch_is_ok(): return delayed_break(33)
 			elif not restart: return 'break'
 

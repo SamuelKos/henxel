@@ -442,17 +442,63 @@ save_forced: check alive, done ok?
 quit_me: check alive
 	if not: fast quit with cleanup()
 #######################
-
-
-
-how to test methods?
-how to not do overlapping tests, like normal and debug?
-
-
-
+binder.py --> searching no find everything ################
+removed for that, ok?
+#######################
+self.cleanup() --> called when quitting etc.
+# To maximize amount of deleted objects, in case of incomplete init,
+# objects are removed in creation order
+moved boldfont creation right after font and menufont so that
+fonts would have bigger chance to be removed after incomplete init.
+#######################
+__init__ is now completely in try-block:
+try:
+	all init code
+except Exception as init_err:
+	try: self.cleanup()
+	except Exception as err:
+		# Some object, that cleanup tried to delete,
+		# did not yet had been created.
+		#print(err)
+	raise init_err
+	
+With this setup, no matter how editor was launched, if init fails,
+there will not be any zombie editor window (root) leftovers.
+#######################
 
 Below this: not done
 
+
+
+
+
+
+
+
+
+
+		
+
+Q:
+when is __new__ executed? after the very first init?
+a=editor() -->init
+do something
+a=editor() -->new?
+
+
+
+
+
+###
+debug: show errors
+debug help?
+when debug show info about being in debug-mode somewhere?
+how to test methods?
+how to not do overlapping tests, like normal and debug?
+###
+
+
+move many lines is very slow! almost dangerous ########
 
 
 #pip install build setuptools
@@ -460,8 +506,6 @@ Below this: not done
 
 
 ###
-bigbug:
-
 To Notes:
 	File "<stdin>", line 12, in <module>
 	is last line of launch_test_as_string in build_launch_test()
@@ -476,17 +520,13 @@ When:
 	
 Then: test-launch passes but after restart:
 --> bad things can happen if code is part of __init__ for example
-
-
-debug: show errors
 ###
 
 
 
-
+########################
 uncomment(), if no selection, check
 paste_fallback() fix
-
 ########################
 			
 
@@ -595,95 +635,6 @@ self.tagnames = [
 
 
 
-########## remove below at some next commit ########
-
-quick first fix for issue below
-at start of save_forced():
-	# Dont do anything when widget is not visible
-	if not self.contents.winfo_ismapped(): return False
-		
-reproduce bad bug command lambda kwargs popup ############		
-##########################################################
-*functools*
-from functool import partial
-kwargs={'quit_me':True}
-my_command=partial(self.quit_me, kwargs)
-self.popup.add_command(label="restart2",
-		command=lambda: self.after_idle(my_command))
-
-ast does not help,
-launch test ok, because it is not debug=True ######### should test with debug also?
---> it is new editor, with incomplete init, stopped at popup creation
---> first error message 111111
---> WMDELETE WINDOW is binded to quit_me at start of init, with quit_debug flag
---> config is loaded just before popup bug --> active tab at danger
---> boldfont is after popup and never get created
-
-Now if pressed window close -button: quit_me with quit_debug-flag:
---> save_forced, activetab: contents.get('1.0', tkinter.END)
---> gets nothing (but that one extra newline) --> content is changed: saved
---> ast passes happily empty file
---> no test-launch on empty file, because quit_debug
---> deleting attributes begin, boldfont is first that dont exist
---> second error message 222222
-
-
-restart -->
-##########
-after restart: 
-before closing empty window:
-raceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py", line 532, in __init__
-    from functool import partial
-ModuleNotFoundError: No module named 'functool'
->>> 
-
-after closing window
-	lose active window data
-
-Exception in Tkinter callback
-Traceback (most recent call last):
-  File "/usr/local/Cellar/python@3.12/3.12.3/Frameworks/Python.framework/Versions/3.12/lib/python3.12/tkinter/__init__.py", line 1967, in __call__
-    return self.func(*args)
-           ^^^^^^^^^^^^^^^^
-  File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py", line 367, in <lambda>
-  File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py", line 1587, in quit_me
-AttributeError: 'Editor' object has no attribute 'boldfont'
-
---> 0
-
-if no close
-	no lose active window data
-##################################
-
-also was this:
-####
-self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
-	solved:
-	
-Exception in Tkinter callback
-Traceback (most recent call last):
-  File "/usr/local/Cellar/python@3.12/3.12.3/Frameworks/Python.framework/Versions/3.12/lib/python3.12/tkinter/__init__.py", line 1967, in __call__
-    return self.func(*args)
-           ^^^^^^^^^^^^^^^^
-  File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py", line 4993, in raise_popup
-    self.popup.focus_set() # Needed to remove popup when clicked outside.
-    ^^^^^^^^^^
-AttributeError: 'Editor' object has no attribute 'popup'
-	
-	was: self.popup.add_command(label="test", command=self.quit_me)
-####
-
-########## remove above at some next commit #########
-
-
-
-
-
-
-
-debug help 
 
 check:
 	if 'EOF in multi-line statement' in ee.args[0]:
@@ -740,14 +691,7 @@ quit_me docstring
 git diff -b --ignore-blank-lines
 
 
-when debug show somewhere
-
-
-binder.py --> searching no find everything ################
-removed for that, ok?
-
 check syntax when no debug?
-quit_me return break? no?
 
 #################
 in init
