@@ -524,14 +524,12 @@ class Editor(tkinter.Toplevel):
 		if self.debug:
 			self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
 			# Next line left as example of what does not work
-			#self.popup.add_command(label="        test", command=self.quit_me)
-			# Note, lambdas with args or kwargs here can be very dangerous,
-			# dont try them before git commit first
+			#self.popup.add_command(label="test", command=self.quit_me)
+
 			self.popup.add_command(label="     restart",
 					command=lambda: self.after_idle(self.restart_editor))
 
-			# Left for testing purposes, will produce error, dont uncomment
-			#from functool import partial
+			if self.flags and self.flags['test_fake_error']: this_func_no_exist()
 
 		else:
 			self.popup.add_command(label="         run", command=self.run)
@@ -1425,6 +1423,7 @@ class Editor(tkinter.Toplevel):
 		flags = ['launch_test=True',
 				'test_is_visible=False',
 				'test_skip_conf=True',
+				'test_fake_error=False',
 				'test_func=print_jou'
 				]
 
@@ -1437,6 +1436,22 @@ class Editor(tkinter.Toplevel):
 		# Basicly, one can do *anything* here, do imports, make
 		# function or class definitions on the fly, pass those as values
 		# in importflags.FLAGS, then use them in actual code even at import-time!
+		###########################################################################
+		# If want to test 'safe' runtime error someplace, set: test_fake_error = True
+		# And put this line to place where one wants to generate error:
+		# if self.flags and self.flags['test_fake_error']: this_func_no_exist()
+		#
+		# In __init__ one could use real error instead, to see effect.
+		# just git commit first, then put this line someplace:
+		# 	this_func_no_exist()
+		# Then dont restart, but quit editor and console, and restart python and editor
+		# --> see effect
+		# in help(henxel.stash_pop) is info about recovering from such errors
+		#############################################################################
+		# If want also to test some methods, add those lines to: launch_test_as_string
+		# below, right after Editor creation, for example:
+		# 	a.test_bind()
+
 		launch_test_as_string = '''
 
 def print_jou():
@@ -1509,28 +1524,46 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
-	def quit_me(self, event=None, quit_debug=False, restart=False):
+	def activate_terminal(self, event=None):
+		''' Give focus back to Terminal when quitting
+		'''
+		if self.os_type != 'mac_os': return
 
-		def delayed_break(delay):
-			self.wait_for(delay)
-			self.bell()
-			return 'break'
+		# https://ss64.com/osx/osascript.html
+		mac_term = 'Terminal'
 
-		if not self.save_forced(): return delayed_break(33)
+		try:
+			# Giving focus back to python terminal-window is not very simple task in macOS
+			# https://apple.stackexchange.com/questions/421137
+			tmp = None
+			if self.__class__.mac_term and self.__class__.win_id:
+				mac_term = self.__class__.mac_term
+				win_id  = self.__class__.win_id
+
+				if mac_term == 'iTerm2':
+					tmp = [ 'osascript', '-e', 'tell app "%s" to select windows whose id = %s' % (mac_term, win_id), '-e', 'tell app "%s" to activate' % mac_term ]
+
+				else:
+					tmp = [ 'osascript', '-e', 'tell app "%s" to set frontmost of windows whose id = %s to true' % (mac_term, win_id), '-e', 'tell app "%s" to activate' % mac_term ]
+
+			elif self.__class__.mac_term:
+				mac_term = self.__class__.mac_term
+				tmp = ['osascript', '-e', 'tell app "%s" to activate' % mac_term ]
+
+			else:
+				tmp = ['osascript', '-e', 'tell app "%s" to activate' % mac_term ]
+
+			subprocess.run(tmp)
+
+		except (FileNotFoundError, subprocess.SubprocessError):
+			pass
+
+		# No need to put in thread
+		#t = threading.Thread( target=subprocess.run, args=(tmp,), daemon=True )
+		#t.start()
 
 
-		if self.debug:
-			if self.package_has_syntax_error(): return delayed_break(33)
-			# Close-Button, quit_debug=True
-			elif quit_debug: pass
-			elif not self.test_launch_is_ok(): return delayed_break(33)
-			elif not restart: return 'break'
-
-
-
-		tab = self.tabs[self.tabindex]
-		self.save_bookmarks(tab)
-		self.save_config()
+	def	cleanup(self, event=None):
 
 		# Affects color, fontchoose, load:
 		for widget in self.to_be_closed:
@@ -1539,49 +1572,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.quit()
 		self.destroy()
 
-
-		# Activate terminal
-		if self.os_type == 'mac_os':
-
-			# This osascript-language is funny
-			# https://ss64.com/osx/osascript.html
-
-			mac_term = 'Terminal'
-
-
-			try:
-				# Giving focus back to python terminal-window is not very simple task in macOS
-				# https://apple.stackexchange.com/questions/421137
-				tmp = None
-				if self.__class__.mac_term and self.__class__.win_id:
-					mac_term = self.__class__.mac_term
-					win_id  = self.__class__.win_id
-
-
-					if mac_term == 'iTerm2':
-						tmp = [ 'osascript', '-e', 'tell app "%s" to select windows whose id = %s' % (mac_term, win_id), '-e', 'tell app "%s" to activate' % mac_term ]
-
-					else:
-						tmp = [ 'osascript', '-e', 'tell app "%s" to set frontmost of windows whose id = %s to true' % (mac_term, win_id), '-e', 'tell app "%s" to activate' % mac_term ]
-
-
-				elif self.__class__.mac_term:
-					mac_term = self.__class__.mac_term
-					tmp = ['osascript', '-e', 'tell app "%s" to activate' % mac_term ]
-
-				else:
-					tmp = ['osascript', '-e', 'tell app "%s" to activate' % mac_term ]
-
-				subprocess.run(tmp)
-
-
-			except (FileNotFoundError, subprocess.SubprocessError):
-				pass
-
-			# No need to put in thread
-			#t = threading.Thread( target=subprocess.run, args=(tmp,), daemon=True )
-			#t.start()
-
+		if self.os_type == 'mac_os': self.activate_terminal()
 
 		if self.tracefunc_name:
 			self.tracevar_filename.trace_remove('write', self.tracefunc_name)
@@ -1601,12 +1592,48 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		del self.scrollbar
 		del self.popup
 
+
+	def quit_me(self, event=None, quit_debug=False, restart=False):
+
+		def delayed_break(delay):
+			self.wait_for(delay)
+			self.bell()
+			return 'break'
+
+		# For example, called from incomplete, or zombie Editor
+		if not self.__class__.alive:
+			print('DED')
+
+			try: self.cleanup()
+			except Exception: pass
+
+			return
+
+
+		if not self.save_forced(): return delayed_break(33)
+
+
+		if self.debug:
+			if self.package_has_syntax_error(): return delayed_break(33)
+			# Close-Button, quit_debug=True
+			elif quit_debug: pass
+			elif not self.test_launch_is_ok(): return delayed_break(33)
+			elif not restart: return 'break'
+
+
+		tab = self.tabs[self.tabindex]
+		self.save_bookmarks(tab)
+		self.save_config()
+		self.cleanup()
+
+
 		self.__class__.alive = False
 
 
 		# quit_debug: Allow quitting debug-session without closing
 		# Python console, by clicking close-button.
 		tests = [not quit_debug, self.debug, restart, self.restart_script]
+
 		if all(tests):
 			tmp = [self.restart_script]
 			subprocess.run(tmp)
@@ -6864,8 +6891,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			If python-file, convert indentation to tabs.
 		'''
-		# Dont do anything when widget is not visible
-		if not self.contents.winfo_ismapped(): return False
+		# Dont do anything when widget is not alive
+		if not self.__class__.alive: return False
 
 		# Dont want contents to be replaced with errorlines or help.
 		last_state = self.state

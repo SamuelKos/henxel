@@ -438,6 +438,15 @@ for mode in [normal, debug]: build test, do test
 	for fixing bad bug told below
 	done ok?
 #######################
+save_forced: check alive, done ok?
+quit_me: check alive
+	if not: fast quit with cleanup()
+#######################
+
+
+
+how to test methods?
+how to not do overlapping tests, like normal and debug?
 
 
 
@@ -456,9 +465,22 @@ bigbug:
 To Notes:
 	File "<stdin>", line 12, in <module>
 	is last line of launch_test_as_string in build_launch_test()
+	
+To Notes:
+When:
+	1: Some part of code is not tested(executed at launch-test)
+	2: That part is changed
+	3: Change has no syntax errors
+	4: Change has runtime error:
+		For example: wrong naming of object: "import functool" instead of "import functools"
+	
+Then: test-launch passes but after restart:
+--> bad things can happen if code is part of __init__ for example
+
 
 debug: show errors
 ###
+
 
 
 
@@ -651,12 +673,6 @@ Traceback (most recent call last):
 AttributeError: 'Editor' object has no attribute 'popup'
 	
 	was: self.popup.add_command(label="test", command=self.quit_me)
-
-### note also:
-lambda keyword is *dangerous* with: command= quit_me 
-	commit before testing
-###
-
 ####
 
 ########## remove above at some next commit #########
