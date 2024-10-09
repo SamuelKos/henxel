@@ -465,6 +465,20 @@ except Exception as init_err:
 With this setup, no matter how editor was launched, if init fails,
 there will not be any zombie editor window (root) leftovers.
 #######################
+when editor launch fails:
+except Exception as init_err:
+if not doing launch_test:
+	give info about recovering: like help(henxel.stash_pop) etc
+	
+	
+to prevent key error when using: if self.flags and self.flags['flagname'],
+--> instead use: if self.flags and self.flags.get('launch_test')
+
+only debug mode is currently used in testlaunch to speed up testing
+for mode in ['DEBUG']:
+#######################
+
+
 
 Below this: not done
 
@@ -472,18 +486,11 @@ Below this: not done
 
 
 
-
-
-
-
+fonts to module at import time?
 
 		
 
-Q:
-when is __new__ executed? after the very first init?
-a=editor() -->init
-do something
-a=editor() -->new?
+
 
 
 
@@ -520,6 +527,10 @@ When:
 	
 Then: test-launch passes but after restart:
 --> bad things can happen if code is part of __init__ for example
+
+
+not related with above
+__new__ is always executed when __init__ would be executed
 ###
 
 

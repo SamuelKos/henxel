@@ -224,7 +224,7 @@ class Editor(tkinter.Toplevel):
 	# No need App-name at launch-test, also this would deadlock the editor
 	# in last call to subprocess with osascript. Value of mac_term would be 'Python'
 	# when doing launch-test, that might be the reason.
-	if flags and flags['launch_test'] == True: pass
+	if flags and flags.get('launch_test') == True: pass
 	elif os_type == 'mac_os':
 		# macOS: Get name of terminal App.
 		# Used to give focus back to it when closing editor, in quit_me()
@@ -274,7 +274,7 @@ class Editor(tkinter.Toplevel):
 
 		if not cls.root:
 			# Q: Does launch-test have its own root? A: Yes:
-##			if flags and flags['launch_test'] == True:
+##			if flags and flags.get('launch_test') == True:
 ##				print('BBBB')
 			# Was earlier v.0.2.2 in init:
 
@@ -370,7 +370,7 @@ class Editor(tkinter.Toplevel):
 			self.protocol("WM_DELETE_WINDOW",
 				lambda kwargs={'quit_debug':True}: self.quit_me(**kwargs))
 
-			if self.flags and not self.flags['test_is_visible']: self.withdraw()
+			if self.flags and not self.flags.get('test_is_visible'): self.withdraw()
 
 			# Other widgets
 			self.to_be_closed = list()
@@ -402,7 +402,7 @@ class Editor(tkinter.Toplevel):
 			self.boldfont.config(weight='bold')
 
 
-			if self.flags and self.flags['launch_test'] == True: pass
+			if self.flags and self.flags.get('launch_test') == True: pass
 			else:
 				# Get current git-branch
 				try:
@@ -483,7 +483,7 @@ class Editor(tkinter.Toplevel):
 			string_representation = None
 			data = None
 
-			if self.flags and self.flags['test_skip_conf'] == True: pass
+			if self.flags and self.flags.get('test_skip_conf') == True: pass
 			else:
 				# Try to apply saved configurations:
 				if self.env:
@@ -538,7 +538,7 @@ class Editor(tkinter.Toplevel):
 				self.popup.add_command(label="     restart",
 						command=lambda: self.after_idle(self.restart_editor))
 
-				if self.flags and self.flags['test_fake_error']: this_func_no_exist()
+				if self.flags and self.flags.get('test_fake_error'): this_func_no_exist()
 				#this_func_no_exist()
 
 			else:
@@ -737,13 +737,13 @@ class Editor(tkinter.Toplevel):
 			self.text_widget_height = self.scrollbar.winfo_height()
 
 ##			# Real widget visibility-check
-##			if self.flags and self.flags['launch_test']:
+##			if self.flags and self.flags.get('launch_test'):
 ##				a = self.contents.winfo_ismapped()
 ##				b = self.contents.winfo_viewable()# checks also if ancestors ar mapped
 ##				print(a,b) # 0 0
 ##
 ##			# Note also this
-##			if self.flags and self.flags['launch_test']:
+##			if self.flags and self.flags.get('launch_test'):
 ##				print(self.bbox_height,  self.text_widget_height)
 ##				# self.bbox_height == 1,  self.text_widget_height == 1
 ##				# --> self.contents is not yet 'packed' by (grid) geometry-manager
@@ -1093,13 +1093,13 @@ class Editor(tkinter.Toplevel):
 			self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
 
 ##			# Real widget visibility-check
-##			if self.flags and self.flags['launch_test']:
+##			if self.flags and self.flags.get('launch_test'):
 ##				a = self.contents.winfo_ismapped()
 ##				b = self.contents.winfo_viewable()# checks also if ancestors ar mapped
 ##				print(a,b) # 0 0
 ##
 ##			# Note also this
-##			if self.flags and self.flags['launch_test']:
+##			if self.flags and self.flags.get('launch_test'):
 ##				print(self.bbox_height,  self.text_widget_height)
 ##				# self.bbox_height == 1,  self.text_widget_height == 1
 ##				# --> self.contents is not yet 'packed' by (grid) geometry-manager
@@ -1194,13 +1194,13 @@ class Editor(tkinter.Toplevel):
 			self.update_title()
 
 ##			# Real widget visibility-check
-##			if self.flags and self.flags['launch_test']:
+##			if self.flags and self.flags.get('launch_test'):
 ##				a = self.contents.winfo_ismapped()
 ##				b = self.contents.winfo_viewable()#check also if ancestors ar mapped
 ##				print(a,b)
 ##
 ##			# Note also this
-##			if self.flags and self.flags['launch_test']:
+##			if self.flags and self.flags.get('launch_test'):
 ##				print(self.bbox_height,  self.text_widget_height)
 ##				# self.bbox_height == 25,  self.text_widget_height == 616
 ##				# --> self.contents is now 'packed' by (grid) geometry-manager
@@ -1211,6 +1211,39 @@ class Editor(tkinter.Toplevel):
 				# Some object, that cleanup tried to delete,
 				# did not yet had been created.
 				print(err)
+
+			doing_launchtest = False
+			if self.flags and self.flags.get('launch_test'): doing_launchtest = True
+
+			# Give info about recovering from unlaunchable state
+			if not doing_launchtest:
+				msg = '''
+################################################
+Editor did not Launch!
+
+1: If tried with debug=True, try launching again with: e=henxel.Editor()
+
+   If it works, fix the error immediately, close normally,
+   exit python console, launch python and editor again with: e=henxel.Editor().
+   If it launches, close editor and it should be working again with debug=True.
+
+2: Editor is not launching, with or without debug=True
+
+   Below is printed help(henxel.stash_pop), read and follow.
+
+
+3: This should not happen but, in worst case: git restore __init__.py
+################################################
+help(henxel.stash_pop) Begin
+
+'''
+				ending = '''
+################################################
+Error messages Begin
+'''
+
+				print(msg + stash_pop.__doc__.replace('\t', '  ') + ending)
+
 			raise init_err
 
 			############################# init End ##########################
@@ -1421,14 +1454,14 @@ class Editor(tkinter.Toplevel):
 		###################################################################
 		# Want to remove some flag completely:
 		# 1: Remove/edit all related lines of code, most likely tests like this:
-		# 	if self.flags and not self.flags['test_is_visible']: self.withdraw()
+		# 	if self.flags and not self.flags.get('test_is_visible'): self.withdraw()
 		# 2: Remove related line from list below: 'test_is_visible=False'
 		###################################################################
 		# Want to add new flag: 1: add line in list below: 'my_flag=True'
 		# 	Flag can be any object: 'my_flag=MyClass(myargs)'
 		# 2: Add/edit lines of code one wants to change if this flag is set,
 		# most likely tests like this:
-		# 	if self.flags and self.flags['my_flag']: self.do_something()
+		# 	if self.flags and self.flags.get('my_flag'): self.do_something()
 		###################################################################
 		# Just want to change a flag: edit line in list below,
 		# when editing conf-related stuff, for example, one would:
@@ -1457,7 +1490,7 @@ class Editor(tkinter.Toplevel):
 		###########################################################################
 		# If want to test 'safe' runtime error someplace, set: test_fake_error = True
 		# And put this line to place where one wants to generate error:
-		# if self.flags and self.flags['test_fake_error']: this_func_no_exist()
+		# if self.flags and self.flags.get('test_fake_error'): this_func_no_exist()
 		#
 		# In __init__ one could use real error instead, to see effect.
 		# just git commit first, then put this line someplace:
@@ -1492,7 +1525,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		success_all = True
 
 		print()
-		for mode in ['NORMAL', 'DEBUG']:
+		#for mode in ['NORMAL', 'DEBUG']:
+		for mode in ['DEBUG']:
 			flag_success = True
 			print('LAUNCHTEST, %s, START' % mode)
 
