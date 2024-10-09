@@ -483,6 +483,14 @@ fonts:
 
 never deleted, ok?
 #######################
+prevent recursion when doing for example launch_test
+in quit_me() and build_test_launch() and test_launch_is_ok():
+	# For example, called from incomplete, or zombie Editor.
+	# And for preventing recursion if doing test-launch
+	if (self.flags and self.flags.get('launch_test')) or not self.__class__.alive:
+		raise ValueError
+#######################
+
 
 
 Below this: not done

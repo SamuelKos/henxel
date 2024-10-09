@@ -1214,17 +1214,19 @@ class Editor(tkinter.Toplevel):
 ##				# --> self.contents is now 'packed' by (grid) geometry-manager
 
 		except Exception as init_err:
-			try: self.cleanup()
-			except Exception as err:
-				# Some object, that cleanup tried to delete,
-				# did not yet had been created.
-				print(err)
 
 			doing_launchtest = False
 			if self.flags and self.flags.get('launch_test'): doing_launchtest = True
 
-			# Give info about recovering from unlaunchable state
-			if not doing_launchtest:
+			if doing_launchtest: pass
+			else:
+				try: self.cleanup()
+				except Exception as err:
+					# Some object, that cleanup tried to delete,
+					# did not yet had been created.
+					print(err)
+
+				# Give info about recovering from unlaunchable state
 				msg = '''
 ################################################
 Editor did not Launch!
@@ -1432,6 +1434,11 @@ Error messages Begin
 			Read before things go wrong: help(henxel.stash_pop)
 		'''
 
+		# For example, called from incomplete, or zombie Editor.
+		# And for preventing recursion if doing test-launch
+		if (self.flags and self.flags.get('launch_test')) or not self.__class__.alive:
+			raise ValueError
+
 		# Test-launch Editor (it is set to non visible, but flags can here be edited)
 		###################################################################
 		# ABOUT TEST-LAUNCH
@@ -1530,6 +1537,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def test_launch_is_ok(self):
 		''' Called from quit_me()
 		'''
+		# For example, called from incomplete, or zombie Editor.
+		# And for preventing recursion if doing test-launch
+		if (self.flags and self.flags.get('launch_test')) or not self.__class__.alive:
+			raise ValueError
+
 		success_all = True
 
 		print()
@@ -1659,14 +1671,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		# For example, called from incomplete, or zombie Editor
-		if not self.__class__.alive:
-			print('DED')
-
-			try: self.cleanup()
-			except Exception: pass
-
-			return
+		# For example, called from incomplete, or zombie Editor.
+		# And for preventing recursion if doing test-launch
+		if (self.flags and self.flags.get('launch_test')) or not self.__class__.alive:
+			raise ValueError
 
 
 		if not self.save_forced(): return delayed_break(33)
@@ -6952,7 +6960,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			If python-file, convert indentation to tabs.
 		'''
 		# Dont do anything when widget is not alive
-		if not self.__class__.alive: return False
+		if not self.__class__.alive: raise ValueError
 
 		# Dont want contents to be replaced with errorlines or help.
 		last_state = self.state
