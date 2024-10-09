@@ -309,7 +309,7 @@ class FontChooser:
 			self.fontnames.append(name)
 			self.lb.insert('end', name)
 			self.lb.see('end')
-			self.wait_for(12)
+			self.wait_for(4)
 
 			if font_is_fixed: self.fontnames_mono.append(name)
 

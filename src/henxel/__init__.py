@@ -211,6 +211,9 @@ class Editor(tkinter.Toplevel):
 	helptxt = None
 
 	root = None
+	font = None
+	menufont = None
+	boldfont = None
 
 	mac_term = None
 	win_id = None
@@ -293,6 +296,12 @@ class Editor(tkinter.Toplevel):
 
 			cls.root = tkinter.Tk()
 			cls.root.withdraw()
+
+
+		if not cls.font:
+			cls.font = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
+			cls.menufont = tkinter.font.Font(family='TkDefaulFont', size=10, name='menufont')
+			cls.boldfont = cls.font.copy()
 
 
 		if not cls.pkg_contents:
@@ -396,10 +405,9 @@ class Editor(tkinter.Toplevel):
 			self.os_type = self.__class__.os_type
 
 
-			self.font = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
-			self.menufont = tkinter.font.Font(family='TkDefaulFont', size=10, name='menufont')
-			self.boldfont = self.font.copy()
-			self.boldfont.config(weight='bold')
+			self.font = self.__class__.font
+			self.menufont = self.__class__.menufont
+			self.boldfont = self.__class__.boldfont
 
 
 			if self.flags and self.flags.get('launch_test') == True: pass
@@ -503,8 +511,6 @@ class Editor(tkinter.Toplevel):
 			if data:
 				self.oldconf = string_representation
 				self.load_config(data)
-				self.boldfont.config(**self.font.config())
-				self.boldfont.config(weight='bold')
 
 
 
@@ -691,8 +697,6 @@ class Editor(tkinter.Toplevel):
 				# Initialize rest of configurables
 				self.font.config(family=fontname, size=size0)
 				self.menufont.config(family=fontname, size=size1)
-				self.boldfont.config(**self.font.config())
-				self.boldfont.config(weight='bold')
 
 
 				self.scrollbar_width, self.elementborderwidth = 16, 2
@@ -1067,6 +1071,10 @@ class Editor(tkinter.Toplevel):
 
 			self.tags = dict()
 			for tag in self.tagnames: self.tags[tag] = list()
+
+
+			self.boldfont.config(**self.font.config())
+			self.boldfont.config(weight='bold')
 
 
 			self.contents.tag_config('keywords', font=self.boldfont)
@@ -1632,10 +1640,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# To maximize amount of deleted objects, in case of incomplete init,
 		# Remove in creation order
 		# Object			Line(order)
-		del self.font		#399
-		del self.menufont	#400
-		del self.boldfont	#401
-
 		del self.btn_git	#468
 		del self.entry		#472
 		del self.btn_open	#476
@@ -2948,7 +2952,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def update_fonts(self):
-		self.boldfont = self.font.copy()
+		self.boldfont.config(**self.font.config())
 		self.boldfont.config(weight='bold')
 
 		self.contents.tag_config('keywords', font=self.boldfont)

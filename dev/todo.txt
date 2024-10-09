@@ -477,7 +477,12 @@ to prevent key error when using: if self.flags and self.flags['flagname'],
 only debug mode is currently used in testlaunch to speed up testing
 for mode in ['DEBUG']:
 #######################
+fonts:
+	from instance attributes --> class attributes like cls.root
+	set in __new__()
 
+never deleted, ok?
+#######################
 
 
 Below this: not done
@@ -486,7 +491,6 @@ Below this: not done
 
 
 
-fonts to module at import time?
 
 		
 
