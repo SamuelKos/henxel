@@ -538,11 +538,12 @@ class Editor(tkinter.Toplevel):
 
 			if self.debug:
 				self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
-				# Next line left as example of what does not work
-				#self.popup.add_command(label="test", command=self.quit_me)
-
 				self.popup.add_command(label="     restart",
 						command=lambda: self.after_idle(self.restart_editor))
+
+				# Next lines left as example of what does not work if doing restart in quit_me
+				#self.popup.add_command(label="test", command=self.quit_me)
+				#self.popup.add_command(label="     restart", command=self.restart_editor)
 
 				if self.flags and self.flags.get('test_fake_error'): this_func_no_exist()
 				#this_func_no_exist()
@@ -1681,13 +1682,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		if self.debug:
-			if self.package_has_syntax_error(): return delayed_break(33)
+			if self.package_has_syntax_error():
+				self.activate_terminal()
+				return delayed_break(33)
 			# Close-Button, quit_debug=True
 			# pass tests if closing editor or restarting
 			elif quit_debug or restart: pass
-			elif not self.test_launch_is_ok(): return delayed_break(33)
+			elif not self.test_launch_is_ok():
+				self.activate_terminal()
+				return delayed_break(33)
 			elif not restart: return 'break'
 
+
+		# After this line, 1: debug=False (normal mode) or 2: quit_debug or restart
+		# --> cleanup is reasonable
 
 		tab = self.tabs[self.tabindex]
 		self.save_bookmarks(tab)

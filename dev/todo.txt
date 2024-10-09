@@ -490,6 +490,13 @@ in quit_me() and build_test_launch() and test_launch_is_ok():
 	if (self.flags and self.flags.get('launch_test')) or not self.__class__.alive:
 		raise ValueError
 #######################
+give focus to terminal, with activate_terminal, after error in:
+ - syntax
+ - launch-test
+
+if restart fails with error, terminal naturally has focus
+#######################
+
 
 
 
@@ -500,20 +507,25 @@ Below this: not done
 
 
 
-		
 
 
+to notes:
+quitme popup no lambda check, done
+	need lambda if doing restart: subprocess.run
+quit_me
+return? no
 
 
 
 
 
 ###
-debug: show errors
+debug: show errors in editor like when running scripts?
 debug help?
 when debug show info about being in debug-mode somewhere?
-how to test methods?
-how to not do overlapping tests, like normal and debug?
+Q:how to test methods? A:manually
+Q:how to not do overlapping tests, like normal and debug?
+A: currently doing only debug-test because it pretty much includes normal
 ###
 
 
