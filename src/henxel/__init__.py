@@ -1984,7 +1984,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
-			#self.update_tokens(everything=True)
 			self.insert_tokens(self.get_tokens())
 			self.line_can_update = True
 
@@ -2083,7 +2082,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.can_do_syntax():
 			self.update_lineinfo()
 			self.insert_tokens(tokens)
-			#self.update_tokens(everything=True)
 			self.line_can_update = True
 
 		#######################
@@ -2354,7 +2352,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
-				#self.update_tokens(start='1.0', end=tkinter.END)
 				self.insert_tokens(self.get_tokens(update=True))
 				self.line_can_update = True
 
@@ -2401,7 +2398,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			Called from: walk_tabs
 		'''
-		print('all cont')
+		#print('all cont')
 		patt = f'{self.tcl_name_of_contents} tag add '
 		flag_err = False
 		par_err = None
@@ -2583,7 +2580,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		linenum = int(start_idx.split('.')[0])
 
 		#print(self.token_err)
-		print('line')
+		#print('line')
 
 
 		###### START ###########
@@ -3503,7 +3500,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
-			#self.update_tokens(everything=True)
 			self.insert_tokens(self.get_tokens())
 			self.line_can_update = True
 
@@ -3736,7 +3732,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
-			#self.update_tokens(everything=True)
 			self.insert_tokens(self.get_tokens())
 			self.line_can_update = True
 
@@ -5353,7 +5348,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
-				#self.update_tokens(start='1.0', end=tkinter.END)
 				self.insert_tokens(self.get_tokens(update=True))
 				self.line_can_update = True
 
@@ -5376,7 +5370,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
-				#self.update_tokens(start='1.0', end=tkinter.END)
 				self.insert_tokens(self.get_tokens(update=True))
 				self.line_can_update = True
 
@@ -5707,7 +5700,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 					if self.can_do_syntax():
 						self.update_lineinfo()
-						#self.update_tokens(everything=True)
 						self.insert_tokens(self.get_tokens())
 						self.line_can_update = True
 
@@ -5772,7 +5764,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if self.can_do_syntax():
 					self.update_lineinfo()
-					#self.update_tokens(everything=True)
 					self.insert_tokens(self.get_tokens())
 					self.line_can_update = True
 
@@ -6858,7 +6849,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if self.can_do_syntax():
 					self.update_lineinfo()
-					#self.update_tokens(everything=True)
 					self.insert_tokens(self.get_tokens())
 					self.line_can_update = True
 
@@ -7119,7 +7109,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						self.update_lineinfo()
 						self.token_err = False
 						self.line_can_update = False
-						#self.update_tokens(everything=True)
 						self.insert_tokens(self.get_tokens())
 						self.line_can_update = True
 
@@ -7166,7 +7155,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if self.can_do_syntax():
 					self.update_lineinfo()
-					#self.update_tokens(everything=True)
 					self.insert_tokens(self.get_tokens())
 					self.line_can_update = True
 
@@ -7542,7 +7530,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
-			#self.update_tokens(everything=True)
 			self.insert_tokens(self.get_tokens())
 			self.line_can_update = True
 
@@ -8111,6 +8098,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Shortcut: Ctrl-np
 		'''
 		search_word = False
+		using_selection = False
 
 		if self.state == 'waiting':
 			return 'break'
@@ -8121,7 +8109,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# No selection
 		elif len(self.contents.tag_ranges('sel')) == 0:
-			if search_word := self.old_word: pass
+			if self.old_word: search_word = self.old_word
+			else:
+				self.bell()
+				return 'break'
 
 		else:
 			tmp = self.selection_get()
@@ -8129,6 +8120,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Allow one linebreak
 			if 80 > len(tmp) > 0 and len(tmp.splitlines()) < 3:
 				search_word = tmp
+				using_selection = True
 
 			# Too large selection
 			else:
@@ -8138,35 +8130,43 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Info: search 'def search(' in module: tkinter
 		# https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
+		# Note: '-all' is needed in counting position among all matches
 		search_args = [ self.contents._w, 'search', '-all', search_word, '1.0' ]
 		res = self.tk.call(tuple(search_args))
+
+		# If no match, res == '' --> False
+		if not res:
+			self.bell()
+			return "break"
 
 		# Start-indexes of matches
 		m = [ str(x) for x in res ]
 
 		num_all_matches = len(m)
 
-		if num_all_matches == 1:
+		if num_all_matches == 1 and using_selection:
 			self.bell()
 			return "break"
 
 
-		flag_nosel = False
 
-		# Current index
-		if len(self.contents.tag_ranges('sel')) > 0:
+		# Get current index among search matches, this
+		# concerns more when using_selection.
+		# This is mainly for the possible future use,
+		# showing info same way when doing real search.
+		if using_selection:
 			start = self.contents.index(tkinter.SEL_FIRST)
 
 		else:
 			start = self.contents.search(search_word, 'insert')
-			# Want to stop at first match
-			flag_nosel = True
 
 
 		idx = m.index(start)
+		# Get current index among search matches End
 
-
-		if flag_nosel:
+		# Next, get 'index among search matches' of next match,
+		# or previous if searching backwards
+		if not using_selection:
 			if back: idx -= 1
 
 		else:
@@ -8182,20 +8182,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				idx += 1
 
 
+		# Now one could show info: "match idx/len(m)" etc.
+		# This is start_index of search_word of next/previous match
 		pos = m[idx]
 
 
 		wordlen = len(search_word)
 		word_end = "%s + %dc" % (pos, wordlen)
 
-		self.wait_for(50)
+		self.wait_for(33)
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		self.contents.mark_set(self.anchorname, pos)
-		self.wait_for(50)
+		self.wait_for(12)
 		self.contents.tag_add('sel', pos, word_end)
 		self.contents.mark_set('insert', word_end)
-		self.wait_for(100)
-		self.ensure_idx_visibility(pos)
+
+		# Is it viewable?
+		if not self.contents.bbox(pos):
+			self.wait_for(100)
+			self.ensure_idx_visibility(pos)
 
 		return "break"
 
@@ -8885,7 +8890,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				self.line_can_update = False
 				if self.can_do_syntax():
 					self.update_lineinfo()
-					#self.update_tokens(start='1.0', end=tkinter.END)
 					self.insert_tokens(self.get_tokens(update=True))
 					self.line_can_update = True
 

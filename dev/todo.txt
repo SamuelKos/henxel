@@ -496,15 +496,11 @@ give focus to terminal, with activate_terminal, after error in:
 
 if restart fails with error, terminal naturally has focus
 #######################
-
-
-
-
-Below this: not done
-
-
+search _next err when oldword that no longer exist
+	and other fixes 	
+	done ok?
+#######################
 self.update_tokens() is updated ok?
-check: self.check_pars
 
 
 self.update_tokens(1.0 end) -->
@@ -512,6 +508,16 @@ self.insert_tokens(self.get_tokens(update=True))
 
 self.update_tokens(everything=True) -->
 self.insert_tokens(self.get_tokens())
+#######################
+
+
+Below this: not done
+
+
+
+check use of: self.check_pars ###########
+
+
 
 
 to notes:
@@ -521,6 +527,7 @@ quit_me return? no
 
 
 tabify_lines check
+
 
 
 
