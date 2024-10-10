@@ -4,23 +4,24 @@ import tkinter
 
 class FontChooser:
 
-	def __init__(self, master, fontlist, big=False, tracefunc=None, os_type='linux'):
+	def __init__(self, master, fontlist, big=False, on_fontchange=None, os_type='linux'):
 		'''	master		tkinter.Toplevel
 			fontlist	list of tkinter.font.Font instances
 			big			If true start with bigger font.
-			tracefunc	callable, used in change_font. It arranges variable
-						observer for change on any item in fontlist.
+			on_fontchange	function, used in change_font()
+							and checkbutton_command(). It is executed after
+							change on any item in fontlist.
 						This is practically same as if there would be virtual
-						event <<FontChanged>> and tracefunc binded to it.
+						event <<FontChanged>> and on_fontchange binded to it.
 		'''
 
 		self.top = master
 		self.fonts = fontlist
 
-		if tracefunc:
-			self.tracefunc = tracefunc
+		if on_fontchange:
+			self.on_fontchange = on_fontchange
 		else:
-			self.tracefunc = None
+			self.on_fontchange = None
 
 		self.max = 42
 		self.min = 8
@@ -210,8 +211,8 @@ class FontChooser:
 
 		self.font[key] = var.get()
 
-		if self.tracefunc:
-			self.tracefunc()
+		if self.on_fontchange:
+			self.on_fontchange()
 
 
 	def optionmenu_command(self, event=None):
@@ -269,8 +270,8 @@ class FontChooser:
 				)
 
 
-		if self.tracefunc:
-			self.tracefunc()
+		if self.on_fontchange:
+			self.on_fontchange()
 
 
 	def wait_for(self, ms):

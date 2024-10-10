@@ -509,15 +509,25 @@ self.insert_tokens(self.get_tokens(update=True))
 self.update_tokens(everything=True) -->
 self.insert_tokens(self.get_tokens())
 #######################
+changefont.py
+parameter tracefunc --> on_fontchange
+done ok?
+#######################
 
 
 Below this: not done
 
 
-
 check use of: self.check_pars ###########
 
 
+f-strings green?
+
+insert_tokens
+for loop better
+
+
+when delete # all contents tokens are updated, is that necessary?
 
 
 to notes:

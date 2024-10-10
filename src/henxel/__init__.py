@@ -2391,14 +2391,24 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return tokens
 
 
-	def insert_tokens(self, tokens):
+	def insert_tokens(self, tokens, linenum=None):
 		''' Syntax-highlight text
 
 			syntax-tokens are from get_tokens()
 
-			Called from: walk_tabs
+			Called from: update_tokens, walk_tabs, etc
 		'''
-		#print('all cont')
+
+		if linenum:
+			# Old tags are remove in update_tokens()
+			print('line')
+		else:
+			# Remove old tags:
+			for tag in self.tagnames:
+				self.contents.tag_remove( tag, '1.0', 'end')
+			print('all cont')
+
+
 		patt = f'{self.tcl_name_of_contents} tag add '
 		flag_err = False
 		par_err = None
@@ -2472,22 +2482,35 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tokenize.TokenError as ee:
 
 			if 'EOF in multi-line statement' in ee.args[0]:
-				idx_start = str(last_token.start[0]) + '.0'
+				if linenum: idx_start = str(last_token.start[0] +linenum -1) + '.0'
+				else: 		idx_start = str(last_token.start[0]) + '.0'
 				self.check_pars = idx_start
+
 
 			elif 'multi-line string' in ee.args[0]:
 				flag_err = True
 				self.token_err = True
 
 
-		for tag in self.tags:
-			if len(self.tags[tag]) > 0:
+		if linenum:
+			for tag in self.tags:
+				if len(self.tags[tag]) > 0:
 
-				tk_command = patt + tag
-				for ((s0,s1), (e0,e1)) in self.tags[tag]:
-					tk_command += f' {s0}.{s1} {e0}.{e1}'
+					tk_command = patt + tag
+					for ((s0,s1), (e0,e1)) in self.tags[tag]:
+						tk_command += f' {s0 +linenum -1}.{s1} {e0 +linenum -1}.{e1}'
 
-				self.tk.eval(tk_command)
+					self.tk.eval(tk_command)
+
+		else:
+			for tag in self.tags:
+				if len(self.tags[tag]) > 0:
+
+					tk_command = patt + tag
+					for ((s0,s1), (e0,e1)) in self.tags[tag]:
+						tk_command += f' {s0}.{s1} {e0}.{e1}'
+
+					self.tk.eval(tk_command)
 
 
 		##### Check parentheses ####
@@ -2512,8 +2535,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not flag_err:
 			#print('ok')
 			self.token_err = False
-
-			##### insert_tokens end #####################
 
 
 	def update_tokens(self, start=None, end=None, line=None):
@@ -2554,7 +2575,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Check if inside multiline string
 		elif 'strings' in self.contents.tag_names(tkinter.INSERT):
-
 			try:
 				s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
 				# Parse linenumbers of start and enf of range == s,e
@@ -2590,127 +2610,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		g = iter( linecontents.splitlines(keepends=True) )
 		tokens = tokenize.generate_tokens( g.__next__ )
 
-		patt = f'{self.tcl_name_of_contents} tag add '
-		flag_err = False
-		par_err = None
-
-		for tag in self.tagnames: self.tags[tag].clear()
-
 		# Remove old tags:
 		for tag in self.tagnames:
 			self.contents.tag_remove( tag, start_idx, end_idx )
 
-		try:
-			for token in tokens:
-				#print(token)
-
-				if token.type == tokenize.NAME or \
-					( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
-					( token.exact_type == tokenize.LPAR ):
-
-
-					if token.type == tokenize.NAME:
-
-						last_token = token
-
-						if token.string in self.keywords:
-
-							if token.string == 'self':
-								self.tags['selfs'].append((token.start, token.end))
-
-							elif token.string in self.bools:
-								self.tags['bools'].append((token.start, token.end))
-
-##							elif token.string in self.tests:
-##								self.tags['tests'].append((token.start, token.end))
-
-							elif token.string in self.breaks:
-								self.tags['breaks'].append((token.start, token.end))
-
-							else:
-								self.tags['keywords'].append((token.start, token.end))
-
-					# Calls
-					elif token.exact_type == tokenize.LPAR:
-						# Need to know if last char before '(' was not empty.
-						# token.line contains line as string which contains token.
-						prev_char_idx = token.start[1]-1
-						if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
-							self.tags['calls'].append((last_token.start, last_token.end))
-
-					elif token.type == tokenize.STRING:
-						self.tags['strings'].append((token.start, token.end))
-
-					elif token.type == tokenize.COMMENT:
-						self.tags['comments'].append((token.start, token.end))
-
-					# token.type == tokenize.NUMBER
-					else:
-						self.tags['numbers'].append((token.start, token.end))
-
-					################## END ####################
-
-
-
-		except IndentationError as e:
-##			for attr in ['args', 'filename', 'lineno', 'msg', 'offset', 'text']:
-##				item = getattr( e, attr)
-##				print( attr,': ', item )
-##
-##			print( e.args[0], '\nIndentation errline: ',
-##			self.contents.index(tkinter.INSERT) )
-
-			flag_err = True
-			self.token_err = True
-
-
-		except tokenize.TokenError as ee:
-
-			if 'EOF in multi-line statement' in ee.args[0]:
-				idx_start = str(last_token.start[0] +linenum -1) + '.0'
-				self.check_pars = idx_start
-
-
-			elif 'multi-line string' in ee.args[0]:
-				flag_err = True
-				self.token_err = True
-
-
-		for tag in self.tags:
-			if len(self.tags[tag]) > 0:
-
-				tk_command = patt + tag
-				for ((s0,s1), (e0,e1)) in self.tags[tag]:
-					tk_command += f' {s0 +linenum -1}.{s1} {e0 +linenum -1}.{e1}'
-
-
-				self.tk.eval(tk_command)
-
-
-		##### Check parentheses ####
-		if self.check_pars:
-			start_line = self.check_pars
-			par_err = self.checkpars(start_line)
-
-		# From backspace_override:
-		elif self.par_err:
-			start_line = False
-			par_err = self.checkpars(start_line)
-
-		self.check_pars = False
-		self.par_err = par_err
-
-		if not par_err:
-			# Not always checking whole file for par mismatches, so clear
-			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
-
-			###### Check parentheses end ###########
-
-		if not flag_err:
-			#print('ok')
-			self.token_err = False
-
-			##### update_tokens end #####################
+		self.insert_tokens(tokens, linenum=linenum)
 
 
 	def checkpars(self, idx_start):
@@ -2983,7 +2887,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.contents.bind( shortcut, self.font_choose)) )
 
 		changefont.FontChooser( fonttop, [self.font, self.menufont], big,
-			tracefunc=self.update_fonts, os_type=self.os_type )
+			on_fontchange=self.update_fonts, os_type=self.os_type )
 		self.contents.bind( shortcut, self.do_nothing)
 		self.to_be_closed.append(fonttop)
 
@@ -5217,8 +5121,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		end = self.contents.index( 'paste lineend')
 
 		if self.can_do_syntax():
-			self.update_tokens( start=start, end=end)
 			self.update_lineinfo()
+			self.update_tokens( start=start, end=end)
 			self.line_can_update = True
 
 
@@ -5815,8 +5719,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.contents.insert(start, tmp)
 
 			if self.can_do_syntax():
-				self.update_tokens(start=start, end=end)
 				self.update_lineinfo()
+				self.update_tokens(start=start, end=end)
 				self.line_can_update = True
 
 			self.contents.edit_separator()
@@ -7882,11 +7786,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			endline = int( e.split('.')[0] )
 			endpos = self.contents.index( '%s lineend' % e )
 
+			self.line_can_update = False
 
 			for linenum in range(startline, endline+1):
 				self.contents.insert('%d.0' % linenum, '##')
 
-			self.line_can_update = False
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens(start=startpos, end=endpos)
@@ -7920,6 +7824,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			endpos = self.contents.index('%s lineend' % e)
 			changed = False
 
+			self.line_can_update = False
+
 			for linenum in range(startline, endline+1):
 				tmp = self.contents.get('%d.0' % linenum,'%d.0 lineend' % linenum)
 
@@ -7931,7 +7837,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 			if changed:
-				self.line_can_update = False
 				if self.can_do_syntax():
 					self.update_lineinfo()
 					self.update_tokens(start=startpos, end=endpos)
