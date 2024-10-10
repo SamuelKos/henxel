@@ -1117,7 +1117,6 @@ class Editor(tkinter.Toplevel):
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.insert_tokens(self.get_tokens())
-				#self.update_tokens(everything=True)
 				self.line_can_update = True
 
 			self.contents.bind( "<<WidgetViewSync>>", self.update_line)
@@ -1985,7 +1984,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
-			self.update_tokens(everything=True)
+			#self.update_tokens(everything=True)
+			self.insert_tokens(self.get_tokens())
 			self.line_can_update = True
 
 
@@ -2083,7 +2083,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.can_do_syntax():
 			self.update_lineinfo()
 			self.insert_tokens(tokens)
-
 			#self.update_tokens(everything=True)
 			self.line_can_update = True
 
@@ -2355,7 +2354,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
-				self.update_tokens(start='1.0', end=tkinter.END)
+				#self.update_tokens(start='1.0', end=tkinter.END)
+				self.insert_tokens(self.get_tokens(update=True))
 				self.line_can_update = True
 
 			return 'break'
@@ -2401,7 +2401,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			Called from: walk_tabs
 		'''
-
+		print('all cont')
 		patt = f'{self.tcl_name_of_contents} tag add '
 		flag_err = False
 		par_err = None
@@ -2519,12 +2519,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			##### insert_tokens end #####################
 
 
-	def update_tokens(self, start=None, end=None, line=None, everything=False):
+	def update_tokens(self, start=None, end=None, line=None):
 		''' Update syntax highlighting after some change in contents.
-
-			When flag: everything is True, text is not getted from widget but
-			from a record: tab.contents, because contents of widget gets deleted
-			at view changes. This happens for example in walk_tabs(), help() etc.
 
 			If there has been syntax error, flag self.token_err is set, and next
 			time when calling this, all contents will be used.
@@ -2543,57 +2539,40 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		start_idx = start
 		end_idx = end
-		linecontents = None
-
-		if not everything:
-			if line:
-				linecontents = line
-				test1 = [
-					self.token_err,
-					( '"""' in linecontents) and ('#' in linecontents ),
-					( "'''" in linecontents) and ('#' in linecontents )
-					]
-			else:
-				test1 = [self.token_err]
+		linecontents = line
+		if not linecontents: linecontents = self.contents.get( start_idx, end_idx )
 
 
-			if any(test1):
-				start_idx = '1.0'
-				end_idx = tkinter.END
-				linecontents = None
-				#print('err')
-
-			# Check if inside multiline string
-			elif 'strings' in self.contents.tag_names(tkinter.INSERT) and \
-					not ( start_idx == '1.0' and end_idx == tkinter.END ):
-
-				try:
-					s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
-					# Parse linenumbers of start and enf of range == s,e
-					# Then convert them to int. This could also be done with:
-					# int(float(s)) which would give linenumber of start as int,
-					# but is not much clearer.
-
-					l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
-
-					if l0 != l1:
-						start_idx, end_idx = (s, e)
-						linecontents = None
-
-				except ValueError:
-					pass
+		tests = [
+				self.token_err,
+				( '"""' in linecontents) and ('#' in linecontents ),
+				( "'''" in linecontents) and ('#' in linecontents )
+				]
 
 
-			if not linecontents:
-				tmp = self.contents.get( start_idx, end_idx )
+		if any(tests):
+			self.insert_tokens(self.get_tokens(update=True))
+			return
 
-			else:
-				tmp = linecontents
 
-		else:
-			tmp = self.tabs[self.tabindex].contents
-			start_idx = '1.0'
-			end_idx = tkinter.END
+		# Check if inside multiline string
+		elif 'strings' in self.contents.tag_names(tkinter.INSERT):
+
+			try:
+				s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
+				# Parse linenumbers of start and enf of range == s,e
+				# Then convert them to int. This could also be done with:
+				# int(float(s)) which would give linenumber of start as int,
+				# but is not much clearer.
+
+				l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
+
+				if l0 != l1:
+					start_idx, end_idx = (s, e)
+					linecontents = self.contents.get( start_idx, end_idx )
+
+			except ValueError:
+				pass
 
 
 
@@ -2602,88 +2581,75 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.par_err = True
 
 		linenum = int(start_idx.split('.')[0])
-		flag_err = False
-		#print(self.token_err)
 
+		#print(self.token_err)
+		print('line')
 
 
 		###### START ###########
-		par_err = None
-
 		# Was:
 		# with io.BytesIO( tmp.encode('utf-8') ) as fo:
 		#	tokens = tokenize.tokenize( fo.readline )
-
-		g = iter( tmp.splitlines(keepends=True) )
+		g = iter( linecontents.splitlines(keepends=True) )
 		tokens = tokenize.generate_tokens( g.__next__ )
+
+		patt = f'{self.tcl_name_of_contents} tag add '
+		flag_err = False
+		par_err = None
+
+		for tag in self.tagnames: self.tags[tag].clear()
 
 		# Remove old tags:
 		for tag in self.tagnames:
 			self.contents.tag_remove( tag, start_idx, end_idx )
 
-		# Retag
-		idx_start = None
 		try:
 			for token in tokens:
 				#print(token)
-
-				# token.line contains line as string which contains token.
 
 				if token.type == tokenize.NAME or \
 					( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
 					( token.exact_type == tokenize.LPAR ):
 
-					# Initiate indexes with correct linenum
-					s0, s1 = map(str, [ token.start[0] + linenum - 1, token.start[1] ] )
-					e0, e1 = map(str, [ token.end[0] + linenum - 1, token.end[1] ] )
-					idx_start = s0 + '.' + s1
-					idx_end = e0 + '.' + e1
-
 
 					if token.type == tokenize.NAME:
 
-						#lastoken = token
-						last_idx_start = idx_start
-						last_idx_end = idx_end
+						last_token = token
 
 						if token.string in self.keywords:
 
 							if token.string == 'self':
-								self.contents.tag_add('selfs', idx_start, idx_end)
+								self.tags['selfs'].append((token.start, token.end))
 
 							elif token.string in self.bools:
-								self.contents.tag_add('bools', idx_start, idx_end)
+								self.tags['bools'].append((token.start, token.end))
 
 ##							elif token.string in self.tests:
-##							self.contents.tag_add('tests', idx_start, idx_end)
+##								self.tags['tests'].append((token.start, token.end))
 
 							elif token.string in self.breaks:
-								self.contents.tag_add('breaks', idx_start, idx_end)
+								self.tags['breaks'].append((token.start, token.end))
 
 							else:
-								self.contents.tag_add('keywords', idx_start, idx_end)
-
+								self.tags['keywords'].append((token.start, token.end))
 
 					# Calls
 					elif token.exact_type == tokenize.LPAR:
-						# Need to know if last char before ( was not empty.
-						# Previously used test was:
-						#if self.contents.get( '%s - 1c' % idx_start, idx_start ).strip():
-
+						# Need to know if last char before '(' was not empty.
 						# token.line contains line as string which contains token.
 						prev_char_idx = token.start[1]-1
 						if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
-							self.contents.tag_add('calls', last_idx_start, last_idx_end)
+							self.tags['calls'].append((last_token.start, last_token.end))
 
 					elif token.type == tokenize.STRING:
-						self.contents.tag_add('strings', idx_start, idx_end)
+						self.tags['strings'].append((token.start, token.end))
 
 					elif token.type == tokenize.COMMENT:
-						self.contents.tag_add('comments', idx_start, idx_end)
+						self.tags['comments'].append((token.start, token.end))
 
 					# token.type == tokenize.NUMBER
 					else:
-						self.contents.tag_add('numbers', idx_start, idx_end)
+						self.tags['numbers'].append((token.start, token.end))
 
 					################## END ####################
 
@@ -2704,22 +2670,35 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tokenize.TokenError as ee:
 
 			if 'EOF in multi-line statement' in ee.args[0]:
+				idx_start = str(last_token.start[0] +linenum -1) + '.0'
 				self.check_pars = idx_start
+
 
 			elif 'multi-line string' in ee.args[0]:
 				flag_err = True
 				self.token_err = True
 
 
+		for tag in self.tags:
+			if len(self.tags[tag]) > 0:
+
+				tk_command = patt + tag
+				for ((s0,s1), (e0,e1)) in self.tags[tag]:
+					tk_command += f' {s0 +linenum -1}.{s1} {e0 +linenum -1}.{e1}'
+
+
+				self.tk.eval(tk_command)
+
+
 		##### Check parentheses ####
 		if self.check_pars:
-			startl = self.check_pars
-			par_err = self.checkpars(startl)
+			start_line = self.check_pars
+			par_err = self.checkpars(start_line)
 
 		# From backspace_override:
 		elif self.par_err:
-			startl = False
-			par_err = self.checkpars(startl)
+			start_line = False
+			par_err = self.checkpars(start_line)
 
 		self.check_pars = False
 		self.par_err = par_err
@@ -2728,11 +2707,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Not always checking whole file for par mismatches, so clear
 			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
 
-			###### Check parentheses End ###########
+			###### Check parentheses end ###########
 
-
-		#  not flag_err and ( everything==True ) is same, because gets same indexes
-		if not flag_err and ( start_idx == '1.0' and end_idx == tkinter.END ):
+		if not flag_err:
 			#print('ok')
 			self.token_err = False
 
@@ -3526,7 +3503,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
-			self.update_tokens(everything=True)
+			#self.update_tokens(everything=True)
+			self.insert_tokens(self.get_tokens())
 			self.line_can_update = True
 
 		# Set cursor pos
@@ -3648,7 +3626,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				else:
 					self.contents.insert(tkinter.INSERT, tmp +"\n")
 
-					# Make look bit nicer:
+					# Make it look bit nicer:
 					if self.syntax:
 						# -1 lines because linebreak has been added already
 						start = self.contents.index('insert -1 lines linestart')
@@ -3724,7 +3702,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				else:
 					self.contents.insert(tkinter.INSERT, tmp +"\n")
 
-					# Make look bit nicer:
+					# Make it look bit nicer:
 					if self.syntax:
 						# -1 lines because linebreak has been added already
 						start = self.contents.index('insert -1 lines linestart')
@@ -3758,7 +3736,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
-			self.update_tokens(everything=True)
+			#self.update_tokens(everything=True)
+			self.insert_tokens(self.get_tokens())
 			self.line_can_update = True
 
 		# Set cursor pos
@@ -5374,7 +5353,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
-				self.update_tokens(start='1.0', end=tkinter.END)
+				#self.update_tokens(start='1.0', end=tkinter.END)
+				self.insert_tokens(self.get_tokens(update=True))
 				self.line_can_update = True
 
 		except tkinter.TclError:
@@ -5396,7 +5376,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
-				self.update_tokens(start='1.0', end=tkinter.END)
+				#self.update_tokens(start='1.0', end=tkinter.END)
+				self.insert_tokens(self.get_tokens(update=True))
 				self.line_can_update = True
 
 
@@ -5726,7 +5707,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 					if self.can_do_syntax():
 						self.update_lineinfo()
-						self.update_tokens(everything=True)
+						#self.update_tokens(everything=True)
+						self.insert_tokens(self.get_tokens())
 						self.line_can_update = True
 
 					self.contents.edit_reset()
@@ -5790,7 +5772,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if self.can_do_syntax():
 					self.update_lineinfo()
-					self.update_tokens(everything=True)
+					#self.update_tokens(everything=True)
+					self.insert_tokens(self.get_tokens())
 					self.line_can_update = True
 
 				self.contents.edit_reset()
@@ -6875,7 +6858,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if self.can_do_syntax():
 					self.update_lineinfo()
-					self.update_tokens(everything=True)
+					#self.update_tokens(everything=True)
+					self.insert_tokens(self.get_tokens())
 					self.line_can_update = True
 
 				self.contents.focus_set()
@@ -7087,6 +7071,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		oldtab = self.tabs[self.tabindex]
 		oldtab.position = pos
 
+		# Update oldtabs contents
 		cur_contents = oldtab.contents = self.contents.get('1.0', tkinter.END)
 		##############################
 
@@ -7134,7 +7119,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						self.update_lineinfo()
 						self.token_err = False
 						self.line_can_update = False
-						self.update_tokens(everything=True)
+						#self.update_tokens(everything=True)
+						self.insert_tokens(self.get_tokens())
 						self.line_can_update = True
 
 
@@ -7162,8 +7148,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.token_err = False
 				self.line_can_update = False
 
-				# Bookmarks of oldtab are saved in self.new_tab
-				# and marks are cleared with self.clear_bookmarks
+				# Bookmarks of oldtab are saved in self.new_tab()
+				# and marks are cleared there with self.clear_bookmarks()
 				self.new_tab()
 				newtab = self.tabs[self.tabindex]
 
@@ -7180,7 +7166,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if self.can_do_syntax():
 					self.update_lineinfo()
-					self.update_tokens(everything=True)
+					#self.update_tokens(everything=True)
+					self.insert_tokens(self.get_tokens())
 					self.line_can_update = True
 
 				set_cursor_pos()
@@ -7555,7 +7542,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
-			self.update_tokens(everything=True)
+			#self.update_tokens(everything=True)
+			self.insert_tokens(self.get_tokens())
 			self.line_can_update = True
 
 
@@ -8897,7 +8885,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				self.line_can_update = False
 				if self.can_do_syntax():
 					self.update_lineinfo()
-					self.update_tokens(start='1.0', end=tkinter.END)
+					#self.update_tokens(start='1.0', end=tkinter.END)
+					self.insert_tokens(self.get_tokens(update=True))
 					self.line_can_update = True
 
 

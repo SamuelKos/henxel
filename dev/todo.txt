@@ -503,18 +503,24 @@ if restart fails with error, terminal naturally has focus
 Below this: not done
 
 
+self.update_tokens() is updated ok?
+check: self.check_pars
 
 
+self.update_tokens(1.0 end) -->
+self.insert_tokens(self.get_tokens(update=True))
 
-
+self.update_tokens(everything=True) -->
+self.insert_tokens(self.get_tokens())
 
 
 to notes:
-quitme popup no lambda check, done
-	need lambda if doing restart: subprocess.run
-quit_me
-return? no
+quitme popup
+	needs lambda if doing restart: subprocess.run
+quit_me return? no
 
+
+tabify_lines check
 
 
 
