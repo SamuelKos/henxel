@@ -513,6 +513,8 @@ changefont.py
 parameter tracefunc --> on_fontchange
 done ok?
 #######################
+backspace_override fix ok?
+#######################
 
 
 Below this: not done
@@ -571,6 +573,7 @@ custom: self.save_config()
 
 indent unindent tokens scope?
 
+
 update_line:
 	if diff: check_line --> check --> after_idle(update)?
 	
@@ -581,7 +584,7 @@ check_line:
 	get scope_start end then update_tokens
 
 check use of: self.check_pars ###########
-backspace_override: no quote tests --> check_line
+backspace_override: no quote tests done ok? --> check_line
 
 
 
