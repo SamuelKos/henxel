@@ -1716,6 +1716,65 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		#### quit_me End ##############
 
 
+	def check_line(self, oldline=None, newline=None, onold_line=True):
+		''' oldline, newline:	string
+			onold_line:			bool	(self.oldlinenum == linenum curline)
+		'''
+
+		# Paste/Undo etc is checked
+		# --> There should only be
+		# 1: Delete selection
+		# 2: Delete one letter
+		# 3: Add one letter
+
+		tests = [
+				self.token_err,
+				( '"""' in linecontents) and ('#' in linecontents ),
+				( "'''" in linecontents) and ('#' in linecontents )
+				]
+
+
+		if any(tests):
+			# Remove old tags:
+			for tag in self.tagnames:
+				self.contents.tag_remove( tag, '1.0', 'end')
+
+			self.insert_tokens(self.get_tokens(update=True))
+			return
+
+
+		# Check if inside multiline string
+		elif 'strings' in self.contents.tag_names(tkinter.INSERT):
+			try:
+				s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
+				# Parse linenumbers of start and enf of range == s,e
+				# Then convert them to int. This could also be done with:
+				# int(float(s)) which would give linenumber of start as int,
+				# but is not much clearer.
+
+				l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
+
+				if l0 != l1:
+					start_idx, end_idx = (s, e)
+					linecontents = self.contents.get( start_idx, end_idx )
+
+			except ValueError:
+				pass
+
+
+
+		prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
+		if prev_char in [ '(', ')', '[', ']' , '{', '}' ]:
+			self.par_err = True
+
+		linenum = int(start_idx.split('.')[0])
+
+
+		#### check_line End #####
+
+
+
+
 	def update_lineinfo(self, event=None):
 		''' Update info about current line, which is used to determine if
 			tokens of the line has to be updated for syntax highlight.
@@ -1761,8 +1820,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			linestart = '%s linestart' % line_idx
 
 			tmp = self.contents.get( linestart, lineend )
+			on_oldline = (self.oldlinenum == linenum)
 
-			if self.oldline != tmp or self.oldlinenum != linenum:
+			if self.oldline != tmp or not on_oldline:
+
+				#self.check_line(oldline=self.oldline, newline=tmp, on_oldline=on_oldline)
 
 				#print('sync')
 				self.oldline = tmp
@@ -2100,7 +2162,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Tab Related End
 ########## Configuration Related Begin
 
-	def save_config(self, event=None):
+	def save_config(self):
 		data = self.get_config()
 
 		string_representation = json.dumps(data)
@@ -2191,8 +2253,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			else:
 				tab.bookmarks.clear()
 
-		tmplist = [ tab.__dict__ for tab in self.tabs ]
-		dictionary['tabs'] = tmplist
+		dictionary['tabs'] = [ tab.__dict__ for tab in self.tabs ]
 
 		return dictionary
 
@@ -2287,7 +2348,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if len(self.tabs) == 0:
 				self.tabindex = -1
 				self.new_tab()
-			# recently active normal tab is gone:
+			# Recently active normal tab is gone:
 			else:
 				self.tabindex = 0
 				self.tabs[self.tabindex].active = True
@@ -2391,7 +2452,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return tokens
 
 
-	def insert_tokens(self, tokens, linenum=None):
+	def insert_tokens(self, tokens):
 		''' Syntax-highlight text
 
 			syntax-tokens are from get_tokens()
@@ -2399,15 +2460,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Called from: update_tokens, walk_tabs, etc
 		'''
 
-		if linenum:
-			# Old tags are remove in update_tokens()
-			print('line')
-		else:
-			# Remove old tags:
-			for tag in self.tagnames:
-				self.contents.tag_remove( tag, '1.0', 'end')
-			print('all cont')
+		#print('all cont')
 
+##		# If not viewchange(contents is not deleted)
+##		# Remove old tags:
+##		for tag in self.tagnames:
+##			self.contents.tag_remove( tag, '1.0', 'end')
 
 		patt = f'{self.tcl_name_of_contents} tag add '
 		flag_err = False
@@ -2419,51 +2477,45 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			for token in tokens:
 				#print(token)
 
-				if token.type == tokenize.NAME or \
-					( token.type in [ tokenize.NUMBER, tokenize.STRING, tokenize.COMMENT] ) or \
-					( token.exact_type == tokenize.LPAR ):
+				if token.type == tokenize.NAME:
+					last_token = token
+					if token.string in self.keywords:
 
+						if token.string == 'self':
+							self.tags['selfs'].append((token.start, token.end))
 
-					if token.type == tokenize.NAME:
+						elif token.string in self.bools:
+							self.tags['bools'].append((token.start, token.end))
 
-						last_token = token
+##						elif token.string in self.tests:
+##							self.tags['tests'].append((token.start, token.end))
 
-						if token.string in self.keywords:
+						elif token.string in self.breaks:
+							self.tags['breaks'].append((token.start, token.end))
 
-							if token.string == 'self':
-								self.tags['selfs'].append((token.start, token.end))
+						else:
+							self.tags['keywords'].append((token.start, token.end))
 
-							elif token.string in self.bools:
-								self.tags['bools'].append((token.start, token.end))
+				# Calls
+				elif token.exact_type == tokenize.LPAR:
+					# Need to know if last char before '(' was not empty.
+					# token.line contains line as string which contains token.
+					prev_char_idx = token.start[1]-1
+					if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
+						self.tags['calls'].append((last_token.start, last_token.end))
 
-##							elif token.string in self.tests:
-##								self.tags['tests'].append((token.start, token.end))
+				elif token.type == tokenize.STRING:
+					self.tags['strings'].append((token.start, token.end))
 
-							elif token.string in self.breaks:
-								self.tags['breaks'].append((token.start, token.end))
+				elif token.type == tokenize.COMMENT:
+					self.tags['comments'].append((token.start, token.end))
 
-							else:
-								self.tags['keywords'].append((token.start, token.end))
+				elif token.type == tokenize.NUMBER:
+					self.tags['numbers'].append((token.start, token.end))
 
-					# Calls
-					elif token.exact_type == tokenize.LPAR:
-						# Need to know if last char before '(' was not empty.
-						# token.line contains line as string which contains token.
-						prev_char_idx = token.start[1]-1
-						if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
-							self.tags['calls'].append((last_token.start, last_token.end))
+				else: pass
 
-					elif token.type == tokenize.STRING:
-						self.tags['strings'].append((token.start, token.end))
-
-					elif token.type == tokenize.COMMENT:
-						self.tags['comments'].append((token.start, token.end))
-
-					# token.type == tokenize.NUMBER
-					else:
-						self.tags['numbers'].append((token.start, token.end))
-
-					################## END ####################
+				################## END ####################
 
 
 
@@ -2482,8 +2534,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tokenize.TokenError as ee:
 
 			if 'EOF in multi-line statement' in ee.args[0]:
-				if linenum: idx_start = str(last_token.start[0] +linenum -1) + '.0'
-				else: 		idx_start = str(last_token.start[0]) + '.0'
+				idx_start = str(last_token.start[0]) + '.0'
 				self.check_pars = idx_start
 
 
@@ -2492,25 +2543,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.token_err = True
 
 
-		if linenum:
-			for tag in self.tags:
-				if len(self.tags[tag]) > 0:
+		for tag in self.tags:
+			if len(self.tags[tag]) > 0:
 
-					tk_command = patt + tag
-					for ((s0,s1), (e0,e1)) in self.tags[tag]:
-						tk_command += f' {s0 +linenum -1}.{s1} {e0 +linenum -1}.{e1}'
+				tk_command = patt + tag
+				for ((s0,s1), (e0,e1)) in self.tags[tag]:
+					tk_command += f' {s0}.{s1} {e0}.{e1}'
 
-					self.tk.eval(tk_command)
-
-		else:
-			for tag in self.tags:
-				if len(self.tags[tag]) > 0:
-
-					tk_command = patt + tag
-					for ((s0,s1), (e0,e1)) in self.tags[tag]:
-						tk_command += f' {s0}.{s1} {e0}.{e1}'
-
-					self.tk.eval(tk_command)
+				self.tk.eval(tk_command)
 
 
 		##### Check parentheses ####
@@ -2569,6 +2609,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		if any(tests):
+			# Remove old tags:
+			for tag in self.tagnames:
+				self.contents.tag_remove( tag, '1.0', 'end')
+
 			self.insert_tokens(self.get_tokens(update=True))
 			return
 
@@ -2614,7 +2658,121 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		for tag in self.tagnames:
 			self.contents.tag_remove( tag, start_idx, end_idx )
 
-		self.insert_tokens(tokens, linenum=linenum)
+		#self.insert_tokens(tokens, linenum=linenum)
+		#print('line')
+
+
+		patt = f'{self.tcl_name_of_contents} tag add '
+		flag_err = False
+		par_err = None
+
+		for tag in self.tagnames: self.tags[tag].clear()
+
+		try:
+			for token in tokens:
+				#print(token)
+
+				if token.type == tokenize.NAME:
+					last_token = token
+					if token.string in self.keywords:
+
+						if token.string == 'self':
+							self.tags['selfs'].append((token.start, token.end))
+
+						elif token.string in self.bools:
+							self.tags['bools'].append((token.start, token.end))
+
+##						elif token.string in self.tests:
+##							self.tags['tests'].append((token.start, token.end))
+
+						elif token.string in self.breaks:
+							self.tags['breaks'].append((token.start, token.end))
+
+						else:
+							self.tags['keywords'].append((token.start, token.end))
+
+				# Calls
+				elif token.exact_type == tokenize.LPAR:
+					# Need to know if last char before '(' was not empty.
+					# token.line contains line as string which contains token.
+					prev_char_idx = token.start[1]-1
+					if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
+						self.tags['calls'].append((last_token.start, last_token.end))
+
+				elif token.type == tokenize.STRING:
+					self.tags['strings'].append((token.start, token.end))
+
+				elif token.type == tokenize.COMMENT:
+					self.tags['comments'].append((token.start, token.end))
+
+				elif token.type == tokenize.NUMBER:
+					self.tags['numbers'].append((token.start, token.end))
+
+				else: pass
+
+				################## END ####################
+
+
+
+		except IndentationError as e:
+##			for attr in ['args', 'filename', 'lineno', 'msg', 'offset', 'text']:
+##				item = getattr( e, attr)
+##				print( attr,': ', item )
+##
+##			print( e.args[0], '\nIndentation errline: ',
+##			self.contents.index(tkinter.INSERT) )
+
+			flag_err = True
+			self.token_err = True
+
+
+		except tokenize.TokenError as ee:
+
+			if 'EOF in multi-line statement' in ee.args[0]:
+				idx_start = str(last_token.start[0] +linenum -1) + '.0'
+				self.check_pars = idx_start
+
+
+			elif 'multi-line string' in ee.args[0]:
+				flag_err = True
+				self.token_err = True
+
+
+
+		for tag in self.tags:
+			if len(self.tags[tag]) > 0:
+
+				tk_command = patt + tag
+				for ((s0,s1), (e0,e1)) in self.tags[tag]:
+					tk_command += f' {s0 +linenum -1}.{s1} {e0 +linenum -1}.{e1}'
+
+				self.tk.eval(tk_command)
+
+
+		##### Check parentheses ####
+		if self.check_pars:
+			start_line = self.check_pars
+			par_err = self.checkpars(start_line)
+
+		# From backspace_override:
+		elif self.par_err:
+			start_line = False
+			par_err = self.checkpars(start_line)
+
+		self.check_pars = False
+		self.par_err = par_err
+
+		if not par_err:
+			# Not always checking whole file for par mismatches, so clear
+			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
+
+			###### Check parentheses end ###########
+
+		if not flag_err:
+			#print('ok')
+			self.token_err = False
+
+			###### update_tokens end ###########
 
 
 	def checkpars(self, idx_start):
@@ -5349,6 +5507,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def tab_over_indent(self):
 		'''	Called from indent()
 		'''
+		self.line_can_update = False
+
 		# There should not be selection
 		ins = tkinter.INSERT
 
@@ -5394,7 +5554,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def backspace_override(self, event):
-		""" for syntax highlight
+		""" For syntax highlight
+			This is executed *before* actual deletion
 		"""
 
 		# State is 8 in windows when no other keys are pressed
@@ -7600,7 +7761,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.state in [ 'search', 'replace', 'replace_all' ]:
 			return 'break'
 
-
 		if len(self.contents.tag_ranges('sel')) == 0:
 
 			if self.can_expand_word():
@@ -7628,26 +7788,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# If at start of line: move line to match indent of previous line.
 			elif indentation_level := self.tab_over_indent():
 				self.contents.insert(tkinter.INSERT, indentation_level * '\t')
+				self.line_can_update = True
 				return 'break'
 
 			else:
+				self.line_can_update = True
 				return
 
 		try:
+			self.line_can_update = False
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
 			i = self.contents.index(tkinter.INSERT)
 
-			start_idx = self.contents.index(tkinter.SEL_FIRST)
-			end_idx = self.contents.index(tkinter.SEL_LAST)
-
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
-			self.contents.tag_add('sel', start_idx, end_idx)
-
 
 			if len(self.contents.tag_ranges('sel')) != 0:
 
-				# is start of selection viewable?
+				# Is start of selection viewable?
 				if not self.contents.bbox(tkinter.SEL_FIRST):
 
 					self.wait_for(150)
@@ -7671,6 +7828,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		except tkinter.TclError:
 			pass
+
+		self.line_can_update = True
 
 		return 'break'
 
@@ -7705,6 +7864,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return 'break'
 
 		try:
+			self.line_can_update = False
+
 			# Unindenting curline only:
 			if len(self.contents.tag_ranges('sel')) == 0:
 				startline = int(self.contents.index(tkinter.INSERT).split(sep='.')[0])
@@ -7722,6 +7883,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			for linenum in range(startline, endline+1):
 				tmp = self.contents.get('%s.0' % linenum, '%s.0 lineend' % linenum)
 
+				# Check that every *non empty* line has tab-char at beginning of line
 				if len(tmp) != 0 and tmp[0] != '\t':
 					flag_continue = False
 					break
@@ -7730,7 +7892,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if len(self.contents.tag_ranges('sel')) != 0:
 
-					# is start of selection viewable?
+					# Is start of selection viewable?
 					if not self.contents.bbox(tkinter.SEL_FIRST):
 
 						self.wait_for(150)
@@ -7750,7 +7912,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 							self.contents.delete( '%s.0' % linenum, '%s.0 +1c' % linenum)
 
 
-				# is selection made from down to top or from right to left?
+				# Is selection made from down to top or from right to left?
 				if len(self.contents.tag_ranges('sel')) != 0:
 
 					if startline == endline:
@@ -7759,7 +7921,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					elif self.contents.compare(tkinter.SEL_FIRST, '<', tkinter.INSERT):
 						self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
 
-					# is start of selection viewable?
+					# Is start of selection viewable?
 					if not self.contents.bbox(tkinter.SEL_FIRST):
 						self.ensure_idx_visibility('insert', back=4)
 
@@ -7767,6 +7929,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		except tkinter.TclError:
 			pass
+
+		self.line_can_update = True
 
 		return "break"
 

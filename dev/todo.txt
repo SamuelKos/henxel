@@ -518,16 +518,103 @@ done ok?
 Below this: not done
 
 
+
+
+
+
+##################
+test-launch conf
+
+when this: if not test.cnf: make_test_conf() ?
+at start of test-launch? no?
+at importtime if debug?
+
+
+
+save_config(data_dict, path, )
+
+
+
+made with: custom test_launch with:
+
+test-launch no can save with normal CONFPATH #####
+
+test-launch conf is in package?
+get path of TEST_CONFPATH:
+	if sys.prefix != sys.base_prefix:
+		envpath = sys.prefix
+	else:
+		envpath = None
+		raise ValueError
+	
+	filepath = pathlib.Path(envpath) / TEST_CONFPATH
+	
+
+
+
+loadfile(filepath):
+		filepath is pathlib.Path
+		If filepath is python-file, convert indentation to tabs.
+		File is always opened to *current* tab
+		
+
+new_tab()
+open other file
+etc
+
+custom: self.save_config()
+##################
+
+
+
+
+
+indent unindent tokens scope?
+
+update_line:
+	if diff: check_line --> check --> after_idle(update)?
+	
+check_line:
+	triples, quotes etc
+	--> all_cont or line
+	all_cont == cur_scope ##################?
+	get scope_start end then update_tokens
+
 check use of: self.check_pars ###########
+backspace_override: no quote tests --> check_line
 
 
-f-strings green?
 
 insert_tokens
-for loop better
+	for loop better, done ok?
+	f-strings green?
 
 
+#####
 when delete # all contents tokens are updated, is that necessary?
+--> update_line() more work on filtering, knows oldline etc
+if diff len(old new line) == 1:
+(
+	could do also select one(or more) letter and insert one letter
+	--> only one update_line call from that one letter insertion
+	so diff len can be more than 1 and just one letter is inserted
+)
+
+
+
+if triple not in oldline and triple in newline:
+	allcont
+
+elif triple in oldline and triple not in newline:
+	allcont
+
+elif triple in oldline and newline:
+	if '#' added in newline: allcont
+	if '#' deleted in newline: allcont
+
+
+#####
+
 
 
 to notes:
