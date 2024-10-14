@@ -10,7 +10,8 @@
 # Class Editor Begin
 #
 # Constants
-# init etc.
+# Init etc.
+# Bindings
 # Linenumbers
 # Tab Related
 # Configuration Related
@@ -195,6 +196,7 @@ GOODFONTS = [
 			]
 
 ############ Constants End
+############ Init etc. Begin
 
 class Editor(tkinter.Toplevel):
 
@@ -757,275 +759,6 @@ class Editor(tkinter.Toplevel):
 
 
 
-			# Bindigs Begin
-			####################################################
-			self.right_mousebutton_num = 3
-
-			if self.os_type == 'mac_os':
-				self.right_mousebutton_num = 2
-
-				# Default cmd-q does not trigger quit_me
-				# Override Cmd-Q:
-				# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
-				self.root.createcommand("tk::mac::Quit", self.quit_me)
-				#self.root.createcommand("tk::mac::OnHide", self.test_hide)
-
-			self.contents.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
-
-			if self.os_type == 'linux':
-				self.contents.bind( "<ISO_Left_Tab>", self.unindent)
-			else:
-				self.contents.bind( "<Shift-Tab>", self.unindent)
-
-
-			############################################################
-			# In macOS all Alt-shortcuts makes some special symbol.
-			# Have to bind to this symbol-name to get Alt-shorcuts work.
-			# For example binding to Alt-f:
-			# self.contents.bind( "<function>", self.font_choose)
-
-			# Except that tkinter does not give all symbol names, like
-			# Alt-x or l
-			# which makes these key-combinations quite unbindable.
-			# It would be much easier if one could do bindings normally:
-			# Alt-SomeKey
-			# like in Linux and Windows.
-
-			# Also binding to combinations which has Command-key (apple-key)
-			# (or Meta-key as reported by events.py)
-			# must use Mod1-Key as modifier name:
-			# Mod1-Key-n == Command-Key-n
-
-			# fn-key -bindings have to be done by checking the state of the event
-			# in proxy-callback: mac_cmd_overrides
-
-			# In short, In macOS one can not just bind like:
-			# Command-n
-			# fn-f
-			# Alt-f
-
-			# This is the reason why below is some extra
-			# and strange looking binding-lines when using macOS.
-			##############################################################
-			if self.os_type != 'mac_os':
-
-				self.bind( "<Alt-n>", self.new_tab)
-				self.bind( "<Control-q>", self.quit_me)
-
-				self.contents.bind( "<Control-b>", self.goto_bookmark)
-				self.contents.bind( "<Control-B>",
-					lambda event: self.goto_bookmark(event, **{'back':True}) )
-
-				self.contents.bind( "<Control-l>", self.gotoline)
-				self.contents.bind( "<Control-g>", self.goto_def)
-				self.contents.bind( "<Alt-p>", self.toggle_bookmark)
-
-				self.contents.bind( "<Alt-s>", self.color_choose)
-				self.contents.bind( "<Alt-t>", self.toggle_color)
-
-				self.bind( "<Alt-w>", self.walk_tabs)
-				self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
-
-				self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
-				self.contents.bind( "<Alt-l>", self.toggle_ln)
-				self.contents.bind( "<Alt-x>", self.toggle_syntax)
-				self.contents.bind( "<Alt-f>", self.font_choose)
-
-				self.contents.bind( "<Control-c>", self.copy)
-				self.contents.bind( "<Control-v>", self.paste)
-				self.contents.bind( "<Control-x>",
-					lambda event: self.copy(event, **{'flag_cut':True}) )
-
-				self.contents.bind( "<Control-y>", self.yank_line)
-
-				self.contents.bind( "<Control-Left>", self.move_by_words)
-				self.contents.bind( "<Control-Right>", self.move_by_words)
-				self.contents.bind( "<Control-Shift-Left>", self.select_by_words)
-				self.contents.bind( "<Control-Shift-Right>", self.select_by_words)
-
-				self.contents.bind( "<Control-Up>", self.move_many_lines)
-				self.contents.bind( "<Control-Down>", self.move_many_lines)
-				self.contents.bind( "<Control-Shift-Up>", self.move_many_lines)
-				self.contents.bind( "<Control-Shift-Down>", self.move_many_lines)
-
-				self.contents.bind( "<Control-8>", self.walk_scope)
-				self.contents.bind( "<Control-Shift-(>",
-					lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
-				self.contents.bind( "<Control-9>",
-					lambda event: self.walk_scope(event, **{'down':True}) )
-				self.contents.bind( "<Control-Shift-)>",
-					lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
-
-				self.contents.bind( "<Alt-Shift-F>", self.select_scope)
-
-
-				self.contents.bind("<Left>", self.check_sel)
-				self.contents.bind("<Right>", self.check_sel)
-				self.entry.bind("<Left>", self.check_sel)
-				self.entry.bind("<Right>", self.check_sel)
-
-
-			# self.os_type == 'mac_os':
-			else:
-				self.contents.bind( "<Left>", self.mac_cmd_overrides)
-				self.contents.bind( "<Right>", self.mac_cmd_overrides)
-				self.contents.bind( "<Up>", self.mac_cmd_overrides)
-				self.contents.bind( "<Down>", self.mac_cmd_overrides)
-
-				self.entry.bind( "<Right>", self.mac_cmd_overrides)
-				self.entry.bind( "<Left>", self.mac_cmd_overrides)
-
-				self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
-
-				# Have to bind using Mod1 as modifier name if want bind to Command-key,
-				# Last line is the only one working:
-				#self.contents.bind( "<Meta-Key-k>", lambda event, arg=('AAA'): print(arg) )
-				#self.contents.bind( "<Command-Key-k>", lambda event, arg=('AAA'): print(arg) )
-				#self.contents.bind( "<Mod1-Key-k>", lambda event, arg=('AAA'): print(arg) )
-
-				# 8,9 as '(' and ')' without Shift, nordic key-layout
-				# 9,0 in us/uk ?
-				self.contents.bind( "<Mod1-Key-8>", self.walk_scope)
-				self.contents.bind( "<Mod1-Shift-(>",
-					lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
-				self.contents.bind( "<Mod1-Key-9>",
-					lambda event: self.walk_scope(event, **{'down':True}) )
-				self.contents.bind( "<Mod1-Shift-)>",
-					lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
-
-				self.contents.bind( "<Mod1-Shift-F>", self.select_scope)
-				self.contents.bind( "<Mod1-Shift-E>", self.elide_scope)
-
-				self.contents.bind( "<Mod1-Key-y>", self.yank_line)
-				self.contents.bind( "<Mod1-Key-n>", self.new_tab)
-
-				self.contents.bind( "<Mod1-Key-f>", self.search)
-				self.contents.bind( "<Mod1-Key-r>", self.replace)
-				self.contents.bind( "<Mod1-Key-R>", self.replace_all)
-
-				self.contents.bind( "<Mod1-Key-c>", self.copy)
-				self.contents.bind( "<Mod1-Key-v>", self.paste)
-				self.contents.bind( "<Mod1-Key-x>",
-					lambda event: self.copy(event, **{'flag_cut':True}) )
-
-				self.contents.bind( "<Mod1-Key-b>", self.goto_bookmark)
-				self.contents.bind( "<Mod1-Key-B>",
-					lambda event: self.goto_bookmark(event, **{'back':True}) )
-
-				self.contents.bind( "<Mod1-Key-p>", self.toggle_bookmark)
-				self.contents.bind( "<Mod1-Key-g>", self.goto_def)
-				self.contents.bind( "<Mod1-Key-l>", self.gotoline)
-				self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
-				self.contents.bind( "<Mod1-Key-e>", self.goto_lineend)
-
-				self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
-				self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
-
-				self.contents.bind( "<Mod1-Key-z>", self.undo_override)
-				self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
-
-				# Could not get keysym for Alt-l and x, so use ctrl
-				self.contents.bind( "<Control-l>", self.toggle_ln)
-				self.contents.bind( "<Control-x>", self.toggle_syntax)
-
-				# have to bind to symbol name to get Alt-shorcuts work in macOS
-				# This is: Alt-f
-				self.contents.bind( "<function>", self.font_choose)		# Alt-f
-				self.contents.bind( "<dagger>", self.toggle_color)		# Alt-t
-				self.contents.bind( "<ssharp>", self.color_choose)		# Alt-s
-
-
-			#######################################################
-
-
-			# Arrange detection of CapsLock-state.
-			self.capslock = 'init'
-			self.motion_bind = self.bind('<Motion>', self.check_caps)
-			if self.os_type != 'mac_os':
-				self.bind('<Caps_Lock>', self.check_caps)
-			else:
-				self.bind('<KeyPress-Caps_Lock>', self.check_caps)
-				self.bind('<KeyRelease-Caps_Lock>', self.check_caps)
-
-
-			self.bind( "<Control-R>", self.replace_all)
-			self.bind( "<Control-r>", self.replace)
-
-			self.bind( "<Escape>", self.esc_override )
-			self.bind( "<Return>", self.do_nothing_without_bell)
-			self.bind( "<Control-minus>", self.decrease_scrollbar_width)
-			self.bind( "<Control-plus>", self.increase_scrollbar_width)
-
-			self.ln_widget.bind("<Control-n>", self.do_nothing_without_bell)
-			self.ln_widget.bind("<Control-p>", self.do_nothing_without_bell)
-
-			self.contents.bind( "<Control-a>", self.goto_linestart)
-			self.contents.bind( "<Control-e>", self.goto_lineend)
-			self.contents.bind( "<Control-A>", self.goto_linestart)
-			self.contents.bind( "<Control-E>", self.goto_lineend)
-
-			if self.os_type == 'windows':
-				self.entry.bind( "<Control-E>",
-					lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
-				self.entry.bind( "<Control-A>",
-					lambda event, arg=('<<SelectLineStart>>'): self.entry.event_generate)
-
-				self.entry.bind( "<Control-c>", self.copy_windows)
-				self.entry.bind( "<Control-x>",
-					lambda event: self.copy_windows(event, **{'flag_cut':True}) )
-
-
-			self.contents.bind( "<Control-j>", self.center_view)
-			self.contents.bind( "<Control-u>",
-				lambda event: self.center_view(event, **{'up':True}) )
-
-			self.contents.bind( "<Control-d>", self.del_tab)
-			self.contents.bind( "<Control-Q>",
-				lambda event: self.del_tab(event, **{'save':False}) )
-
-			self.contents.bind( "<Shift-Return>", self.comment)
-			self.contents.bind( "<Shift-BackSpace>", self.uncomment)
-			self.contents.bind( "<Tab>", self.indent)
-
-			self.contents.bind( "<Control-Tab>", self.insert_tab)
-
-			self.contents.bind( "<Control-t>", self.tabify_lines)
-			self.contents.bind( "<Control-z>", self.undo_override)
-			self.contents.bind( "<Control-Z>", self.redo_override)
-			self.contents.bind( "<Control-f>", self.search)
-
-			self.contents.bind( "<Return>", self.return_override)
-			self.contents.bind( "<BackSpace>", self.backspace_override)
-
-			if self.os_type == 'mac_os':
-				self.contents.bind( "<Mod1-Key-BackSpace>", self.del_to_dot)
-			else:
-				self.contents.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
-
-			# Used in searching
-			self.bid_space = self.contents.bind( "<space>", self.space_override)
-
-			self.contents.bind( "<Control-n>", self.search_next)
-			self.contents.bind( "<Control-p>",
-					lambda event: self.search_next(event, **{'back':True}) )
-
-
-			# Unbind some default bindings
-			# Paragraph-bindings: too easy to press by accident
-			self.contents.unbind_class('Text', '<<NextPara>>')
-			self.contents.unbind_class('Text', '<<PrevPara>>')
-			self.contents.unbind_class('Text', '<<SelectNextPara>>')
-			self.contents.unbind_class('Text', '<<SelectPrevPara>>')
-
-			# LineStart and -End:
-			# fix goto_linestart-end and
-			# enable tab-walking in mac_os with cmd-left-right
-			self.contents.unbind_class('Text', '<<LineStart>>')
-			self.contents.unbind_class('Text', '<<LineEnd>>')
-			self.contents.unbind_class('Text', '<<SelectLineEnd>>')
-			self.contents.unbind_class('Text', '<<SelectLineStart>>')
-
-
 			# Register validation-functions, note the tuple-syntax:
 			self.validate_gotoline = (self.register(self.do_validate_gotoline), '%i', '%S', '%P')
 			self.validate_search = (self.register(self.do_validate_search), '%i', '%s', '%S')
@@ -1037,62 +770,11 @@ class Editor(tkinter.Toplevel):
 			###############################
 			#
 			# Syntax-highlight Begin #################
-			self.keywords = keyword.kwlist
-			self.keywords.insert(0, 'self')
-
-			self.bools = [ 'False', 'True', 'None' ]
-			self.breaks = [
-							'break',
-							'return',
-							'continue',
-							'pass',
-							'raise',
-							'assert',
-							'yield'
-							]
-
-			self.tests = [
-						'not',
-						'or',
-						'and',
-						'in',
-						'as'
-						]
-
-			self.tagnames = [
-					'keywords',
-					'numbers',
-					'bools',
-					'strings',
-					'comments',
-					'breaks',
-					'calls',
-					'selfs'
-					]
-
-			self.tags = dict()
-			for tag in self.tagnames: self.tags[tag] = list()
-
 
 			self.boldfont.config(**self.font.config())
 			self.boldfont.config(weight='bold')
 
-
-			self.contents.tag_config('keywords', font=self.boldfont)
-			self.contents.tag_config('numbers', font=self.boldfont)
-			self.contents.tag_config('comments', font=self.boldfont)
-			self.contents.tag_config('breaks', font=self.boldfont)
-			self.contents.tag_config('calls', font=self.boldfont)
-
-			self.contents.tag_config('focus', underline=True)
-			self.contents.tag_config('elided', elide=True)
-			self.contents.tag_config('animate')
-
-			# Search-tags have highest priority
-			self.contents.tag_raise('match')
-			self.contents.tag_raise('replaced')
-			self.contents.tag_raise('sel')
-			self.contents.tag_raise('focus')
+			self.set_syntags()
 
 
 			self.oldline = ''
@@ -1180,6 +862,7 @@ class Editor(tkinter.Toplevel):
 				self.contents.see('1.0')
 
 
+			self.after_idle(self.set_bindings)
 
 			# Remove some unwanted key-sequences, which otherwise would
 			# mess with searching, from couple of virtual events.
@@ -1724,14 +1407,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		ins_col = col = int(self.contents.index(idx_insert).split('.')[1])
 
 		triples = ["'''", '"""']
-		doubles = ["''", '""']
-		singles = ["'", '"']
 
 		# Counted from insert
-		two_chars_before_prevchar = newline[col-3:col-1]
-		next_2chars = newline[col:col+2]
 		prev_char = newline[col-1:col]
-		next_char = newline[col:col+1]
 
 
 		# Paste/Undo etc is checked
@@ -1746,92 +1424,67 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Deletion is already checked in backspace_override
 		# Only add one letter is left unchecked
 		# -->
-		if prev_char in '()[]{}':
-			self.par_err = True
+		if not self.par_err and prev_char in '()[]{}': self.par_err = True
 		############
 
+		if not self.token_err:
+			# backspace_override: changing triple-quotes by deletion, already checked
+			# --> Only "changing triple-quotes by addition" by adding one letter, is left unchecked
 
-		# backspace_override: changing triple-quotes by deletion, already checked
-		# --> Only "changing triple-quotes by addition" by adding one letter, is left unchecked
+			# Check quotes
+			if on_oldline:
 
-		# Check quotes
-		if on_oldline:
+				for triple in triples:
+					if triple in newline:
+						pass
+						#break
+						#allcont
 
-			for triple in triples:
+					# Triple die (by addition in middle: ''a' or 'a'')
+					elif triple in oldline and triple not in newline:
+						pass
+						#break
+						#allcont
 
-				# Triple born
-				if triple not in oldline and triple in newline:
-					pass #allcont
-
-				# Triple die (by addition in middle: ''a' or 'a'')
-				elif triple in oldline and triple not in newline:
-					pass #allcont
-
-				# Comments and quotes
-				elif triple in oldline and triple in newline:
-					# backspace_override checks only 6 nearest chars, not whole line
-					# -->
-					if '#' in oldline and '#' not in newline:
-						pass #allcont
-
-					# added? '#'
-					if prev_char == '#':
-						pass #allcont
-
-
-
-		# On newline, one letter changed, deletion is checked already
-		# --> Only add one letter is left unchecked
-		else:
-
-			for triple in triples:
-				# added? '#'
-				if (prev_char == '#') and triples in newline:
-					pass #allcont
-
-			# 'a<INSERT>''
-			if (prev_char not in singles) and (next_2chars in doubles):
-				pass #allcont
-			# ''a<INSERT>'
-			if (prev_char not in singles) and (two_chars_before_prevchar in doubles):
-				pass #allcont
+			# On newline, one letter changed, deletion is checked already
+			# --> Only add one letter is left unchecked
+			else:
+				for triple in triples:
+					if triple in newline:
+						pass
+						#break
+						#allcont
 
 
+			# Check if inside multiline string
+			if 'strings' in self.contents.tag_names(tkinter.INSERT):
+				try:
+					s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
+					# Parse linenumbers of start and enf of range == s,e
+					# Then convert them to int. This could also be done with:
+					# int(float(s)) which would give linenumber of start as int,
+					# but is not much clearer.
+
+					l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
+
+					if l0 != l1:
+						start_idx, end_idx = (s, e)
+						linecontents = self.contents.get( start_idx, end_idx )
+						#allcont
+
+				except ValueError:
+					pass
 
 
+			linenum = int(start_idx.split('.')[0])
 
-		# taken from update_tokens
-		tests = [self.token_err]
 
-##		if any(tests):
-##			# Remove old tags:
-##			for tag in self.tagnames:
-##				self.contents.tag_remove( tag, '1.0', 'end')
+##		# Remove old tags:
+##		for tag in self.tagnames:
+##			self.contents.tag_remove( tag, '1.0', 'end')
 ##
-##			self.insert_tokens(self.get_tokens(update=True))
-##			return
-
-
-		# Check if inside multiline string
-##		elif 'strings' in self.contents.tag_names(tkinter.INSERT):
-##			try:
-##				s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
-##				# Parse linenumbers of start and enf of range == s,e
-##				# Then convert them to int. This could also be done with:
-##				# int(float(s)) which would give linenumber of start as int,
-##				# but is not much clearer.
-##
-##				l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
-##
-##				if l0 != l1:
-##					start_idx, end_idx = (s, e)
-##					linecontents = self.contents.get( start_idx, end_idx )
-##
-##			except ValueError:
-##				pass
-
-
-		linenum = int(start_idx.split('.')[0])
+##		self.insert_tokens(self.get_tokens(update=True))
+##		return
 
 		#### check_line End #####
 
@@ -1892,6 +1545,283 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.update_tokens(start=linestart, end=lineend, line=tmp)
 
 
+############## Init etc. End
+############## Bindings Begin
+
+	def set_bindings(self):
+		''' Called from init
+		'''
+
+		self.right_mousebutton_num = 3
+
+		if self.os_type == 'mac_os':
+			self.right_mousebutton_num = 2
+
+			# Default cmd-q does not trigger quit_me
+			# Override Cmd-Q:
+			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
+			self.root.createcommand("tk::mac::Quit", self.quit_me)
+			#self.root.createcommand("tk::mac::OnHide", self.test_hide)
+
+		self.contents.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
+
+		if self.os_type == 'linux':
+			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
+		else:
+			self.contents.bind( "<Shift-Tab>", self.unindent)
+
+
+		############################################################
+		# In macOS all Alt-shortcuts makes some special symbol.
+		# Have to bind to this symbol-name to get Alt-shorcuts work.
+		# For example binding to Alt-f:
+		# self.contents.bind( "<function>", self.font_choose)
+
+		# Except that tkinter does not give all symbol names, like
+		# Alt-x or l
+		# which makes these key-combinations quite unbindable.
+		# It would be much easier if one could do bindings normally:
+		# Alt-SomeKey
+		# like in Linux and Windows.
+
+		# Also binding to combinations which has Command-key (apple-key)
+		# (or Meta-key as reported by events.py)
+		# must use Mod1-Key as modifier name:
+		# Mod1-Key-n == Command-Key-n
+
+		# fn-key -bindings have to be done by checking the state of the event
+		# in proxy-callback: mac_cmd_overrides
+
+		# In short, In macOS one can not just bind like:
+		# Command-n
+		# fn-f
+		# Alt-f
+
+		# This is the reason why below is some extra
+		# and strange looking binding-lines when using macOS.
+		##############################################################
+		if self.os_type != 'mac_os':
+
+			self.bind( "<Alt-n>", self.new_tab)
+			self.bind( "<Control-q>", self.quit_me)
+
+			self.contents.bind( "<Control-b>", self.goto_bookmark)
+			self.contents.bind( "<Control-B>",
+				lambda event: self.goto_bookmark(event, **{'back':True}) )
+
+			self.contents.bind( "<Control-l>", self.gotoline)
+			self.contents.bind( "<Control-g>", self.goto_def)
+			self.contents.bind( "<Alt-p>", self.toggle_bookmark)
+
+			self.contents.bind( "<Alt-s>", self.color_choose)
+			self.contents.bind( "<Alt-t>", self.toggle_color)
+
+			self.bind( "<Alt-w>", self.walk_tabs)
+			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
+
+			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
+			self.contents.bind( "<Alt-l>", self.toggle_ln)
+			self.contents.bind( "<Alt-x>", self.toggle_syntax)
+			self.contents.bind( "<Alt-f>", self.font_choose)
+
+			self.contents.bind( "<Control-c>", self.copy)
+			self.contents.bind( "<Control-v>", self.paste)
+			self.contents.bind( "<Control-x>",
+				lambda event: self.copy(event, **{'flag_cut':True}) )
+
+			self.contents.bind( "<Control-y>", self.yank_line)
+
+			self.contents.bind( "<Control-Left>", self.move_by_words)
+			self.contents.bind( "<Control-Right>", self.move_by_words)
+			self.contents.bind( "<Control-Shift-Left>", self.select_by_words)
+			self.contents.bind( "<Control-Shift-Right>", self.select_by_words)
+
+			self.contents.bind( "<Control-Up>", self.move_many_lines)
+			self.contents.bind( "<Control-Down>", self.move_many_lines)
+			self.contents.bind( "<Control-Shift-Up>", self.move_many_lines)
+			self.contents.bind( "<Control-Shift-Down>", self.move_many_lines)
+
+			self.contents.bind( "<Control-8>", self.walk_scope)
+			self.contents.bind( "<Control-Shift-(>",
+				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
+			self.contents.bind( "<Control-9>",
+				lambda event: self.walk_scope(event, **{'down':True}) )
+			self.contents.bind( "<Control-Shift-)>",
+				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
+
+			self.contents.bind( "<Alt-Shift-F>", self.select_scope)
+
+
+			self.contents.bind("<Left>", self.check_sel)
+			self.contents.bind("<Right>", self.check_sel)
+			self.entry.bind("<Left>", self.check_sel)
+			self.entry.bind("<Right>", self.check_sel)
+
+
+		# self.os_type == 'mac_os':
+		else:
+			self.contents.bind( "<Left>", self.mac_cmd_overrides)
+			self.contents.bind( "<Right>", self.mac_cmd_overrides)
+			self.contents.bind( "<Up>", self.mac_cmd_overrides)
+			self.contents.bind( "<Down>", self.mac_cmd_overrides)
+
+			self.entry.bind( "<Right>", self.mac_cmd_overrides)
+			self.entry.bind( "<Left>", self.mac_cmd_overrides)
+
+			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
+
+			# Have to bind using Mod1 as modifier name if want bind to Command-key,
+			# Last line is the only one working:
+			#self.contents.bind( "<Meta-Key-k>", lambda event, arg=('AAA'): print(arg) )
+			#self.contents.bind( "<Command-Key-k>", lambda event, arg=('AAA'): print(arg) )
+			#self.contents.bind( "<Mod1-Key-k>", lambda event, arg=('AAA'): print(arg) )
+
+			# 8,9 as '(' and ')' without Shift, nordic key-layout
+			# 9,0 in us/uk ?
+			self.contents.bind( "<Mod1-Key-8>", self.walk_scope)
+			self.contents.bind( "<Mod1-Shift-(>",
+				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
+			self.contents.bind( "<Mod1-Key-9>",
+				lambda event: self.walk_scope(event, **{'down':True}) )
+			self.contents.bind( "<Mod1-Shift-)>",
+				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
+
+			self.contents.bind( "<Mod1-Shift-F>", self.select_scope)
+			self.contents.bind( "<Mod1-Shift-E>", self.elide_scope)
+
+			self.contents.bind( "<Mod1-Key-y>", self.yank_line)
+			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
+
+			self.contents.bind( "<Mod1-Key-f>", self.search)
+			self.contents.bind( "<Mod1-Key-r>", self.replace)
+			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
+
+			self.contents.bind( "<Mod1-Key-c>", self.copy)
+			self.contents.bind( "<Mod1-Key-v>", self.paste)
+			self.contents.bind( "<Mod1-Key-x>",
+				lambda event: self.copy(event, **{'flag_cut':True}) )
+
+			self.contents.bind( "<Mod1-Key-b>", self.goto_bookmark)
+			self.contents.bind( "<Mod1-Key-B>",
+				lambda event: self.goto_bookmark(event, **{'back':True}) )
+
+			self.contents.bind( "<Mod1-Key-p>", self.toggle_bookmark)
+			self.contents.bind( "<Mod1-Key-g>", self.goto_def)
+			self.contents.bind( "<Mod1-Key-l>", self.gotoline)
+			self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
+			self.contents.bind( "<Mod1-Key-e>", self.goto_lineend)
+
+			self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
+			self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
+
+			self.contents.bind( "<Mod1-Key-z>", self.undo_override)
+			self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
+
+			# Could not get keysym for Alt-l and x, so use ctrl
+			self.contents.bind( "<Control-l>", self.toggle_ln)
+			self.contents.bind( "<Control-x>", self.toggle_syntax)
+
+			# have to bind to symbol name to get Alt-shorcuts work in macOS
+			# This is: Alt-f
+			self.contents.bind( "<function>", self.font_choose)		# Alt-f
+			self.contents.bind( "<dagger>", self.toggle_color)		# Alt-t
+			self.contents.bind( "<ssharp>", self.color_choose)		# Alt-s
+
+
+		#######################################################
+
+
+		# Arrange detection of CapsLock-state.
+		self.capslock = 'init'
+		self.motion_bind = self.bind('<Motion>', self.check_caps)
+		if self.os_type != 'mac_os':
+			self.bind('<Caps_Lock>', self.check_caps)
+		else:
+			self.bind('<KeyPress-Caps_Lock>', self.check_caps)
+			self.bind('<KeyRelease-Caps_Lock>', self.check_caps)
+
+
+		self.bind( "<Control-R>", self.replace_all)
+		self.bind( "<Control-r>", self.replace)
+
+		self.bind( "<Escape>", self.esc_override )
+		self.bind( "<Return>", self.do_nothing_without_bell)
+		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
+		self.bind( "<Control-plus>", self.increase_scrollbar_width)
+
+		self.ln_widget.bind("<Control-n>", self.do_nothing_without_bell)
+		self.ln_widget.bind("<Control-p>", self.do_nothing_without_bell)
+
+		self.contents.bind( "<Control-a>", self.goto_linestart)
+		self.contents.bind( "<Control-e>", self.goto_lineend)
+		self.contents.bind( "<Control-A>", self.goto_linestart)
+		self.contents.bind( "<Control-E>", self.goto_lineend)
+
+		if self.os_type == 'windows':
+			self.entry.bind( "<Control-E>",
+				lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
+			self.entry.bind( "<Control-A>",
+				lambda event, arg=('<<SelectLineStart>>'): self.entry.event_generate)
+
+			self.entry.bind( "<Control-c>", self.copy_windows)
+			self.entry.bind( "<Control-x>",
+				lambda event: self.copy_windows(event, **{'flag_cut':True}) )
+
+
+		self.contents.bind( "<Control-j>", self.center_view)
+		self.contents.bind( "<Control-u>",
+			lambda event: self.center_view(event, **{'up':True}) )
+
+		self.contents.bind( "<Control-d>", self.del_tab)
+		self.contents.bind( "<Control-Q>",
+			lambda event: self.del_tab(event, **{'save':False}) )
+
+		self.contents.bind( "<Shift-Return>", self.comment)
+		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
+		self.contents.bind( "<Tab>", self.indent)
+
+		self.contents.bind( "<Control-Tab>", self.insert_tab)
+
+		self.contents.bind( "<Control-t>", self.tabify_lines)
+		self.contents.bind( "<Control-z>", self.undo_override)
+		self.contents.bind( "<Control-Z>", self.redo_override)
+		self.contents.bind( "<Control-f>", self.search)
+
+		self.contents.bind( "<Return>", self.return_override)
+		self.contents.bind( "<BackSpace>", self.backspace_override)
+
+		if self.os_type == 'mac_os':
+			self.contents.bind( "<Mod1-Key-BackSpace>", self.del_to_dot)
+		else:
+			self.contents.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
+
+		# Used in searching
+		self.bid_space = self.contents.bind( "<space>", self.space_override)
+
+		self.contents.bind( "<Control-n>", self.search_next)
+		self.contents.bind( "<Control-p>",
+				lambda event: self.search_next(event, **{'back':True}) )
+
+
+		# Unbind some default bindings
+		# Paragraph-bindings: too easy to press by accident
+		self.contents.unbind_class('Text', '<<NextPara>>')
+		self.contents.unbind_class('Text', '<<PrevPara>>')
+		self.contents.unbind_class('Text', '<<SelectNextPara>>')
+		self.contents.unbind_class('Text', '<<SelectPrevPara>>')
+
+		# LineStart and -End:
+		# fix goto_linestart-end and
+		# enable tab-walking in mac_os with cmd-left-right
+		self.contents.unbind_class('Text', '<<LineStart>>')
+		self.contents.unbind_class('Text', '<<LineEnd>>')
+		self.contents.unbind_class('Text', '<<SelectLineEnd>>')
+		self.contents.unbind_class('Text', '<<SelectLineStart>>')
+
+		#### set_bindings End #######
+
+
+############## Bindings End
 ############## Linenumbers Begin
 
 	def toggle_ln(self, event=None):
@@ -2455,6 +2385,62 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 ########## Configuration Related End
 ########## Syntax highlight Begin
+
+	def set_syntags(self):
+
+		self.keywords = keyword.kwlist
+		self.keywords.insert(0, 'self')
+
+		self.bools = [ 'False', 'True', 'None' ]
+		self.breaks = [
+						'break',
+						'return',
+						'continue',
+						'pass',
+						'raise',
+						'assert',
+						'yield'
+						]
+
+		self.tests = [
+					'not',
+					'or',
+					'and',
+					'in',
+					'as'
+					]
+
+		self.tagnames = [
+				'keywords',
+				'numbers',
+				'bools',
+				'strings',
+				'comments',
+				'breaks',
+				'calls',
+				'selfs'
+				]
+
+		self.tags = dict()
+		for tag in self.tagnames: self.tags[tag] = list()
+
+
+		self.contents.tag_config('keywords', font=self.boldfont)
+		self.contents.tag_config('numbers', font=self.boldfont)
+		self.contents.tag_config('comments', font=self.boldfont)
+		self.contents.tag_config('breaks', font=self.boldfont)
+		self.contents.tag_config('calls', font=self.boldfont)
+
+		self.contents.tag_config('focus', underline=True)
+		self.contents.tag_config('elided', elide=True)
+		self.contents.tag_config('animate')
+
+		# Search-tags have highest priority
+		self.contents.tag_raise('match')
+		self.contents.tag_raise('replaced')
+		self.contents.tag_raise('sel')
+		self.contents.tag_raise('focus')
+
 
 	def toggle_syntax(self, event=None):
 
@@ -5635,6 +5621,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			for triple in triples:
 				if triple in tmp:
 					self.token_err = True
+					break
 
 			for char in tmp:
 				if char in pars:
@@ -5651,32 +5638,42 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# Rest is multiline string check
 			# Take three chars back and forwards == 6 chars
-			chars = self.contents.get( '%s - 3c' % 'insert', '%s + 3c' % 'insert' )
+			#chars = self.contents.get( '%s - 3c' % 'insert', '%s + 3c' % 'insert' )
+			chars = self.contents.get( 'insert linestart', 'insert lineend')
+			ins_col = int(self.contents.index('insert').split('.')[1])
+			prev_char = chars[ins_col-1:ins_col]
 
 			triples = ["'''", '"""']
-			doubles = ["''", '""']
-			singles = ["'", '"']
 
-			# Counted from insert
-			prev_3chars = chars[:3]
-			next_3chars = chars[-3:]
-			prev_2chars = chars[1:3]
-			next_2chars = chars[-3:-1]
-			prev_char = chars[2:3]
-			next_char = chars[-3:-2]
+			for triple in triples:
+				if triple in chars:
+					self.token_err = True
+					break
 
-			quote_tests = [
-						(prev_char == '#') and (next_3chars in triples),
-						prev_3chars in triples,
-						(prev_2chars == doubles[0]) and (next_char == singles[0]),
-						(prev_2chars == doubles[1]) and (next_char == singles[1]),
-						(prev_char == singles[0]) and (next_2chars == doubles[0]),
-						(prev_char == singles[1]) and (next_2chars == doubles[1])
-						]
 
-			if any(quote_tests):
-				#print('#')
-				self.token_err = True
+##			doubles = ["''", '""']
+##			singles = ["'", '"']
+##
+##			# Counted from insert
+##			prev_3chars = chars[:3]
+##			next_3chars = chars[-3:]
+##			prev_2chars = chars[1:3]
+##			next_2chars = chars[-3:-1]
+##			prev_char = chars[2:3]
+##			next_char = chars[-3:-2]
+##
+##			quote_tests = [
+##						(prev_char == '#') and (next_3chars in triples),
+##						prev_3chars in triples,
+##						(prev_2chars == doubles[0]) and (next_char == singles[0]),
+##						(prev_2chars == doubles[1]) and (next_char == singles[1]),
+##						(prev_char == singles[0]) and (next_2chars == doubles[0]),
+##						(prev_char == singles[1]) and (next_2chars == doubles[1])
+##						]
+##
+##			if any(quote_tests):
+##				#print('#')
+##				self.token_err = True
 
 			# Trigger parcheck
 			if prev_char in pars:

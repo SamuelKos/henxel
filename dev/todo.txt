@@ -518,12 +518,22 @@ backspace_override fix ok?
 set cursor pos before update_lineinfo, except in init
 in update_lineinfo: use 'insert' instead of: self.tabs[self.tabindex].position
 #######################
+in init:
+	after_idle(set_bindings())
+	set_syntags()
+#######################
 
 
 Below this: not done
 
 
 
+
+
+
+
+
+update_line --> check_line?
 
 
 
