@@ -515,6 +515,9 @@ done ok?
 #######################
 backspace_override fix ok?
 #######################
+set cursor pos before update_lineinfo, except in init
+in update_lineinfo: use 'insert' instead of: self.tabs[self.tabindex].position
+#######################
 
 
 Below this: not done
@@ -567,11 +570,18 @@ etc
 custom: self.save_config()
 ##################
 
+run() show_err no set curpos?
+comment uncomment tabify_lines paste undo redo no set cursor, ok?
 
 
+search: when to set line_can_update? #################
+
+	
 
 
 indent unindent tokens scope?
+# check update range in comment uncomment paste #########
+
 
 
 update_line:

@@ -1119,11 +1119,11 @@ class Editor(tkinter.Toplevel):
 				self.insert_tokens(self.get_tokens())
 				self.line_can_update = True
 
+
 			self.contents.bind( "<<WidgetViewSync>>", self.update_line)
 			# Viewsync-event does not trigger at window size changes,
 			# to get linenumbers right, one binds to this:
 			self.contents.bind("<Configure>", self.handle_window_resize)
-
 
 			####  Syntax-highlight End  ######################################
 
@@ -1152,15 +1152,24 @@ class Editor(tkinter.Toplevel):
 			self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 
 
+			# Get window positioning to work below
+			self.update_idletasks()
 
-			# Set cursor pos:
-			line = self.tabs[self.tabindex].position
+			# Sticky top right corner, to get some space for console on left
+			# Next line seems not to work in macos12 consistently.
+			#self.geometry('-0+0')
+			diff = self.winfo_screenwidth() - self.winfo_width()
+			if diff > 0:
+				self.geometry('+%d+0' % diff )
+
 
 			if self.os_type == 'windows':
 				self.contents.focus_force()
 			else:
 				self.contents.focus_set()
 
+			# Set cursor pos
+			line = self.tabs[self.tabindex].position
 			try:
 				self.contents.mark_set('insert', line)
 				self.ensure_idx_visibility(line)
@@ -1170,16 +1179,6 @@ class Editor(tkinter.Toplevel):
 				self.tabs[self.tabindex].position = '1.0'
 				self.contents.see('1.0')
 
-
-			# Sticky top right corner, to get some space for console on left
-			# Next line seems not to work in macos12 consistently.
-			#self.geometry('-0+0')
-			diff = self.winfo_screenwidth() - self.winfo_width()
-			if diff > 0:
-				self.geometry('+%d+0' % diff )
-
-			self.update_idletasks()
-			self.update_line()
 
 
 			# Remove some unwanted key-sequences, which otherwise would
@@ -1716,10 +1715,24 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		#### quit_me End ##############
 
 
-	def check_line(self, oldline=None, newline=None, on_oldline=True):
+	def check_line(self, oldline=None, newline=None, on_oldline=True, idx_insert=None):
 		''' oldline, newline:	string
 			on_oldline:			bool	(self.oldlinenum == linenum curline)
+			idx_insert			tk text index, position of insertion cursor
 		'''
+
+		ins_col = col = int(self.contents.index(idx_insert).split('.')[1])
+
+		triples = ["'''", '"""']
+		doubles = ["''", '""']
+		singles = ["'", '"']
+
+		# Counted from insert
+		two_chars_before_prevchar = newline[col-3:col-1]
+		next_2chars = newline[col:col+2]
+		prev_char = newline[col-1:col]
+		next_char = newline[col:col+1]
+
 
 		# Paste/Undo etc is checked
 		# --> There should only be
@@ -1728,65 +1741,62 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# 3: Add one letter
 
 
-		############
-##		Check pars:
-##		deletion is already checked in backspace_override,
-##		only add one letter is left unchecked
-##		-->
-##		prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
-##		if prev_char in '()[]{}':
-##			self.par_err = True
+		#############
+		# Check pars:
+		# Deletion is already checked in backspace_override
+		# Only add one letter is left unchecked
+		# -->
+		if prev_char in '()[]{}':
+			self.par_err = True
 		############
 
 
-		# backspace_override: quotes, triples already checked
-		# --> only add one letter is left unchecked
-		# comment uncomment paste?
+		# backspace_override: changing triple-quotes by deletion, already checked
+		# --> Only "changing triple-quotes by addition" by adding one letter, is left unchecked
 
 		# Check quotes
-		triples = ["'''", '"""']
 		if on_oldline:
 
 			for triple in triples:
 
 				# Triple born
-				if triple not in oldline and triple in newline: allcont
+				if triple not in oldline and triple in newline:
+					pass #allcont
 
-				# Triple die (by addition in middle)
-				elif triple in oldline and triple not in newline: allcont
+				# Triple die (by addition in middle: ''a' or 'a'')
+				elif triple in oldline and triple not in newline:
+					pass #allcont
 
 				# Comments and quotes
 				elif triple in oldline and triple in newline:
-					# backspace_override checks only 6 chars, not whole line -->
-					if '#' in oldline and '#' not in newline: allcont
+					# backspace_override checks only 6 nearest chars, not whole line
+					# -->
+					if '#' in oldline and '#' not in newline:
+						pass #allcont
+
 					# added? '#'
-					if prev_char == '#': allcont
+					if prev_char == '#':
+						pass #allcont
 
 
 
 		# On newline, one letter changed, deletion is checked already
-		# --> only add one letter is left unchecked
+		# --> Only add one letter is left unchecked
 		else:
-			# Take two chars back and forwards == 4 chars
-			chars = self.contents.get( '%s -3c' % 'insert', '%s +2c' % 'insert' )
-
-			doubles = ["''", '""']
-			singles = ["'", '"']
-
-			# Counted from insert
-			first_2chars = chars[0:2]
-			last_2chars = chars[3:]
-			prev_char = chars[2:3]
-			next_char = chars[3:4]
 
 			for triple in triples:
 				# added? '#'
-				if (prev_char == '#') and triples in newline: allcont
+				if (prev_char == '#') and triples in newline:
+					pass #allcont
 
-			# 'a''
-			if (prev_char not in singles) and (last_2chars in doubles): allcont
-			# ''a'
-			if (prev_char not in singles) and (first_2chars in doubles): allcont
+			# 'a<INSERT>''
+			if (prev_char not in singles) and (next_2chars in doubles):
+				pass #allcont
+			# ''a<INSERT>'
+			if (prev_char not in singles) and (two_chars_before_prevchar in doubles):
+				pass #allcont
+
+
 
 
 
@@ -1836,12 +1846,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			prevents update for the line (in update_line() ), which is the purpose.
 		'''
 
-		pos = self.tabs[self.tabindex].position
-		linestart = '%s linestart' % pos
-		lineend = '%s lineend' % pos
-		tmp = self.contents.get( linestart, lineend )
-		self.oldline = tmp
-		self.oldlinenum = pos.split('.')[0]
+		linestart = 'insert linestart'
+		lineend = 'insert lineend'
+		self.oldline = self.contents.get( linestart, lineend )
+		self.oldlinenum = self.contents.index('insert').split('.')[0]
 
 
 	def update_line(self, event=None):
@@ -1864,20 +1872,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# Tag alter triggers this event if font changes, like from normal to bold.
 			# --> need to check if line is changed to prevent self-trigger
-			line_idx = self.contents.index( tkinter.INSERT )
-			linenum = line_idx.split('.')[0]
-			#prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT )
+			idx_insert = self.contents.index( tkinter.INSERT )
+			linenum = idx_insert.split('.')[0]
 
 
-			lineend = '%s lineend' % line_idx
-			linestart = '%s linestart' % line_idx
+			lineend = '%s lineend' % idx_insert
+			linestart = '%s linestart' % idx_insert
 
 			tmp = self.contents.get( linestart, lineend )
 			on_oldline = (self.oldlinenum == linenum)
 
 			if self.oldline != tmp or not on_oldline:
 
-				#self.check_line(oldline=self.oldline, newline=tmp, on_oldline=on_oldline)
+				#self.check_line(oldline=self.oldline, newline=tmp, on_oldline=on_oldline, idx_insert=idx_insert)
 
 				#print('sync')
 				self.oldline = tmp
@@ -2097,11 +2104,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.clear_bookmarks()
 		self.restore_bookmarks(tab)
 
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.insert_tokens(self.get_tokens())
-			self.line_can_update = True
-
 
 		# Set cursor pos
 		line = tab.position
@@ -2115,6 +2117,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.contents.mark_set('insert', '1.0')
 			tab.position = '1.0'
 			self.contents.see('1.0')
+
+
+		if self.can_do_syntax():
+			self.update_lineinfo()
+			self.insert_tokens(self.get_tokens())
+			self.line_can_update = True
 
 
 		self.contents.edit_reset()
@@ -3613,16 +3621,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.clear_bookmarks()
 		self.restore_bookmarks(self.tabs[self.tabindex])
 
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.insert_tokens(self.get_tokens())
-			self.line_can_update = True
 
 		# Set cursor pos
 		line = errline + '.0'
 		self.contents.focus_set()
 		self.contents.mark_set('insert', line)
 		self.ensure_idx_visibility(line)
+
+		if self.can_do_syntax():
+			self.update_lineinfo()
+			self.insert_tokens(self.get_tokens())
+			self.line_can_update = True
 
 
 		self.contents.edit_reset()
@@ -3845,16 +3854,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.clear_bookmarks()
 		self.restore_bookmarks(curtab)
 
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.insert_tokens(self.get_tokens())
-			self.line_can_update = True
 
 		# Set cursor pos
 		line = curtab.position
 		self.contents.focus_set()
 		self.contents.mark_set('insert', line)
 		self.ensure_idx_visibility(line)
+
+		if self.can_do_syntax():
+			self.update_lineinfo()
+			self.insert_tokens(self.get_tokens())
+			self.line_can_update = True
 
 
 		self.contents.edit_reset()
@@ -5815,7 +5825,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					else:
 						curtab.contents = fcontents
 
-
+					# Set cursor pos
 					curtab.position = '1.0'
 					self.contents.focus_set()
 					self.contents.insert('1.0', curtab.contents)
@@ -5876,7 +5886,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tmp = ''.join(tmp)
 				curtab.contents = tmp
 
-
+				# Set cursor pos
 				curtab.position = '1.0'
 				self.contents.focus_set()
 				self.contents.insert('1.0', curtab.contents)
@@ -6971,14 +6981,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.remove_bookmarks(all_tabs=False)
 				self.clear_bookmarks()
 
+
+				# Set cursor pos
+				self.contents.focus_set()
+				self.contents.see('1.0')
+				self.contents.mark_set('insert', '1.0')
+
 				if self.can_do_syntax():
 					self.update_lineinfo()
 					self.insert_tokens(self.get_tokens())
 					self.line_can_update = True
 
-				self.contents.focus_set()
-				self.contents.see('1.0')
-				self.contents.mark_set('insert', '1.0')
 
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
@@ -7226,6 +7239,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					print(f'\n Could not create file: {fpath_in_entry}')
 					return False
 
+
+				set_cursor_pos()
+
 				if oldtab.filepath != None:
 					update_entry()
 
@@ -7237,7 +7253,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						self.line_can_update = True
 
 
-				set_cursor_pos()
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 
@@ -7273,16 +7288,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				newtab.contents = cur_contents
 				newtab.position = pos
 				newtab.type = 'normal'
-				update_entry()
 
+				update_entry()
 				self.contents.insert(tkinter.INSERT, newtab.contents)
+				set_cursor_pos()
 
 				if self.can_do_syntax():
 					self.update_lineinfo()
 					self.insert_tokens(self.get_tokens())
 					self.line_can_update = True
 
-				set_cursor_pos()
+
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 
@@ -7652,11 +7668,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.clear_bookmarks()
 		self.restore_bookmarks(curtab)
 
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.insert_tokens(self.get_tokens())
-			self.line_can_update = True
-
 
 		# Set cursor pos
 		try:
@@ -7667,6 +7678,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		except tkinter.TclError:
 			curtab.position = '1.0'
+
+		if self.can_do_syntax():
+			self.update_lineinfo()
+			self.insert_tokens(self.get_tokens())
+			self.line_can_update = True
 
 
 		self.contents.edit_reset()
@@ -9006,6 +9022,23 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.entry.insert(0, curtab.filepath)
 			self.entry.xview_moveto(1.0)
 
+
+		# Set cursor pos
+		try:
+			if self.save_pos:
+				line = self.save_pos
+				curtab.position = line
+				self.save_pos = None
+			else:
+				line = curtab.position
+
+			self.contents.focus_set()
+			self.contents.mark_set('insert', line)
+
+		except tkinter.TclError:
+			curtab.position = self.contents.index(tkinter.INSERT)
+
+
 		self.new_word = ''
 		self.search_matches = 0
 		flag_all = False
@@ -9049,23 +9082,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.bind( "<Return>", self.do_nothing_without_bell)
 
 
-		# Set cursor pos
-		try:
-			if self.save_pos:
-				line = self.save_pos
-				curtab.position = line
-				self.save_pos = None
-			else:
-				line = curtab.position
-
-			self.contents.focus_set()
-			self.contents.mark_set('insert', line)
-
-			if not flag_all:
-				self.ensure_idx_visibility(line)
-
-		except tkinter.TclError:
-			curtab.position = self.contents.index(tkinter.INSERT)
+		if not flag_all: self.ensure_idx_visibility(line)
 
 		# Release space
 		self.wait_for(200)
