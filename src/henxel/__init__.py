@@ -864,21 +864,6 @@ class Editor(tkinter.Toplevel):
 
 			self.after_idle(self.set_bindings)
 
-			# Remove some unwanted key-sequences, which otherwise would
-			# mess with searching, from couple of virtual events.
-			tmp = list()
-			for seq in self.contents.event_info('<<NextLine>>'):
-				if seq != '<Control-Key-n>': tmp.append(seq)
-
-			self.contents.event_delete('<<NextLine>>')
-			self.contents.event_add('<<NextLine>>', *tmp)
-
-			tmp.clear()
-			for seq in self.contents.event_info('<<PrevLine>>'):
-				if seq != '<Control-Key-p>': tmp.append(seq)
-
-			self.contents.event_delete('<<PrevLine>>')
-			self.contents.event_add('<<PrevLine>>', *tmp)
 
 			self.__class__.alive = True
 			self.update_title()
@@ -1398,6 +1383,27 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		#### quit_me End ##############
 
 
+	def cursor_is_in_multiline_string(self):
+		''' Called from check_line
+		'''
+		if ('strings' in self.contents.tag_names('insert')):
+			try:
+				s, e = self.contents.tag_prevrange('strings', 'insert')
+				# Parse linenumbers of start and enf of range == s,e
+				# Then convert them to int. This could also be done with:
+				# int(float(s)) which would give linenumber of start as int,
+				# but is not much clearer.
+
+				l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
+
+				if l0 != l1: return True
+
+			except ValueError:
+				pass
+
+			return False
+
+
 	def check_line(self, oldline=None, newline=None, on_oldline=True, idx_insert=None):
 		''' oldline, newline:	string
 			on_oldline:			bool	(self.oldlinenum == linenum curline)
@@ -1412,11 +1418,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		prev_char = newline[col-1:col]
 
 
-		# Paste/Undo etc is checked
-		# --> There should only be
-		# 1: Delete selection
-		# 2: Delete one letter
-		# 3: Add one letter
+		# Paste/Undo etc is already checked.
+		# Also deletion is already checked in backspace_override.
+		#
+		# There should only be:
+		# Adding one letter
+
+		############
+		# In short:
+		# Every time char is added or deleted inside multiline string,
+		# or on such line that contains triple-quote
+		# --> update tokens of whole scope
+		########################
 
 
 		#############
@@ -1424,69 +1437,67 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Deletion is already checked in backspace_override
 		# Only add one letter is left unchecked
 		# -->
-		if not self.par_err and prev_char in '()[]{}': self.par_err = True
+		if not self.par_err and (prev_char in '()[]{}'): self.par_err = True
 		############
 
-		if not self.token_err:
-			# backspace_override: changing triple-quotes by deletion, already checked
-			# --> Only "changing triple-quotes by addition" by adding one letter, is left unchecked
 
-			# Check quotes
-			if on_oldline:
+		# Check if need to update tokens in whole scope
+		if not self.token_err:
+
+			if self.cursor_is_in_multiline_string(): self.token_err = True
+
+			# Quotes
+			elif on_oldline:
 
 				for triple in triples:
 					if triple in newline:
-						pass
-						#break
-						#allcont
+						self.token_err = True
+						break
 
 					# Triple die (by addition in middle: ''a' or 'a'')
 					elif triple in oldline and triple not in newline:
-						pass
-						#break
-						#allcont
+						self.token_err = True
+						break
 
 			# On newline, one letter changed, deletion is checked already
 			# --> Only add one letter is left unchecked
+			# Note: triple die: ''a' and 'a'' is not checked here for simplicity,
+			# and that should already be covered by: cursor_is_in_multiline_string above
 			else:
 				for triple in triples:
 					if triple in newline:
-						pass
-						#break
-						#allcont
+						self.token_err = True
+						break
 
 
-			# Check if inside multiline string
-			if 'strings' in self.contents.tag_names(tkinter.INSERT):
-				try:
-					s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
-					# Parse linenumbers of start and enf of range == s,e
-					# Then convert them to int. This could also be done with:
-					# int(float(s)) which would give linenumber of start as int,
-					# but is not much clearer.
 
-					l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
+		s,e = '',''
 
-					if l0 != l1:
-						start_idx, end_idx = (s, e)
-						linecontents = self.contents.get( start_idx, end_idx )
-						#allcont
+		if self.token_err:
+			( scope_line, ind_defline, idx_scope_start) = self.get_scope_start()
 
-				except ValueError:
-					pass
+			idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
+			print(scope_line)
+
+			s = '%s linestart' % idx_scope_start
+			e = idx_scope_end
+
+		else:
+			s = 'insert linestart'
+			e = 'insert lineend'
 
 
-			linenum = int(start_idx.split('.')[0])
+		# Remove old tags:
+		for tag in self.tagnames:
+			self.contents.tag_remove( tag, s, e)
 
 
-##		# Remove old tags:
-##		for tag in self.tagnames:
-##			self.contents.tag_remove( tag, '1.0', 'end')
-##
-##		self.insert_tokens(self.get_tokens(update=True))
-##		return
+		if self.token_err:
+			self.update_tokens(start=s, end=e)
+		else:
+			self.update_tokens(start=s, end=e, line=self.oldline)
 
-		#### check_line End #####
+		###### check_line End ##########
 
 
 
@@ -1532,17 +1543,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			lineend = '%s lineend' % idx_insert
 			linestart = '%s linestart' % idx_insert
 
-			tmp = self.contents.get( linestart, lineend )
+			curline = self.contents.get( linestart, lineend )
 			on_oldline = (self.oldlinenum == linenum)
 
-			if self.oldline != tmp or not on_oldline:
+			if self.oldline != curline or not on_oldline:
 
-				#self.check_line(oldline=self.oldline, newline=tmp, on_oldline=on_oldline, idx_insert=idx_insert)
+##				self.check_line( oldline=self.oldline, newline=curline,
+##								on_oldline=on_oldline, idx_insert=idx_insert)
 
 				#print('sync')
-				self.oldline = tmp
+				self.oldline = curline
 				self.oldlinenum = linenum
-				self.update_tokens(start=linestart, end=lineend, line=tmp)
+				self.update_tokens(start=linestart, end=lineend, line=curline)
 
 
 ############## Init etc. End
@@ -1817,6 +1829,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.contents.unbind_class('Text', '<<LineEnd>>')
 		self.contents.unbind_class('Text', '<<SelectLineEnd>>')
 		self.contents.unbind_class('Text', '<<SelectLineStart>>')
+
+
+		# Remove some unwanted key-sequences, which otherwise would
+		# mess with searching, from couple of virtual events.
+		tmp = list()
+		for seq in self.contents.event_info('<<NextLine>>'):
+			if seq != '<Control-Key-n>': tmp.append(seq)
+
+		self.contents.event_delete('<<NextLine>>')
+		self.contents.event_add('<<NextLine>>', *tmp)
+
+		tmp.clear()
+		for seq in self.contents.event_info('<<PrevLine>>'):
+			if seq != '<Control-Key-p>': tmp.append(seq)
+
+		self.contents.event_delete('<<PrevLine>>')
+		self.contents.event_add('<<PrevLine>>', *tmp)
 
 		#### set_bindings End #######
 
@@ -5452,14 +5481,30 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return "break"
 
 		try:
-			self.wait_for(100)
+			idx_ins_line_orig = self.contents.index('insert').split('.')[0]
+			self.wait_for(33)
 			self.line_can_update = False
 
 			self.contents.edit_undo()
 
+			idx_ins = self.contents.index('insert')
+			idx_ins_line = idx_ins.split('.')[0]
+
+			# Was action on different line?
+			# Then just move the cursor, with redo
+			if idx_ins_line != idx_ins_line_orig:
+				self.contents.edit_redo()
+
+
 			if self.can_do_syntax():
+				( scope_line, ind_defline, idx_scope_start) = self.get_scope_start()
+				idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
+
+				s = '%s linestart' % idx_scope_start
+				e = idx_scope_end
+
 				self.update_lineinfo()
-				self.insert_tokens(self.get_tokens(update=True))
+				self.update_tokens(start=s, end=e)
 				self.line_can_update = True
 
 		except tkinter.TclError:
@@ -5474,16 +5519,31 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return "break"
 
 		try:
-			self.wait_for(100)
+			idx_ins_line_orig = self.contents.index('insert').split('.')[0]
+			self.wait_for(33)
 			self.line_can_update = False
 
 			self.contents.edit_redo()
 
-			if self.can_do_syntax():
-				self.update_lineinfo()
-				self.insert_tokens(self.get_tokens(update=True))
-				self.line_can_update = True
+			idx_ins = self.contents.index('insert')
+			idx_ins_line = idx_ins.split('.')[0]
 
+			# Was action on different line?
+			# Then just move the cursor, with undo
+			if idx_ins_line != idx_ins_line_orig:
+				self.contents.edit_undo()
+
+
+			if self.can_do_syntax():
+				( scope_line, ind_defline, idx_scope_start) = self.get_scope_start()
+				idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
+
+				s = '%s linestart' % idx_scope_start
+				e = idx_scope_end
+
+				self.update_lineinfo()
+				self.update_tokens(start=s, end=e)
+				self.line_can_update = True
 
 		except tkinter.TclError:
 			self.bell()
@@ -5618,10 +5678,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if len(self.contents.tag_ranges('sel')) > 0:
 			tmp = self.contents.selection_get()
 
-			for triple in triples:
-				if triple in tmp:
-					self.token_err = True
-					break
+			if not self.token_err:
+				for triple in triples:
+					if triple in tmp:
+						self.token_err = True
+						break
+
+			if not self.token_err and self.cursor_is_in_multiline_string():
+				self.token_err = True
 
 			for char in tmp:
 				if char in pars:
@@ -5636,48 +5700,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		else:
 			# Deleting one letter
 
-			# Rest is multiline string check
-			# Take three chars back and forwards == 6 chars
-			#chars = self.contents.get( '%s - 3c' % 'insert', '%s + 3c' % 'insert' )
-			chars = self.contents.get( 'insert linestart', 'insert lineend')
+			# Multiline string check
+			line = self.contents.get( 'insert linestart', 'insert lineend')
 			ins_col = int(self.contents.index('insert').split('.')[1])
-			prev_char = chars[ins_col-1:ins_col]
+			prev_char = line[ins_col-1:ins_col]
 
-			triples = ["'''", '"""']
-
-			for triple in triples:
-				if triple in chars:
-					self.token_err = True
-					break
-
-
-##			doubles = ["''", '""']
-##			singles = ["'", '"']
-##
-##			# Counted from insert
-##			prev_3chars = chars[:3]
-##			next_3chars = chars[-3:]
-##			prev_2chars = chars[1:3]
-##			next_2chars = chars[-3:-1]
-##			prev_char = chars[2:3]
-##			next_char = chars[-3:-2]
-##
-##			quote_tests = [
-##						(prev_char == '#') and (next_3chars in triples),
-##						prev_3chars in triples,
-##						(prev_2chars == doubles[0]) and (next_char == singles[0]),
-##						(prev_2chars == doubles[1]) and (next_char == singles[1]),
-##						(prev_char == singles[0]) and (next_2chars == doubles[0]),
-##						(prev_char == singles[1]) and (next_2chars == doubles[1])
-##						]
-##
-##			if any(quote_tests):
-##				#print('#')
-##				self.token_err = True
+			if not self.token_err:
+				for triple in triples:
+					if triple in line:
+						self.token_err = True
+						break
 
 			# Trigger parcheck
-			if prev_char in pars:
-				self.par_err = True
+			if not self.par_err and ( prev_char in pars): self.par_err = True
 
 		return
 

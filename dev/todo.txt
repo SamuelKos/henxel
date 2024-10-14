@@ -522,18 +522,39 @@ in init:
 	after_idle(set_bindings())
 	set_syntags()
 #######################
+undo_override, redo_override:
 
+before, if last action was offscreen and doing for example undo:
+action was undoed but user did not see what was undoed.
+Now, if undoed action is on different line, undoing is undoed
+with redo after first undo, so only cursor is moved to correct line.
+--> One can see what is going to be undoed next time one does undo.
+
+same with redo
+#######################
 
 Below this: not done
 
 
 
+allcont --> curscope
+idx_start
 
 
+#####
+undo_override, redo_override:
 
+check with multiline actions like indent comment etc
+replace all, maybe need some flag?
+#####
 
 
 update_line --> check_line?
+
+
+when to check all_cont?
+undo redo paste comment indent tabify_lines
+
 
 
 
