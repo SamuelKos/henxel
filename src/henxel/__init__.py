@@ -758,6 +758,11 @@ class Editor(tkinter.Toplevel):
 			self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 
 
+			############
+			# Bindings #
+			############
+			self.set_bindings()
+
 
 			# Register validation-functions, note the tuple-syntax:
 			self.validate_gotoline = (self.register(self.do_validate_gotoline), '%i', '%S', '%P')
@@ -860,9 +865,6 @@ class Editor(tkinter.Toplevel):
 				self.contents.mark_set('insert', '1.0')
 				self.tabs[self.tabindex].position = '1.0'
 				self.contents.see('1.0')
-
-
-			self.after_idle(self.set_bindings)
 
 
 			self.__class__.alive = True
@@ -1386,6 +1388,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def cursor_is_in_multiline_string(self):
 		''' Called from check_line
 		'''
+##		Note:
+##		'strings' in self.contents.tag_names('insert')
+##		will return True when cursor is at marked places or between them:
+##
+##		<INSERT>''' multiline string
+##		multiline string
+##		''<INSERT>'
+
 		if ('strings' in self.contents.tag_names('insert')):
 			try:
 				s, e = self.contents.tag_prevrange('strings', 'insert')
@@ -1437,43 +1447,47 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Deletion is already checked in backspace_override
 		# Only add one letter is left unchecked
 		# -->
-		if not self.par_err and (prev_char in '()[]{}'): self.par_err = True
+		if not self.par_err and ( prev_char in '()[]{}'): self.par_err = True
 		############
 
 
 		# Check if need to update tokens in whole scope
-		if not self.token_err:
+		if not self.token_err and not self.check_scope:
 
-			if self.cursor_is_in_multiline_string(): self.token_err = True
+			if self.cursor_is_in_multiline_string(): self.check_scope = True
 
-			# Quotes
 			elif on_oldline:
 
 				for triple in triples:
+					# Not in multiline string, but on same line with triple-quote
+					# 1: Before first triple
+					# 2: After last triple
+					# 3: Triple was just born by addition
 					if triple in newline:
-						self.token_err = True
+						self.check_scope = True
 						break
 
 					# Triple die (by addition in middle: ''a' or 'a'')
+					# Should already be covered by: cursor_is_in_multiline_string-call above
 					elif triple in oldline and triple not in newline:
-						self.token_err = True
+						self.check_scope = True
 						break
 
 			# On newline, one letter changed, deletion is checked already
 			# --> Only add one letter is left unchecked
-			# Note: triple die: ''a' and 'a'' is not checked here for simplicity,
-			# and that should already be covered by: cursor_is_in_multiline_string above
+			# Note: triple die: ''a' and 'a'' is already covered by
+			# cursor_is_in_multiline_string -call above
 			else:
 				for triple in triples:
 					if triple in newline:
-						self.token_err = True
+						self.check_scope = True
 						break
 
 
 
 		s,e = '',''
 
-		if self.token_err:
+		if self.check_scope:
 			( scope_line, ind_defline, idx_scope_start) = self.get_scope_start()
 
 			idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
@@ -1492,7 +1506,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.contents.tag_remove( tag, s, e)
 
 
-		if self.token_err:
+		if self.check_scope:
 			self.update_tokens(start=s, end=e)
 		else:
 			self.update_tokens(start=s, end=e, line=self.oldline)
@@ -5481,18 +5495,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return "break"
 
 		try:
-			idx_ins_line_orig = self.contents.index('insert').split('.')[0]
-			self.wait_for(33)
+			# Linenumbers of top and bottom lines currently disaplayed on screen
+			top_line = int(self.contents.index('@0,0').split('.')[0])
+			bot_line = int(self.contents.index('@0,65535').split('.')[0])
 			self.line_can_update = False
+			self.wait_for(33)
+
 
 			self.contents.edit_undo()
 
-			idx_ins = self.contents.index('insert')
-			idx_ins_line = idx_ins.split('.')[0]
 
-			# Was action on different line?
+			# Is it not viewable?
 			# Then just move the cursor, with redo
-			if idx_ins_line != idx_ins_line_orig:
+			ins_line = int(self.contents.index('insert').split('.')[0])
+			if not ( top_line <= ins_line <= bot_line ):
 				self.contents.edit_redo()
 
 
@@ -5519,18 +5535,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return "break"
 
 		try:
-			idx_ins_line_orig = self.contents.index('insert').split('.')[0]
-			self.wait_for(33)
+			# Linenumbers of top and bottom lines currently disaplayed on screen
+			top_line = int(self.contents.index('@0,0').split('.')[0])
+			bot_line = int(self.contents.index('@0,65535').split('.')[0])
 			self.line_can_update = False
+			self.wait_for(33)
+
 
 			self.contents.edit_redo()
 
-			idx_ins = self.contents.index('insert')
-			idx_ins_line = idx_ins.split('.')[0]
 
-			# Was action on different line?
+			# Is it not viewable?
 			# Then just move the cursor, with undo
-			if idx_ins_line != idx_ins_line_orig:
+			ins_line = int(self.contents.index('insert').split('.')[0])
+			if not ( top_line <= ins_line <= bot_line ):
 				self.contents.edit_undo()
 
 
