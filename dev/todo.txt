@@ -544,12 +544,24 @@ if not ( top_line <= ins_line <= bot_line ):
 
 #######################
 ensure_idx_visibility: does not set insert-mark anymore, done ok?
+goto_def: no longer set insert-mark, ok?
+#######################
+Enable adding to lineend, with using "$" (or "\n") as search_word
+changes search_word from '$' to r'\n' (make tags visible)
+
+# Enable adding to linestart, with using "^" as search_word
+changes search_word from '^' to r'^(.)' (make tags visible) and
+adds '-nolinestop' to self.search_settings
+if it is not there (and keeps it there)
 #######################
 
 Below this: not done
 
 
 
+
+get_info()
+list funcs which gets some info
 
 
 check_line:

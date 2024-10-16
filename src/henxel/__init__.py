@@ -85,6 +85,52 @@ FLAGS = importflags.FLAGS
 ############ Imports End
 ############ Module Utilities Begin
 
+def get_info():
+	''' Print names of methods in class Editor,
+		which gathers some information.
+	'''
+
+	names = [
+			'can_do_syntax',
+			'can_expand_word',
+			'check_caps',
+			'check_indent_depth',
+			'check_line',
+			'check_sel',
+			'checkpars',
+			'cursor_is_in_multiline_string',
+			'edit_search_setting',
+			'ensure_idx_visibility',
+			'find_empty_lines',
+			'fonts_exists',
+			'get_config',
+			'get_linenums',
+			'get_safe_index',
+			'get_scope_end',
+			'get_scope_path',
+			'get_scope_start',
+			'get_sel_info',
+			'idx_lineend',
+			'idx_linestart',
+			'is_pyfile',
+			'line_is_bookmarked',
+			'line_is_defline',
+			'line_is_elided',
+			'line_is_empty',
+			'package_has_syntax_error',
+			'print_bookmarks',
+			'print_search_help',
+			'print_search_setting',
+			'test_launch_is_ok',
+			'update_lineinfo',
+			'update_linenums',
+			'update_title',
+			'update_tokens'
+			]
+
+	for name in names: print(name)
+
+
 def stash_pop():
 	''' When Editor did not launch after recent updates
 		Note: This assumes last commit was launchable
@@ -1068,7 +1114,7 @@ Error messages Begin
 	def ensure_idx_visibility(self, index, back=None):
 		''' Ensures index is visible on screen.
 
-			Does not put insertion cursor to index.
+			Does not set insert-mark to index.
 		'''
 
 		b = 2
@@ -6707,17 +6753,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return "break"
 
-		have_selection = len(self.contents.tag_ranges('sel')) > 0
+		c = self.contents
+		have_selection = len(c.tag_ranges('sel')) > 0
+
 
 		if have_selection:
-			word_at_cursor = self.contents.selection_get()
+			word_at_cursor = c.selection_get()
 		else:
-			word_at_cursor = self.contents.get('insert wordstart', 'insert wordend')
+			word_at_cursor = c.get('insert wordstart', 'insert wordend')
 
 		word_at_cursor = word_at_cursor.strip()
 
 		if word_at_cursor == '':
 			return 'break'
+
 
 		#print(word_at_cursor)
 		# https://www.tcl.tk/man/tcl9.0/TclCmd/re_syntax.html#M31
@@ -6732,7 +6781,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 		if pos:
-			self.contents.mark_set('insert', 'insert')
+			#self.contents.mark_set('insert', pos)
 			self.contents.focus_set()
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
@@ -7392,6 +7441,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Save and Load End
 ########## Bookmarks and Help Begin
 
+##	Note: goto_bookmark() is in Gotoline etc -section
 
 	def print_bookmarks(self):
 
@@ -7407,14 +7457,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def line_is_bookmarked(self, index):
-		''' mark_name is tkinter.Text -index
+		''' index:	tkinter.Text -index
 		'''
 
 		# Find first mark in line
 		s = self.contents.index('%s display linestart' % index)
 		mark_name = self.contents.mark_next(s)
 
-		# Find first bookmark after s
+		# Find first bookmark at or after s
 		while mark_name:
 			if 'bookmark' not in mark_name:
 				mark_name = self.contents.mark_next(mark_name)
@@ -8952,6 +9002,17 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		search_word = tmp
 
+		# Enable adding to lineend, with using "$" (or "\n") as search_word
+		if '-regexp' in self.search_settings:
+			if search_word in ['$', r'\n']: search_word = r'\n'
+
+			# Enable adding to linestart, with using "^" as search_word
+			elif search_word == r'^':
+				if not '-nolinestop' in self.search_settings[5:]:
+					self.search_settings.append('-nolinestop')
+				search_word = r'^(.)'
+
+
 		self.contents.tag_remove('match', '1.0', tkinter.END)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.contents.tag_config('match', background='', foreground='')
@@ -9398,7 +9459,20 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		end_old = '%s +%dc' % ( start, self.match_lenghts[self.search_index] )
 		end_new = "%s +%dc" % ( start, wordlen_new )
 
+		# Enable adding to lineend, with using "$" (or "\n") as search_word
+		if ('-regexp' in self.search_settings):
+			if self.old_word == r'\n':
+				self.contents.tag_remove('focus', '1.0', tkinter.END)
+				end_old = start
+
+			# Enable adding to linestart, with using "^" as search_word
+			elif self.old_word == r'^(.)' and ('-nolinestop' in self.search_settings):
+				self.contents.tag_remove('focus', '1.0', tkinter.END)
+				end_old = start
+
+
 		self.contents.replace(start, end_old, self.new_word)
+
 
 		self.contents.tag_add('replaced', start, end_new)
 		self.contents.mark_unset(mark_name)
