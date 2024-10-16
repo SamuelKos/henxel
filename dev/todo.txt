@@ -543,8 +543,14 @@ if not ( top_line <= ins_line <= bot_line ):
 	cancel undo or redo
 
 #######################
+ensure_idx_visibility: does not set insert-mark anymore, done ok?
+#######################
 
 Below this: not done
+
+
+
+
 
 check_line:
 self.check_scope	scope
@@ -567,10 +573,6 @@ will return true if cursor is at marked places or between them:
 multiline string
 ''<INSERT>'
 
-comment tag at once
-
-
-no after in init
 
 
 

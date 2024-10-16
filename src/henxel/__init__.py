@@ -1068,14 +1068,13 @@ Error messages Begin
 	def ensure_idx_visibility(self, index, back=None):
 		''' Ensures index is visible on screen.
 
-			Puts insertion cursor to index.
+			Does not put insertion cursor to index.
 		'''
 
 		b = 2
 		if back:
 			b = back
 
-		self.contents.mark_set( 'insert', index)
 		s = self.contents.bbox( '%s - %i lines' % (index, b) )
 		e = self.contents.bbox( '%s + 4 lines' % index)
 
@@ -1571,7 +1570,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.update_tokens(start=linestart, end=lineend, line=curline)
 
 
-############## Init etc. End
+############## Init etc End
 ############## Bindings Begin
 
 	def set_bindings(self):
@@ -5510,6 +5509,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			ins_line = int(self.contents.index('insert').split('.')[0])
 			if not ( top_line <= ins_line <= bot_line ):
 				self.contents.edit_redo()
+				self.ensure_idx_visibility('insert')
 
 
 			if self.can_do_syntax():
@@ -5517,7 +5517,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
 
 				s = '%s linestart' % idx_scope_start
-				e = idx_scope_end
+				e = '%s lineend' % idx_scope_end
 
 				self.update_lineinfo()
 				self.update_tokens(start=s, end=e)
@@ -5550,6 +5550,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			ins_line = int(self.contents.index('insert').split('.')[0])
 			if not ( top_line <= ins_line <= bot_line ):
 				self.contents.edit_undo()
+				self.ensure_idx_visibility('insert')
 
 
 			if self.can_do_syntax():
@@ -5557,7 +5558,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
 
 				s = '%s linestart' % idx_scope_start
-				e = idx_scope_end
+				e = '%s lineend' % idx_scope_end
 
 				self.update_lineinfo()
 				self.update_tokens(start=s, end=e)
