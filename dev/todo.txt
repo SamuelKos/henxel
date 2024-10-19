@@ -542,10 +542,20 @@ else: cancel undo or redo
 if not ( top_line <= ins_line <= bot_line ):
 	cancel undo or redo
 
+
+To help and notes:
+If action is not being undoed, undo/redo can be called directly with:
+e.contents.edit_undo()
+e.contents.edit_redo()
+
+This undo is not fully tested
 #######################
 ensure_idx_visibility: does not set insert-mark anymore, done ok?
-goto_def: no longer set insert-mark, ok?
+goto_def: no longer set insert-mark, ok? no? ############
 #######################
+
+ENABLE REGEXP WHEN DOING REPLACE
+
 Enable adding to lineend, with using "$" (or "\n") as search_word
 changes search_word from '$' to r'\n' (make tags visible)
 
@@ -553,6 +563,54 @@ changes search_word from '$' to r'\n' (make tags visible)
 changes search_word from '^' to r'^(.)' (make tags visible) and
 adds '-nolinestop' to self.search_settings
 if it is not there (and keeps it there)
+
+Note: if searchword has anything else: like: "^1" or "1$"
+then it works automatically without any changes
+
+To Notes this and to some searching helptext also ##############
+
+
+Also, replace/all is now done with "tcl regsub" instead of "tk text replace"
+--> Replacing with regexp, back references etc..
+
+
+It would have been better if regsub would return all substitutions as list
+when doing -all, but dont know how this can be done. Currently, replace_all
+is done in same way than replace.
+
+elif ('-regexp' in self.search_settings):
+	cont = r'[%s get {%s} {%s}]' \
+			% (self.tcl_name_of_contents, start, end_old)
+	search_re = self.old_word
+	substit_re = r'{%s}' % self.new_word
+	patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit_re)
+	new_word = self.contents.tk.eval(patt)
+	len_new_word = len(new_word)
+	end_new = "%s +%dc" % ( start, len_new_word )
+	
+
+
+Example: If contents of tab is:
+Example: 121 212
+
+Example: 121 212
+
+Example: 121 212
+
+
+And there is "-regexp" in search_setting, And doing replace:
+
+Then if search_word(old_word) would be:
+"(\d+) (\d+)"
+And if substitution(new_word) would be:
+"\2 \1"
+
+Result after replacing would then be:
+Example: 212 121
+
+Example: 212 121
+
+Example: 212 121
 #######################
 
 Below this: not done
@@ -560,8 +618,45 @@ Below this: not done
 
 
 
+
+
+
+
+#####
+To notes:
+It could be a multiline action, like replace_all
+If trying to undo redo, redo will put cursor to action end,
+undo to action start, if they dont fit in same screen, fail
+
+Undo and indexes:
+1: Redoing an action will put cursor to end of action, that got redoed,
+just like when anything is normally being done
+(example: after inserting letter, cursor is at end of letter)
+
+2: Undoing an action will put cursor to start, where action, that got
+undoed, would have started.
+(example: after undoing insert letter,
+cursor is at start of letter that no longer exist)
+#####		
+
+
+
+macos
+clipboard not persist over restart if not paste to console
+
+
+update_curpos() needs check
+
+
+paste mark insert after paste is wrong?
+
+
+
+
+
 get_info()
 list funcs which gets some info
+check list add comments
 
 
 check_line:
@@ -590,9 +685,7 @@ multiline string
 
 #####
 undo_override, redo_override:
-
 check with multiline actions like indent comment etc
-replace all, maybe need some flag?
 #####
 
 
@@ -605,8 +698,8 @@ undo redo paste comment indent tabify_lines
 
 
 
-##################
-test-launch conf
+########################################
+test-launch conf related thinking begin
 
 when this: if not test.cnf: make_test_conf() ?
 at start of test-launch? no?
@@ -646,7 +739,11 @@ open other file
 etc
 
 custom: self.save_config()
-##################
+
+test-launch conf related thinking end
+######################################
+
+
 
 run() show_err no set curpos?
 comment uncomment tabify_lines paste undo redo no set cursor, ok?

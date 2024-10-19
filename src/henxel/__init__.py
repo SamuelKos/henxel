@@ -5540,6 +5540,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return "break"
 
 		try:
+			# It could be a multiline action, like replace_all
+			# If trying to undo redo, redo will put cursor to action end,
+			# undo to action start, if they dont fit in same screen, fail
+
+##			Undo and indexes:
+##			1: Redoing an action will put cursor to end of action, that got redoed,
+##			just like when anything is normally being done
+##			(example: after inserting letter, cursor is at end of letter)
+##
+##			2: Undoing an action will put cursor to start, where action, that got
+##			undoed, would have started.
+##			(example: after undoing insert letter,
+##			cursor is at start of letter that no longer exist)
+##
+
+			ins_orig = self.contents.index('insert')
 			# Linenumbers of top and bottom lines currently disaplayed on screen
 			top_line = int(self.contents.index('@0,0').split('.')[0])
 			bot_line = int(self.contents.index('@0,65535').split('.')[0])
@@ -5554,7 +5570,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Then just move the cursor, with redo
 			ins_line = int(self.contents.index('insert').split('.')[0])
 			if not ( top_line <= ins_line <= bot_line ):
+				#print(top_line, bot_line, ins_line)
 				self.contents.edit_redo()
+
+				# It could be a multiline action, like replace_all
+				ins_after_redo = self.contents.index('insert')
+				if ins_after_redo == ins_orig:
+					self.contents.edit_undo()
+
 				self.ensure_idx_visibility('insert')
 
 
@@ -5581,6 +5604,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return "break"
 
 		try:
+			# It could be a multiline action, like replace_all
+			# If trying to undo redo, redo will put cursor to action end,
+			# undo to action start, if they dont fit in same screen, fail.
+
+##			Undo and indexes:
+##			1: Redoing an action will put cursor to end of action, that got redoed,
+##			just like when anything is normally being done
+##			(example: after inserting letter, cursor is at end of letter)
+##
+##			2: Undoing an action will put cursor to start, where action, that got
+##			undoed, would have started.
+##			(example: after undoing insert letter,
+##			cursor is at start of letter that no longer exist)
+##
+
+			ins_orig = self.contents.index('insert')
 			# Linenumbers of top and bottom lines currently disaplayed on screen
 			top_line = int(self.contents.index('@0,0').split('.')[0])
 			bot_line = int(self.contents.index('@0,65535').split('.')[0])
@@ -5596,6 +5635,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			ins_line = int(self.contents.index('insert').split('.')[0])
 			if not ( top_line <= ins_line <= bot_line ):
 				self.contents.edit_undo()
+
+				# It could be a multiline action, like replace_all
+				ins_after_undo = self.contents.index('insert')
+				if ins_after_undo == ins_orig:
+					self.contents.edit_redo()
+
+
 				self.ensure_idx_visibility('insert')
 
 
@@ -9010,7 +9056,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			elif search_word == r'^':
 				if not '-nolinestop' in self.search_settings[5:]:
 					self.search_settings.append('-nolinestop')
-				search_word = r'^(.)'
+				search_word = r'^.'
 
 
 		self.contents.tag_remove('match', '1.0', tkinter.END)
@@ -9446,6 +9492,20 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			return 'break'
 
 
+
+		# Adding to line ends without effectively deleting anything:
+		flag_add_only = False
+		# Enable adding to lineend, with using "$" (or "\n") as search_word
+		if ('-regexp' in self.search_settings):
+			if self.old_word == r'\n':
+				flag_add_only = True
+
+			# Enable adding to linestart, with using "^" as search_word
+			elif self.old_word == r'^.' and ('-nolinestop' in self.search_settings):
+				flag_add_only = True
+
+
+
 		# Start of actual replacing
 		self.contents.config(state='normal')
 
@@ -9459,22 +9519,32 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		end_old = '%s +%dc' % ( start, self.match_lenghts[self.search_index] )
 		end_new = "%s +%dc" % ( start, wordlen_new )
 
-		# Enable adding to lineend, with using "$" (or "\n") as search_word
-		if ('-regexp' in self.search_settings):
-			if self.old_word == r'\n':
-				self.contents.tag_remove('focus', '1.0', tkinter.END)
-				end_old = start
 
-			# Enable adding to linestart, with using "^" as search_word
-			elif self.old_word == r'^(.)' and ('-nolinestop' in self.search_settings):
-				self.contents.tag_remove('focus', '1.0', tkinter.END)
-				end_old = start
+		if flag_add_only:
+			self.contents.tag_remove('focus', '1.0', tkinter.END)
+			end_old = start
+
+		# Normal regexp case here
+		elif ('-regexp' in self.search_settings):
+			cont = r'[%s get {%s} {%s}]' \
+					% (self.tcl_name_of_contents, start, end_old)
+			search_re = self.old_word
+			substit_re = r'{%s}' % self.new_word
+			patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit_re)
+			res = self.contents.tk.eval(patt)
+			wordlen_res = len(res)
+			end_res = "%s +%dc" % ( start, wordlen_res )
+
+			self.contents.replace(start, end_old, res)
+			self.contents.tag_add('replaced', start, end_res)
 
 
-		self.contents.replace(start, end_old, self.new_word)
+		# Normal case here
+		else:
+			self.contents.replace(start, end_old, self.new_word)
+			self.contents.tag_add('replaced', start, end_new)
 
 
-		self.contents.tag_add('replaced', start, end_new)
 		self.contents.mark_unset(mark_name)
 		self.mark_indexes.remove(self.search_index)
 		###########
@@ -9492,6 +9562,20 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 	def do_replace_all(self, event=None):
 
+		# Adding to line ends without effectively deleting anything:
+		flag_add_only = False
+		# Enable adding to lineend, with using "$" (or "\n") as search_word
+		if ('-regexp' in self.search_settings):
+			if self.old_word == r'\n':
+				flag_add_only = True
+
+			# Enable adding to linestart, with using "^" as search_word
+			elif self.old_word == r'^.' and ('-nolinestop' in self.search_settings):
+				flag_add_only = True
+
+
+
+		# Start of actual replacing
 		self.contents.tag_config('match', background='', foreground='')
 		self.contents.config(state='normal')
 		wordlen_new = len(self.new_word)
@@ -9499,7 +9583,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		####
 		pos = self.contents.index('match0')
-
 		for index in self.mark_indexes[::-1]:
 
 			mark_name = 'match%d' % index
@@ -9507,7 +9590,30 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			end_old = '%s +%dc' % ( start, self.match_lenghts[index] )
 			end_new = "%s +%dc" % ( start, wordlen_new )
 
-			self.contents.replace(start, end_old, self.new_word)
+
+			if flag_add_only:
+				end_old = start
+				new_word = self.new_word
+
+
+			# Normal regexp case here
+			elif ('-regexp' in self.search_settings):
+				cont = r'[%s get {%s} {%s}]' \
+						% (self.tcl_name_of_contents, start, end_old)
+				search_re = self.old_word
+				substit_re = r'{%s}' % self.new_word
+				patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit_re)
+				new_word = self.contents.tk.eval(patt)
+				len_new_word = len(new_word)
+				end_new = "%s +%dc" % ( start, len_new_word )
+
+
+			# Normal case here
+			else: new_word = self.new_word
+
+
+			self.contents.replace(start, end_old, new_word)
+
 
 			self.contents.tag_add('replaced', start, end_new)
 			self.contents.mark_unset(mark_name)
@@ -9525,7 +9631,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		bg, fg = self.themes[self.curtheme]['replaced'][:]
 		self.contents.tag_config('replaced', background=bg, foreground=fg)
-
 
 		self.stop_search()
 		###################
