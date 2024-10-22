@@ -554,42 +554,30 @@ ensure_idx_visibility: does not set insert-mark anymore, done ok?
 goto_def: no longer set insert-mark, ok? no? ############
 #######################
 
-ENABLE REGEXP WHEN DOING REPLACE
-
-Enable adding to lineend, with using "$" (or "\n") as search_word
-changes search_word from '$' to r'\n' (make tags visible)
-
-# Enable adding to linestart, with using "^" as search_word
-changes search_word from '^' to r'^(.)' (make tags visible) and
-adds '-nolinestop' to self.search_settings
-if it is not there (and keeps it there)
-
-Note: if searchword has anything else: like: "^1" or "1$"
-then it works automatically without any changes
-
-To Notes this and to some searching helptext also ##############
+ENABLE SUBSTITUTION WITH REGEXP
 
 
-Also, replace/all is now done with "tcl regsub" instead of "tk text replace"
+replace/all is now done with "tcl regsub" instead of "tk text replace"
 --> Replacing with regexp, back references etc..
 
-
-It would have been better if regsub would return all substitutions as list
-when doing -all, but dont know how this can be done. Currently, replace_all
-is done in same way than replace.
-
-elif ('-regexp' in self.search_settings):
+###
+if ('-regexp' in self.search_settings):
 	cont = r'[%s get {%s} {%s}]' \
 			% (self.tcl_name_of_contents, start, end_old)
 	search_re = self.old_word
-	substit_re = r'{%s}' % self.new_word
-	patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit_re)
+	substit = r'{%s}' % self.new_word
+	patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit)
 	new_word = self.contents.tk.eval(patt)
 	len_new_word = len(new_word)
 	end_new = "%s +%dc" % ( start, len_new_word )
-	
 
+###
+self.contents.tag_config('match_zero_lenght')
+if not in elided text
+	if len old_word = 0
+		tag next char
 
+###
 Example: If contents of tab is:
 Example: 121 212
 
@@ -611,9 +599,32 @@ Example: 212 121
 Example: 212 121
 
 Example: 212 121
+
+###
+Adding space to end of substitution:
+	search_word + () ==empty string, if search_word is "A", then using
+		A()
+	with substitution, if want for example " BB "
+		\0 BB \1
+		
+	where \0 is whole matched string and \1 is the empty string
+	"&" can be used inplace of "\0"
+	
+	--> "A BB "
+
+###
+Adding to linestart: "^"
+Adding to lineend: "$"
+Concatenate lines: "\n+"
+###
+
 #######################
 
-Below this: not done
+Below this: not done ################################################
+
+
+
+ln_widget dark brown or gray
 
 
 
@@ -622,23 +633,42 @@ Below this: not done
 
 
 
-#####
-To notes:
-It could be a multiline action, like replace_all
-If trying to undo redo, redo will put cursor to action end,
-undo to action start, if they dont fit in same screen, fail
+################################################
+uncomment(), if no selection, check
 
-Undo and indexes:
-1: Redoing an action will put cursor to end of action, that got redoed,
-just like when anything is normally being done
-(example: after inserting letter, cursor is at end of letter)
 
-2: Undoing an action will put cursor to start, where action, that got
-undoed, would have started.
-(example: after undoing insert letter,
-cursor is at start of letter that no longer exist)
-#####		
+undo_override, redo_override:
+check with multiline actions like indent comment etc
 
+
+paste_fallback() fix
+
+
+tabify_lines check
+
+
+quit_me docstring
+
+
+idx_lineend() == display line end, this is ok?
+
+
+copy block to empty line indent0 no work?
+
+
+center_view() when search?
+
+
+sel.first last edit_search_setting ?
+
+
+handle_viewchange?
+
+
+check syntax when no debug?
+
+
+move many lines is very slow! almost dangerous ########
 
 
 macos
@@ -648,15 +678,20 @@ clipboard not persist over restart if not paste to console
 update_curpos() needs check
 
 
-paste mark insert after paste is wrong?
-
-
-
+paste() mark-insert after paste is wrong?
 
 
 get_info()
 list funcs which gets some info
 check list add comments
+###########################################################
+
+
+git diff -b --ignore-blank-lines
+pip install build setuptools
+python -m build -nx
+
+
 
 
 check_line:
@@ -681,14 +716,6 @@ multiline string
 ''<INSERT>'
 
 
-
-
-#####
-undo_override, redo_override:
-check with multiline actions like indent comment etc
-#####
-
-
 update_line --> check_line?
 
 
@@ -696,6 +723,70 @@ when to check all_cont?
 undo redo paste comment indent tabify_lines
 
 
+run() show_err no set curpos?
+comment uncomment tabify_lines paste undo redo no set cursor, ok?
+
+
+search: when to set line_can_update? #################
+
+
+indent unindent tokens scope?
+# check update range in comment uncomment paste #########
+
+
+update_line:
+	if diff: check_line --> check --> after_idle(update)?
+	
+check_line:
+	triples, quotes etc
+	--> all_cont or line
+	all_cont == cur_scope ##################?
+	get scope_start end then update_tokens
+
+check use of: self.check_pars ###########
+backspace_override: no quote tests done ok? --> check_line
+
+
+insert_tokens
+	for loop better, done ok?
+	f-strings green?
+
+
+#####
+when delete # all contents tokens are updated, is that necessary?
+--> update_line() more work on filtering, knows oldline etc
+if diff len(old new line) == 1:
+(
+	could do also select one(or more) letter and insert one letter
+	--> only one update_line call from that one letter insertion
+	so diff len can be more than 1 and just one letter is inserted
+)
+
+
+
+if triple not in oldline and triple in newline:
+	allcont
+
+elif triple in oldline and triple not in newline:
+	allcont
+
+elif triple in oldline and newline:
+	if '#' added in newline: allcont
+	if '#' deleted in newline: allcont
+
+#####
+
+
+
+
+###
+debug: show errors in editor like when running scripts?
+debug help?
+when debug show info about being in debug-mode somewhere?
+Q:how to test methods? A:manually
+Q:how to not do overlapping tests, like normal and debug?
+A: currently doing only debug-test because it pretty much includes normal
+###
 
 
 ########################################
@@ -726,8 +817,6 @@ get path of TEST_CONFPATH:
 	filepath = pathlib.Path(envpath) / TEST_CONFPATH
 	
 
-
-
 loadfile(filepath):
 		filepath is pathlib.Path
 		If filepath is python-file, convert indentation to tabs.
@@ -745,101 +834,18 @@ test-launch conf related thinking end
 
 
 
-run() show_err no set curpos?
-comment uncomment tabify_lines paste undo redo no set cursor, ok?
+
+################################################
+TO NOTES START
 
 
-search: when to set line_can_update? #################
-
-	
-
-
-indent unindent tokens scope?
-# check update range in comment uncomment paste #########
-
-
-
-update_line:
-	if diff: check_line --> check --> after_idle(update)?
-	
-check_line:
-	triples, quotes etc
-	--> all_cont or line
-	all_cont == cur_scope ##################?
-	get scope_start end then update_tokens
-
-check use of: self.check_pars ###########
-backspace_override: no quote tests done ok? --> check_line
-
-
-
-insert_tokens
-	for loop better, done ok?
-	f-strings green?
+####
+File "<stdin>", line 12, in <module>
+is last line of launch_test_as_string in build_launch_test()
+####
 
 
 #####
-when delete # all contents tokens are updated, is that necessary?
---> update_line() more work on filtering, knows oldline etc
-if diff len(old new line) == 1:
-(
-	could do also select one(or more) letter and insert one letter
-	--> only one update_line call from that one letter insertion
-	so diff len can be more than 1 and just one letter is inserted
-)
-
-
-
-if triple not in oldline and triple in newline:
-	allcont
-
-elif triple in oldline and triple not in newline:
-	allcont
-
-elif triple in oldline and newline:
-	if '#' added in newline: allcont
-	if '#' deleted in newline: allcont
-
-
-#####
-
-
-
-to notes:
-quitme popup
-	needs lambda if doing restart: subprocess.run
-quit_me return? no
-
-
-tabify_lines check
-
-
-
-
-
-###
-debug: show errors in editor like when running scripts?
-debug help?
-when debug show info about being in debug-mode somewhere?
-Q:how to test methods? A:manually
-Q:how to not do overlapping tests, like normal and debug?
-A: currently doing only debug-test because it pretty much includes normal
-###
-
-
-move many lines is very slow! almost dangerous ########
-
-
-#pip install build setuptools
-#python -m build -nx
-
-
-###
-To Notes:
-	File "<stdin>", line 12, in <module>
-	is last line of launch_test_as_string in build_launch_test()
-	
-To Notes:
 When:
 	1: Some part of code is not tested(executed at launch-test)
 	2: That part is changed
@@ -849,25 +855,20 @@ When:
 	
 Then: test-launch passes but after restart:
 --> bad things can happen if code is part of __init__ for example
+#####
 
 
-not related with above
+
+######
 __new__ is always executed when __init__ would be executed
-###
+######
 
 
+######
+quitme popup
+	needs lambda if doing restart: subprocess.run
+######
 
-########################
-uncomment(), if no selection, check
-paste_fallback() fix
-########################
-			
-
-
-
-
-########################
-TO NOTES START
 
 about indexes
 ###
@@ -879,6 +880,23 @@ if top == bot and text.winfo_height() == 1:
 	bot = top + height - 1
 return top, bot
 ###
+
+
+#####
+It could be a multiline action, like replace_all
+If trying to undo redo, redo will put cursor to action end,
+undo to action start, if they dont fit in same screen, fail
+
+Undo and indexes:
+1: Redoing an action will put cursor to end of action, that got redoed,
+just like when anything is normally being done
+(example: after inserting letter, cursor is at end of letter)
+
+2: Undoing an action will put cursor to start, where action, that got
+undoed, would have started.
+(example: after undoing insert letter,
+cursor is at start of letter that no longer exist)
+#####		
 
 
 ##
@@ -1016,15 +1034,6 @@ foreach tab $tabs {parray $tab}
 	tab2(tagname2) = 1 2 3 4
 
 
-
-quit_me docstring
-
-
-
-git diff -b --ignore-blank-lines
-
-
-check syntax when no debug?
 
 #################
 in init
@@ -1176,39 +1185,6 @@ if self.contents.compare(idx, '!=', ref):
 
 
 
-###################################
-idx_lineend() == display line end, this is ok?
-
-
-fontchoose too slow?
-
-
-copy block to empty line indent0 no work?
-
-
-center_view() when search?
-
-
-backspace_override() removed do_syntax
-update_tokens()
-	iter keepends=True is needed
-
-
-when writing in docstring of update_tokens()
---> syntax end in test1
-
-
-sel.first last edit_search_setting ?
-
-
-handle_viewchange?
-###################################
-
-
-
-
-
-
 def myfunctionDef() ...
 
 
@@ -1251,8 +1227,6 @@ Cmd-Shift-()
 
 
 
-
-
 async def only
 
 
@@ -1263,11 +1237,6 @@ def funcname[str]():    not done #########################
 
 get_scope_end() get_scope_start() get_scope_path()
 ################################################################################################
-
-
-
-ensure_idx_visibility(index)
-puts always insert to index ###############################
 
 
 update help
@@ -1285,17 +1254,12 @@ handle_normal_entry
 save file to disk when pressing save
 
 
-stash if start fails?
-dev/stash_start/
-
-
 python not remommended install with brew?
 pyenv
 
 get(elided) -displaychars
 elided text is getted by default
 structure-viewer with taglinks?
-linenumbers works already?
 #####################################################
 replaced less yellow
 
@@ -1316,8 +1280,8 @@ self.winfo_rgb('deep sky blue')
 
 github:
 fixed tag config -under --> -underline
-2tkcon.tcl
-
+tkcon.tcl
+make README etc.
 
 
 

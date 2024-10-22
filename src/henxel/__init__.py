@@ -110,6 +110,7 @@ def get_info():
 			'get_scope_path',
 			'get_scope_start',
 			'get_sel_info',
+			'handle_window_resize',
 			'idx_lineend',
 			'idx_linestart',
 			'is_pyfile',
@@ -2522,6 +2523,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.contents.tag_config('focus', underline=True)
 		self.contents.tag_config('elided', elide=True)
 		self.contents.tag_config('animate')
+		self.contents.tag_config('match_zero_lenght')
 
 		# Search-tags have highest priority
 		self.contents.tag_raise('match')
@@ -8539,7 +8541,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# match-mark marks start of the match
 		start = mark_name
-		end = '%s +%dc' % ( mark_name, self.match_lenghts[self.search_index] )
+
+
+		# Make zero lenght matches visible
+		if 'match_zero_lenght' in self.contents.tag_names(start):
+			end = '%s +1c' % mark_name
+
+		else:
+			end = '%s +%dc' % ( mark_name, self.match_lenghts[self.search_index] )
+
 		# self.search_focus is range of focus-tag.
 		self.search_focus = (start, end)
 
@@ -8625,7 +8635,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# match-mark marks start of the match
 		start = mark_name
-		end = '%s +%dc' % ( mark_name, self.match_lenghts[self.search_index] )
+
+
+		# Make zero lenght matches visible
+		if 'match_zero_lenght' in self.contents.tag_names(start):
+			end = '%s +1c' % mark_name
+
+		else:
+			end = '%s +%dc' % ( mark_name, self.match_lenghts[self.search_index] )
+
 		# self.search_focus is range of focus-tag.
 		self.search_focus = (start, end)
 
@@ -9012,6 +9030,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				self.contents.mark_unset(mark)
 
 		match_ranges = list()
+		match_zero_ranges = list()
 		self.mark_indexes = list()
 
 		# Tag matches, add mark to start of every match
@@ -9023,13 +9042,24 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.mark_indexes.append(i)
 
 			match_lenght = s[i]
-			end_idx = '%s +%dc' % (mark_name, match_lenght)
+
+			# Used in making zero lenght matches visible
+			if match_lenght == 0 and 'elided' not in self.contents.tag_names(start_idx):
+				end_idx = '%s +1c' % start_idx
+				match_zero_ranges.append(mark_name)
+				match_zero_ranges.append(end_idx)
+
+			else:
+				end_idx = '%s +%dc' % (mark_name, match_lenght)
+
 
 			match_ranges.append(mark_name)
 			match_ranges.append(end_idx)
 
 
 		self.contents.tag_add('match', *match_ranges)
+		if len(match_zero_ranges) > 0:
+			self.contents.tag_add('match_zero_lenght', *match_zero_ranges)
 
 		return num_matches
 
@@ -9047,16 +9077,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			return 'break'
 
 		search_word = tmp
-
-		# Enable adding to lineend, with using "$" (or "\n") as search_word
-		if '-regexp' in self.search_settings:
-			if search_word in ['$', r'\n']: search_word = r'\n'
-
-			# Enable adding to linestart, with using "^" as search_word
-			elif search_word == r'^':
-				if not '-nolinestop' in self.search_settings[5:]:
-					self.search_settings.append('-nolinestop')
-				search_word = r'^.'
 
 
 		self.contents.tag_remove('match', '1.0', tkinter.END)
@@ -9159,6 +9179,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		#self.wait_for(200)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.contents.tag_remove('match', '1.0', tkinter.END)
+		self.contents.tag_remove('match_zero_lenght', '1.0', tkinter.END)
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 
 		# Leave marks on replaced areas, Esc clears.
@@ -9493,26 +9514,13 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 
-		# Adding to line ends without effectively deleting anything:
-		flag_add_only = False
-		# Enable adding to lineend, with using "$" (or "\n") as search_word
-		if ('-regexp' in self.search_settings):
-			if self.old_word == r'\n':
-				flag_add_only = True
-
-			# Enable adding to linestart, with using "^" as search_word
-			elif self.old_word == r'^.' and ('-nolinestop' in self.search_settings):
-				flag_add_only = True
-
-
-
 		# Start of actual replacing
 		self.contents.config(state='normal')
 
 		wordlen_new = len(self.new_word)
 
 
-		###########
+		####
 		mark_name = 'match%d' % self.search_index
 
 		start = self.contents.index(mark_name)
@@ -9520,35 +9528,29 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		end_new = "%s +%dc" % ( start, wordlen_new )
 
 
-		if flag_add_only:
-			self.contents.tag_remove('focus', '1.0', tkinter.END)
-			end_old = start
-
-		# Normal regexp case here
-		elif ('-regexp' in self.search_settings):
+		# Regexp
+		if ('-regexp' in self.search_settings):
 			cont = r'[%s get {%s} {%s}]' \
 					% (self.tcl_name_of_contents, start, end_old)
 			search_re = self.old_word
-			substit_re = r'{%s}' % self.new_word
-			patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit_re)
-			res = self.contents.tk.eval(patt)
-			wordlen_res = len(res)
-			end_res = "%s +%dc" % ( start, wordlen_res )
+			substit = r'{%s}' % self.new_word
+			patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit)
+			new_word = self.contents.tk.eval(patt)
+			len_new_word = len(new_word)
+			end_new = "%s +%dc" % ( start, len_new_word )
 
-			self.contents.replace(start, end_old, res)
-			self.contents.tag_add('replaced', start, end_res)
-
-
-		# Normal case here
-		else:
-			self.contents.replace(start, end_old, self.new_word)
-			self.contents.tag_add('replaced', start, end_new)
+		# Normal
+		else: new_word = self.new_word
 
 
+		self.contents.replace(start, end_old, new_word)
+
+
+		self.contents.tag_add('replaced', start, end_new)
+		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.contents.mark_unset(mark_name)
 		self.mark_indexes.remove(self.search_index)
-		###########
-
+		####
 
 
 		self.contents.config(state='disabled')
@@ -9562,21 +9564,9 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 	def do_replace_all(self, event=None):
 
-		# Adding to line ends without effectively deleting anything:
-		flag_add_only = False
-		# Enable adding to lineend, with using "$" (or "\n") as search_word
-		if ('-regexp' in self.search_settings):
-			if self.old_word == r'\n':
-				flag_add_only = True
-
-			# Enable adding to linestart, with using "^" as search_word
-			elif self.old_word == r'^.' and ('-nolinestop' in self.search_settings):
-				flag_add_only = True
-
-
-
 		# Start of actual replacing
 		self.contents.tag_config('match', background='', foreground='')
+		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.contents.config(state='normal')
 		wordlen_new = len(self.new_word)
 
@@ -9591,24 +9581,19 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			end_new = "%s +%dc" % ( start, wordlen_new )
 
 
-			if flag_add_only:
-				end_old = start
-				new_word = self.new_word
-
-
-			# Normal regexp case here
-			elif ('-regexp' in self.search_settings):
+			# Regexp
+			if ('-regexp' in self.search_settings):
 				cont = r'[%s get {%s} {%s}]' \
 						% (self.tcl_name_of_contents, start, end_old)
 				search_re = self.old_word
-				substit_re = r'{%s}' % self.new_word
-				patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit_re)
+				substit = r'{%s}' % self.new_word
+				patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit)
 				new_word = self.contents.tk.eval(patt)
 				len_new_word = len(new_word)
 				end_new = "%s +%dc" % ( start, len_new_word )
 
 
-			# Normal case here
+			# Normal
 			else: new_word = self.new_word
 
 
