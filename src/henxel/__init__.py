@@ -173,7 +173,7 @@ class Tab:
 			type		String
 			bookmarks	List
 		'''
-		self.active = True
+		self.active = False
 		self.filepath = None
 		self.contents = ''
 		self.oldcontents = ''
@@ -499,7 +499,6 @@ class Editor(tkinter.Toplevel):
 			self.tracefunc_name = None
 			self.lastdir = None
 
-			self.check_pars = False
 			self.par_err = False
 
 			# Used in copy() and paste()
@@ -589,6 +588,7 @@ class Editor(tkinter.Toplevel):
 				self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
 				self.popup.add_command(label="     restart",
 						command=lambda: self.after_idle(self.restart_editor))
+				self.popup.add_command(label="         run", command=self.run)
 
 				# Next lines left as example of what does not work if doing restart in quit_me
 				#self.popup.add_command(label="test", command=self.quit_me)
@@ -1469,6 +1469,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		ins_col = col = int(self.contents.index(idx_insert).split('.')[1])
 
 		triples = ["'''", '"""']
+		pars = '()[]{}'
 
 		# Counted from insert
 		prev_char = newline[col-1:col]
@@ -1493,7 +1494,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Deletion is already checked in backspace_override
 		# Only add one letter is left unchecked
 		# -->
-		if not self.par_err and ( prev_char in '()[]{}'): self.par_err = True
+		if not self.par_err:
+			if prev_char in pars: self.par_err = True
+			else:
+				for char in newline:
+					if char in pars:
+						self.par_err = True
+						break
 		############
 
 
@@ -2019,48 +2026,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ############## Linenumbers End
 ############## Tab Related Begin
 
-	def new_tab(self, event=None, error=False):
-		''' error == True from tag_link()
-		'''
+	def new_tab(self, event=None):
 
-		# Normally there would only be event.state check, but because
-		# one can open file (in new tab) from error-view, when state is 'error',
-		# there is an additional check if event is None:
-		# event == None when clicked hyper-link in tag_link() in error-view
-		if self.state != 'normal' and event != None:
+		if self.state != 'normal':
 			self.bell()
 			return 'break'
 
-
-		if len(self.tabs) > 0 and not error:
-			try:
-				pos = self.contents.index(tkinter.INSERT)
-
-			except tkinter.TclError:
-				pos = '1.0'
-
-			self.tabs[self.tabindex].position = pos
-
-			tmp = self.contents.get('1.0', tkinter.END)
-			# [:-1]: remove unwanted extra newline
-			self.tabs[self.tabindex].contents = tmp[:-1]
-
-			tab = self.tabs[self.tabindex]
-			self.save_bookmarks(tab)
-			self.clear_bookmarks()
-
-		# Fix for tag_link
-		elif len(self.tabs) > 0 and error:
-			self.clear_bookmarks()
-
-
-		self.contents.delete('1.0', tkinter.END)
-		self.entry.delete(0, tkinter.END)
-
 		if len(self.tabs) > 0:
+			self.view_close()
+			self.clear_bookmarks()
 			self.tabs[self.tabindex].active = False
 
+
 		newtab = Tab()
+		newtab.active = True
 
 		self.tabindex += 1
 		self.tabs.insert(self.tabindex, newtab)
@@ -2108,34 +2087,38 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.tabindex -= 1
 
 		tab = self.tabs[self.tabindex]
-
 		tab.active = True
-		self.entry.delete(0, tkinter.END)
 
-		if tab.filepath:
-			self.entry.insert(0, tab.filepath)
+		self.view_open()
+		self.update_title()
+
+		return 'break'
+
+
+	def view_open(self, idx_ins=None):
+		curtab = self.tabs[self.tabindex]
+
+		self.entry.delete(0, tkinter.END)
+		if curtab.filepath:
+			self.entry.insert(0, curtab.filepath)
 			self.entry.xview_moveto(1.0)
+
 
 		self.token_err = False
 		self.line_can_update = False
 		self.contents.delete('1.0', tkinter.END)
-		self.contents.insert(tkinter.INSERT, tab.contents)
-		self.clear_bookmarks()
-		self.restore_bookmarks(tab)
-
+		self.contents.insert(tkinter.INSERT, curtab.contents)
 
 		# Set cursor pos
-		line = tab.position
-		self.contents.focus_set()
-
 		try:
+			if idx_ins: line = idx_ins
+			else: line = curtab.position
+			self.contents.focus_set()
 			self.contents.mark_set('insert', line)
 			self.ensure_idx_visibility(line)
 
 		except tkinter.TclError:
-			self.contents.mark_set('insert', '1.0')
-			tab.position = '1.0'
-			self.contents.see('1.0')
+			curtab.position = '1.0'
 
 
 		if self.can_do_syntax():
@@ -2144,11 +2127,33 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.line_can_update = True
 
 
+		self.clear_bookmarks() ## --> view_close?
+		self.restore_bookmarks(curtab)
+
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
-		self.update_title()
 
-		return 'break'
+
+	def view_close(self):
+		# Save cursor position
+		oldtab = self.tabs[self.tabindex]
+
+		try: pos = self.contents.index(tkinter.INSERT)
+		except tkinter.TclError: pos = '1.0'
+
+		oldtab.position = pos
+
+		# Save contents and bookmarks
+		tmp = self.contents.get('1.0', tkinter.END)
+		# [:-1]: remove unwanted extra newline
+		oldtab.contents = tmp[:-1]
+		self.save_bookmarks(oldtab)
+		#self.clear_bookmarks()?
+
+
+		self.line_can_update = False
+		self.entry.delete(0, tkinter.END)
+		self.contents.delete('1.0', tkinter.END)
 
 
 	def walk_tabs(self, event=None, back=False):
@@ -2159,18 +2164,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		oldtab = self.tabs[self.tabindex]
 		oldtab.active = False
-
-		try:
-			pos = self.contents.index(tkinter.INSERT)
-		except tkinter.TclError:
-			pos = '1.0'
-
-		oldtab.position = pos
-
-		tmp = self.contents.get('1.0', tkinter.END)
-		# [:-1]: remove unwanted extra newline
-		oldtab.contents = tmp[:-1]
-		self.save_bookmarks(oldtab)
+		self.view_close()
 
 
 		idx = self.tabindex
@@ -2189,52 +2183,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		newtab = self.tabs[self.tabindex]
-
 		newtab.active = True
-		self.entry.delete(0, tkinter.END)
 
-		if newtab.filepath:
-			self.entry.insert(0, newtab.filepath)
-			self.entry.xview_moveto(1.0)
-
-
-		######################
-		self.token_err = False
-		self.line_can_update = False
-
-
-		tokens = self.get_tokens()
-		self.contents.delete('1.0', tkinter.END)
-		self.contents.insert(tkinter.INSERT, newtab.contents)
-
-		# Set cursor pos
-		line = newtab.position
-		self.contents.focus_set()
-
-		try:
-			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
-
-		except tkinter.TclError:
-			self.contents.mark_set('insert', '1.0')
-			newtab.position = '1.0'
-			self.contents.see('1.0')
-
-
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.insert_tokens(tokens)
-			self.line_can_update = True
-
-		#######################
-
-
-		self.clear_bookmarks()
-		self.restore_bookmarks(newtab)
-
-
-		self.contents.edit_reset()
-		self.contents.edit_modified(0)
+		self.view_open()
 		self.update_title()
 
 		return 'break'
@@ -2607,6 +2558,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		patt = f'{self.tcl_name_of_contents} tag add '
 		flag_err = False
 		par_err = None
+		check_pars = False
 
 		for tag in self.tagnames: self.tags[tag].clear()
 
@@ -2666,18 +2618,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			flag_err = True
 			self.token_err = True
+			#self.check_scope = True
 
 
 		except tokenize.TokenError as ee:
 
 			if 'EOF in multi-line statement' in ee.args[0]:
 				idx_start = str(last_token.start[0]) + '.0'
-				self.check_pars = idx_start
+				check_pars = idx_start
 
 
 			elif 'multi-line string' in ee.args[0]:
 				flag_err = True
 				self.token_err = True
+				#self.check_scope = True
 
 
 		for tag in self.tags:
@@ -2691,8 +2645,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		##### Check parentheses ####
-		if self.check_pars:
-			start_line = self.check_pars
+		if check_pars:
+			start_line = check_pars
 			par_err = self.checkpars(start_line)
 
 		# From backspace_override:
@@ -2700,7 +2654,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			start_line = False
 			par_err = self.checkpars(start_line)
 
-		self.check_pars = False
 		self.par_err = par_err
 
 		if not par_err:
@@ -2712,6 +2665,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not flag_err:
 			#print('ok')
 			self.token_err = False
+			#self.check_scope = False
 
 
 	def update_tokens(self, start=None, end=None, line=None):
@@ -2802,6 +2756,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		patt = f'{self.tcl_name_of_contents} tag add '
 		flag_err = False
 		par_err = None
+		check_pars = False
 
 		for tag in self.tagnames: self.tags[tag].clear()
 
@@ -2867,7 +2822,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if 'EOF in multi-line statement' in ee.args[0]:
 				idx_start = str(last_token.start[0] +linenum -1) + '.0'
-				self.check_pars = idx_start
+				check_pars = idx_start
 
 
 			elif 'multi-line string' in ee.args[0]:
@@ -2887,8 +2842,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		##### Check parentheses ####
-		if self.check_pars:
-			start_line = self.check_pars
+		if check_pars:
+			start_line = check_pars
 			par_err = self.checkpars(start_line)
 
 		# From backspace_override:
@@ -2896,7 +2851,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			start_line = False
 			par_err = self.checkpars(start_line)
 
-		self.check_pars = False
 		self.par_err = par_err
 
 		if not par_err:
@@ -3654,11 +3608,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				with open(filepath, 'r', encoding='utf-8') as f:
 					tmp = f.read()
 
-					# Bookmarks of oldtab are already saved, unsetting old marks is done
-					# in self.new_tab with self.clear_bookmarks
-					self.new_tab(error=True)
+					if len(self.tabs) > 0:
+						self.tabs[self.tabindex].active = False
 
-					newtab = self.tabs[self.tabindex]
+					newtab = Tab()
+					newtab.active = True
+					self.tabindex += 1
+					self.tabs.insert(self.tabindex, newtab)
+
 					newtab.oldcontents = tmp
 
 					if '.py' in filepath.suffix:
@@ -3686,33 +3643,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return
 
 
-		self.entry.delete(0, tkinter.END)
-		self.entry.insert(0, self.tabs[self.tabindex].filepath)
-		self.entry.xview_moveto(1.0)
-
-		self.token_err = False
-		self.line_can_update = False
-		self.contents.delete('1.0', tkinter.END)
-		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-		self.clear_bookmarks()
-		self.restore_bookmarks(self.tabs[self.tabindex])
-
-
-		# Set cursor pos
 		line = errline + '.0'
-		self.contents.focus_set()
-		self.contents.mark_set('insert', line)
-		self.ensure_idx_visibility(line)
+		self.view_open(idx_ins=line)
 
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.insert_tokens(self.get_tokens())
-			self.line_can_update = True
-
-
-		self.contents.edit_reset()
-		self.contents.edit_modified(0)
-
+		self.bind("<Escape>", self.esc_override)
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 		self.state = 'normal'
@@ -3755,18 +3689,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if len(err) != 0:
 			self.bind("<Escape>", self.stop_show_errors)
 			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
-			try: pos = self.contents.index(tkinter.INSERT)
-			except tkinter.TclError: pos = '1.0'
-			curtab.position = pos
+
+			self.view_close()
+
 			self.state = 'error'
 
 			self.taglinks = dict()
 			self.errlines = list()
 			openfiles = [tab.filepath for tab in self.tabs]
-			self.save_bookmarks(curtab)
 
-			self.line_can_update = False
-			self.contents.delete('1.0', tkinter.END)
 
 			for tag in self.contents.tag_names():
 				if 'hyper' in tag:
@@ -3832,8 +3763,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						self.update_tokens(start=start, end=end, line=line)
 						self.line_can_update = True
 
-		return 'break'
-
 
 	def show_errors(self):
 		''' Show traceback from last run with added hyperlinks.
@@ -3844,21 +3773,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.state = 'error'
 
-			tmp = self.contents.get('1.0', tkinter.END)
-			curtab = self.tabs[self.tabindex]
-			# [:-1]: remove unwanted extra newline
-			curtab.contents = tmp[:-1]
+			self.view_close()
 
-			try:
-				pos = self.contents.index(tkinter.INSERT)
-			except tkinter.TclError:
-				pos = '1.0'
-
-			curtab.position = pos
-			self.save_bookmarks(curtab)
-
-			self.line_can_update = False
-			self.contents.delete('1.0', tkinter.END)
 			openfiles = [tab.filepath for tab in self.tabs]
 
 			for tag in self.contents.tag_names():
@@ -3909,42 +3825,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						self.line_can_update = True
 
 
-
 	def stop_show_errors(self, event=None):
 		self.state = 'normal'
 		self.bind("<Escape>", self.esc_override)
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 
-		self.entry.delete(0, tkinter.END)
-		curtab = self.tabs[self.tabindex]
+		self.view_open()
 
-		if curtab.type == 'normal':
-			self.entry.insert(0, curtab.filepath)
-			self.entry.xview_moveto(1.0)
-
-		self.token_err = False
-		self.line_can_update = False
-		self.contents.delete('1.0', tkinter.END)
-		self.contents.insert(tkinter.INSERT, curtab.contents)
-		self.clear_bookmarks()
-		self.restore_bookmarks(curtab)
-
-
-		# Set cursor pos
-		line = curtab.position
-		self.contents.focus_set()
-		self.contents.mark_set('insert', line)
-		self.ensure_idx_visibility(line)
-
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.insert_tokens(self.get_tokens())
-			self.line_can_update = True
-
-
-		self.contents.edit_reset()
-		self.contents.edit_modified(0)
+		return 'break'
 
 
 ########## Run file Related End
@@ -3998,11 +3887,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			When walking with absolutely_next-flag,
 			Cursor is moved to absolutely next defline.
 
+
+			Note: Puts insertion-cursor on defline, for example selection purposes
+
 		'''
 		# Why can_do_syntax, instead of is_pyfile? Because tag: 'strings' is
 		# used while parsing. Tag exists only if synxtax-highlighting is on.
 		# This means one can not walk_scope without syntax-highlight.
-		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search']):
+		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search', 'goto_def']):
 			self.bell()
 			return "break"
 
@@ -4019,7 +3911,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		else:
 			# +1 lines: Because cursor could be at defline, start at next line(down)
-			# for get_scope_start to catch defline
+			# to catch that defline
 			pos = 'insert +1 lines'
 			if not absolutely_next:
 				(scope_line, ind_defline,
@@ -4069,6 +3961,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				pos = '%s +1 lines' % pos
 				##################################
+
 		# Put cursor on defline
 		try:
 			self.contents.mark_set('insert', pos)
@@ -4102,7 +3995,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Why can_do_syntax, instead of is_pyfile? Because tag: 'strings' is
 		# used while parsing. Tag exists only if synxtax-highlighting is on.
 		# This means one can not walk_scope without syntax-highlight.
-		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search']):
+		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search', 'goto_def']):
 			self.bell()
 			return "break"
 
@@ -4140,7 +4033,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Mac stuff is in mac_cmd_overrides()
 		'''
 
-		if self.state not in  ['normal', 'search']:
+		if self.state not in  ['normal', 'search', 'goto_def']:
 			self.bell()
 			return "break"
 
@@ -4201,7 +4094,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return
 
 
-
 	def center_view(self, event=None, up=False):
 		''' Raise insertion-line
 		'''
@@ -4214,23 +4106,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		num_scroll = num_lines // 3
 		pos = self.contents.index('insert')
 		#posint = int(float(self.contents.index('insert')))
-		# lastline of visible window
+		# Lastline of visible window
 		lastline_screen = int(float(self.contents.index("@0,65535")))
 
-		# lastline
+		# Lastline
 		last = int(float(self.contents.index('end'))) - 1
 		curline = int(float(self.contents.index('insert'))) - 1
 
 
 		if up: num_scroll *= -1
 
-		# if near fileend
+		# Near fileend
 		elif curline + 2*num_scroll + 2 > last:
 			self.contents.insert(tkinter.END, num_scroll*'\n')
 			self.contents.mark_set('insert', pos)
 
 
-		# if near screen end
+		# Near screen end
 		#elif curline + 2*num_scroll + 2 > lastline_screen:
 		self.contents.yview_scroll(num_scroll, 'units')
 
@@ -4413,7 +4305,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''	Pressed ctrl or Alt + shift and arrow left or right.
 			Make <<SelectNextWord>> and <<SelectPrevWord>> to stop at lineends.
 		'''
-		if self.state not in [ 'normal', 'error', 'search', 'replace', 'replace_all' ]:
+		if self.state not in ['normal', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
 			self.bell()
 			return "break"
 
@@ -4622,7 +4514,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''	Pressed ctrl or Alt and arrow left or right.
 			Make <<NextWord>> and <<PrevWord>> to handle lineends.
 		'''
-		if self.state not in [ 'normal', 'error', 'search', 'replace', 'replace_all' ]:
+		if self.state not in ['normal', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
 			self.bell()
 			return "break"
 
@@ -4743,7 +4635,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''	Copy current line to clipboard
 		'''
 
-		if self.state not in [ 'normal', 'help', 'error', 'search', 'replace', 'replace_all' ]:
+		if self.state not in [
+					'normal', 'help', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
 			self.bell()
 			return "break"
 
@@ -5718,7 +5611,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''	Used to insert tab
 		'''
 
-		if self.state in [ 'search', 'replace', 'replace_all' ]:
+		if self.state in [ 'search', 'replace', 'replace_all', 'goto_def' ]:
 			return 'break'
 
 		self.contents.insert(tkinter.INSERT, '\t')
@@ -5728,6 +5621,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def tab_over_indent(self):
 		'''	Called from indent()
+
+			If at indent0 of empty line or non empty line:
+			move line and/or cursor to closest indentation
 		'''
 		self.line_can_update = False
 
@@ -5743,24 +5639,60 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Line is wrapped
 		if res[0] > 1: return False
 
-		tests = [not self.line_is_empty(),
+		empty = self.line_is_empty()
+		tests = [not empty,
 				self.contents.get('insert', 'insert +1c').isspace()
 				]
 
-		# Line has indentation
+		# Line already has indentation
 		if all(tests): return False
 
-		if self.line_is_empty():
+		if empty:
 			self.contents.delete('insert linestart', 'insert lineend')
 
 
-		patt = r'^[[:blank:]]*[^[:blank:]#]'
-		pos = self.contents.search(patt, ins, stopindex='1.0',
+		patt = r'^[[:blank:]]+[^[:blank:]]'
+		line_ins = int(self.contents.index('insert').split('.')[0])
+
+		(ind_prev, ind_next, pos_prev, pos_next,
+		line_prev, line_next, diff_prev, diff_next) = (
+			False, False, False, False, False, False, False, False)
+
+
+		# Indentation of previous
+		pos_prev = self.contents.search(patt, ins, stopindex='1.0',
 			regexp=True, backwards=True, count=self.search_count_var)
 
 		# self.search_count_var.get() == indentation level +1
 		# because pattern matches: not blank and not comment at end of patt
-		if pos: return self.search_count_var.get() -1
+		if pos_prev:
+			ind_prev = self.search_count_var.get() -1
+			line_prev = int(self.contents.index(pos_prev).split('.')[0])
+			diff_prev = line_ins - line_prev
+
+
+		# Indentation of next
+		pos_next = self.contents.search(patt, ins, stopindex='end',
+			regexp=True, count=self.search_count_var)
+
+		if pos_next:
+			ind_next = self.search_count_var.get() -1
+			line_next = int(self.contents.index(pos_next).split('.')[0])
+			diff_next = line_next - line_ins
+
+
+		if pos_next and pos_prev:
+			# Equal distance, prefer previous
+			if diff_prev == diff_next: return ind_prev
+
+			elif min(diff_prev, diff_next) == diff_prev:
+				return ind_prev
+
+			else: return ind_next
+
+		elif pos_prev: return ind_prev
+		elif pos_next: return ind_next
+		else: return False
 
 
 	def del_to_dot(self, event):
@@ -6792,6 +6724,33 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Utilities End
 ########## Gotoline etc Begin
 
+	def stop_goto_def(self, event=None):
+		self.bind("<Escape>", self.esc_override)
+		self.contents.unbind( "<Double-Button-1>", funcid=self.bid )
+		self.contents.config(state='normal')
+		self.state = 'normal'
+
+		# Set cursor pos
+		curtab = self.tabs[self.tabindex]
+		try:
+			if self.save_pos:
+				line = self.save_pos
+				curtab.position = line
+				self.save_pos = None
+			else:
+				line = curtab.position
+
+			self.contents.focus_set()
+			self.contents.mark_set('insert', line)
+			self.wait_for(100)
+			self.ensure_idx_visibility(line)
+
+		except tkinter.TclError:
+			curtab.position = self.contents.index(tkinter.INSERT)
+
+		return 'break'
+
+
 	def goto_def(self, event=None):
 		''' Get word under cursor or use selection and
 			go to function definition
@@ -6834,8 +6793,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
 
+			if self.state == 'search': pass
+			else:
+				# Save cursor pos
+				tab = self.tabs[self.tabindex]
+				try: tab.position = self.contents.index(tkinter.INSERT)
+				except tkinter.TclError: pass
+				self.save_pos = None
+
+				self.bind("<Escape>", self.stop_goto_def)
+				self.bid = self.contents.bind("<Double-Button-1>",
+					func=lambda event: self.update_curpos(event, **{'doubleclick':True,
+					'on_stop':self.stop_goto_def}), add=True )
+
+				self.contents.config(state='disabled')
+				self.state = 'goto_def'
+
 			if have_selection:
 				self.contents.tag_remove( 'sel', '1.0', tkinter.END )
+
 		else:
 			self.bell()
 
@@ -7115,34 +7091,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					curtab.contents = curtab.oldcontents
 
 
-				self.entry.delete(0, tkinter.END)
 				curtab.filepath = filename
 				curtab.type = 'normal'
 				curtab.position = '1.0'
-				self.entry.insert(0, filename)
-				self.entry.xview_moveto(1.0)
-
-				self.token_err = False
-				self.line_can_update = False
-				self.contents.delete('1.0', tkinter.END)
-				self.contents.insert(tkinter.INSERT, curtab.contents)
 				self.remove_bookmarks(all_tabs=False)
-				self.clear_bookmarks()
-
-
-				# Set cursor pos
-				self.contents.focus_set()
-				self.contents.see('1.0')
-				self.contents.mark_set('insert', '1.0')
-
-				if self.can_do_syntax():
-					self.update_lineinfo()
-					self.insert_tokens(self.get_tokens())
-					self.line_can_update = True
-
-
-				self.contents.edit_reset()
-				self.contents.edit_modified(0)
+				self.view_open()
 
 
 		except (EnvironmentError, UnicodeDecodeError) as e:
@@ -7309,7 +7262,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		# Used below
+
 		def update_entry():
 			self.entry.delete(0, tkinter.END)
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
@@ -7452,7 +7405,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		else:
-			# Skip unnecessary disk-writing
+			# Skip disk-writing
 			if not activetab:
 				return True
 
@@ -7616,7 +7569,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			It is appended to tab.bookmarks
 		'''
 		tests = (
-				self.state not in [ 'normal', 'search', 'replace' ],
+				self.state not in [ 'normal', 'search', 'replace', 'goto_def' ],
 				not self.contents.bbox('insert')
 				)
 
@@ -7804,38 +7757,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 
-		curtab = self.tabs[self.tabindex]
-
-		if curtab.filepath:
-			self.entry.insert(0, curtab.filepath)
-			self.entry.xview_moveto(1.0)
-
-		self.token_err = False
-		self.line_can_update = False
-		self.contents.delete('1.0', tkinter.END)
-		self.contents.insert(tkinter.INSERT, curtab.contents)
-		self.clear_bookmarks()
-		self.restore_bookmarks(curtab)
-
-
-		# Set cursor pos
-		try:
-			line = curtab.position
-			self.contents.focus_set()
-			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
-
-		except tkinter.TclError:
-			curtab.position = '1.0'
-
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.insert_tokens(self.get_tokens())
-			self.line_can_update = True
-
-
-		self.contents.edit_reset()
-		self.contents.edit_modified(0)
+		self.view_open()
 
 		self.bind("<Escape>", self.esc_override)
 		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
@@ -7849,22 +7771,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.state = 'help'
 
-		try:
-			pos = self.contents.index(tkinter.INSERT)
-		except tkinter.TclError:
-			pos = '1.0'
+		self.view_close()
 
-		curtab = self.tabs[self.tabindex]
-		curtab.position = pos
-		tmp = self.contents.get('1.0', tkinter.END)
-		# [:-1]: remove unwanted extra newline
-		curtab.contents = tmp[:-1]
-		self.save_bookmarks(curtab)
-
-		self.line_can_update = False
-
-		self.entry.delete(0, tkinter.END)
-		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.helptxt)
 
 		self.entry.config(state='disabled')
@@ -7982,7 +7890,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def indent(self, event=None):
-		if self.state in [ 'search', 'replace', 'replace_all' ]:
+		if self.state in [ 'search', 'replace', 'replace_all', 'goto_def' ]:
 			return 'break'
 
 		if len(self.contents.tag_ranges('sel')) == 0:
@@ -8028,7 +7936,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if len(self.contents.tag_ranges('sel')) != 0:
 
-				# Is start of selection viewable?
+				# Is start of selection not viewable?
 				if not self.contents.bbox(tkinter.SEL_FIRST):
 
 					self.wait_for(150)
@@ -8059,7 +7967,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def unindent(self, event=None):
-		if self.state in [ 'search', 'replace', 'replace_all' ]:
+		if self.state in [ 'search', 'replace', 'replace_all', 'goto_def' ]:
 			return 'break'
 
 
@@ -8116,7 +8024,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if len(self.contents.tag_ranges('sel')) != 0:
 
-					# Is start of selection viewable?
+					# Is start of selection not viewable?
 					if not self.contents.bbox(tkinter.SEL_FIRST):
 
 						self.wait_for(150)
@@ -8145,7 +8053,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					elif self.contents.compare(tkinter.SEL_FIRST, '<', tkinter.INSERT):
 						self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
 
-					# Is start of selection viewable?
+					# Is start of selection not viewable?
 					if not self.contents.bbox(tkinter.SEL_FIRST):
 						self.ensure_idx_visibility('insert', back=4)
 
@@ -8490,7 +8398,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.contents.tag_add('sel', pos, word_end)
 		self.contents.mark_set('insert', word_end)
 
-		# Is it viewable?
+		# Is it not viewable?
 		if not self.contents.bbox(pos):
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
@@ -8562,6 +8470,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.wait_for(100)
 
 		self.ensure_idx_visibility(start)
+		self.contents.mark_set('insert', start)
 
 		if self.entry.flag_start:
 			if self.state == 'search':
@@ -8652,13 +8561,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# start: tkinter.Text -index
 		self.handle_search_entry(idx, start)
 
-
-		# Is it viewable?
+		# Is it not viewable?
 		if not self.contents.bbox(start):
 			self.wait_for(100)
 
 		self.ensure_idx_visibility(start)
-
+		self.contents.mark_set('insert', start)
 
 		if self.entry.flag_start:
 			if self.state == 'search':
@@ -9141,18 +9049,13 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		return 'break'
 
 
-	def update_curpos(self, event=None, doubleclick=False):
+	def update_curpos(self, event=None, doubleclick=False, on_stop=None):
+		''' on_stop: function to be executed on doubleclick
+		'''
+
 		self.save_pos = self.contents.index(tkinter.INSERT)
 
-		if doubleclick:
-			self.stop_search()
-
-		else:
-			# This is needed to enable replacing with Return.
-			# Because of binding to self in start_replace().
-			# And when pressing contents with mouse, self.contents gets focus,
-			# so put it back to self.
-			self.focus_set()
+		if doubleclick: on_stop()
 
 		return "break"
 
@@ -9303,7 +9206,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.bid_show_prev = None
 
 		self.bid3 = self.contents.bind("<Double-Button-1>",
-			func=lambda event: self.update_curpos(event, **{'doubleclick':True}), add=True )
+			func=lambda event: self.update_curpos(event, **{'doubleclick':True,
+			'on_stop':self.stop_search}), add=True )
 
 		self.contents.unbind( "<space>", funcid=self.bid_space )
 		self.bid4 = self.contents.bind( "<space>", self.space_override )
@@ -9406,7 +9310,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		self.bid3 = self.contents.bind("<Double-Button-1>",
-			func=lambda event: self.update_curpos(event, **{'doubleclick':True}), add=True )
+			func=lambda event: self.update_curpos(event, **{'doubleclick':True,
+			'on_stop':self.stop_search}), add=True )
 
 		self.contents.unbind( "<space>", funcid=self.bid_space )
 		self.bid4 = self.contents.bind("<space>", func=self.space_override )
@@ -9606,7 +9511,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		####
 
 
-		# Is it viewable?
+		# Is it not viewable?
 		if not self.contents.bbox(pos):
 			self.wait_for(200)
 

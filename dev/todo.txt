@@ -619,6 +619,27 @@ Concatenate lines: "\n+"
 ###
 
 #######################
+removed: self.check_pars
+
+search no can yank without clicking, fixed ok?
+yank_line no can yank other than focus line, fixed with:
+show_next/prev:
+	self.ensure_idx_visibility(start)
+	self.contents.mark_set('insert', start)
+
+#######################
+new state: 'goto_def'
+	in goto_def(), when not already searching
+	
+esc: return to cursor, after goto_def
+double-click: stop to mouse
+goto_def(): content is now disabled like when searching
+	stop_goto_def()
+	self.state = 'goto_def'
+#######################
+tab_over_indent(), choose indentation of previous lines or next lines,
+	which is closer to insert
+#######################
 
 Below this: not done ################################################
 
@@ -634,23 +655,22 @@ ln_widget dark brown or gray
 
 
 ################################################
-uncomment(), if no selection, check
-
-
+uncomment(), if no selection, check done ok?
+##########
 undo_override, redo_override:
 check with multiline actions like indent comment etc
-
-
-paste_fallback() fix
-
-
-tabify_lines check
 
 
 quit_me docstring
 
 
 idx_lineend() == display line end, this is ok?
+
+
+paste_fallback() fix
+
+
+tabify_lines check
 
 
 copy block to empty line indent0 no work?
@@ -673,6 +693,19 @@ move many lines is very slow! almost dangerous ########
 
 macos
 clipboard not persist over restart if not paste to console
+termios
+tty
+pty
+
+get line from python console:
+	readline.get_line_buffer()
+
+insert line in console
+	readline.insert_text('dir()')
+
+display it
+	readline.redisplay()
+
 
 
 update_curpos() needs check
@@ -681,7 +714,7 @@ update_curpos() needs check
 paste() mark-insert after paste is wrong?
 
 
-get_info()
+henxel.get_info()
 list funcs which gets some info
 check list add comments
 ###########################################################
@@ -694,6 +727,37 @@ python -m build -nx
 
 
 
+view_open
+view_close
+	clear_bookmarks?
+	no del content?
+	
+	
+
+show_err() run() similar parts combine?
+
+
+
+view changes, after open tab, restore_bookmarks() is used in:
+	walk_tabs *
+	del_tab *
+		
+	run *
+	show_errors *
+	stop_show_errors *
+		
+	help *
+	stop_help *
+		
+	new_tab *
+	tag_link *
+	loadfile *
+	save * not using view_open/close
+	
+
+
+tokens
+###########################
 check_line:
 self.check_scope	scope
 
@@ -721,6 +785,8 @@ update_line --> check_line?
 
 when to check all_cont?
 undo redo paste comment indent tabify_lines
+indent unindent tokens scope?
+# check update range in comment uncomment paste #########
 
 
 run() show_err no set curpos?
@@ -728,10 +794,6 @@ comment uncomment tabify_lines paste undo redo no set cursor, ok?
 
 
 search: when to set line_can_update? #################
-
-
-indent unindent tokens scope?
-# check update range in comment uncomment paste #########
 
 
 update_line:
@@ -743,7 +805,19 @@ check_line:
 	all_cont == cur_scope ##################?
 	get scope_start end then update_tokens
 
-check use of: self.check_pars ###########
+
+######
+self.par_err set in backspace_override and in insert/update tokens, when:
+	self.checkpars() returns True
+	should be also set when commenting line with pars, done in check_line ok?
+######
+
+
+self.token_err is set only from backspace_override and insert/update tokens
+	when: indentation error or multiline string error
+could be scope only?
+
+
 backspace_override: no quote tests done ok? --> check_line
 
 
@@ -751,30 +825,128 @@ insert_tokens
 	for loop better, done ok?
 	f-strings green?
 
+########################################################################
+Thinking about tokens
+	
 
-#####
-when delete # all contents tokens are updated, is that necessary?
---> update_line() more work on filtering, knows oldline etc
-if diff len(old new line) == 1:
-(
-	could do also select one(or more) letter and insert one letter
-	--> only one update_line call from that one letter insertion
-	so diff len can be more than 1 and just one letter is inserted
-)
+tab.tk_command
+self.token_err --> tab.token_err
 
 
+tab.cache = dict()
+if tab.cache['contents'] != tab.contents:
+	update tab.cache['tokens']
 
-if triple not in oldline and triple in newline:
-	allcont
 
-elif triple in oldline and triple not in newline:
-	allcont
+view changes == (list is above with bookmarks)
+walk_tabs:
+	1: get tokens of curtab
+	2: delete, insert
+	3: insert_syntags(): eval nexttab.tk_command
+	4: after_idle: update oldtab.tk_command
+		
 
-elif triple in oldline and newline:
-	if '#' added in newline: allcont
-	if '#' deleted in newline: allcont
 
-#####
+	
+self.tagnames = [
+		'keywords',
+		'numbers',
+		'bools',
+		'strings',
+		'comments',
+		'breaks',
+		'calls',
+		'selfs'
+		]
+
+
+
+
+tab.cache = dict()
+
+for tag in self.tagnames:
+	self.tags[tag] = list()
+
+len(tab.cache) > 0: --> dict is not empty
+tab.cache.clear() --> clear dict
+tab.cache['contents'] update at viewchange
+
+
+tab.cache['tags'] == list of tk_commands, update at viewchange
+	tk_command = patt + tag
+	for ((s0,s1), (e0,e1)) in self.tags[tag]:
+		tk_command += f' {s0}.{s1} {e0}.{e1}'
+
+
+for command in tab.cache['tags']:
+	self.contents.tk.eval(command)
+
+
+should be tcl proc?, nested array: tabs(filepath)(tagname) --> list of indexes or empty
+r'set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} before {^.*(\w\W|\W\w)}] ')
+('array set ::tcl::WordBreakRE $l3 ')
+
+
+tabs = array of arrays(tabs): filepath-string as key, tab-array as value
+	array set tabs [list filepath1 $tab1 filepath2 $tab2]
+
+each tab is array: tagname as key, index-list as value
+	array set tab1 [list tag_a $list_a tag_b $list_b]
+		each key tag_a etc, has list of indexes as value:
+			set list_a {4 5 6 7}
+
+
+foreach tab $tabs {parray $tab}
+	tab1(tagname1) = 1 2 3 4
+	tab1(tagname2) = 1 2 3 4
+	----
+	tab2(tagname1) = 1 2 3 4
+	tab2(tagname2) = 1 2 3 4
+
+
+
+#################
+in init
+
+
+proc addtags {widget array filepath} {
+	foreach {tag, indexlist} $array($filepath) {
+		$widget tag add $tag $indexlist
+	}
+}
+
+
+in update_tokens
+array unset tabs(filepath-string%s) # like clear
+array set tabs(filepath-string%s) long %s-string tag1 indexes tag2 indexes
+
+#################
+
+
+update_tokens ==
+	get_tokens(update=False) --> tokens of tab 
+				tab.contents, if update: get(1.0, end)
+	
+	insert_tokens(tokens)
+	
+	
+when view change:
+	get_tokens
+	delete
+	insert
+	insert_tokens
+	
+walk_tabs
+	
+Thinking about tokens End
+############################################################
+
+
+
+
+
+
+
 
 
 
@@ -945,142 +1117,6 @@ TO NOTES END
 ########################
 		
 		
-		
-		
-		
-####################################
-update_tokens(
-	
-
-tab.tk_command
-self.check_pars --> tab.check_pars 
-self.token_err --> tab.token_err
-self.checkpars() ?
-
-
-tab.cache = dict()
-if tab.cache['contents'] != tab.contents:
-	update tab.cache['tokens']
-
-
-view changes == (list is above with bookmarks)
-walk_tabs:
-	1: get tokens of curtab
-	2: delete, insert
-	3: insert_syntags(): eval nexttab.tk_command
-	4: after_idle: update oldtab.tk_command
-		
-
-
-	
-self.tagnames = [
-		'keywords',
-		'numbers',
-		'bools',
-		'strings',
-		'comments',
-		'breaks',
-		'calls',
-		'selfs'
-		]
-
-
-
-
-check:
-	if 'EOF in multi-line statement' in ee.args[0]:
-
-
-
-tab.cache = dict()
-
-for tag in self.tagnames:
-	self.tags[tag] = list()
-
-len(tab.cache) > 0: --> dict is not empty
-tab.cache.clear() --> clear dict
-tab.cache['contents'] update at viewchange
-
-
-tab.cache['tags'] == list of tk_commands, update at viewchange
-	tk_command = patt + tag
-	for ((s0,s1), (e0,e1)) in self.tags[tag]:
-		tk_command += f' {s0}.{s1} {e0}.{e1}'
-
-
-for command in tab.cache['tags']:
-	self.contents.tk.eval(command)
-
-
-should be tcl proc?, nested array: tabs(filepath)(tagname) --> list of indexes or empty
-r'set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} before {^.*(\w\W|\W\w)}] ')
-('array set ::tcl::WordBreakRE $l3 ')
-
-
-tabs = array of arrays(tabs): filepath-string as key, tab-array as value
-	array set tabs [list filepath1 $tab1 filepath2 $tab2]
-
-each tab is array: tagname as key, index-list as value
-	array set tab1 [list tag_a $list_a tag_b $list_b]
-		each key tag_a etc, has list of indexes as value:
-			set list_a {4 5 6 7}
-
-
-foreach tab $tabs {parray $tab}
-	tab1(tagname1) = 1 2 3 4
-	tab1(tagname2) = 1 2 3 4
-	----
-	tab2(tagname1) = 1 2 3 4
-	tab2(tagname2) = 1 2 3 4
-
-
-
-#################
-in init
-
-
-proc addtags {widget array filepath} {
-	foreach {tag, indexlist} $array($filepath) {
-		$widget tag add $tag $indexlist
-	}
-}
-
-
-in update_tokens
-array unset tabs(filepath-string%s) # like clear
-array set tabs(filepath-string%s) long %s-string tag1 indexes tag2 indexes
-
-#################
-
-
-update_tokens ==
-	get_tokens(update=False) --> tokens of tab 
-				tab.contents, if update: get(1.0, end)
-	
-	insert_tokens(tokens)
-	
-	
-when view change:
-	get_tokens
-	delete
-	insert
-	insert_tokens
-	
-walk_tabs
-	
-
-##############################
-
-
-
-
-
-
-
-
-
-
-
 
 
 
