@@ -189,6 +189,7 @@ class ExpandWord:
 			dictionary[w] = w
 
 		words.append(word)
+
 		return words
 
 
