@@ -429,7 +429,15 @@ class Editor(tkinter.Toplevel):
 			self.protocol("WM_DELETE_WINDOW",
 				lambda kwargs={'quit_debug':True}: self.quit_me(**kwargs))
 
-			if self.flags and not self.flags.get('test_is_visible'): self.withdraw()
+
+			# Get original background, which is returned at end of init
+			# after editor gets mapped
+			self.orig_bg_color = self.cget('bg')
+			self.config(bg='black')
+			# Dont map too early to prevent empty windows at startup
+			# when init is taking long
+			self.withdraw()
+
 
 			# Other widgets
 			self.to_be_closed = list()
@@ -824,7 +832,7 @@ class Editor(tkinter.Toplevel):
 ##				# self.bbox_height == 1,  self.text_widget_height == 1
 ##				# --> self.contents is not yet 'packed' by (grid) geometry-manager
 
-			self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
+			#self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 
 
 			############
@@ -922,9 +930,15 @@ class Editor(tkinter.Toplevel):
 
 			############
 			# Reordering test for slow machines
-			#if self.tabs[self.tabindex].type == 'normal':
-				#self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-				#self.restore_bookmarks(self.tabs[self.tabindex])
+
+			curtab = self.tabs[self.tabindex]
+
+			if curtab.type == 'normal':
+				self.contents.insert(tkinter.INSERT, curtab.contents)
+				self.restore_bookmarks(curtab)
+				self.entry.insert(0, curtab.filepath)
+				self.entry.xview_moveto(1.0)
+
 
 			# Set cursor pos
 			line = self.tabs[self.tabindex].position
@@ -943,9 +957,18 @@ class Editor(tkinter.Toplevel):
 				self.insert_tokens(self.get_tokens())
 				self.line_can_update = True
 
+			self.contents.edit_reset()
+			self.contents.edit_modified(0)
+
 			self.set_bindings()
 			############
 
+
+			# map Editor, restore original background, which was set to black
+			# during init to prevent flashing when init takes long
+			if self.flags and not self.flags.get('test_is_visible'): pass
+			else: self.deiconify()
+			self.config(bg=self.orig_bg_color)
 
 			self.__class__.alive = True
 			self.update_title()
@@ -1058,7 +1081,7 @@ Error messages Begin
 ##			# Correct value would be 0
 ##			self.screen_lines = int(self.contents['height'])
 
-		self.update_linenums()
+		#self.update_linenums()
 
 
 	def copy_windows(self, event=None, selection=None, flag_cut=False):
@@ -1447,6 +1470,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		tab = self.tabs[self.tabindex]
 		self.save_bookmarks(tab)
 		self.save_config()
+		self.config(bg='black') # prevent flashing if slow machine
 		self.cleanup()
 
 
@@ -1630,7 +1654,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# More info in update_linenums()
 		self.bbox_height = self.contents.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
-		self.update_linenums()
+		#self.update_linenums()
 
 		if self.can_do_syntax() and self.line_can_update:
 
@@ -2480,17 +2504,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.btn_git.config(font=self.menufont)
 		self.popup.config(font=self.menufont)
 
-		curtab = self.tabs[self.tabindex]
-
-		if curtab.type == 'normal':
-			self.contents.insert(tkinter.INSERT, curtab.contents)
-			self.restore_bookmarks(curtab)
-			self.entry.insert(0, curtab.filepath)
-			self.entry.xview_moveto(1.0)
-
-
-		self.contents.edit_reset()
-		self.contents.edit_modified(0)
 
 ########## Configuration Related End
 ########## Syntax highlight Begin
@@ -3149,23 +3162,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def highlight_line(self, index='insert', color=None):
-
-		safe_idx = self.get_safe_index(index)
-		s = '%s display linestart' % safe_idx
-
-		if not self.line_is_elided(safe_idx):
-			e = '%s display lineend' % safe_idx
-		else:
-			e = '%s display lineend -1 display char' % safe_idx
-
-		self.contents.tag_remove('highlight_line', '1.0', 'end')
-		#color = self.get_accent_color(self.bgcolor)
-
-		self.contents.tag_config('highlight_line', background=color)
-		self.contents.tag_add('highlight_line', s, e)
-
-
-	def get_accent_color(self, color):
 		''' color is tk color, which can be
 
 			A: System named color. For example, one has Entry-widget with default
@@ -3184,47 +3180,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			#ffffffffffff
 		'''
 
-		max_val = self.winfo_rgb('white')[0]
-		# 65535 '0xffff'
-		#f 	 15   step 1
-		#ff  255  16 or smaller
-		#fff 4096 16**2 etc
-		max_val_hex = hex(max_val)[2:]
-		len_max_val_hex = len(max_val_hex)
+		if not color: color = r'#303030'
 
-		step = (len_max_val_hex-1)*4 +1
-		#print(max_val_hex, len_max_val_hex, step)
-		#step = max_val // 121
+		safe_idx = self.get_safe_index(index)
+		s = '%s display linestart' % safe_idx
 
-		rgb_orig = self.winfo_rgb(color)
-		rgb = list()
+		if not self.line_is_elided(safe_idx):
+			e = '%s display lineend' % safe_idx
+		else:
+			e = '%s display lineend -1 display char' % safe_idx
 
-		# self.winfo_rgb('red') --> (65535, 0, 0)
-		for clr in rgb_orig:
-			# When clr is half or more max bright, make dimmer
-			if clr >= max_val//2:
-				rgb.append( clr -step)
-			# Make brighter
-			else:
-				rgb.append( clr +step)
+		self.contents.tag_remove('highlight_line', '1.0', 'end')
 
-		# To hexadecimals
-		# Remove 0x from start: [2:]
-		as_hex = [hex(clr)[2:] for clr in rgb]
-		print(as_hex)
-		# Longest number, like 0xffff is longer than 0xff
-		max_len = len_max_val_hex
-		accent_color = r'#'
-
-		for clr in as_hex:
-			if diff := max_len - len(clr):
-				clr = diff*'0' + clr
-			accent_color += clr
-
-
-		print(step, rgb_orig, rgb, accent_color)
-
-		return accent_color
+		self.contents.tag_config('highlight_line', background=color)
+		self.contents.tag_add('highlight_line', s, e)
 
 
 	def update_normal_text(self):

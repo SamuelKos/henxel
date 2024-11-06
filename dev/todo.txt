@@ -642,6 +642,17 @@ tab_over_indent(), choose indentation of previous lines or next lines,
 #######################
 added FreeMono to goodfonts
 #######################
+apply_conf no insert contents
+moved to end of init ok?
+
+small fixes
+
+also sbset_override and update_linenumbers currently not used
+for testing with slow machine
+
+removed get_accent_color
+planning to use magic colors instead in line highlight
+#######################
 
 
 Below this: not done ################################################
@@ -788,10 +799,12 @@ use same padx in every widget
 ln_wid, cont --> relief flat ok?
 
 need: select_lines(startline, endline) ############
-maybe put in gotoline? if ',' in linenum: 1,100 then select, show last etc
+maybe put in gotoline? if ',:-?' in linenum: 1,100 then select, show last etc
 --> goodbye vim
 
 
+font choose check
+colors edit enable toggle bold ############
 
 
 Mod1-Shift-(
