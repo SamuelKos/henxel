@@ -533,48 +533,20 @@ class Editor(tkinter.Toplevel):
 			# Initiate widgets
 			####################################
 			self.btn_git = tkinter.Button(self, takefocus=0, font=self.menufont, relief='flat', highlightthickness=0, padx=0, state='disabled')
-			# Put branch name, if on one
-			self.restore_btn_git()
+			self.restore_btn_git() # Put branch name, if on one
 
 			self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, takefocus=0)
 			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
 			self.entry.bind("<Return>", self.load)
 
-			self.btn_open=tkinter.Button(self, takefocus=0, text='Open', bd=4, highlightthickness=0, command=self.load)
-			self.btn_save=tkinter.Button(self, takefocus=0, text='Save', bd=4, highlightthickness=0, command=self.save)
-
-
-			# Get conf:
-			string_representation = None
-			data = None
-
-			if self.flags and self.flags.get('test_skip_conf') == True: pass
-			else:
-				# Try to apply saved configurations:
-				if self.env:
-					p = pathlib.Path(self.env) / CONFPATH
-
-				if self.env and p.exists():
-					try:
-						with open(p, 'r', encoding='utf-8') as f:
-							string_representation = f.read()
-							data = json.loads(string_representation)
-
-					except EnvironmentError as e:
-						print(e.__str__())	# __str__() is for user (print to screen)
-						#print(e.__repr__())	# __repr__() is for developer (log to file)
-						print(f'\n Could not load existing configuration file: {p}')
-
-			if data:
-				self.oldconf = string_representation
-				self.load_config(data)
-
-
+			self.btn_open = tkinter.Button(self, takefocus=0, text='Open', bd=4, highlightthickness=0, command=self.load)
+			self.btn_save = tkinter.Button(self, takefocus=0, text='Save', bd=4, highlightthickness=0, command=self.save)
 
 			self.ln_widget = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4, relief='flat')
 			self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
 
-			# Disable copying linenumbers:
+
+			# Disable copying linenumbers
 			shortcut = '<Mod1-Key-c>'
 			if self.os_type != 'mac_os': shortcut = '<Control-c>'
 			self.ln_widget.bind(shortcut, self.do_nothing_without_bell)
@@ -590,8 +562,10 @@ class Editor(tkinter.Toplevel):
 			# Needed in leave() taglink in: Run file Related
 			self.name_of_cursor_in_text_widget = self.contents['cursor']
 
+
 			self.popup = tkinter.Menu(self.contents, tearoff=0, bd=0, activeborderwidth=0)
 			self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
+
 
 			if self.debug:
 				self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
@@ -617,6 +591,31 @@ class Editor(tkinter.Toplevel):
 			self.popup.add_command(label="     inspect", command=self.insert_inspected)
 			self.popup.add_command(label="      errors", command=self.show_errors)
 			self.popup.add_command(label="        help", command=self.help)
+
+
+			# Get conf:
+			string_representation = None
+			data, p = None, None
+
+			if self.flags and self.flags.get('test_skip_conf') == True: pass
+			else:
+				if self.env: p = pathlib.Path(self.env) / CONFPATH
+
+				if p and p.exists():
+					try:
+						with open(p, 'r', encoding='utf-8') as f:
+							string_representation = f.read()
+							data = json.loads(string_representation)
+
+					except EnvironmentError as e:
+						print(e.__str__())	# __str__() is for user (print to screen)
+						#print(e.__repr__())	# __repr__() is for developer (log to file)
+						print(f'\n Could not load existing configuration file: {p}')
+
+			if data:
+				self.oldconf = string_representation
+				self.load_config(data)
+
 
 
 			# Get anchor-name of selection-start.
@@ -1600,7 +1599,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.check_scope:
 			( scope_line, ind_defline, idx_scope_start) = self.get_scope_start()
 
-			idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
+			idx_scope_end = self.get_scope_end(ind_defline, idx_scope_start)
 			print(scope_line)
 
 			s = '%s linestart' % idx_scope_start
@@ -4039,7 +4038,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				idx_scope_start) = self.get_scope_start(index=pos)
 
 				if scope_line != '__main__()':
-					idx_scope_end = pos = self.get_scope_end(ind_defline, index=idx_scope_start)
+					idx_scope_end = pos = self.get_scope_end(ind_defline, idx_scope_start)
 				# Q: Why not: else: return here, after if?
 				# A: 'insert' could be before(more up) than first defline
 
@@ -4126,7 +4125,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		idx_scope_start) = self.get_scope_start(index=pos)
 
 		if scope_line != '__main__()':
-			idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
+			idx_scope_end = self.get_scope_end(ind_defline, idx_scope_start)
 		else:
 			self.bell()
 			return 'break'
@@ -5550,7 +5549,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
-	def undo_override(self, event=None):
+	def undos(self, func1, func2):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
@@ -5578,28 +5577,24 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.line_can_update = False
 			self.wait_for(33)
 
-
-			self.contents.edit_undo()
-
+			func1()
 
 			# Is it not viewable?
 			# Then just move the cursor, with redo
 			ins_line = int(self.contents.index('insert').split('.')[0])
 			if not ( top_line <= ins_line <= bot_line ):
-				#print(top_line, bot_line, ins_line)
-				self.contents.edit_redo()
+				func2()
 
 				# It could be a multiline action, like replace_all
 				ins_after_redo = self.contents.index('insert')
-				if ins_after_redo == ins_orig:
-					self.contents.edit_undo()
+				if ins_after_redo == ins_orig: func1()
 
 				self.ensure_idx_visibility('insert')
 
 
 			if self.can_do_syntax():
 				( scope_line, ind_defline, idx_scope_start) = self.get_scope_start()
-				idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
+				idx_scope_end = self.get_scope_end(ind_defline, idx_scope_start)
 
 				s = '%s linestart' % idx_scope_start
 				e = '%s lineend' % idx_scope_end
@@ -5612,70 +5607,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 
 		return 'break'
+
+
+	def undo_override(self, event=None):
+		return self.undos(self.contents.edit_undo, self.contents.edit_redo)
 
 
 	def redo_override(self, event=None):
-		if self.state != 'normal':
-			self.bell()
-			return "break"
-
-		try:
-			# It could be a multiline action, like replace_all
-			# If trying to undo redo, redo will put cursor to action end,
-			# undo to action start, if they dont fit in same screen, fail.
-
-##			Undo and indexes:
-##			1: Redoing an action will put cursor to end of action, that got redoed,
-##			just like when anything is normally being done
-##			(example: after inserting letter, cursor is at end of letter)
-##
-##			2: Undoing an action will put cursor to start, where action, that got
-##			undoed, would have started.
-##			(example: after undoing insert letter,
-##			cursor is at start of letter that no longer exist)
-##
-
-			ins_orig = self.contents.index('insert')
-			# Linenumbers of top and bottom lines currently disaplayed on screen
-			top_line = int(self.contents.index('@0,0').split('.')[0])
-			bot_line = int(self.contents.index('@0,65535').split('.')[0])
-			self.line_can_update = False
-			self.wait_for(33)
-
-
-			self.contents.edit_redo()
-
-
-			# Is it not viewable?
-			# Then just move the cursor, with undo
-			ins_line = int(self.contents.index('insert').split('.')[0])
-			if not ( top_line <= ins_line <= bot_line ):
-				self.contents.edit_undo()
-
-				# It could be a multiline action, like replace_all
-				ins_after_undo = self.contents.index('insert')
-				if ins_after_undo == ins_orig:
-					self.contents.edit_redo()
-
-
-				self.ensure_idx_visibility('insert')
-
-
-			if self.can_do_syntax():
-				( scope_line, ind_defline, idx_scope_start) = self.get_scope_start()
-				idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
-
-				s = '%s linestart' % idx_scope_start
-				e = '%s lineend' % idx_scope_end
-
-				self.update_lineinfo()
-				self.update_tokens(start=s, end=e)
-				self.line_can_update = True
-
-		except tkinter.TclError:
-			self.bell()
-
-		return 'break'
+		return self.undos(self.contents.edit_redo, self.contents.edit_undo)
 
 
 	def select_all(self, event=None):
@@ -8172,10 +8111,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			e = self.contents.index(tkinter.SEL_LAST)
 
 			startline = int( s.split('.')[0] )
-			startpos = self.contents.index( '%s linestart' % s )
+			startpos = self.contents.index( '%s -1l linestart' % s )
 
 			endline = int( e.split('.')[0] )
-			endpos = self.contents.index( '%s lineend' % e )
+			endpos = self.contents.index( '%s +1l lineend' % e )
 
 			self.line_can_update = False
 
@@ -8190,7 +8129,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# No selection, comment curline
 		except tkinter.TclError as e:
+			startpos = self.contents.index( 'insert -1l linestart' )
+			endpos = self.contents.index( 'insert +1l lineend' )
+			self.line_can_update = False
 			self.contents.insert('%s linestart' % tkinter.INSERT, '##')
+
+			if self.can_do_syntax():
+				self.update_lineinfo()
+				self.update_tokens(start=startpos, end=endpos)
+				self.line_can_update = True
 
 
 		self.contents.edit_separator()
@@ -8211,8 +8158,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			startline = int(s.split('.')[0])
 			endline = int(e.split('.')[0])
-			startpos = self.contents.index('%s linestart' % s)
-			endpos = self.contents.index('%s lineend' % e)
+			startpos = self.contents.index('%s -1l linestart' % s)
+			endpos = self.contents.index('%s +1l lineend' % e)
 			changed = False
 
 			self.line_can_update = False
@@ -8324,7 +8271,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			(scope_line, ind_defline,
 			idx_scope_start) = self.get_scope_start(index=pos)
 
-			idx_scope_end = self.get_scope_end(ind_defline, index=idx_scope_start)
+			idx_scope_end = self.get_scope_end(ind_defline, idx_scope_start)
 
 
 			s = '%s lineend' % idx_scope_start
