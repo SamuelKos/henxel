@@ -104,6 +104,7 @@ def get_info():
 			'find_empty_lines',
 			'fonts_exists',
 			'get_config',
+			'get_line_col_as_int',
 			'get_linenums',
 			'get_safe_index',
 			'get_scope_end',
@@ -819,25 +820,7 @@ class Editor(tkinter.Toplevel):
 			self.bbox_height = self.contents.bbox('@0,0')[3]
 			self.text_widget_height = self.scrollbar.winfo_height()
 
-##			# Real widget visibility-check
-##			if self.flags and self.flags.get('launch_test'):
-##				a = self.contents.winfo_ismapped()
-##				b = self.contents.winfo_viewable()# checks also if ancestors ar mapped
-##				print(a,b) # 0 0
-##
-##			# Note also this
-##			if self.flags and self.flags.get('launch_test'):
-##				print(self.bbox_height,  self.text_widget_height)
-##				# self.bbox_height == 1,  self.text_widget_height == 1
-##				# --> self.contents is not yet 'packed' by (grid) geometry-manager
-
 			#self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
-
-
-			############
-			# Bindings #
-			############
-			#self.set_bindings()
 
 
 			# Register validation-functions, note the tuple-syntax:
@@ -861,13 +844,14 @@ class Editor(tkinter.Toplevel):
 			self.oldline = ''
 			self.token_err = False
 			self.line_can_update = False
-			self.oldlinenum = self.contents.index(tkinter.INSERT).split('.')[0]
+			self.oldlinenum,_ = self.get_line_col_as_int()
 			self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
 
-##			# Real widget visibility-check
+
+##			# Widget visibility-check
 ##			if self.flags and self.flags.get('launch_test'):
 ##				a = self.contents.winfo_ismapped()
-##				b = self.contents.winfo_viewable()# checks also if ancestors ar mapped
+##				b = self.contents.winfo_viewable()# checks also if ancestors are mapped
 ##				print(a,b) # 0 0
 ##
 ##			# Note also this
@@ -875,7 +859,6 @@ class Editor(tkinter.Toplevel):
 ##				print(self.bbox_height,  self.text_widget_height)
 ##				# self.bbox_height == 1,  self.text_widget_height == 1
 ##				# --> self.contents is not yet 'packed' by (grid) geometry-manager
-
 
 
 			self.contents.bind( "<<WidgetViewSync>>", self.update_line)
@@ -927,9 +910,8 @@ class Editor(tkinter.Toplevel):
 				self.contents.focus_set()
 
 
-			############
-			# Reordering test for slow machines
 
+			############
 			curtab = self.tabs[self.tabindex]
 
 			if curtab.type == 'normal':
@@ -953,14 +935,28 @@ class Editor(tkinter.Toplevel):
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
-				self.insert_tokens(self.get_tokens())
+
+				t1 = int(self.root.tk.eval('clock seconds'))
+				a = self.get_tokens()
+				t2 = int(self.root.tk.eval('clock seconds'))
+				self.insert_tokens(a) ##### this takes times
+				t3 = int(self.root.tk.eval('clock seconds'))
+				print(t3-t2, t2-t1, 's')
+
+				#self.insert_tokens(self.get_tokens())
 				self.line_can_update = True
 
 			self.contents.edit_reset()
 			self.contents.edit_modified(0)
 
-			self.set_bindings()
 			############
+			# Bindings #
+			############
+
+			self.set_bindings()
+
+			############
+
 
 
 			# map Editor, restore original background, which was set to black
@@ -972,7 +968,7 @@ class Editor(tkinter.Toplevel):
 			self.__class__.alive = True
 			self.update_title()
 
-##			# Real widget visibility-check
+##			# Widget visibility-check
 ##			if self.flags and self.flags.get('launch_test'):
 ##				a = self.contents.winfo_ismapped()
 ##				b = self.contents.winfo_viewable()#check also if ancestors ar mapped
@@ -1177,19 +1173,19 @@ Error messages Begin
 		if back:
 			b = back
 
-		s = self.contents.bbox( '%s - %i lines' % (index, b) )
-		e = self.contents.bbox( '%s + 4 lines' % index)
+		idx_s = '@0,0'
+		idx_e = '@0,65535'
 
-		tests = [
-				not s,
-				not e,
-				s and (s[1] < 0)
-				]
+		lineno_start = self.get_line_col_as_int(idx_s)[0]
+		lineno_end = self.get_line_col_as_int(idx_e)[0]
+		lineno_ins = self.get_line_col_as_int(index)[0]
 
-		if any(tests):
+
+		# Note, see takes times
+		if not lineno_start + b < lineno_ins:
 			self.contents.see( '%s - %i lines' % (index, b) )
-			self.update_idletasks()
-			self.contents.see( '%s + 4 lines' % index)
+		elif not lineno_ins + 4 < lineno_end:
+			self.contents.see( '%s + 4 lines' % index )
 
 
 	def build_launch_test(self, mode):
@@ -1487,6 +1483,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		#### quit_me End ##############
 
 
+	def get_line_col_as_int(self, index='insert'):
+		''' index: tk text -index
+		'''
+		line,col = map(int, self.contents.index(index).split('.'))
+		return line,col
+
 	def cursor_is_in_multiline_string(self):
 		''' Called from check_line
 		'''
@@ -1501,12 +1503,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if ('strings' in self.contents.tag_names('insert')):
 			try:
 				s, e = self.contents.tag_prevrange('strings', 'insert')
-				# Parse linenumbers of start and enf of range == s,e
-				# Then convert them to int. This could also be done with:
-				# int(float(s)) which would give linenumber of start as int,
-				# but is not much clearer.
 
-				l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
+				(l0,_), (l1,_) = map(self.get_line_col_as_int, [s, e])
 
 				if l0 != l1: return True
 
@@ -1516,13 +1514,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return False
 
 
-	def check_line(self, oldline=None, newline=None, on_oldline=True, idx_insert=None):
+	def check_line(self, oldline=None, newline=None, on_oldline=True):
 		''' oldline, newline:	string
 			on_oldline:			bool	(self.oldlinenum == linenum curline)
-			idx_insert			tk text index, position of insertion cursor
 		'''
 
-		ins_col = col = int(self.contents.index(idx_insert).split('.')[1])
+		ins_col = col = self.get_line_col_as_int()[1]
 
 		triples = ["'''", '"""']
 		pars = '()[]{}'
@@ -1636,7 +1633,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		linestart = 'insert linestart'
 		lineend = 'insert lineend'
 		self.oldline = self.contents.get( linestart, lineend )
-		self.oldlinenum = self.contents.index('insert').split('.')[0]
+		self.oldlinenum,_ = self.get_line_col_as_int()
 
 
 	def update_line(self, event=None):
@@ -1659,12 +1656,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# Tag alter triggers this event if font changes, like from normal to bold.
 			# --> need to check if line is changed to prevent self-trigger
-			idx_insert = self.contents.index( tkinter.INSERT )
-			linenum = idx_insert.split('.')[0]
+			linenum,_ = self.get_line_col_as_int()
 
-
-			lineend = '%s lineend' % idx_insert
-			linestart = '%s linestart' % idx_insert
+			lineend = 'insert lineend'
+			linestart = 'insert linestart'
 
 			curline = self.contents.get( linestart, lineend )
 			on_oldline = (self.oldlinenum == linenum)
@@ -1672,7 +1667,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if self.oldline != curline or not on_oldline:
 
 ##				self.check_line( oldline=self.oldline, newline=curline,
-##								on_oldline=on_oldline, idx_insert=idx_insert)
+##								on_oldline=on_oldline)
 
 				#print('sync')
 				self.oldline = curline
@@ -2248,7 +2243,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.state != 'normal' or len(self.tabs) < 2:
 			self.bell()
-			return "break"
+			return 'break'
 
 		oldtab = self.tabs[self.tabindex]
 		oldtab.active = False
@@ -2794,12 +2789,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		elif 'strings' in self.contents.tag_names(tkinter.INSERT):
 			try:
 				s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
-				# Parse linenumbers of start and enf of range == s,e
-				# Then convert them to int. This could also be done with:
-				# int(float(s)) which would give linenumber of start as int,
-				# but is not much clearer.
 
-				l0, l1 = map( lambda x: int( x.split('.')[0] ), [s, e] )
+				(l0,_), (l1,_) = map(self.get_line_col_as_int, [s, e])
 
 				if l0 != l1:
 					start_idx, end_idx = (s, e)
@@ -2814,7 +2805,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if prev_char in '()[]{}':
 			self.par_err = True
 
-		linenum = int(start_idx.split('.')[0])
+		linenum,_ = self.get_line_col_as_int(start_idx)
 
 		#print(self.token_err)
 		#print('line')
@@ -2960,7 +2951,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			idx_start = 'insert'
 
 		startline, lines = self.find_empty_lines(idx_start)
-		startline = int( self.contents.index(startline).split('.')[0] )
+		startline,_ = self.get_line_col_as_int(startline)
 		err_indexes = self.count_pars(startline, lines)
 
 		err = False
@@ -3236,7 +3227,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def font_choose(self, event=None):
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 		fonttop = tkinter.Toplevel()
 		fonttop.title('Choose Font')
@@ -3494,7 +3485,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def color_choose(self, event=None):
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 		colortop = tkinter.Toplevel()
 		c = colortop
@@ -4016,7 +4007,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# This means one can not walk_scope without syntax-highlight.
 		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search', 'goto_def']):
 			self.bell()
-			return "break"
+			return 'break'
 
 
 		if not down:
@@ -4025,7 +4016,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if scope_line == '__main__()':
 				self.bell()
-				return "break"
+				return 'break'
 
 			pos = idx_scope_start
 
@@ -4060,11 +4051,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				except tkinter.TclError as e:
 					print(e)
 					self.bell()
-					return "break"
+					return 'break'
 
 				if not pos:
 					self.bell()
-					return "break"
+					return 'break'
 
 				if 'strings' in self.contents.tag_names(pos):
 					#print('strings3', pos)
@@ -4091,7 +4082,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tkinter.TclError as e:
 			print(e)
 
-		return "break"
+		return 'break'
 
 
 	def select_scope(self, event=None, index='insert'):
@@ -4117,7 +4108,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# This means one can not walk_scope without syntax-highlight.
 		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search', 'goto_def']):
 			self.bell()
-			return "break"
+			return 'break'
 
 		# +1 lines: Enable matching defline at insert
 		pos = '%s +1 lines' % index
@@ -4155,7 +4146,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.state not in  ['normal', 'search', 'goto_def']:
 			self.bell()
-			return "break"
+			return 'break'
 
 		if event.widget != self.contents:
 			return
@@ -4219,7 +4210,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 
 		num_lines = self.text_widget_height // self.bbox_height
@@ -4227,7 +4218,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		pos = self.contents.index('insert')
 		#posint = int(float(self.contents.index('insert')))
 		# Lastline of visible window
-		lastline_screen = int(float(self.contents.index("@0,65535")))
+		lastline_screen = int(float(self.contents.index('@0,65535')))
 
 		# Lastline
 		last = int(float(self.contents.index('end'))) - 1
@@ -4248,7 +4239,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# No ensure_view, enable return to cursor by arrow keys
-		return "break"
+		return 'break'
 
 
 	def idx_lineend(self, index='insert'):
@@ -4427,7 +4418,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		if self.state not in ['normal', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
 			self.bell()
-			return "break"
+			return 'break'
 
 		# Check if: ctrl + shift down.
 		# MacOS event is already checked.
@@ -4508,7 +4499,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		elif i_orig == idx_linestart:
 
 			# No indentation?
-			if int(idx_linestart.split('.')[1]) == 0:
+			if self.get_line_col_as_int(idx_linestart)[1] == 0:
 				# At filestart?
 				if self.contents.compare( i_orig, '==', '1.0'):
 					pos = i_orig
@@ -4538,7 +4529,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# --> Cursor is in indentation
 
 		# At indent0 of line that has indentation
-		elif int(i_orig.split('.')[1]) == 0:
+		elif self.get_line_col_as_int(i_orig)[1] == 0:
 			# At filestart?
 			if self.contents.compare( i_orig, '==', '1.0'):
 				pos = i_orig
@@ -4636,7 +4627,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		if self.state not in ['normal', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
 			self.bell()
-			return "break"
+			return 'break'
 
 		# Check if: not only ctrl down, then return
 		# MacOS event is already checked.
@@ -4667,7 +4658,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.state in [ 'filedialog' ]:
 			self.bell()
-			return "break"
+			return 'break'
 
 
 		# self.contents or self.entry
@@ -4758,7 +4749,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.state not in [
 					'normal', 'help', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
 			self.bell()
-			return "break"
+			return 'break'
 
 
 		self.wait_for(12)
@@ -4797,7 +4788,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def goto_lineend(self, event=None):
 		if self.state in [ 'filedialog' ]:
 			self.bell()
-			return "break"
+			return 'break'
 
 
 		wid = event.widget
@@ -4881,13 +4872,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.contents.tag_add('sel', i, 'insert')
 
 
-		return "break"
+		return 'break'
 
 
 	def goto_linestart(self, event=None):
 		if self.state in [ 'filedialog' ]:
 			self.bell()
-			return "break"
+			return 'break'
 
 		wid = event.widget
 		if wid == self.entry:
@@ -4950,7 +4941,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.set_selection(*args, direction='up')
 
 
-		return "break"
+		return 'break'
 
 ########## Select and move End
 ########## Overrides Begin
@@ -4992,7 +4983,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					idx = self.idx_linestart()[0]
 					tests = [not self.line_is_empty(),
 							self.contents.compare(idx, '==', 'insert' ),
-							idx.split('.')[1] != 0,
+							self.get_line_col_as_int(idx)[1] != 0,
 							not len(self.contents.tag_ranges('sel')) > 0
 							]
 
@@ -5167,7 +5158,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def raise_popup(self, event=None):
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 		self.popup.post(event.x_root, event.y_root)
 		self.popup.focus_set() # Needed to remove popup when clicked outside.
@@ -5376,7 +5367,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# Count indent diff of pasteline and copyline
-		idx_ins, col = map(int, ins_old.split('.'))
+		idx_ins, col = self.get_line_col_as_int(ins_old)
 		indent_cursor = col
 		indent_diff_cursor = indent_cursor - self.indent_selstart
 
@@ -5552,7 +5543,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def undos(self, func1, func2):
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 		try:
 			# It could be a multiline action, like replace_all
@@ -5572,8 +5563,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			ins_orig = self.contents.index('insert')
 			# Linenumbers of top and bottom lines currently disaplayed on screen
-			top_line = int(self.contents.index('@0,0').split('.')[0])
-			bot_line = int(self.contents.index('@0,65535').split('.')[0])
+			top_line,_ = self.get_line_col_as_int('@0,0')
+			bot_line,_ = self.get_line_col_as_int('@0,65535')
 			self.line_can_update = False
 			self.wait_for(33)
 
@@ -5581,7 +5572,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# Is it not viewable?
 			# Then just move the cursor, with redo
-			ins_line = int(self.contents.index('insert').split('.')[0])
+			ins_line,_ = self.get_line_col_as_int()
 			if not ( top_line <= ins_line <= bot_line ):
 				func2()
 
@@ -5620,7 +5611,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def select_all(self, event=None):
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		self.contents.tag_add('sel', 1.0, tkinter.END)
-		return "break"
+		return 'break'
 
 
 	def esc_override(self, event):
@@ -5689,9 +5680,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# There should not be selection
 		ins = tkinter.INSERT
+		line_ins, col_ins = self.get_line_col_as_int(ins)
 
 		# Cursor is not at indent0
-		if self.contents.index(ins).split('.')[1] != '0': return False
+		if col_ins != 0: return False
 
 		res = self.contents.count(
 				'insert linestart', 'insert +1 lines', 'displaylines')
@@ -5712,7 +5704,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		patt = r'^[[:blank:]]+[^[:blank:]]'
-		line_ins = int(self.contents.index('insert').split('.')[0])
 
 		(ind_prev, ind_next, pos_prev, pos_next,
 		line_prev, line_next, diff_prev, diff_next) = (
@@ -5727,7 +5718,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# because pattern matches: not blank and not comment at end of patt
 		if pos_prev:
 			ind_prev = self.search_count_var.get() -1
-			line_prev = int(self.contents.index(pos_prev).split('.')[0])
+			line_prev,_ = self.get_line_col_as_int(pos_prev)
 			diff_prev = line_ins - line_prev
 
 
@@ -5737,7 +5728,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if pos_next:
 			ind_next = self.search_count_var.get() -1
-			line_next = int(self.contents.index(pos_next).split('.')[0])
+			line_next,_ = self.get_line_col_as_int(pos_next)
 			diff_next = line_next - line_ins
 
 
@@ -5807,7 +5798,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# Multiline string check
 			line = self.contents.get( 'insert linestart', 'insert lineend')
-			ins_col = int(self.contents.index('insert').split('.')[1])
+			ins_col = self.get_line_col_as_int()[1]
 			prev_char = line[ins_col-1:ins_col]
 
 			if not self.token_err:
@@ -5825,7 +5816,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def return_override(self, event):
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 
 		# macOS, open file with cmd-return:
@@ -5835,7 +5826,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# Cursor indexes when pressed return:
-		line, col = map(int, self.contents.index(tkinter.INSERT).split('.'))
+		line, col = self.get_line_col_as_int()
 
 
 		# First an easy case:
@@ -5843,7 +5834,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.contents.insert(tkinter.INSERT, '\n')
 			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
-			return "break"
+			return 'break'
 
 
 		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
@@ -5855,7 +5846,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.contents.insert('%s.0' % str(line+1), tmp[:col])
 			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
-			return "break"
+			return 'break'
 
 		else:
 			# rstrip space to prevent indentation sailing.
@@ -5871,7 +5862,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.contents.insert(tkinter.INSERT, i*'\t')
 			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
-			return "break"
+			return 'break'
 
 
 	def sbset_override(self, *args):
@@ -6070,7 +6061,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tkinter.TclError as e:
 			print(e)
 
-		return "break"
+		return 'break'
 
 
 	def tabify(self, line, width=None):
@@ -6307,6 +6298,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if scope_name := self.get_scope_path(index):
 				patt = ' @' + scope_name + ' @'
 
+
 		# b: Add search position
 		idx = search_pos
 		lenght_of_search_position_index = len(str(idx))
@@ -6407,6 +6399,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Below this, real start
 
 
+		t1 = int(self.root.tk.eval('clock milliseconds')) #####
+
+
 		flag_finish = False
 
 		if ind_last_line > 1:
@@ -6425,19 +6420,31 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		flag_match = False
+		flag_cont = True
 
 		while pos:
 			try:
+				# 100 line buffer seems to be quite ideal for backwards searching
+				# with slow machine
+				stopline = self.get_line_col_as_int(pos)[0] - 100 ##################
+				if stopline > 0:
+					stopline = '%s.0' % stopline
+				else:
+					stopline = '1.0'
+					flag_cont = False
+
 				# Count is tkinter.IntVar which is used to
 				# count indentation level of matched line.
-				pos = self.contents.search(patt, pos, stopindex='1.0',
-					regexp=True, backwards=True, count=self.search_count_var)
+				pos = self.contents.search(patt, pos, stopindex=stopline,
+					backwards=True, regexp=True)#, count=self.search_count_var)
 
 			except tkinter.TclError as e:
 				print(e)
 				break
 
-			if not pos: break
+			if not pos:
+				if not flag_cont: break
+				else: continue
 
 			elif 'strings' in self.contents.tag_names(pos):
 				#print('strings2', pos)
@@ -6445,7 +6452,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# -1: remove terminating char(not blank not #) from matched char count
 			# Check patt if interested.
-			ind_curline = self.search_count_var.get() - 1
+			#ind_curline = self.search_count_var.get() - 1
 
 			#print(pos, ind_curline, ind_last_line, flag_finish)
 
@@ -6454,6 +6461,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# 	Then if it also is definition line --> add to scopepath
 			# 	update ind_last_line
 			def_line_contents = tmp = self.contents.get( pos, '%s lineend' % pos )
+
+			ind_curline = 0
+			for char in tmp:
+				if char in ['\t']: ind_curline += 1 ########################
+				else: break
+
 
 			########
 			if scope_name := self.line_is_defline(def_line_contents):
@@ -6507,6 +6520,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			scope_path = '__main__()'
 			return scope_path
 		else:
+			t2 = int(self.root.tk.eval('clock milliseconds'))
+			print(t2-t1, 'mss')
+
 			return scope_path + '()'
 
 
@@ -6792,7 +6808,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if (not self.is_pyfile()) or (self.state not in ['normal', 'search']):
 			self.bell()
-			return "break"
+			return 'break'
 
 		c = self.contents
 		have_selection = len(c.tag_ranges('sel')) > 0
@@ -6858,7 +6874,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 
 		def get_mark(start_idx, markfunc):
@@ -6894,7 +6910,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not pos:
 			self.wait_for(100)
 			self.bell()
-			return "break"
+			return 'break'
 
 
 		try:
@@ -6905,7 +6921,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tkinter.TclError as e:
 			print(e)
 
-		return "break"
+		return 'break'
 
 
 	def do_gotoline(self, event=None):
@@ -6948,7 +6964,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			print(e)
 
 		self.stop_gotoline()
-		return "break"
+		return 'break'
 
 
 	def stop_gotoline(self, event=None):
@@ -6980,13 +6996,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tkinter.TclError:
 			curtab.position = '1.0'
 
-		return "break"
+		return 'break'
 
 
 	def gotoline(self, event=None):
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 		self.state = 'gotoline'
 
@@ -6998,7 +7014,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tabs[self.tabindex].position = pos
 
 		# Remove extra line, this is number of lines in contents
-		self.entry.endline = str(int(self.contents.index(tkinter.END).split('.')[0]) - 1)
+		self.entry.endline = str(self.get_line_col_as_int(tkinter.END)[0] - 1)
 
 		self.entry.bind("<Return>", self.do_gotoline)
 		self.bind("<Escape>", self.stop_gotoline)
@@ -7011,7 +7027,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.entry.insert(0, patt)
 		self.entry.config(validate='key', validatecommand=self.validate_gotoline)
 
-		return "break"
+		return 'break'
 
 
 	def do_validate_gotoline(self, i, S, P):
@@ -7508,8 +7524,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if mark_name:
 			if 'bookmark' in mark_name:
-				mark_line = self.contents.index(mark_name).split('.')[0]
-				pos_line = s.split('.')[0]
+				mark_line,_ = self.get_line_col_as_int(mark_name)
+				pos_line,_ = self.get_line_col_as_int(s)
 
 			if mark_line == pos_line:
 				return mark_name
@@ -7609,7 +7625,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if any(tests):
 			self.bell()
-			return "break"
+			return 'break'
 
 
 		pos = tkinter.INSERT
@@ -7623,7 +7639,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# If there is bookmark, remove it
 		if self.remove_single_bookmark():
 			self.bookmark_animate(s, remove=True)
-			return "break"
+			return 'break'
 
 
 		curtab = self.tabs[self.tabindex]
@@ -7632,7 +7648,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		curtab.bookmarks.append(new_mark)
 
 		self.bookmark_animate(s)
-		return "break"
+		return 'break'
 
 
 	def bookmark_animate(self, idx_linestart, remove=False):
@@ -7647,7 +7663,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		try:
 			e0 = self.idx_lineend()
-			col = int(e0.split('.')[1])
+			col = self.get_line_col_as_int(e0)[1]
 
 
 			# Time to spend with marking-animation on line
@@ -7801,7 +7817,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def help(self, event=None):
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 		self.state = 'help'
 
@@ -8098,22 +8114,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.line_can_update = True
 
-		return "break"
+		return 'break'
 
 
 	def comment(self, event=None):
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 		try:
 			s = self.contents.index(tkinter.SEL_FIRST)
 			e = self.contents.index(tkinter.SEL_LAST)
 
-			startline = int( s.split('.')[0] )
+			startline,_ = self.get_line_col_as_int(s)
 			startpos = self.contents.index( '%s -1l linestart' % s )
 
-			endline = int( e.split('.')[0] )
+			endline,_ = self.get_line_col_as_int(e)
 			endpos = self.contents.index( '%s +1l lineend' % e )
 
 			self.line_can_update = False
@@ -8141,14 +8157,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.contents.edit_separator()
-		return "break"
+		return 'break'
 
 
 	def uncomment(self, event=None):
 		''' Should work even if there are uncommented lines between commented lines. '''
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 		idx_ins = self.contents.index(tkinter.INSERT)
 
@@ -8156,8 +8172,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			s = self.contents.index(tkinter.SEL_FIRST)
 			e = self.contents.index(tkinter.SEL_LAST)
 
-			startline = int(s.split('.')[0])
-			endline = int(e.split('.')[0])
+			startline,_ = self.get_line_col_as_int(s)
+			endline,_ = self.get_line_col_as_int(e)
 			startpos = self.contents.index('%s -1l linestart' % s)
 			endpos = self.contents.index('%s +1l lineend' % e)
 			changed = False
@@ -8194,7 +8210,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.contents.edit_separator()
 
-		return "break"
+		return 'break'
 
 ########## Indent and Comment End
 ################ Elide Begin
@@ -8227,7 +8243,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		r = self.contents.tag_nextrange('elided', index)
 
 		if len(r) > 0:
-			if r[0].split('.')[0] == index.split('.')[0]:
+			if self.get_line_col_as_int(r[0])[0] == self.get_line_col_as_int(index)[0]:
 				return r
 
 		return False
@@ -8239,7 +8255,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		if (not self.can_do_syntax()) or (self.state not in ['normal']):
 			self.bell()
-			return "break"
+			return 'break'
 
 		ref = self.contents.index(index)
 		idx = self.get_safe_index(index)
@@ -8368,7 +8384,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Too large selection
 			else:
 				self.bell()
-				return "break"
+				return 'break'
 
 
 		# Info: search 'def search(' in module: tkinter
@@ -8380,7 +8396,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# If no match, res == '' --> False
 		if not res:
 			self.bell()
-			return "break"
+			return 'break'
 
 		# Start-indexes of matches
 		m = [ str(x) for x in res ]
@@ -8389,7 +8405,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if num_all_matches == 1 and using_selection:
 			self.bell()
-			return "break"
+			return 'break'
 
 
 
@@ -8445,7 +8461,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
 
-		return "break"
+		return 'break'
 
 
 	def show_next(self, event=None):
@@ -8505,13 +8521,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# idx: int
 		# start: tkinter.Text -index
+		t1 = int(self.root.tk.eval('clock milliseconds'))
 		self.handle_search_entry(idx, start)
-
+		t2 = int(self.root.tk.eval('clock milliseconds'))
 		# Is it not viewable?
 		if not self.contents.bbox(start):
 			self.wait_for(100)
 
 		self.ensure_idx_visibility(start)
+		t3 = int(self.root.tk.eval('clock milliseconds'))
+		print(t3-t2, t2-t1, 'ms')
+
 		self.contents.mark_set('insert', start)
 
 		if self.entry.flag_start:
@@ -9099,12 +9119,12 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		on_stop()
 
-		return "break"
+		return 'break'
 
 
 	def clear_search_tags(self, event=None):
 		if self.state != 'normal':
-			return "break"
+			return 'break'
 
 		self.contents.tag_remove('replaced', '1.0', tkinter.END)
 		self.bind("<Escape>", self.esc_override)
@@ -9166,20 +9186,19 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.new_word = ''
 		self.search_matches = 0
 		flag_all = False
-		if self.state == 'replace_all': flag_all = True
 
-		if self.state in [ 'replace_all', 'replace' ]:
 
-				self.state = 'normal'
+		if self.state in ['replace_all']:
+			flag_all = True
+			if self.can_do_syntax():
+				self.update_lineinfo()
+				self.insert_tokens(self.get_tokens(update=True))
 
-				self.line_can_update = False
-				if self.can_do_syntax():
-					self.update_lineinfo()
-					self.insert_tokens(self.get_tokens(update=True))
-					self.line_can_update = True
+		if self.can_do_syntax(): self.line_can_update = True
 
 
 		self.state = 'normal'
+
 
 		if self.bid_show_next:
 			self.unbind( "<Control-n>", funcid=self.bid_show_next )
@@ -9213,7 +9232,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.contents.unbind( "<space>", funcid=bid_tmp )
 		self.bid_space = self.contents.bind( "<space>", self.space_override)
 
-		return "break"
+		return 'break'
 
 
 	def search(self, event=None):
@@ -9222,7 +9241,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 		if not self.search_settings:
 			self.reset_search_setting()
@@ -9281,7 +9300,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.entry.icursor(tkinter.END)
 
 
-
 		patt = 'Search: '
 		self.entry.insert(0, patt)
 		self.entry.config(validate='key', validatecommand=self.validate_search)
@@ -9289,7 +9307,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.contents.config(state='disabled')
 		self.entry.focus_set()
 
-		return "break"
+		return 'break'
 
 
 	def do_validate_search(self, i, s, S):
@@ -9322,13 +9340,13 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 		elif '-overlap' in self.search_settings:
 			self.wait_for(100)
 			print('\nError: Can not replace while "-overlap" in search_settings')
 			self.bell()
-			return "break"
+			return 'break'
 
 
 		# Save cursor pos
@@ -9393,7 +9411,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		self.contents.config(state='disabled')
 		self.entry.focus_set()
-		return "break"
+		return 'break'
 
 
 	def replace_all(self, event=None):
@@ -9403,13 +9421,13 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		if self.state != 'normal':
 			self.bell()
-			return "break"
+			return 'break'
 
 		elif '-overlap' in self.search_settings:
 			self.wait_for(100)
 			print('\nError: Can not replace_all while "-overlap" in search_settings')
 			self.bell()
-			return "break"
+			return 'break'
 
 
 		self.replace(event, state='replace_all')
@@ -9492,9 +9510,17 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		self.contents.replace(start, end_old, new_word)
 
+		if self.can_do_syntax():
+			self.update_tokens(start='%s linestart' % start, end='%s lineend' % end_new)
+
 
 		self.contents.tag_add('replaced', start, end_new)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
+
+		# Fix for use of non existing mark in self.save_pos
+		self.search_focus = (start, end_new)
+		# Mark gets here deleted
+
 		self.contents.mark_unset(mark_name)
 		self.mark_indexes.remove(self.search_index)
 		####
@@ -9599,6 +9625,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		self.entry.flag_start = True
+		self.line_can_update = False
 		self.wait_for(100)
 
 		self.show_next()

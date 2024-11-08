@@ -658,6 +658,25 @@ planning to use magic colors instead in line highlight
 Below this: not done ################################################
 
 
+try space to exit replace, is is error?
+not error in search
+
+backwards search slow?
+
+
+#################
+tests = [
+		lineno_start + b < lineno_ins,
+		lineno_ins + 4 < lineno_end
+		<sel_end>not e,
+		s and (s[1] < 0)
+		<sel_start>]
+
+and delete --> error
+####################
+
+
+
 
 ln_widget dark brown or gray
 
