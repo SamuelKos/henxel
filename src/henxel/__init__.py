@@ -534,7 +534,7 @@ class Editor(tkinter.Toplevel):
 			# Initiate widgets
 			####################################
 			self.btn_git = tkinter.Button(self, takefocus=0, font=self.menufont, relief='flat', highlightthickness=0, padx=0, state='disabled')
-			self.restore_btn_git() # Put branch name, if on one
+			self.restore_btn_git() # Show git-branch if on one
 
 			self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, takefocus=0)
 			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
@@ -814,6 +814,7 @@ class Editor(tkinter.Toplevel):
 			################################################
 			# Needed in update_linenums(), there is more info.
 			self.update_idletasks()
+
 			# if self.y_extra_offset > 0, it needs attention
 			self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
 			# Needed in update_linenums() and sbset_override()
@@ -936,8 +937,9 @@ class Editor(tkinter.Toplevel):
 			if self.can_do_syntax():
 				self.update_lineinfo()
 
+				# init before this is timewise quite ok
 				t1 = int(self.root.tk.eval('clock seconds'))
-				a = self.get_tokens()
+				a = self.get_tokens() ##### virtually takes no time
 				t2 = int(self.root.tk.eval('clock seconds'))
 				self.insert_tokens(a) ##### this takes times
 				t3 = int(self.root.tk.eval('clock seconds'))
@@ -6399,9 +6401,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Below this, real start
 
 
-		t1 = int(self.root.tk.eval('clock milliseconds')) #####
-
-
 		flag_finish = False
 
 		if ind_last_line > 1:
@@ -6420,31 +6419,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		flag_match = False
-		flag_cont = True
 
 		while pos:
 			try:
-				# 100 line buffer seems to be quite ideal for backwards searching
-				# with slow machine
-				stopline = self.get_line_col_as_int(pos)[0] - 100 ##################
-				if stopline > 0:
-					stopline = '%s.0' % stopline
-				else:
-					stopline = '1.0'
-					flag_cont = False
-
 				# Count is tkinter.IntVar which is used to
 				# count indentation level of matched line.
-				pos = self.contents.search(patt, pos, stopindex=stopline,
-					backwards=True, regexp=True)#, count=self.search_count_var)
+				pos = self.contents.search(patt, pos, stopindex='1.0',
+					backwards=True, regexp=True, count=self.search_count_var)
 
 			except tkinter.TclError as e:
 				print(e)
 				break
 
-			if not pos:
-				if not flag_cont: break
-				else: continue
+			if not pos: break
 
 			elif 'strings' in self.contents.tag_names(pos):
 				#print('strings2', pos)
@@ -6452,20 +6439,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# -1: remove terminating char(not blank not #) from matched char count
 			# Check patt if interested.
-			#ind_curline = self.search_count_var.get() - 1
+			ind_curline = self.search_count_var.get() - 1
 
-			#print(pos, ind_curline, ind_last_line, flag_finish)
 
 			# Find previous line that:
 			# Has one (or more) indentation level smaller indentation than ind_last_line
 			# 	Then if it also is definition line --> add to scopepath
 			# 	update ind_last_line
 			def_line_contents = tmp = self.contents.get( pos, '%s lineend' % pos )
-
-			ind_curline = 0
-			for char in tmp:
-				if char in ['\t']: ind_curline += 1 ########################
-				else: break
 
 
 			########
@@ -6520,9 +6501,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			scope_path = '__main__()'
 			return scope_path
 		else:
-			t2 = int(self.root.tk.eval('clock milliseconds'))
-			print(t2-t1, 'mss')
-
 			return scope_path + '()'
 
 
@@ -8521,18 +8499,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# idx: int
 		# start: tkinter.Text -index
-		t1 = int(self.root.tk.eval('clock milliseconds'))
 		self.handle_search_entry(idx, start)
-		t2 = int(self.root.tk.eval('clock milliseconds'))
+
 		# Is it not viewable?
 		if not self.contents.bbox(start):
 			self.wait_for(100)
 
 		self.ensure_idx_visibility(start)
-		t3 = int(self.root.tk.eval('clock milliseconds'))
-		print(t3-t2, t2-t1, 'ms')
+
 
 		self.contents.mark_set('insert', start)
+
 
 		if self.entry.flag_start:
 			if self.state == 'search':
@@ -8972,7 +8949,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		s.append( handle_search_start() )
 		if self.search_ends_at: s.append(self.search_ends_at)
 
-
 		res = self.tk.call(tuple(s))
 		if not res: return False
 
@@ -9052,7 +9028,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.contents.tag_remove('match', '1.0', tkinter.END)
 		self.contents.tag_remove('focus', '1.0', tkinter.END)
 		self.contents.tag_config('match', background='', foreground='')
-
 
 		self.search_matches = self.do_search(search_word)
 		# 'match' is tagged in do_search()

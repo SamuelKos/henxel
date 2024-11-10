@@ -658,10 +658,80 @@ planning to use magic colors instead in line highlight
 Below this: not done ################################################
 
 
-try space to exit replace, is is error?
-not error in search
+################################################
+# tab_open, tab_close(etc) rewrite planning Begin
 
-backwards search slow?
+Currently, single tkinter.Text -widget /Editor
+--> like in dev/ungridtest.py
+--> tabs have own widgets
+
+
+- when to create widget?
+- when to delete widget?
+- bindings?
+- etc ?
+
+
+
+# tab_open, tab_close(etc) rewrite planning End
+################################################
+# Thinking about how to get scope limits faster Begin
+
+searching scopepath is slow with long scopes like Editor
+and searching starts from near end
+
+henxel.Editor.__bases__
+type(self).__name__
+
+[i for i in dir(henxel.Editor) if i not in dir(henxel.tkinter.Toplevel)]
+
+
+1: get to indent 1 --> defline
+2: m = re.search(defline, contents)
+3: pos_def = m.start()
+
+patt1 = r'(?:^async[[:blank:]]+def)|(?:^def[[:blank:]]+)|(?:^class[[:blank:]]+)'
+patt2 = r'(?:^def\s+)|(?:^class\s+)|(?:^async\s+def)'
+
+p = re.compile(patt2)
+
+def re_search(defline, p, contents):
+	t0 = int(e.root.tk.eval('clock milliseconds'))
+	m = re.search(defline, contents)
+	pos_def = m.start()
+	last = 0
+	new = 0
+	for m in p.finditer(contents):
+		new = m
+		if new.start() > pos_def: break
+		last = new
+	else:
+		if new: last = new
+	if last:
+		k = last.endpos-last.start()
+		res = e.contents.index('end -%dc' % k )
+		t1 = int(e.root.tk.eval('clock milliseconds'))
+		print(res, t1-t0, 'ms')
+
+	
+
+# s=tab.contents, update it at search start
+cont = e.tabs[e.tabindex].contents
+patt = r'(?:^def\s+)|(?:^class\s+)|(?:^async\s+def)'
+chars_to_end =offset= e.contents.count('insert linestart', 'end', 'chars' )[0]
+
+def re_search(searchword, contents, offset):
+	t0 = int(e.root.tk.eval('clock milliseconds'))
+	m = re.search(searchword, contents[:-offset], flags=re.MULTILINE)
+	k = m.endpos-m.start()
+	res = e.contents.index('end -%dc' % k )
+	t1 = int(e.root.tk.eval('clock milliseconds'))
+	print(res, t1-t0, 'ms')
+
+# Thinking about how to get scope limits faster End
+################################################
+
+
 
 
 #################
