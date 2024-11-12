@@ -670,10 +670,106 @@ Currently, single tkinter.Text -widget /Editor
 - when to delete widget?
 - bindings?
 - etc ?
+- Tab()
+- bindings not triggered when ungridded --> no need to unbind
+- theme changes
+- tag-changes
+- help, error
 
+
+
+### init check ######
+- self.expander = wordexpand.ExpandWord(self.contents)
+	--> tab.expander
+
+- self.popup = tkinter.Menu(self.contents, tearoff=0, bd=0, activeborderwidth=0)
+	--> tab.popup
+
+- # Get anchor-name of selection-start.
+	--> tab.anchorname
+
+- for tagname in self.themes[self.curtheme]:
+	bg, fg = self.themes[self.curtheme][tagname][:]
+	self.contents.tag_config(tagname, background=bg, foreground=fg)
+	
+- self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
+	--> tab.tcl_name_of_contents
+
+- self.contents.bind( "<<WidgetViewSync>>", self.update_line)
+- self.contents.bind("<Configure>", self.handle_window_resize)
+- self.set_bindings()
+
+conf = active_tab.config()
+new_tab.config(**conf)
+
+###-->
+for tab in tabs:
+	tab.expander = wordexpand.ExpandWord(tab.text_widget)
+	
+	## popup
+	popconf = active_tab.popup.config()
+	tab.popup = tkinter.Menu(tab.text_widget, **popconf)
+	
+	tab.popup.bind("<FocusOut>", self.popup_focusOut)
+
+	if self.debug:
+		tab.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
+		tab.popup.add_command(label="     restart",
+				command=lambda: self.after_idle(self.restart_editor))
+		tab.popup.add_command(label="         run", command=self.run)
+
+		
+		if self.flags and self.flags.get('test_fake_error'): this_func_no_exist()
+		#this_func_no_exist()
+
+	else:
+		tab.popup.add_command(label="         run", command=self.run)
+		tab.popup.add_command(label="        copy", command=self.copy)
+		tab.popup.add_command(label="       paste", command=self.paste)
+		tab.popup.add_command(label="##   comment", command=self.comment)
+		tab.popup.add_command(label="   uncomment", command=self.uncomment)
+
+	tab.popup.add_command(label="  select all", command=self.select_all)
+	tab.popup.add_command(label="     inspect", command=self.insert_inspected)
+	tab.popup.add_command(label="      errors", command=self.show_errors)
+	tab.popup.add_command(label="        help", command=self.help)
+	## popup
+	
+	
+	tab.anchorname
+
+	for tagname in self.themes[self.curtheme]:
+		bg, fg = self.themes[self.curtheme][tagname][:]
+		tab.text_widget.tag_config(tagname, background=bg, foreground=fg)
+	
+	tab.tcl_name_of_contents = str( tab.text_widget.nametowidget(tab.text_widget) )
+	
+	self.set_bindings(tab)
+	
+	self.contents.bind( "<<WidgetViewSync>>", self.update_line)
+	self.contents.bind("<Configure>", self.handle_window_resize)
+	--> to set_bindings? 
+	
+	conf = active_tab.config()
+	new_tab.config(**conf)
+
+	
+	
+### init check end #######
 
 
 # tab_open, tab_close(etc) rewrite planning End
+################################################
+
+
+
+
+
+
+
+
+
+
 ################################################
 # Thinking about how to get scope limits faster Begin
 

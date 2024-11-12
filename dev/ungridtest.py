@@ -113,6 +113,7 @@ class Ed(tkinter.Toplevel):
 		self.scrollbar.grid(row=1,column=3, sticky='nse')
 
 		self.contents.focus_set()
+		print('jou1')
 
 		return 'break'
 
@@ -131,6 +132,7 @@ class Ed(tkinter.Toplevel):
 		self.scrollbar.grid(row=1,column=3, sticky='nse')
 
 		self.contents.focus_set()
+		print('jou2')
 
 		return 'break'
 
