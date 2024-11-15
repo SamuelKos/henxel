@@ -5547,11 +5547,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		try:
-			# It could be a multiline action, like replace_all
-			# If trying to undo redo, redo will put cursor to action end,
-			# undo to action start, if they dont fit in same screen, fail
-
 ##			Undo and indexes:
 ##			1: Redoing an action will put cursor to end of action, that got redoed,
 ##			just like when anything is normally being done
@@ -5562,9 +5557,49 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##			(example: after undoing insert letter,
 ##			cursor is at start of letter that no longer exist)
 ##
+##			##########################################
+##
+##			Original issue
+##			When undoing normally, if action was offscreen,
+##			action was undoed but user did not see what was undoed.
+##			This override tries to fix that.
+##			Now, if undoed action was offscreen, undo/redo is canceled
+##				( index-logic described above in mind )
+##			with the opposite action. --> Nothing is changed,
+##			only cursor is moved to correct line.
+##			--> One can see what is going to be undoed next time one does undo.
+##
+##
+##			Issue after fix
+##			Because it could be a multiline action, like replace_all,
+##				( most likely just indent, comment )
+##			And because there is this "is action visible on screen" -test:
+##				top_line <= ins_line <= bot_line
+##			--> If trying to apply this fix to long action, there is problem
+##
+##			For example if trying to undo long indentation action: At first try
+##			it notices that after undoing action, cursor is not on original screen
+##			and so it redoes the action to fix the "no can see undo" -issue told above.
+##			But if action one tries to undo is long, cursor will not ever be visible on screen
+##				(after func1)
+##			--> redo(func2) always happen and so long actions are never undoed.
+##
+##
+##			To fix this, original insertion cursor position and position after fix
+##			(with opposite action) is compared,
+##				ins_after_func2 == ins_orig
+##
+##			if cursor was not moved when trying to move it for visibilitys sake,
+##			it means the start/end of action is always not on screen
+##			--> action is long
+##			--> just appply normal undo/redo (func1) without visibility-check
+
+
+
+		try:
 
 			ins_orig = self.contents.index('insert')
-			# Linenumbers of top and bottom lines currently disaplayed on screen
+			# Linenumbers of top and bottom lines currently displayed on screen
 			top_line,_ = self.get_line_col_as_int('@0,0')
 			bot_line,_ = self.get_line_col_as_int('@0,65535')
 			self.line_can_update = False
@@ -5572,17 +5607,33 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			func1()
 
-			# Is it not viewable?
-			# Then just move the cursor, with redo
+			# Was action func1 not viewable?
+			# Then just move the cursor, with opposite action, func2
 			ins_line,_ = self.get_line_col_as_int()
 			if not ( top_line <= ins_line <= bot_line ):
 				func2()
 
-				# It could be a multiline action, like replace_all
-				ins_after_redo = self.contents.index('insert')
-				if ins_after_redo == ins_orig: func1()
+				bot_line_after_func2,_ = self.get_line_col_as_int('@0,65535')
 
-				self.ensure_idx_visibility('insert')
+
+				# Check for long actions, like indent. Info is above
+				ins_after_func2 = self.contents.index('insert')
+				if ins_after_func2 == ins_orig:
+					func1()
+
+					# This seems to fix 'screen jumping'
+					bot_line_after,_ = self.get_line_col_as_int('@0,65535')
+					diff = bot_line_after - bot_line_after_func2
+					if diff != 0: self.contents.yview_scroll(-diff, 'units')
+
+			else:
+				# This seems to fix 'screen jumping'
+				bot_line_after,_ = self.get_line_col_as_int('@0,65535')
+				diff = bot_line_after - bot_line
+				if diff != 0: self.contents.yview_scroll(-diff, 'units')
+
+
+
 
 
 			if self.can_do_syntax():

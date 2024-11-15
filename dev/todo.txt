@@ -658,6 +658,7 @@ planning to use magic colors instead in line highlight
 Below this: not done ################################################
 
 
+
 ################################################
 # tab_open, tab_close(etc) rewrite planning Begin
 
@@ -679,30 +680,6 @@ Currently, single tkinter.Text -widget /Editor
 
 
 ### init check ######
-- self.expander = wordexpand.ExpandWord(self.contents)
-	--> tab.expander
-
-- self.popup = tkinter.Menu(self.contents, tearoff=0, bd=0, activeborderwidth=0)
-	--> tab.popup
-
-- # Get anchor-name of selection-start.
-	--> tab.anchorname
-
-- for tagname in self.themes[self.curtheme]:
-	bg, fg = self.themes[self.curtheme][tagname][:]
-	self.contents.tag_config(tagname, background=bg, foreground=fg)
-	
-- self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
-	--> tab.tcl_name_of_contents
-
-- self.contents.bind( "<<WidgetViewSync>>", self.update_line)
-- self.contents.bind("<Configure>", self.handle_window_resize)
-- self.set_bindings()
-
-conf = active_tab.config()
-new_tab.config(**conf)
-
-###-->
 for tab in tabs:
 	tab.expander = wordexpand.ExpandWord(tab.text_widget)
 	
@@ -751,6 +728,7 @@ for tab in tabs:
 	--> to set_bindings? 
 	
 	conf = active_tab.config()
+	or from load_conf() d=dict(settings)
 	new_tab.config(**conf)
 
 	
