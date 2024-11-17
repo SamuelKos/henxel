@@ -839,6 +839,7 @@ class Editor(tkinter.Toplevel):
 			self.boldfont.config(**self.font.config())
 			self.boldfont.config(weight='bold')
 
+
 			self.set_syntags()
 
 
@@ -861,11 +862,6 @@ class Editor(tkinter.Toplevel):
 ##				# self.bbox_height == 1,  self.text_widget_height == 1
 ##				# --> self.contents is not yet 'packed' by (grid) geometry-manager
 
-
-			self.contents.bind( "<<WidgetViewSync>>", self.update_line)
-			# Viewsync-event does not trigger at window size changes,
-			# to get linenumbers right, one binds to this:
-			self.contents.bind("<Configure>", self.handle_window_resize)
 
 			####  Syntax-highlight End  ######################################
 
@@ -923,14 +919,14 @@ class Editor(tkinter.Toplevel):
 
 
 			# Set cursor pos
-			line = self.tabs[self.tabindex].position
+			line = curtab.position
 			try:
 				self.contents.mark_set('insert', line)
 				self.ensure_idx_visibility(line)
 
 			except tkinter.TclError:
 				self.contents.mark_set('insert', '1.0')
-				self.tabs[self.tabindex].position = '1.0'
+				self.curtab.position = '1.0'
 				self.contents.see('1.0')
 
 
@@ -954,8 +950,9 @@ class Editor(tkinter.Toplevel):
 			############
 			# Bindings #
 			############
-
-			self.set_bindings()
+			curtab.text_widget = self.contents
+			self.set_bindings(curtab)
+			self.set_bindings_other()
 
 			############
 
@@ -1680,8 +1677,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ############## Init etc End
 ############## Bindings Begin
 
-	def set_bindings(self):
-		''' Called from init
+	def set_bindings(self, tab):
+		''' Set bindings for tab
+
+			tab:	tkinter Text-widget
+
+			Called from init
+
 		'''
 
 		self.right_mousebutton_num = 3
@@ -1695,19 +1697,24 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.root.createcommand("tk::mac::Quit", self.quit_me)
 			#self.root.createcommand("tk::mac::OnHide", self.test_hide)
 
-		self.contents.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
+
+
+		###################
+		w = tab.text_widget
+
+		w.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
 
 		if self.os_type == 'linux':
-			self.contents.bind( "<ISO_Left_Tab>", self.unindent)
+			w.bind( "<ISO_Left_Tab>", self.unindent)
 		else:
-			self.contents.bind( "<Shift-Tab>", self.unindent)
+			w.bind( "<Shift-Tab>", self.unindent)
 
 
 		############################################################
 		# In macOS all Alt-shortcuts makes some special symbol.
 		# Have to bind to this symbol-name to get Alt-shorcuts work.
 		# For example binding to Alt-f:
-		# self.contents.bind( "<function>", self.font_choose)
+		# w.bind( "<function>", self.font_choose)
 
 		# Except that tkinter does not give all symbol names, like
 		# Alt-x or l
@@ -1734,133 +1741,231 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		##############################################################
 		if self.os_type != 'mac_os':
 
+			w.bind( "<Control-b>", self.goto_bookmark)
+			w.bind( "<Control-B>",
+				lambda event: self.goto_bookmark(event, **{'back':True}) )
+
+			w.bind( "<Control-l>", self.gotoline)
+			w.bind( "<Control-g>", self.goto_def)
+			w.bind( "<Alt-p>", self.toggle_bookmark)
+
+			w.bind( "<Alt-s>", self.color_choose)
+			w.bind( "<Alt-t>", self.toggle_color)
+
+			w.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
+			w.bind( "<Alt-l>", self.toggle_ln)
+			w.bind( "<Alt-x>", self.toggle_syntax)
+			w.bind( "<Alt-f>", self.font_choose)
+
+			w.bind( "<Control-c>", self.copy)
+			w.bind( "<Control-v>", self.paste)
+			w.bind( "<Control-x>",
+				lambda event: self.copy(event, **{'flag_cut':True}) )
+
+			w.bind( "<Control-y>", self.yank_line)
+
+			w.bind( "<Control-Left>", self.move_by_words)
+			w.bind( "<Control-Right>", self.move_by_words)
+			w.bind( "<Control-Shift-Left>", self.select_by_words)
+			w.bind( "<Control-Shift-Right>", self.select_by_words)
+
+			w.bind( "<Control-Up>", self.move_many_lines)
+			w.bind( "<Control-Down>", self.move_many_lines)
+			w.bind( "<Control-Shift-Up>", self.move_many_lines)
+			w.bind( "<Control-Shift-Down>", self.move_many_lines)
+
+			w.bind( "<Control-8>", self.walk_scope)
+			w.bind( "<Control-Shift-8>",
+				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
+			w.bind( "<Control-9>",
+				lambda event: self.walk_scope(event, **{'down':True}) )
+			w.bind( "<Control-Shift-9>",
+				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
+
+			w.bind( "<Alt-Shift-F>", self.select_scope)
+
+			w.bind("<Left>", self.check_sel)
+			w.bind("<Right>", self.check_sel)
+
+
+		# self.os_type == 'mac_os':
+		else:
+			w.bind( "<Left>", self.mac_cmd_overrides)
+			w.bind( "<Right>", self.mac_cmd_overrides)
+			w.bind( "<Up>", self.mac_cmd_overrides)
+			w.bind( "<Down>", self.mac_cmd_overrides)
+
+			w.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
+
+			# Have to bind using Mod1 as modifier name if want bind to Command-key,
+			# Last line is the only one working:
+			#w.bind( "<Meta-Key-k>", lambda event, arg=('AAA'): print(arg) )
+			#w.bind( "<Command-Key-k>", lambda event, arg=('AAA'): print(arg) )
+			#w.bind( "<Mod1-Key-k>", lambda event, arg=('AAA'): print(arg) )
+
+			# 8,9 as '(' and ')' without Shift, nordic key-layout
+			# 9,0 in us/uk ?
+			w.bind( "<Mod1-Key-8>", self.walk_scope)
+			w.bind( "<Mod1-Shift-(>",
+				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
+			w.bind( "<Mod1-Key-9>",
+				lambda event: self.walk_scope(event, **{'down':True}) )
+			w.bind( "<Mod1-Shift-)>",
+				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
+
+			w.bind( "<Mod1-Shift-F>", self.select_scope)
+			w.bind( "<Mod1-Shift-E>", self.elide_scope)
+
+			w.bind( "<Mod1-Key-y>", self.yank_line)
+			w.bind( "<Mod1-Key-n>", self.new_tab)
+
+			w.bind( "<Mod1-Key-f>", self.search)
+			w.bind( "<Mod1-Key-r>", self.replace)
+			w.bind( "<Mod1-Key-R>", self.replace_all)
+
+			w.bind( "<Mod1-Key-c>", self.copy)
+			w.bind( "<Mod1-Key-v>", self.paste)
+			w.bind( "<Mod1-Key-x>",
+				lambda event: self.copy(event, **{'flag_cut':True}) )
+
+			w.bind( "<Mod1-Key-b>", self.goto_bookmark)
+			w.bind( "<Mod1-Key-B>",
+				lambda event: self.goto_bookmark(event, **{'back':True}) )
+
+			w.bind( "<Mod1-Key-p>", self.toggle_bookmark)
+			w.bind( "<Mod1-Key-g>", self.goto_def)
+			w.bind( "<Mod1-Key-l>", self.gotoline)
+			w.bind( "<Mod1-Key-a>", self.goto_linestart)
+			w.bind( "<Mod1-Key-e>", self.goto_lineend)
+
+			w.bind( "<Mod1-Key-z>", self.undo_override)
+			w.bind( "<Mod1-Key-Z>", self.redo_override)
+
+			# Could not get keysym for Alt-l and x, so use ctrl
+			w.bind( "<Control-l>", self.toggle_ln)
+			w.bind( "<Control-x>", self.toggle_syntax)
+
+			# have to bind to symbol name to get Alt-shorcuts work in macOS
+			# This is: Alt-f
+			w.bind( "<function>", self.font_choose)		# Alt-f
+			w.bind( "<dagger>", self.toggle_color)		# Alt-t
+			w.bind( "<ssharp>", self.color_choose)		# Alt-s
+
+
+		#######################################################
+
+		# self.os_type == any:
+		w.bind( "<Control-a>", self.goto_linestart)
+		w.bind( "<Control-e>", self.goto_lineend)
+		w.bind( "<Control-A>", self.goto_linestart)
+		w.bind( "<Control-E>", self.goto_lineend)
+
+		w.bind( "<Control-j>", self.center_view)
+		w.bind( "<Control-u>",
+			lambda event: self.center_view(event, **{'up':True}) )
+
+		w.bind( "<Control-d>", self.del_tab)
+		w.bind( "<Control-Q>",
+			lambda event: self.del_tab(event, **{'save':False}) )
+
+		w.bind( "<Shift-Return>", self.comment)
+		w.bind( "<Shift-BackSpace>", self.uncomment)
+		w.bind( "<Tab>", self.indent)
+
+		w.bind( "<Control-Tab>", self.insert_tab)
+
+		w.bind( "<Control-t>", self.tabify_lines)
+		w.bind( "<Control-z>", self.undo_override)
+		w.bind( "<Control-Z>", self.redo_override)
+		w.bind( "<Control-f>", self.search)
+
+		w.bind( "<Return>", self.return_override)
+		w.bind( "<BackSpace>", self.backspace_override)
+
+		if self.os_type == 'mac_os':
+			w.bind( "<Mod1-Key-BackSpace>", self.del_to_dot)
+		else:
+			w.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
+
+		# Used in searching
+		self.bid_space = w.bind( "<space>", self.space_override)
+
+		w.bind( "<Control-n>", self.search_next)
+		w.bind( "<Control-p>",
+				lambda event: self.search_next(event, **{'back':True}) )
+
+
+		# Unbind some default bindings
+		# Paragraph-bindings: too easy to press by accident
+		w.unbind_class('Text', '<<NextPara>>')
+		w.unbind_class('Text', '<<PrevPara>>')
+		w.unbind_class('Text', '<<SelectNextPara>>')
+		w.unbind_class('Text', '<<SelectPrevPara>>')
+
+		# LineStart and -End:
+		# fix goto_linestart-end and
+		# enable tab-walking in mac_os with cmd-left-right
+		w.unbind_class('Text', '<<LineStart>>')
+		w.unbind_class('Text', '<<LineEnd>>')
+		w.unbind_class('Text', '<<SelectLineEnd>>')
+		w.unbind_class('Text', '<<SelectLineStart>>')
+
+
+		# Remove some unwanted key-sequences, which otherwise would
+		# mess with searching, from couple of virtual events.
+		tmp = list()
+		for seq in w.event_info('<<NextLine>>'):
+			if seq != '<Control-Key-n>': tmp.append(seq)
+
+		w.event_delete('<<NextLine>>')
+		w.event_add('<<NextLine>>', *tmp)
+
+		tmp.clear()
+		for seq in w.event_info('<<PrevLine>>'):
+			if seq != '<Control-Key-p>': tmp.append(seq)
+
+		w.event_delete('<<PrevLine>>')
+		w.event_add('<<PrevLine>>', *tmp)
+
+
+		w.bind( "<<WidgetViewSync>>", self.update_line)
+		# Viewsync-event does not trigger at window size changes,
+		# to get linenumbers right, one binds to this:
+		w.bind("<Configure>", self.handle_window_resize)
+
+		#### set_bindings for Text-widget End #######
+
+
+	def set_bindings_other(self):
+		''' Set bindings for other than Text-widgets
+
+			Called from init
+		'''
+
+		if self.os_type != 'mac_os':
+
 			self.bind( "<Alt-n>", self.new_tab)
 			self.bind( "<Control-q>", self.quit_me)
 
-			self.contents.bind( "<Control-b>", self.goto_bookmark)
-			self.contents.bind( "<Control-B>",
-				lambda event: self.goto_bookmark(event, **{'back':True}) )
-
-			self.contents.bind( "<Control-l>", self.gotoline)
-			self.contents.bind( "<Control-g>", self.goto_def)
-			self.contents.bind( "<Alt-p>", self.toggle_bookmark)
-
-			self.contents.bind( "<Alt-s>", self.color_choose)
-			self.contents.bind( "<Alt-t>", self.toggle_color)
+			self.bind( "<Control-R>", self.replace_all)
+			self.bind( "<Control-r>", self.replace)
 
 			self.bind( "<Alt-w>", self.walk_tabs)
 			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
 
-			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
-			self.contents.bind( "<Alt-l>", self.toggle_ln)
-			self.contents.bind( "<Alt-x>", self.toggle_syntax)
-			self.contents.bind( "<Alt-f>", self.font_choose)
-
-			self.contents.bind( "<Control-c>", self.copy)
-			self.contents.bind( "<Control-v>", self.paste)
-			self.contents.bind( "<Control-x>",
-				lambda event: self.copy(event, **{'flag_cut':True}) )
-
-			self.contents.bind( "<Control-y>", self.yank_line)
-
-			self.contents.bind( "<Control-Left>", self.move_by_words)
-			self.contents.bind( "<Control-Right>", self.move_by_words)
-			self.contents.bind( "<Control-Shift-Left>", self.select_by_words)
-			self.contents.bind( "<Control-Shift-Right>", self.select_by_words)
-
-			self.contents.bind( "<Control-Up>", self.move_many_lines)
-			self.contents.bind( "<Control-Down>", self.move_many_lines)
-			self.contents.bind( "<Control-Shift-Up>", self.move_many_lines)
-			self.contents.bind( "<Control-Shift-Down>", self.move_many_lines)
-
-			self.contents.bind( "<Control-8>", self.walk_scope)
-			self.contents.bind( "<Control-Shift-8>",
-				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
-			self.contents.bind( "<Control-9>",
-				lambda event: self.walk_scope(event, **{'down':True}) )
-			self.contents.bind( "<Control-Shift-9>",
-				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
-
-			self.contents.bind( "<Alt-Shift-F>", self.select_scope)
-
-
-			self.contents.bind("<Left>", self.check_sel)
-			self.contents.bind("<Right>", self.check_sel)
 			self.entry.bind("<Left>", self.check_sel)
 			self.entry.bind("<Right>", self.check_sel)
 
 
 		# self.os_type == 'mac_os':
 		else:
-			self.contents.bind( "<Left>", self.mac_cmd_overrides)
-			self.contents.bind( "<Right>", self.mac_cmd_overrides)
-			self.contents.bind( "<Up>", self.mac_cmd_overrides)
-			self.contents.bind( "<Down>", self.mac_cmd_overrides)
 
 			self.entry.bind( "<Right>", self.mac_cmd_overrides)
 			self.entry.bind( "<Left>", self.mac_cmd_overrides)
 
-			self.contents.bind( "<f>", self.mac_cmd_overrides)		# + fn full screen
-
-			# Have to bind using Mod1 as modifier name if want bind to Command-key,
-			# Last line is the only one working:
-			#self.contents.bind( "<Meta-Key-k>", lambda event, arg=('AAA'): print(arg) )
-			#self.contents.bind( "<Command-Key-k>", lambda event, arg=('AAA'): print(arg) )
-			#self.contents.bind( "<Mod1-Key-k>", lambda event, arg=('AAA'): print(arg) )
-
-			# 8,9 as '(' and ')' without Shift, nordic key-layout
-			# 9,0 in us/uk ?
-			self.contents.bind( "<Mod1-Key-8>", self.walk_scope)
-			self.contents.bind( "<Mod1-Shift-(>",
-				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
-			self.contents.bind( "<Mod1-Key-9>",
-				lambda event: self.walk_scope(event, **{'down':True}) )
-			self.contents.bind( "<Mod1-Shift-)>",
-				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
-
-			self.contents.bind( "<Mod1-Shift-F>", self.select_scope)
-			self.contents.bind( "<Mod1-Shift-E>", self.elide_scope)
-
-			self.contents.bind( "<Mod1-Key-y>", self.yank_line)
-			self.contents.bind( "<Mod1-Key-n>", self.new_tab)
-
-			self.contents.bind( "<Mod1-Key-f>", self.search)
-			self.contents.bind( "<Mod1-Key-r>", self.replace)
-			self.contents.bind( "<Mod1-Key-R>", self.replace_all)
-
-			self.contents.bind( "<Mod1-Key-c>", self.copy)
-			self.contents.bind( "<Mod1-Key-v>", self.paste)
-			self.contents.bind( "<Mod1-Key-x>",
-				lambda event: self.copy(event, **{'flag_cut':True}) )
-
-			self.contents.bind( "<Mod1-Key-b>", self.goto_bookmark)
-			self.contents.bind( "<Mod1-Key-B>",
-				lambda event: self.goto_bookmark(event, **{'back':True}) )
-
-			self.contents.bind( "<Mod1-Key-p>", self.toggle_bookmark)
-			self.contents.bind( "<Mod1-Key-g>", self.goto_def)
-			self.contents.bind( "<Mod1-Key-l>", self.gotoline)
-			self.contents.bind( "<Mod1-Key-a>", self.goto_linestart)
-			self.contents.bind( "<Mod1-Key-e>", self.goto_lineend)
-
 			self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
 			self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
 
-			self.contents.bind( "<Mod1-Key-z>", self.undo_override)
-			self.contents.bind( "<Mod1-Key-Z>", self.redo_override)
-
-			# Could not get keysym for Alt-l and x, so use ctrl
-			self.contents.bind( "<Control-l>", self.toggle_ln)
-			self.contents.bind( "<Control-x>", self.toggle_syntax)
-
-			# have to bind to symbol name to get Alt-shorcuts work in macOS
-			# This is: Alt-f
-			self.contents.bind( "<function>", self.font_choose)		# Alt-f
-			self.contents.bind( "<dagger>", self.toggle_color)		# Alt-t
-			self.contents.bind( "<ssharp>", self.color_choose)		# Alt-s
-
-
-		#######################################################
 
 
 		# Arrange detection of CapsLock-state.
@@ -1873,21 +1978,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bind('<KeyRelease-Caps_Lock>', self.check_caps)
 
 
-		self.bind( "<Control-R>", self.replace_all)
-		self.bind( "<Control-r>", self.replace)
-
 		self.bind( "<Escape>", self.esc_override )
 		self.bind( "<Return>", self.do_nothing_without_bell)
 		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
 		self.bind( "<Control-plus>", self.increase_scrollbar_width)
 
+
 		self.ln_widget.bind("<Control-n>", self.do_nothing_without_bell)
 		self.ln_widget.bind("<Control-p>", self.do_nothing_without_bell)
 
-		self.contents.bind( "<Control-a>", self.goto_linestart)
-		self.contents.bind( "<Control-e>", self.goto_lineend)
-		self.contents.bind( "<Control-A>", self.goto_linestart)
-		self.contents.bind( "<Control-E>", self.goto_lineend)
 
 		if self.os_type == 'windows':
 			self.entry.bind( "<Control-E>",
@@ -1899,75 +1998,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.entry.bind( "<Control-x>",
 				lambda event: self.copy_windows(event, **{'flag_cut':True}) )
 
-
-		self.contents.bind( "<Control-j>", self.center_view)
-		self.contents.bind( "<Control-u>",
-			lambda event: self.center_view(event, **{'up':True}) )
-
-		self.contents.bind( "<Control-d>", self.del_tab)
-		self.contents.bind( "<Control-Q>",
-			lambda event: self.del_tab(event, **{'save':False}) )
-
-		self.contents.bind( "<Shift-Return>", self.comment)
-		self.contents.bind( "<Shift-BackSpace>", self.uncomment)
-		self.contents.bind( "<Tab>", self.indent)
-
-		self.contents.bind( "<Control-Tab>", self.insert_tab)
-
-		self.contents.bind( "<Control-t>", self.tabify_lines)
-		self.contents.bind( "<Control-z>", self.undo_override)
-		self.contents.bind( "<Control-Z>", self.redo_override)
-		self.contents.bind( "<Control-f>", self.search)
-
-		self.contents.bind( "<Return>", self.return_override)
-		self.contents.bind( "<BackSpace>", self.backspace_override)
-
-		if self.os_type == 'mac_os':
-			self.contents.bind( "<Mod1-Key-BackSpace>", self.del_to_dot)
-		else:
-			self.contents.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
-
-		# Used in searching
-		self.bid_space = self.contents.bind( "<space>", self.space_override)
-
-		self.contents.bind( "<Control-n>", self.search_next)
-		self.contents.bind( "<Control-p>",
-				lambda event: self.search_next(event, **{'back':True}) )
-
-
-		# Unbind some default bindings
-		# Paragraph-bindings: too easy to press by accident
-		self.contents.unbind_class('Text', '<<NextPara>>')
-		self.contents.unbind_class('Text', '<<PrevPara>>')
-		self.contents.unbind_class('Text', '<<SelectNextPara>>')
-		self.contents.unbind_class('Text', '<<SelectPrevPara>>')
-
-		# LineStart and -End:
-		# fix goto_linestart-end and
-		# enable tab-walking in mac_os with cmd-left-right
-		self.contents.unbind_class('Text', '<<LineStart>>')
-		self.contents.unbind_class('Text', '<<LineEnd>>')
-		self.contents.unbind_class('Text', '<<SelectLineEnd>>')
-		self.contents.unbind_class('Text', '<<SelectLineStart>>')
-
-
-		# Remove some unwanted key-sequences, which otherwise would
-		# mess with searching, from couple of virtual events.
-		tmp = list()
-		for seq in self.contents.event_info('<<NextLine>>'):
-			if seq != '<Control-Key-n>': tmp.append(seq)
-
-		self.contents.event_delete('<<NextLine>>')
-		self.contents.event_add('<<NextLine>>', *tmp)
-
-		tmp.clear()
-		for seq in self.contents.event_info('<<PrevLine>>'):
-			if seq != '<Control-Key-p>': tmp.append(seq)
-
-		self.contents.event_delete('<<PrevLine>>')
-		self.contents.event_add('<<PrevLine>>', *tmp)
-
-		#### set_bindings End #######
 
 
 ############## Bindings End
@@ -2369,7 +2399,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			else:
 				tab.bookmarks.clear()
 
-		dictionary['tabs'] = [ tab.__dict__ for tab in self.tabs ]
+		# Should be whitelist instead of __dict__?
+		dictionary['tabs'] = [ tab.__dict__.copy() for tab in self.tabs ]
+
+		for d in dictionary['tabs']:
+			if 'text_widget' in d.keys(): d.pop('text_widget')
+
 
 		return dictionary
 
@@ -2550,7 +2585,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.contents.tag_config('calls', font=self.boldfont)
 
 		self.contents.tag_config('focus', underline=True)
-		self.contents.tag_config('elided', elide=True)
+		self.contents.tag_config('elIdel', elide=True)
 		self.contents.tag_config('animate')
 		self.contents.tag_config('highlight_line')
 		self.contents.tag_config('match_zero_lenght')
@@ -5611,6 +5646,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Then just move the cursor, with opposite action, func2
 			ins_line,_ = self.get_line_col_as_int()
 			if not ( top_line <= ins_line <= bot_line ):
+
 				func2()
 
 				bot_line_after_func2,_ = self.get_line_col_as_int('@0,65535')
@@ -5619,6 +5655,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				# Check for long actions, like indent. Info is above
 				ins_after_func2 = self.contents.index('insert')
 				if ins_after_func2 == ins_orig:
+
 					func1()
 
 					# This seems to fix 'screen jumping'
@@ -5631,8 +5668,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				bot_line_after,_ = self.get_line_col_as_int('@0,65535')
 				diff = bot_line_after - bot_line
 				if diff != 0: self.contents.yview_scroll(-diff, 'units')
-
-
 
 
 
@@ -8269,7 +8304,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def line_is_elided(self, index='insert'):
 
 		# Cursor is at elided defline
-		r = self.contents.tag_nextrange('elided', index)
+		r = self.contents.tag_nextrange('elIdel', index)
 
 		if len(r) > 0:
 			if self.get_line_col_as_int(r[0])[0] == self.get_line_col_as_int(index)[0]:
@@ -8298,7 +8333,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Protect cursor from being pushed down
 			self.contents.mark_set('insert', idx)
 
-			self.contents.tag_remove('elided', r[0], r[1])
+			self.contents.tag_remove('elIdel', r[0], r[1])
 
 		else:
 			patt = r'%s get {%s linestart} {%s lineend}' \
@@ -8328,7 +8363,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Protect cursor from being elided
 			self.contents.mark_set('insert', idx)
 
-			self.contents.tag_add('elided', s, e)
+			self.contents.tag_add('elIdel', s, e)
 
 
 		# If cursor was at defline lineend, it was moved 1 char left,
@@ -8337,7 +8372,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# 	Q: Why not '%s lineend' % idx ?
 			#
 			# 	A:	s = '%s lineend' % idx_scope_start
-			#		self.contents.tag_add('elided', s, e)
+			#		self.contents.tag_add('elIdel', s, e)
 			#
 			# That says, the first index inside elided text is:
 			# 	'lineend' of definition line
@@ -8354,7 +8389,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			#	s = '%s lineend' % idx_scope_start
 			#	e = idx_scope_end
 			#
-			#	self.contents.tag_add('elided', s, e)
+			#	self.contents.tag_add('elIdel', s, e)
 			#
 			# One has to think what is the first display index after elided
 			# text. That is first index after 'e' and since one knows that
@@ -9041,7 +9076,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			match_lenght = s[i]
 
 			# Used in making zero lenght matches visible
-			if match_lenght == 0 and 'elided' not in self.contents.tag_names(start_idx):
+			if match_lenght == 0 and 'elIdel' not in self.contents.tag_names(start_idx):
 				end_idx = '%s +1c' % start_idx
 				match_zero_ranges.append(mark_name)
 				match_zero_ranges.append(end_idx)

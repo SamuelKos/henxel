@@ -677,42 +677,62 @@ Currently, single tkinter.Text -widget /Editor
 - tag-changes
 - help, error
 
+###
+get_config():
+	# Should be whitelist instead of __dict__?
+	or just tab.pop('text_widget')
+	
+	pop_list.append('text_widget')
+	pop_list.append('tcl_name_of_contents')
+	for item in pop_list
+		tab.pop(item)
+###
+
 
 
 ### init check ######
-for tab in tabs:
-	tab.expander = wordexpand.ExpandWord(tab.text_widget)
-	
-	## popup
-	popconf = active_tab.popup.config()
-	tab.popup = tkinter.Menu(tab.text_widget, **popconf)
-	
-	tab.popup.bind("<FocusOut>", self.popup_focusOut)
 
-	if self.debug:
-		tab.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
-		tab.popup.add_command(label="     restart",
-				command=lambda: self.after_idle(self.restart_editor))
-		tab.popup.add_command(label="         run", command=self.run)
+tab.expander = wordexpand.ExpandWord(tab.text_widget)
 
-		
-		if self.flags and self.flags.get('test_fake_error'): this_func_no_exist()
-		#this_func_no_exist()
+## popup
+popconf = active_tab.popup.config()
+tab.popup = tkinter.Menu(tab.text_widget, **popconf)
 
-	else:
-		tab.popup.add_command(label="         run", command=self.run)
-		tab.popup.add_command(label="        copy", command=self.copy)
-		tab.popup.add_command(label="       paste", command=self.paste)
-		tab.popup.add_command(label="##   comment", command=self.comment)
-		tab.popup.add_command(label="   uncomment", command=self.uncomment)
+tab.popup.bind("<FocusOut>", self.popup_focusOut)
 
-	tab.popup.add_command(label="  select all", command=self.select_all)
-	tab.popup.add_command(label="     inspect", command=self.insert_inspected)
-	tab.popup.add_command(label="      errors", command=self.show_errors)
-	tab.popup.add_command(label="        help", command=self.help)
-	## popup
+if self.debug:
+	tab.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
+	tab.popup.add_command(label="     restart",
+			command=lambda: self.after_idle(self.restart_editor))
+	tab.popup.add_command(label="         run", command=self.run)
+
 	
+	if self.flags and self.flags.get('test_fake_error'): this_func_no_exist()
+	#this_func_no_exist()
+
+else:
+	tab.popup.add_command(label="         run", command=self.run)
+	tab.popup.add_command(label="        copy", command=self.copy)
+	tab.popup.add_command(label="       paste", command=self.paste)
+	tab.popup.add_command(label="##   comment", command=self.comment)
+	tab.popup.add_command(label="   uncomment", command=self.uncomment)
+
+tab.popup.add_command(label="  select all", command=self.select_all)
+tab.popup.add_command(label="     inspect", command=self.insert_inspected)
+tab.popup.add_command(label="      errors", command=self.show_errors)
+tab.popup.add_command(label="        help", command=self.help)
+## popup
+
 	
+popup, expander --> self? #######
+
+basic_conf = {asd,asd}
+Text(**basic_conf)
+
+for tab in self.tabs:
+
+	tab.config(**basic_conf)
+
 	tab.anchorname
 
 	for tagname in self.themes[self.curtheme]:
@@ -723,14 +743,8 @@ for tab in tabs:
 	
 	self.set_bindings(tab)
 	
-	self.contents.bind( "<<WidgetViewSync>>", self.update_line)
-	self.contents.bind("<Configure>", self.handle_window_resize)
-	--> to set_bindings? 
 	
-	conf = active_tab.config()
-	or from load_conf() d=dict(settings)
-	new_tab.config(**conf)
-
+	
 	
 	
 ### init check end #######
