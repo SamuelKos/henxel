@@ -653,7 +653,13 @@ for testing with slow machine
 removed get_accent_color
 planning to use magic colors instead in line highlight
 #######################
+utilize check_line() as, filtering range for syntax-highlighting,
+which was previously done in update_tokens()
 
+Currently self.token_err is almost not used
+--> tokens of whole content is updated not so often
+--> When?
+#######################
 
 Below this: not done ################################################
 
@@ -752,6 +758,8 @@ for tab in self.tabs:
 
 # tab_open, tab_close(etc) rewrite planning End
 ################################################
+
+
 
 
 

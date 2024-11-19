@@ -1548,16 +1548,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# -->
 		if not self.par_err:
 			if prev_char in pars: self.par_err = True
-			else:
-				for char in newline:
-					if char in pars:
-						self.par_err = True
-						break
+##			else:
+##				for char in newline:
+##					if char in pars:
+##						self.par_err = True
+##						break
 		############
 
 
 		# Check if need to update tokens in whole scope
-		if not self.token_err and not self.check_scope:
+		if not self.check_scope:
 
 			if self.cursor_is_in_multiline_string(): self.check_scope = True
 
@@ -1596,7 +1596,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			( scope_line, ind_defline, idx_scope_start) = self.get_scope_start()
 
 			idx_scope_end = self.get_scope_end(ind_defline, idx_scope_start)
-			print(scope_line)
 
 			s = '%s linestart' % idx_scope_start
 			e = idx_scope_end
@@ -1614,11 +1613,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.check_scope:
 			self.update_tokens(start=s, end=e)
 		else:
-			self.update_tokens(start=s, end=e, line=self.oldline)
+			self.update_tokens(start=s, end=e, line=newline)
 
 		###### check_line End ##########
-
-
 
 
 	def update_lineinfo(self, event=None):
@@ -1663,15 +1660,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			curline = self.contents.get( linestart, lineend )
 			on_oldline = (self.oldlinenum == linenum)
 
+
 			if self.oldline != curline or not on_oldline:
-
-##				self.check_line( oldline=self.oldline, newline=curline,
-##								on_oldline=on_oldline)
-
-				#print('sync')
 				self.oldline = curline
 				self.oldlinenum = linenum
-				self.update_tokens(start=linestart, end=lineend, line=curline)
+
+				self.check_line( oldline=self.oldline, newline=curline,
+								on_oldline=on_oldline)
+
+				#print('sync')
 
 
 ############## Init etc End
@@ -2731,8 +2728,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##			self.contents.index(tkinter.INSERT) )
 
 			flag_err = True
-			self.token_err = True
-			#self.check_scope = True
+			self.check_scope = True
 
 
 		except tokenize.TokenError as ee:
@@ -2744,8 +2740,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			elif 'multi-line string' in ee.args[0]:
 				flag_err = True
-				self.token_err = True
-				#self.check_scope = True
+				self.check_scope = True
 
 
 		for tag in self.tags:
@@ -2779,24 +2774,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not flag_err:
 			#print('ok')
 			self.token_err = False
-			#self.check_scope = False
+			self.check_scope = False
 
 
 	def update_tokens(self, start=None, end=None, line=None):
 		''' Update syntax highlighting after some change in contents.
-
-			If there has been syntax error, flag self.token_err is set, and next
-			time when calling this, all contents will be used.
-			If all contents was checked and there were no errors, flag is set False.
-
-			If normally inserting and deleting etc text in same tab, caller
-			is update_line() with current line contents and indexes. Then if
-			all tests are passed, like there is no token_err, then only that line
-			will be updated.
-
-			Sometimes action is complicated and one does not know the indexes,
-			then all current content is updated with start='1.0' end='end'.
-			This is done for example in undo_override().
 
 		'''
 
@@ -2805,47 +2787,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		linecontents = line
 		if not linecontents: linecontents = self.contents.get( start_idx, end_idx )
 
-
-		tests = [
-				self.token_err,
-				( '"""' in linecontents) and ('#' in linecontents ),
-				( "'''" in linecontents) and ('#' in linecontents )
-				]
-
-
-		if any(tests):
-			# Remove old tags:
-			for tag in self.tagnames:
-				self.contents.tag_remove( tag, '1.0', 'end')
-
-			self.insert_tokens(self.get_tokens(update=True))
-			return
-
-
-		# Check if inside multiline string
-		elif 'strings' in self.contents.tag_names(tkinter.INSERT):
-			try:
-				s, e = self.contents.tag_prevrange('strings', tkinter.INSERT)
-
-				(l0,_), (l1,_) = map(self.get_line_col_as_int, [s, e])
-
-				if l0 != l1:
-					start_idx, end_idx = (s, e)
-					linecontents = self.contents.get( start_idx, end_idx )
-
-			except ValueError:
-				pass
-
-
-
-		prev_char = self.contents.get( '%s - 1c' % tkinter.INSERT, tkinter.INSERT )
-		if prev_char in '()[]{}':
-			self.par_err = True
-
 		linenum,_ = self.get_line_col_as_int(start_idx)
 
-		#print(self.token_err)
-		#print('line')
 
 
 		###### START ###########
@@ -2925,7 +2868,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##			self.contents.index(tkinter.INSERT) )
 
 			flag_err = True
-			self.token_err = True
+			self.check_scope = True
 
 
 		except tokenize.TokenError as ee:
@@ -2937,7 +2880,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			elif 'multi-line string' in ee.args[0]:
 				flag_err = True
-				self.token_err = True
+				self.check_scope = True
 
 
 
@@ -2972,6 +2915,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not flag_err:
 			#print('ok')
 			self.token_err = False
+			self.check_scope = False
 
 			###### update_tokens end ###########
 
@@ -5862,14 +5806,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if len(self.contents.tag_ranges('sel')) > 0:
 			tmp = self.contents.selection_get()
 
-			if not self.token_err:
+			if not self.check_scope:
 				for triple in triples:
 					if triple in tmp:
-						self.token_err = True
+						self.check_scope = True
 						break
 
-			if not self.token_err and self.cursor_is_in_multiline_string():
-				self.token_err = True
+			if not self.check_scope and self.cursor_is_in_multiline_string():
+				self.check_scope = True
 
 			for char in tmp:
 				if char in pars:
@@ -5889,10 +5833,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			ins_col = self.get_line_col_as_int()[1]
 			prev_char = line[ins_col-1:ins_col]
 
-			if not self.token_err:
+			if not self.check_scope:
 				for triple in triples:
 					if triple in line:
-						self.token_err = True
+						self.check_scope = True
 						break
 
 			# Trigger parcheck
@@ -8529,6 +8473,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def show_next(self, event=None):
+		''' Note: side-effect, alters insert-mark
+				self.contents.mark_set('insert')
+		'''
+
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
 
@@ -8626,6 +8574,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def show_prev(self, event=None):
+		''' Note: side-effect, alters insert-mark
+				self.contents.mark_set('insert')
+		'''
+
 
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
 			return
@@ -9231,6 +9183,12 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# Set cursor pos
 		try:
 			if self.save_pos:
+
+				# Unfinished replace_all call
+				if self.state == 'replace_all' and len(self.mark_indexes) != 0:
+					self.save_pos = None
+					pass
+
 				line = self.save_pos
 				curtab.position = line
 				self.save_pos = None
@@ -9413,6 +9371,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# Save cursor pos
 		try:
 			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
+			if state == 'replace_all':
+				self.save_pos = self.contents.index(tkinter.INSERT)
 
 		except tkinter.TclError:
 			pass
@@ -9606,7 +9566,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		####
-		pos = self.contents.index('match0')
+		i = self.mark_indexes[-1]
+		last_mark = 'match%d' % i
+		idx_last_mark = self.contents.index(last_mark)
+
 		for index in self.mark_indexes[::-1]:
 
 			mark_name = 'match%d' % index
@@ -9641,11 +9604,11 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		# Is it not viewable?
-		if not self.contents.bbox(pos):
-			self.wait_for(200)
+		if not self.contents.bbox(idx_last_mark):
+			self.wait_for(300)
 
-		# Show first match that got replaced
-		self.ensure_idx_visibility(pos)
+		# Show last match that got replaced
+		self.ensure_idx_visibility(idx_last_mark)
 		self.wait_for(200)
 
 		bg, fg = self.themes[self.curtheme]['replaced'][:]
