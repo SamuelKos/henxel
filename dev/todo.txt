@@ -656,10 +656,11 @@ planning to use magic colors instead in line highlight
 utilize check_line() as, filtering range for syntax-highlighting,
 which was previously done in update_tokens()
 
-Currently self.token_err is almost not used
+removed self.token_err
 --> tokens of whole content is updated not so often
 --> When?
 #######################
+
 
 Below this: not done ################################################
 
@@ -731,6 +732,7 @@ tab.popup.add_command(label="        help", command=self.help)
 
 	
 popup, expander --> self? #######
+popup done, ok?
 
 basic_conf = {asd,asd}
 Text(**basic_conf)
@@ -827,19 +829,6 @@ def re_search(searchword, contents, offset):
 # Thinking about how to get scope limits faster End
 ################################################
 
-
-
-
-#################
-tests = [
-		lineno_start + b < lineno_ins,
-		lineno_ins + 4 < lineno_end
-		<sel_end>not e,
-		s and (s[1] < 0)
-		<sel_start>]
-
-and delete --> error
-####################
 
 
 

@@ -538,19 +538,12 @@ class Editor(tkinter.Toplevel):
 
 			self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, takefocus=0)
 			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
-			self.entry.bind("<Return>", self.load)
 
 			self.btn_open = tkinter.Button(self, takefocus=0, text='Open', bd=4, highlightthickness=0, command=self.load)
 			self.btn_save = tkinter.Button(self, takefocus=0, text='Save', bd=4, highlightthickness=0, command=self.save)
 
 			self.ln_widget = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4, relief='flat')
 			self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
-
-
-			# Disable copying linenumbers
-			shortcut = '<Mod1-Key-c>'
-			if self.os_type != 'mac_os': shortcut = '<Control-c>'
-			self.ln_widget.bind(shortcut, self.do_nothing_without_bell)
 
 			self.contents = tkinter.Text(self, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10, relief='flat')
 
@@ -559,13 +552,10 @@ class Editor(tkinter.Toplevel):
 			# Tab-completion, used in indent() and unindent()
 			self.expander = wordexpand.ExpandWord(self.contents)
 
-
 			# Needed in leave() taglink in: Run file Related
 			self.name_of_cursor_in_text_widget = self.contents['cursor']
 
-
-			self.popup = tkinter.Menu(self.contents, tearoff=0, bd=0, activeborderwidth=0)
-			self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
+			self.popup = tkinter.Menu(self, tearoff=0, bd=0, activeborderwidth=0)
 
 
 			if self.debug:
@@ -844,7 +834,6 @@ class Editor(tkinter.Toplevel):
 
 
 			self.oldline = ''
-			self.token_err = False
 			self.line_can_update = False
 			self.oldlinenum,_ = self.get_line_col_as_int()
 			self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
@@ -1488,6 +1477,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		line,col = map(int, self.contents.index(index).split('.'))
 		return line,col
 
+
 	def cursor_is_in_multiline_string(self):
 		''' Called from check_line
 		'''
@@ -1574,6 +1564,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 					# Triple die (by addition in middle: ''a' or 'a'')
 					# Should already be covered by: cursor_is_in_multiline_string-call above
+					# (Except it is not in case both triples were on the same line)
 					elif triple in oldline and triple not in newline:
 						self.check_scope = True
 						break
@@ -1582,6 +1573,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# --> Only add one letter is left unchecked
 			# Note: triple die: ''a' and 'a'' is already covered by
 			# cursor_is_in_multiline_string -call above
+			# (Except it is not in case both triples were/are on the same line)
+			# In that case, test below works only if one triple is alive
 			else:
 				for triple in triples:
 					if triple in newline:
@@ -1683,29 +1676,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		'''
 
-		self.right_mousebutton_num = 3
-
-		if self.os_type == 'mac_os':
-			self.right_mousebutton_num = 2
-
-			# Default cmd-q does not trigger quit_me
-			# Override Cmd-Q:
-			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
-			self.root.createcommand("tk::mac::Quit", self.quit_me)
-			#self.root.createcommand("tk::mac::OnHide", self.test_hide)
-
-
-
 		###################
 		w = tab.text_widget
 
-		w.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
 
 		if self.os_type == 'linux':
 			w.bind( "<ISO_Left_Tab>", self.unindent)
 		else:
 			w.bind( "<Shift-Tab>", self.unindent)
 
+		w.unbind_class('Text', '<Button-3>')
+		w.unbind_class('Text', '<B3-Motion>')
+		w.event_delete('<<PasteSelection>>')
 
 		############################################################
 		# In macOS all Alt-shortcuts makes some special symbol.
@@ -1939,8 +1921,38 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Called from init
 		'''
 
-		if self.os_type != 'mac_os':
+		## popup
+		self.right_mousebutton_num = 3
 
+		if self.os_type == 'mac_os':
+			self.right_mousebutton_num = 2
+
+		self.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
+		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
+
+		# Disable popup in other than Text-widget
+		for widget in [self.entry, self.btn_open, self.btn_save, self.btn_git,
+			self.ln_widget, self.scrollbar]:
+			widget.bind( "<Button-%i>" % self.right_mousebutton_num, self.do_nothing_without_bell)
+		## popup end
+
+
+		if self.os_type == 'mac_os':
+
+			self.entry.bind( "<Right>", self.mac_cmd_overrides)
+			self.entry.bind( "<Left>", self.mac_cmd_overrides)
+
+			self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
+			self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
+
+			# Default cmd-q does not trigger quit_me
+			# Override Cmd-Q:
+			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
+			self.root.createcommand("tk::mac::Quit", self.quit_me)
+			#self.root.createcommand("tk::mac::OnHide", self.test_hide)
+
+
+		else:
 			self.bind( "<Alt-n>", self.new_tab)
 			self.bind( "<Control-q>", self.quit_me)
 
@@ -1954,38 +1966,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.entry.bind("<Right>", self.check_sel)
 
 
-		# self.os_type == 'mac_os':
-		else:
-
-			self.entry.bind( "<Right>", self.mac_cmd_overrides)
-			self.entry.bind( "<Left>", self.mac_cmd_overrides)
-
-			self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
-			self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
-
-
-
-		# Arrange detection of CapsLock-state.
-		self.capslock = 'init'
-		self.motion_bind = self.bind('<Motion>', self.check_caps)
-		if self.os_type != 'mac_os':
-			self.bind('<Caps_Lock>', self.check_caps)
-		else:
-			self.bind('<KeyPress-Caps_Lock>', self.check_caps)
-			self.bind('<KeyRelease-Caps_Lock>', self.check_caps)
-
-
-		self.bind( "<Escape>", self.esc_override )
-		self.bind( "<Return>", self.do_nothing_without_bell)
-		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
-		self.bind( "<Control-plus>", self.increase_scrollbar_width)
-
-
-		self.ln_widget.bind("<Control-n>", self.do_nothing_without_bell)
-		self.ln_widget.bind("<Control-p>", self.do_nothing_without_bell)
-
-
 		if self.os_type == 'windows':
+
 			self.entry.bind( "<Control-E>",
 				lambda event, arg=('<<SelectLineEnd>>'): self.entry.event_generate)
 			self.entry.bind( "<Control-A>",
@@ -1994,6 +1976,33 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.entry.bind( "<Control-c>", self.copy_windows)
 			self.entry.bind( "<Control-x>",
 				lambda event: self.copy_windows(event, **{'flag_cut':True}) )
+
+
+		# Arrange detection of CapsLock-state
+		self.capslock = 'init'
+		self.motion_bind = self.bind('<Motion>', self.check_caps)
+		if self.os_type != 'mac_os':
+			self.bind('<Caps_Lock>', self.check_caps)
+		else:
+			self.bind('<KeyPress-Caps_Lock>', self.check_caps)
+			self.bind('<KeyRelease-Caps_Lock>', self.check_caps)
+
+		self.bind( "<Escape>", self.esc_override )
+		self.bind( "<Return>", self.do_nothing_without_bell)
+		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
+		self.bind( "<Control-plus>", self.increase_scrollbar_width)
+
+
+		self.entry.bind("<Return>", self.load)
+
+
+		self.ln_widget.bind("<Control-n>", self.do_nothing_without_bell)
+		self.ln_widget.bind("<Control-p>", self.do_nothing_without_bell)
+
+		# Disable copying linenumbers
+		shortcut = '<Mod1-Key-c>'
+		if self.os_type != 'mac_os': shortcut = '<Control-c>'
+		self.ln_widget.bind(shortcut, self.do_nothing_without_bell)
 
 
 
@@ -2203,7 +2212,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.entry.xview_moveto(1.0)
 
 
-		self.token_err = False
 		self.line_can_update = False
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, curtab.contents)
@@ -2607,7 +2615,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		else:
 			self.syntax = True
-			self.token_err = False
 			self.line_can_update = False
 
 			if self.can_do_syntax():
@@ -2659,8 +2666,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Called from: update_tokens, walk_tabs, etc
 		'''
 
-		#print('all cont')
-
 ##		# If not viewchange(contents is not deleted)
 ##		# Remove old tags:
 ##		for tag in self.tagnames:
@@ -2670,12 +2675,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		flag_err = False
 		par_err = None
 		check_pars = False
+		last_token = False
+		last = False # Used only at errors
 
 		for tag in self.tagnames: self.tags[tag].clear()
-
+		t0 = int(self.root.tk.eval('clock milliseconds'))
 		try:
 			for token in tokens:
-				#print(token)
+				last = token
 
 				if token.type == tokenize.NAME:
 					last_token = token
@@ -2734,7 +2741,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tokenize.TokenError as ee:
 
 			if 'EOF in multi-line statement' in ee.args[0]:
-				idx_start = str(last_token.start[0]) + '.0'
+				idx_start = str(last.start[0]) + '.0'
 				check_pars = idx_start
 
 
@@ -2743,6 +2750,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.check_scope = True
 
 
+		t1 = int(self.root.tk.eval('clock milliseconds'))
 		for tag in self.tags:
 			if len(self.tags[tag]) > 0:
 
@@ -2752,6 +2760,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.tk.eval(tk_command)
 
+		t2 = int(self.root.tk.eval('clock milliseconds'))
+		#print(t2-t1, t1-t0, 'ms')
 
 		##### Check parentheses ####
 		if check_pars:
@@ -2773,7 +2783,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if not flag_err:
 			#print('ok')
-			self.token_err = False
 			self.check_scope = False
 
 
@@ -2803,19 +2812,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.contents.tag_remove( tag, start_idx, end_idx )
 
 		#self.insert_tokens(tokens, linenum=linenum)
-		#print('line')
 
 
 		patt = f'{self.tcl_name_of_contents} tag add '
 		flag_err = False
 		par_err = None
 		check_pars = False
+		last_token = False
+		last = False # Used only at errors
 
 		for tag in self.tagnames: self.tags[tag].clear()
 
 		try:
 			for token in tokens:
-				#print(token)
+				last = token
 
 				if token.type == tokenize.NAME:
 					last_token = token
@@ -2874,7 +2884,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tokenize.TokenError as ee:
 
 			if 'EOF in multi-line statement' in ee.args[0]:
-				idx_start = str(last_token.start[0] +linenum -1) + '.0'
+				idx_start = str(last.start[0] +linenum -1) + '.0'
 				check_pars = idx_start
 
 
@@ -2914,7 +2924,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if not flag_err:
 			#print('ok')
-			self.token_err = False
 			self.check_scope = False
 
 			###### update_tokens end ###########
@@ -2955,8 +2964,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		bras = list()
 		curls = list()
 
-		opening  = [ '(', '[', '{' ]
-		closing  = [ ')', ']', '}' ]
+		opening  = '([{'
+		closing  = ')]}'
 
 		tags = None
 
@@ -3041,7 +3050,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Called from check_pars()
 		'''
 
-		startline = index
+		startline = '1.0'
 		patt = r'^[[:blank:]]*$'
 		pos = index
 
@@ -3052,7 +3061,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 
 		if pos: startline = pos
-		#######################
+
 
 		endline = 'end'
 		pos = index
@@ -3737,7 +3746,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tab_open()
 
 		self.bind("<Escape>", self.esc_override)
-		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
+		self.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 		self.state = 'normal'
 		self.update_title()
@@ -3778,7 +3787,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if len(err) != 0:
 			self.bind("<Escape>", self.stop_show_errors)
-			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
+			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 
 			self.tab_close()
 
@@ -3860,7 +3869,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if len(self.errlines) != 0:
 			self.bind("<Escape>", self.stop_show_errors)
-			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
+			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.state = 'error'
 
 			self.tab_close()
@@ -3918,7 +3927,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def stop_show_errors(self, event=None):
 		self.state = 'normal'
 		self.bind("<Escape>", self.esc_override)
-		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
+		self.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 
 		self.tab_open()
@@ -5141,12 +5150,26 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
+		# Disable popup when not clicked inside Text-widget
+		root_y = self.contents.winfo_rooty()
+		root_x = self.contents.winfo_rootx()
+		max_y = self.contents.winfo_rooty() + self.text_widget_height
+		max_x = self.contents.winfo_rootx() + self.contents.winfo_width()
+
+		tests = (root_x <= event.x_root <= max_x,
+				root_y <= event.y_root <= max_y)
+
+		if not all(tests): return 'break'
+
+
 		self.popup.post(event.x_root, event.y_root)
 		self.popup.focus_set() # Needed to remove popup when clicked outside.
+		return 'break'
 
 
 	def popup_focusOut(self, event=None):
 		self.popup.unpost()
+		return 'break'
 
 
 	def copy_fallback(self, selection=None, flag_cut=False):
@@ -5965,7 +5988,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				with open(filepath, 'r', encoding='utf-8') as f:
 					fcontents = f.read()
 
-					self.token_err = False
 					self.line_can_update = False
 
 					# new_tab() calls tab_close(), which saves contents etc. of oldtab
@@ -6017,8 +6039,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				l = inspect.getsourcelines(target_object)
 				t = ''.join(l[0])
 
-
-				self.token_err = False
 				self.line_can_update = False
 
 				# new_tab() calls tab_close(), which saves contents etc. of oldtab
@@ -7406,7 +7426,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 					if self.can_do_syntax():
 						self.update_lineinfo()
-						self.token_err = False
 						self.line_can_update = False
 						self.insert_tokens(self.get_tokens())
 						self.line_can_update = True
@@ -7433,7 +7452,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					return False
 
 
-				self.token_err = False
 				self.line_can_update = False
 
 				# new_tab() calls tab_close(), which saves contents etc. of oldtab
@@ -7818,7 +7836,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tab_open()
 
 		self.bind("<Escape>", self.esc_override)
-		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
+		self.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 
 
@@ -7838,7 +7856,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 
-		self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
+		self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 		self.bind("<Escape>", self.stop_help)
 
 
@@ -9076,7 +9094,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.old_word = search_word
 			self.search_index = -1
 
-			self.contents.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
+			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.entry.config(validate='none')
 
 
@@ -9151,7 +9169,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.entry.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
-		self.contents.bind("<Button-%i>" % self.right_mousebutton_num,
+		self.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 
 		#self.wait_for(200)
@@ -9187,6 +9205,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				# Unfinished replace_all call
 				if self.state == 'replace_all' and len(self.mark_indexes) != 0:
 					self.save_pos = None
+					# This will pass until focus_set
 					pass
 
 				line = self.save_pos
