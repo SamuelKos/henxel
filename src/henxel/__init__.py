@@ -533,24 +533,35 @@ class Editor(tkinter.Toplevel):
 
 			# Initiate widgets
 			####################################
-			self.btn_git = tkinter.Button(self, takefocus=0, font=self.menufont, relief='flat', highlightthickness=0, padx=0, state='disabled')
+			self.btn_git = tkinter.Button(self, takefocus=0, font=self.menufont, relief='flat',
+										highlightthickness=0, padx=0, state='disabled')
 			self.restore_btn_git() # Show git-branch if on one
 
 			self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, takefocus=0)
 			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
 
-			self.btn_open = tkinter.Button(self, takefocus=0, text='Open', bd=4, highlightthickness=0, command=self.load)
-			self.btn_save = tkinter.Button(self, takefocus=0, text='Save', bd=4, highlightthickness=0, command=self.save)
+			self.btn_open = tkinter.Button(self, takefocus=0, text='Open', bd=4,
+										highlightthickness=0, command=self.load)
+			self.btn_save = tkinter.Button(self, takefocus=0, text='Save', bd=4,
+										highlightthickness=0, command=self.save)
 
-			self.ln_widget = tkinter.Text(self, width=4, padx=10, highlightthickness=0, bd=4, pady=4, relief='flat')
+			self.ln_widget = tkinter.Text(self, width=4, padx=10, highlightthickness=0,
+										bd=4, pady=4, relief='flat')
 			self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
 
-			self.contents = tkinter.Text(self, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor', highlightthickness=0, bd=4, pady=4, padx=10, relief='flat')
 
-			self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0, bd=0, takefocus=0, command = self.contents.yview)
+			self.text_widget_basic_config = dict(undo=True, maxundo=-1, autoseparators=True,
+											tabstyle='wordprocessor', highlightthickness=0,
+											relief='flat')
+			#############
+			self.contents = tkinter.Text(self, **self.text_widget_basic_config)
+
+
+			self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0,
+										bd=0, takefocus=0, command = self.contents.yview)
 
 			# Tab-completion, used in indent() and unindent()
-			self.expander = wordexpand.ExpandWord(self.contents)
+			self.expander = wordexpand.ExpandWord()
 
 			# Needed in leave() taglink in: Run file Related
 			self.name_of_cursor_in_text_widget = self.contents['cursor']
@@ -584,7 +595,7 @@ class Editor(tkinter.Toplevel):
 			self.popup.add_command(label="        help", command=self.help)
 
 
-			# Get conf:
+			# Get conf
 			string_representation = None
 			data, p = None, None
 
@@ -606,53 +617,14 @@ class Editor(tkinter.Toplevel):
 			if data:
 				self.oldconf = string_representation
 				self.load_config(data)
-
-
-
-			# Get anchor-name of selection-start.
-			# Used in for example select_by_words():
-			self.contents.insert(1.0, 'asd')
-			# This is needed to get some tcl-objects created,
-			# ::tcl::WordBreakRE and self.anchorname
-			self.contents.event_generate('<<SelectNextWord>>')
-			# This is needed to clear selection
-			# otherwise left at the end of file:
-			self.contents.event_generate('<<PrevLine>>')
-
-			# Now also this array is created which is needed
-			# in RE-fixing ctrl-leftright behaviour in Windows below.
-			# self.tk.eval('parray ::tcl::WordBreakRE')
-
-			self.anchorname = None
-			for item in self.contents.mark_names():
-				if 'tk::' in item:
-					self.anchorname = item
-					break
-
-			self.contents.delete('1.0', '1.3')
-
-			# In Win11 event: <<NextWord>> does not work (as supposed) but does so in Linux and macOS
-			# https://www.tcl.tk/man/tcl9.0/TclCmd/tclvars.html
-			# https://www.tcl.tk/man/tcl9.0/TclCmd/library.html
-
-			if self.os_type == 'windows':
-
-				# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
-				# replace proc tk::TextNextWord with newer version which was looked in Debian 12
-				# Need for some reason generate event: <<NextWord>> before this,
-				# because array ::tcl::WordBreakRE does not exist yet,
-				# but after this event it does. This was done above.
-
-				self.tk.eval(r'set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
-				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
-				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
-
-
-			if data:
 				self.apply_config()
 
 				# Hide selection in linenumbers
-				self.ln_widget.config( selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor )
+				self.ln_widget.config( selectbackground=self.bgcolor,
+									selectforeground=self.fgcolor,
+									inactiveselectbackground=self.bgcolor )
+
+
 
 
 			# Colors Begin #######################
@@ -668,7 +640,7 @@ class Editor(tkinter.Toplevel):
 
 
 			self.default_themes = dict()
-			self.default_themes['day'] = d = dict()
+			self.default_themes['day']   = d = dict()
 			self.default_themes['night'] = n = dict()
 
 			# self.default_themes[self.curtheme][tagname] = [backgroundcolor, foregroundcolor]
@@ -714,6 +686,23 @@ class Editor(tkinter.Toplevel):
 				newtab.active = True
 				self.tabindex = 0
 				self.tabs.insert(self.tabindex, newtab)
+
+				######
+				w = tab.text_widget = self.contents
+
+				w.insert(1.0, 'asd')
+				w.event_generate('<<SelectNextWord>>')
+				w.event_generate('<<PrevLine>>')
+
+				tab.anchorname = None
+				for item in w.mark_names():
+					if 'tk::' in item:
+						tab.anchorname = item
+						#print(tab.anchorname)
+						break
+
+				w.delete('1.0', '1.3')
+				######
 
 
 				self.curtheme = 'night'
@@ -800,6 +789,53 @@ class Editor(tkinter.Toplevel):
 				self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled', padx=pad_x, pady=pad_y)
 
 
+
+
+
+			# In apply_conf now
+
+##			# Get anchor-name of selection-start.
+##			# Used in for example select_by_words():
+##			self.contents.insert(1.0, 'asd')
+##			# This is needed to get some tcl-objects created,
+##			# ::tcl::WordBreakRE and self.tabs[self.tabindex].anchorname
+##			self.contents.event_generate('<<SelectNextWord>>')
+##			# This is needed to clear selection
+##			# otherwise left at the end of file:
+##			self.contents.event_generate('<<PrevLine>>')
+##
+##			# Now also this array is created which is needed
+##			# in RE-fixing ctrl-leftright behaviour in Windows below.
+##			# self.tk.eval('parray ::tcl::WordBreakRE')
+##
+##			self.tabs[self.tabindex].anchorname = None
+##			for item in self.contents.mark_names():
+##				if 'tk::' in item:
+##					self.tabs[self.tabindex].anchorname = item
+##					break
+##
+##			self.contents.delete('1.0', '1.3')
+
+
+			# In Win11 event: <<NextWord>> does not work (as supposed) but does so in Linux and macOS
+			# https://www.tcl.tk/man/tcl9.0/TclCmd/tclvars.html
+			# https://www.tcl.tk/man/tcl9.0/TclCmd/library.html
+
+			if self.os_type == 'windows':
+
+				# To fix: replace array ::tcl::WordBreakRE contents with newer version, and
+				# replace proc tk::TextNextWord with newer version which was looked in Debian 12
+				# Need for some reason generate event: <<NextWord>> before this,
+				# because array ::tcl::WordBreakRE does not exist yet,
+				# but after this event it does. This was done above.
+
+				self.tk.eval(r'set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
+
+
+
+
 			# Widgets are initiated, now more configuration
 			################################################
 			# Needed in update_linenums(), there is more info.
@@ -831,12 +867,6 @@ class Editor(tkinter.Toplevel):
 
 
 			self.set_syntags()
-
-
-			self.oldline = ''
-			self.line_can_update = False
-			self.oldlinenum,_ = self.get_line_col_as_int()
-			self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
 
 
 ##			# Widget visibility-check
@@ -919,6 +949,13 @@ class Editor(tkinter.Toplevel):
 				self.contents.see('1.0')
 
 
+			self.oldline = ''
+			self.check_scope = False
+			self.line_can_update = False
+			self.oldlinenum,_ = self.get_line_col_as_int()
+			self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
+
+
 			if self.can_do_syntax():
 				self.update_lineinfo()
 
@@ -939,10 +976,8 @@ class Editor(tkinter.Toplevel):
 			############
 			# Bindings #
 			############
-			curtab.text_widget = self.contents
-			self.set_bindings(curtab)
+			self.set_bindings(curtab.text_widget)
 			self.set_bindings_other()
-
 			############
 
 
@@ -1444,16 +1479,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			elif not self.test_launch_is_ok():
 				self.activate_terminal()
 				return delayed_break(33)
-			elif not restart: return 'break'
+			else: return 'break'
 
 
-		# After this line, 1: debug=False (normal mode) or 2: quit_debug or restart
+		# Below this line, 1: debug=False (normal mode) or 2: quit_debug or restart
 		# --> cleanup is reasonable
 
 		tab = self.tabs[self.tabindex]
 		self.save_bookmarks(tab)
 		self.save_config()
-		self.config(bg='black') # prevent flashing if slow machine
+		self.config(bg='black') # Prevent flashing if slow machine
 		self.cleanup()
 
 
@@ -1667,17 +1702,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ############## Init etc End
 ############## Bindings Begin
 
-	def set_bindings(self, tab):
-		''' Set bindings for tab
+	def set_bindings(self, text_widget):
+		''' Set bindings for text_widget
 
-			tab:	tkinter Text-widget
+			text_widget:	tkinter Text-widget
 
 			Called from init
 
 		'''
 
-		###################
-		w = tab.text_widget
+		w = text_widget
 
 
 		if self.os_type == 'linux':
@@ -2150,7 +2184,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		if ((len(self.tabs) == 1) and self.tabs[self.tabindex].type == 'newtab'):
+		if len(self.tabs) == 1 and self.tabs[self.tabindex].type == 'newtab':
 			self.clear_bookmarks()
 			self.tabs[self.tabindex].bookmarks.clear()
 			self.contents.delete('1.0', tkinter.END)
@@ -2166,7 +2200,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tabs.pop(self.tabindex)
 
 
-		if (len(self.tabs) == 0):
+		if len(self.tabs) == 0:
 			newtab = Tab()
 			self.tabs.append(newtab)
 
@@ -2360,9 +2394,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def get_config(self):
-		dictionary = dict()
-		dictionary['curtheme'] = self.curtheme
-		dictionary['lastdir'] = self.lastdir.__str__()
+		dictionary = d = dict()
+		d['curtheme'] = self.curtheme
+		d['lastdir'] = self.lastdir.__str__()
 
 		# Replace possible Tkdefaulfont as family with real name,
 		# if not mac_os, because tkinter.font.Font does not recognise
@@ -2371,28 +2405,28 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.os_type == 'mac_os':
 
 			if self.font.cget('family') == 'TkDefaulFont':
-				dictionary['font'] = self.font.config()
+				d['font'] = self.font.config()
 
 			else:
-				dictionary['font'] = self.font.actual()
+				d['font'] = self.font.actual()
 
 			if self.menufont.cget('family') == 'TkDefaulFont':
-				dictionary['menufont'] = self.menufont.config()
+				d['menufont'] = self.menufont.config()
 
 			else:
-				dictionary['menufont'] = self.menufont.actual()
+				d['menufont'] = self.menufont.actual()
 
 		else:
-			dictionary['font'] = self.font.actual()
-			dictionary['menufont'] = self.menufont.actual()
+			d['font'] = self.font.actual()
+			d['menufont'] = self.menufont.actual()
 
 
-		dictionary['scrollbar_width'] = self.scrollbar_width
-		dictionary['elementborderwidth'] = self.elementborderwidth
-		dictionary['want_ln'] = self.want_ln
-		dictionary['syntax'] = self.syntax
-		dictionary['ind_depth'] = self.ind_depth
-		dictionary['themes'] = self.themes
+		d['scrollbar_width'] = self.scrollbar_width
+		d['elementborderwidth'] = self.elementborderwidth
+		d['want_ln'] = self.want_ln
+		d['syntax'] = self.syntax
+		d['ind_depth'] = self.ind_depth
+		d['themes'] = self.themes
 
 		for tab in self.tabs:
 			tab.contents = ''
@@ -2405,17 +2439,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tab.bookmarks.clear()
 
 		# Should be whitelist instead of __dict__?
-		dictionary['tabs'] = [ tab.__dict__.copy() for tab in self.tabs ]
+		d['tabs'] = [ tab.__dict__.copy() for tab in self.tabs ]
 
-		for d in dictionary['tabs']:
-			if 'text_widget' in d.keys(): d.pop('text_widget')
+		for t in d['tabs']:
+			if 'text_widget' in t.keys(): t.pop('text_widget')
 
 
 		return dictionary
 
 
 	def set_config(self, dictionary, font, menufont):
-
+		d = dictionary
 		# Set Font Begin ##############################
 
 		# Both missing:
@@ -2432,37 +2466,37 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if not fontname:
 				fontname = 'TkDefaulFont'
 
-			dictionary['font']['family'] = fontname
-			dictionary['menufont']['family'] = fontname
+			d['font']['family'] = fontname
+			d['menufont']['family'] = fontname
 
 		# One missing, copy existing:
 		elif bool(font) ^ bool(menufont):
 			if font:
-				dictionary['menufont']['family'] = font
+				d['menufont']['family'] = font
 			else:
-				dictionary['font']['family'] = menufont
+				d['font']['family'] = menufont
 
 
-		self.font.config(**dictionary['font'])
-		self.menufont.config(**dictionary['menufont'])
-		self.scrollbar_width 	= dictionary['scrollbar_width']
-		self.elementborderwidth	= dictionary['elementborderwidth']
-		self.want_ln = dictionary['want_ln']
-		self.syntax = dictionary['syntax']
-		self.ind_depth = dictionary['ind_depth']
-		self.themes = dictionary['themes']
-		self.curtheme = dictionary['curtheme']
+		self.font.config(**d['font'])
+		self.menufont.config(**d['menufont'])
+		self.scrollbar_width 	= d['scrollbar_width']
+		self.elementborderwidth	= d['elementborderwidth']
+		self.want_ln = d['want_ln']
+		self.syntax = d['syntax']
+		self.ind_depth = d['ind_depth']
+		self.themes = d['themes']
+		self.curtheme = d['curtheme']
 
 		self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
 
-		self.lastdir = dictionary['lastdir']
+		self.lastdir = d['lastdir']
 
 		if self.lastdir != None:
-			self.lastdir = pathlib.Path(dictionary['lastdir'])
+			self.lastdir = pathlib.Path(d['lastdir'])
 			if not self.lastdir.exists():
 				self.lastdir = None
 
-		self.tabs = [ Tab(**item) for item in dictionary['tabs'] ]
+		self.tabs = [ Tab(**item) for item in d['tabs'] ]
 
 		# To avoid for-loop breaking, while removing items from the container being iterated,
 		# one can iterate over container[:], that is: self.tabs[:],
@@ -2519,14 +2553,43 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		pad_x =  self.tab_width // self.ind_depth // 3
 		pad_y = pad_x
 
-		for tagname in self.themes[self.curtheme]:
-			bg, fg = self.themes[self.curtheme][tagname][:]
-			self.contents.tag_config(tagname, background=bg, foreground=fg)
 
 
-		self.contents.config(font=self.font, foreground=self.fgcolor,
-			background=self.bgcolor, insertbackground=self.fgcolor,
-			tabs=(self.tab_width, ), padx=pad_x, pady=pad_y)
+		###################################################
+		for tab in self.tabs:
+
+			if not tab.active:
+				tab.text_widget = tkinter.Text(self, **self.text_widget_basic_config)
+			else:
+				tab.text_widget = self.contents
+
+			w = tab.text_widget
+
+			w.insert(1.0, 'asd')
+			w.event_generate('<<SelectNextWord>>')
+			w.event_generate('<<PrevLine>>')
+
+			tab.anchorname = None
+			for item in w.mark_names():
+				if 'tk::' in item:
+					tab.anchorname = item
+					print(tab.anchorname)
+					break
+
+			w.delete('1.0', '1.3')
+
+
+			for tagname in self.themes[self.curtheme]:
+				bg, fg = self.themes[self.curtheme][tagname][:]
+				w.tag_config(tagname, background=bg, foreground=fg)
+
+
+			w.config(font=self.font, foreground=self.fgcolor,
+				background=self.bgcolor, insertbackground=self.fgcolor,
+				tabs=(self.tab_width, ), padx=pad_x, pady=pad_y)
+		################################################
+
+
 
 		self.scrollbar.config(width=self.scrollbar_width)
 		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
@@ -2582,24 +2645,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tags = dict()
 		for tag in self.tagnames: self.tags[tag] = list()
 
+		for tab in self.tabs:
+			w = tab.text_widget
+			w.tag_config('keywords', font=self.boldfont)
+			w.tag_config('numbers', font=self.boldfont)
+			w.tag_config('comments', font=self.boldfont)
+			w.tag_config('breaks', font=self.boldfont)
+			w.tag_config('calls', font=self.boldfont)
 
-		self.contents.tag_config('keywords', font=self.boldfont)
-		self.contents.tag_config('numbers', font=self.boldfont)
-		self.contents.tag_config('comments', font=self.boldfont)
-		self.contents.tag_config('breaks', font=self.boldfont)
-		self.contents.tag_config('calls', font=self.boldfont)
+			w.tag_config('focus', underline=True)
+			w.tag_config('elIdel', elide=True)
+			w.tag_config('animate')
+			w.tag_config('highlight_line')
+			w.tag_config('match_zero_lenght')
 
-		self.contents.tag_config('focus', underline=True)
-		self.contents.tag_config('elIdel', elide=True)
-		self.contents.tag_config('animate')
-		self.contents.tag_config('highlight_line')
-		self.contents.tag_config('match_zero_lenght')
-
-		# Search-tags have highest priority
-		self.contents.tag_raise('match')
-		self.contents.tag_raise('replaced')
-		self.contents.tag_raise('sel')
-		self.contents.tag_raise('focus')
+			# Search-tags have highest priority
+			w.tag_raise('match')
+			w.tag_raise('replaced')
+			w.tag_raise('sel')
+			w.tag_raise('focus')
 
 
 	def toggle_syntax(self, event=None):
@@ -4122,7 +4186,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		else:
 			self.contents.mark_set('insert', idx_scope_start)
 
-		self.contents.mark_set(self.anchorname, idx_scope_end)
+		self.contents.mark_set(self.tabs[self.tabindex].anchorname, idx_scope_end)
 		self.contents.tag_add('sel', idx_scope_start, idx_scope_end )
 
 		return 'break'
@@ -4320,7 +4384,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# It gives something like this if there has been or is a selection:
 		# 'insert', 'current', 'tk::anchor1'.
 		# This: 'tk::anchor1' is name of the selection-start-mark
-		# used here as in self.anchorname below.
+		# used here as in self.tabs[self.tabindex].anchorname below.
 		# This is done because adjusting only 'sel' -tags
 		# is not sufficient in selection handling, when not using
 		# builtin-events, <<SelectNextWord>> and <<SelectPrevWord>>.
@@ -4331,7 +4395,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
 
 				if selection_started_from_top:
-					self.contents.mark_set(self.anchorname, sel_start)
+					self.contents.mark_set(self.tabs[self.tabindex].anchorname, sel_start)
 					self.contents.tag_add('sel', sel_start, ins_new)
 				else:
 					# Check if selection is about to be closed
@@ -4339,16 +4403,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					# to avoid one char selection -leftovers.
 					if self.contents.compare( '%s +1 chars' % ins_new, '>=' , sel_end ):
 						self.contents.mark_set('insert', sel_end)
-						self.contents.mark_set(self.anchorname, sel_end)
+						self.contents.mark_set(self.tabs[self.tabindex].anchorname, sel_end)
 						return
 
-					self.contents.mark_set(self.anchorname, sel_end)
+					self.contents.mark_set(self.tabs[self.tabindex].anchorname, sel_end)
 					self.contents.tag_add('sel', ins_new, sel_end)
 
 			# No selection,
 			# no need to check direction of selection:
 			else:
-				self.contents.mark_set(self.anchorname, ins_old)
+				self.contents.mark_set(self.tabs[self.tabindex].anchorname, ins_old)
 				self.contents.tag_add('sel', ins_old, ins_new)
 
 
@@ -4362,20 +4426,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					# to avoid one char selection -leftovers.
 					if self.contents.compare( '%s -1 chars' % ins_new, '<=' , sel_start ):
 						self.contents.mark_set('insert', sel_start)
-						self.contents.mark_set(self.anchorname, sel_start)
+						self.contents.mark_set(self.tabs[self.tabindex].anchorname, sel_start)
 						return
 
-					self.contents.mark_set(self.anchorname, sel_start)
+					self.contents.mark_set(self.tabs[self.tabindex].anchorname, sel_start)
 					self.contents.tag_add('sel', sel_start, ins_new)
 
 				else:
-					self.contents.mark_set(self.anchorname, sel_end)
+					self.contents.mark_set(self.tabs[self.tabindex].anchorname, sel_end)
 					self.contents.tag_add('sel', ins_new, sel_end)
 
 			# No selection,
 			# no need to check direction of selection:
 			else:
-				self.contents.mark_set(self.anchorname, ins_old)
+				self.contents.mark_set(self.tabs[self.tabindex].anchorname, ins_old)
 				self.contents.tag_add('sel', ins_new, ins_old)
 
 
@@ -4849,16 +4913,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
 
 				if from_top:
-					self.contents.mark_set(self.anchorname, s)
+					self.contents.mark_set(self.tabs[self.tabindex].anchorname, s)
 					self.contents.tag_add('sel', s, 'insert')
 
 				# From bottom:
 				else:
-					self.contents.mark_set(self.anchorname, e)
+					self.contents.mark_set(self.tabs[self.tabindex].anchorname, e)
 					self.contents.tag_add('sel', 'insert', e)
 
 			else:
-				self.contents.mark_set(self.anchorname, i)
+				self.contents.mark_set(self.tabs[self.tabindex].anchorname, i)
 				self.contents.tag_add('sel', i, 'insert')
 
 
@@ -4979,7 +5043,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 					if all(tests):
 						pos = self.contents.index('%s linestart' % idx )
-						self.contents.mark_set(self.anchorname, 'insert')
+						self.contents.mark_set(self.tabs[self.tabindex].anchorname, 'insert')
 						self.contents.tag_add('sel', pos, 'insert')
 
 					else:
@@ -5435,7 +5499,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.ensure_idx_visibility(ins_old)
 			self.wait_for(100)
 			self.contents.tag_add('sel', ins_old, 'paste')
-			self.contents.mark_set(self.anchorname, 'paste')
+			self.contents.mark_set(self.tabs[self.tabindex].anchorname, 'paste')
 
 		elif selection_started_from_top:
 				self.ensure_idx_visibility(ins_old)
@@ -7972,7 +8036,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if len(self.contents.tag_ranges('sel')) == 0:
 
 			if self.can_expand_word():
-				self.expander.expand_word()
+				self.expander.expand_word(event=event)
 
 				# can_expand_word called before indent and unindent
 
@@ -8050,7 +8114,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if len(self.contents.tag_ranges('sel')) == 0:
 
 			if self.can_expand_word():
-				self.expander.expand_word()
+				self.expander.expand_word(event=event)
 
 				# can_expand_word called before indent and unindent
 
@@ -8477,7 +8541,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.wait_for(33)
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
-		self.contents.mark_set(self.anchorname, pos)
+		self.contents.mark_set(self.tabs[self.tabindex].anchorname, pos)
 		self.wait_for(12)
 		self.contents.tag_add('sel', pos, word_end)
 		self.contents.mark_set('insert', word_end)

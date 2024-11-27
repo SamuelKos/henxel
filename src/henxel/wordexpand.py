@@ -12,6 +12,12 @@ cycle starts again.
 Changing current text line or leaving cursor in a different
 place before requesting next selection causes ExpandWord to reset
 its state.
+
+These methods of Editor are being used in getwords():
+	get_scope_start()
+	get_scope_end()
+	can_do_syntax()
+
 '''
 
 
@@ -20,24 +26,24 @@ class ExpandWord:
 	# string.ascii_letters + string.digits + "_" + "."
 
 
-	def __init__(self, textwid):
-		''' textwid is tkinter.Text -widget'''
-
-		self.textwid = textwid
-		self.bell = self.textwid.bell
+	def __init__(self):
+		# text_widget is tkinter.Text -widget
+		self.text_widget = None
 		self.state = None
 
 
-	def expand_word(self):
+	def expand_word(self, event=None):
 		''' Replace the current word with the next expansion.
 		'''
 
-		curinsert = self.textwid.index("insert")
-		curline = self.textwid.get("insert linestart", "insert lineend")
+		curinsert = event.widget.index("insert")
+		curline = event.widget.get("insert linestart", "insert lineend")
 
-		# if used the very first time:
-		if not self.state:
-			self.tcl_name_of_contents = str( self.textwid.nametowidget(self.textwid) )
+
+		# Tab changed
+		if event.widget != self.text_widget:
+			self.text_widget = event.widget
+			self.tcl_name_of_contents = str( self.text_widget.nametowidget(self.text_widget) )
 			words = self.getwords()
 			index = 0
 
@@ -53,7 +59,7 @@ class ExpandWord:
 
 
 		if not words:
-			self.bell()
+			self.text_widget.bell()
 			return "break"
 
 
@@ -65,7 +71,7 @@ class ExpandWord:
 		# Gone through all words once
 		if index == len(words):
 			index = 0
-			self.bell()
+			self.text_widget.bell()
 
 
 		#######################
@@ -79,18 +85,18 @@ class ExpandWord:
 		# ranges('sel', asd)
 		# asd(self, asd)
 
-		# self.textwid.delete(as,ads)
-		# self.textwid.insert(as,ads)
+		# self.text_widget.delete(as,ads)
+		# self.text_widget.insert(as,ads)
 		###########################
 
 
 		#print(word, len(word), newword)
-		self.textwid.delete("insert - %d chars" % len(word), "insert")
-		self.textwid.insert("insert", newword)
+		self.text_widget.delete("insert - %d chars" % len(word), "insert")
+		self.text_widget.insert("insert", newword)
 
 
-		curinsert = self.textwid.index("insert")
-		curline = self.textwid.get("insert linestart", "insert lineend")
+		curinsert = self.text_widget.index("insert")
+		curline = self.text_widget.get("insert linestart", "insert lineend")
 		self.state = words, index, curinsert, curline
 
 		return "break"
@@ -98,9 +104,15 @@ class ExpandWord:
 
 	def getwords(self):
 		''' Return a list of words that match the prefix before the cursor.
+
+			These methods of Editor are being used:
+				get_scope_start()
+				get_scope_end()
+				can_do_syntax()
+
 		'''
 
-		editor = self.textwid.master
+		editor = self.text_widget.master
 		all_words = False
 		word = self.getprevword()
 		words = []
@@ -142,23 +154,23 @@ class ExpandWord:
 			if scope_end:
 				# Up: insert - scope_start == scope_start - insert reversed
 				p = patt_start + patt_end % (scope_start, '{insert wordstart}')
-				l1 = words_ins_def_up = self.textwid.tk.eval(p).split()
+				l1 = words_ins_def_up = self.text_widget.tk.eval(p).split()
 				l1.reverse()
 
 				# Down: insert - scope_end
 				p = patt_start + patt_end % ('{insert wordend}', scope_end)
-				l2 = words_ins_def_down = self.textwid.tk.eval(p).split()
+				l2 = words_ins_def_down = self.text_widget.tk.eval(p).split()
 
 				if scope_start != '1.0':
 					# Up: scope_start - filestart == filestart - scope_start reversed
 					p = patt_start + patt_end % ('1.0', scope_start)
-					l3 = words_def_up_filestart = self.textwid.tk.eval(p).split()
+					l3 = words_def_up_filestart = self.text_widget.tk.eval(p).split()
 					l3.reverse()
 
 				if scope_end != 'end':
 					# Down: scope_end - fileend
 					p = patt_start + patt_end % (scope_end, 'end')
-					l4 = words_def_down_fileend = self.textwid.tk.eval(p).split()
+					l4 = words_def_down_fileend = self.text_widget.tk.eval(p).split()
 
 
 				all_words = l1 + l2
@@ -169,11 +181,11 @@ class ExpandWord:
 		# For example: Tabbing at __main__() or in non py-file
 		if not all_words:
 			p = patt_start + patt_end % ('1.0', '{insert wordstart}')
-			l1 = words_ins_filestart = self.textwid.tk.eval(p).split()
+			l1 = words_ins_filestart = self.text_widget.tk.eval(p).split()
 			l1.reverse()
 
 			p = patt_start + patt_end % ('{insert wordstart}', 'end')
-			l2 = words_ins_filestart = self.textwid.tk.eval(p).split()
+			l2 = words_ins_filestart = self.text_widget.tk.eval(p).split()
 
 			all_words = l1 + l2
 		#######################
@@ -199,7 +211,7 @@ class ExpandWord:
 		patt = r'%s get {insert linestart} insert' \
 				% self.tcl_name_of_contents
 
-		tmp = self.textwid.tk.eval(patt)
+		tmp = self.text_widget.tk.eval(patt)
 
 
 		for i in reversed( range(len(tmp)) ):

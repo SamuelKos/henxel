@@ -665,6 +665,24 @@ removed self.token_err
 Below this: not done ################################################
 
 
+apply_config():
+tab.text_widget = tkinter.Te<insert>
+
+then tab complete
+-->
+tab.text_widget = Text}
+
+
+
+set_syntags() contents.tag_config combine?
+
+
+self.anchorname --> self.tabs[self.tabindex].anchorname
+
+
+self.text_widget_basic_config
+
+
 
 ################################################
 # tab_open, tab_close(etc) rewrite planning Begin
@@ -683,6 +701,7 @@ Currently, single tkinter.Text -widget /Editor
 - theme changes
 - tag-changes
 - help, error
+- save load walk_tabs
 
 ###
 get_config():
@@ -699,40 +718,8 @@ get_config():
 
 ### init check ######
 
-tab.expander = wordexpand.ExpandWord(tab.text_widget)
+popup, expander done, ok?
 
-## popup
-popconf = active_tab.popup.config()
-tab.popup = tkinter.Menu(tab.text_widget, **popconf)
-
-tab.popup.bind("<FocusOut>", self.popup_focusOut)
-
-if self.debug:
-	tab.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
-	tab.popup.add_command(label="     restart",
-			command=lambda: self.after_idle(self.restart_editor))
-	tab.popup.add_command(label="         run", command=self.run)
-
-	
-	if self.flags and self.flags.get('test_fake_error'): this_func_no_exist()
-	#this_func_no_exist()
-
-else:
-	tab.popup.add_command(label="         run", command=self.run)
-	tab.popup.add_command(label="        copy", command=self.copy)
-	tab.popup.add_command(label="       paste", command=self.paste)
-	tab.popup.add_command(label="##   comment", command=self.comment)
-	tab.popup.add_command(label="   uncomment", command=self.uncomment)
-
-tab.popup.add_command(label="  select all", command=self.select_all)
-tab.popup.add_command(label="     inspect", command=self.insert_inspected)
-tab.popup.add_command(label="      errors", command=self.show_errors)
-tab.popup.add_command(label="        help", command=self.help)
-## popup
-
-	
-popup, expander --> self? #######
-popup done, ok?
 
 basic_conf = {asd,asd}
 Text(**basic_conf)
