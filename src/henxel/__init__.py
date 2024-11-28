@@ -558,7 +558,7 @@ class Editor(tkinter.Toplevel):
 
 
 			self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0,
-										bd=0, takefocus=0, command = self.contents.yview)
+										bd=0, takefocus=0, command=self.contents.yview)
 
 			# Tab-completion, used in indent() and unindent()
 			self.expander = wordexpand.ExpandWord()
@@ -679,7 +679,7 @@ class Editor(tkinter.Toplevel):
 			n['sel'] = ['#c3c3c3', black]
 
 
-			# No conf:
+			# No conf
 			if self.tabindex == None:
 
 				newtab = Tab()
@@ -687,22 +687,24 @@ class Editor(tkinter.Toplevel):
 				self.tabindex = 0
 				self.tabs.insert(self.tabindex, newtab)
 
-				######
-				w = tab.text_widget = self.contents
+				############
+				w = newtab.text_widget = self.contents
 
 				w.insert(1.0, 'asd')
 				w.event_generate('<<SelectNextWord>>')
 				w.event_generate('<<PrevLine>>')
 
-				tab.anchorname = None
+				newtab.anchorname = None
 				for item in w.mark_names():
 					if 'tk::' in item:
-						tab.anchorname = item
-						#print(tab.anchorname)
+						newtab.anchorname = item
+						#print(newtab.anchorname)
 						break
 
 				w.delete('1.0', '1.3')
-				######
+
+				newtab.tcl_name_of_contents = str( w.nametowidget(w) )
+				############
 
 
 				self.curtheme = 'night'
@@ -798,7 +800,7 @@ class Editor(tkinter.Toplevel):
 ##			# Used in for example select_by_words():
 ##			self.contents.insert(1.0, 'asd')
 ##			# This is needed to get some tcl-objects created,
-##			# ::tcl::WordBreakRE and self.tabs[self.tabindex].anchorname
+##			# ::tcl::WordBreakRE and self.anchorname
 ##			self.contents.event_generate('<<SelectNextWord>>')
 ##			# This is needed to clear selection
 ##			# otherwise left at the end of file:
@@ -808,10 +810,10 @@ class Editor(tkinter.Toplevel):
 ##			# in RE-fixing ctrl-leftright behaviour in Windows below.
 ##			# self.tk.eval('parray ::tcl::WordBreakRE')
 ##
-##			self.tabs[self.tabindex].anchorname = None
+##			self.anchorname = None
 ##			for item in self.contents.mark_names():
 ##				if 'tk::' in item:
-##					self.tabs[self.tabindex].anchorname = item
+##					self.anchorname = item
 ##					break
 ##
 ##			self.contents.delete('1.0', '1.3')
@@ -928,55 +930,91 @@ class Editor(tkinter.Toplevel):
 
 
 			############
+			self.line_can_update = False
+			
+			for tab in self.tabs:
+				
+				if tab.type == 'normal':
+					tab.text_widget.insert('insert', tab.contents)
+					self.restore_bookmarks(tab)
+					
+					# Set cursor pos
+					line = tab.position
+					try:
+						tab.text_widget.mark_set('insert', line)
+						#self.ensure_idx_visibility(line)
+
+					except tkinter.TclError:
+						tab.text_widget.mark_set('insert', '1.0')
+						self.tab.position = '1.0'
+						tab.text_widget.see('1.0')
+						
+						
+##					self.oldline = ''
+##					self.check_scope = False
+##					self.line_can_update = False			
+##					self.oldlinenum,_ = self.get_line_col_as_int()
+##					
+##					
+##					if self.can_do_syntax():
+##						self.update_lineinfo()
+##
+##						# init before this is timewise quite ok
+##						#t1 = int(self.root.tk.eval('clock seconds'))
+##						a = self.get_tokens(tab) ##### virtually takes no time
+##						#t2 = int(self.root.tk.eval('clock seconds'))
+##						self.insert_tokens(a) ##### this takes times
+##						#t3 = int(self.root.tk.eval('clock seconds'))
+##						#print(t3-t2, t2-t1, 's')
+##
+##						self.line_can_update = True
+						
+						
+				tab.text_widget.edit_reset()
+				tab.text_widget.edit_modified(0)
+
+
+
+
 			curtab = self.tabs[self.tabindex]
-
-			if curtab.type == 'normal':
-				self.contents.insert(tkinter.INSERT, curtab.contents)
-				self.restore_bookmarks(curtab)
-				self.entry.insert(0, curtab.filepath)
-				self.entry.xview_moveto(1.0)
-
-
-			# Set cursor pos
-			line = curtab.position
-			try:
-				self.contents.mark_set('insert', line)
-				self.ensure_idx_visibility(line)
-
-			except tkinter.TclError:
-				self.contents.mark_set('insert', '1.0')
-				self.curtab.position = '1.0'
-				self.contents.see('1.0')
-
-
 			self.oldline = ''
 			self.check_scope = False
-			self.line_can_update = False
+			self.line_can_update = False			
 			self.oldlinenum,_ = self.get_line_col_as_int()
-			self.tcl_name_of_contents = str( self.contents.nametowidget(self.contents) )
+			
+			self.anchorname = curtab.anchorname
+			self.tcl_name_of_contents = curtab.tcl_name_of_contents
 
-
+			
 			if self.can_do_syntax():
 				self.update_lineinfo()
 
 				# init before this is timewise quite ok
 				t1 = int(self.root.tk.eval('clock seconds'))
-				a = self.get_tokens() ##### virtually takes no time
+				a = self.get_tokens(curtab) ##### virtually takes no time
 				t2 = int(self.root.tk.eval('clock seconds'))
 				self.insert_tokens(a) ##### this takes times
 				t3 = int(self.root.tk.eval('clock seconds'))
 				print(t3-t2, t2-t1, 's')
 
-				#self.insert_tokens(self.get_tokens())
 				self.line_can_update = True
+					
+			
+			
+			curtab.text_widget.edit_reset()
+			curtab.text_widget.edit_modified(0)
 
-			self.contents.edit_reset()
-			self.contents.edit_modified(0)
+			self.entry.insert(0, curtab.filepath)
+			self.entry.xview_moveto(1.0)
+			
+			
 
 			############
 			# Bindings #
 			############
-			self.set_bindings(curtab.text_widget)
+			for tab in self.tabs:
+				self.set_bindings(tab)
+
 			self.set_bindings_other()
 			############
 
@@ -1430,6 +1468,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		for widget in self.to_be_closed:
 			widget.destroy()
 
+		for tab in self.tabs:
+			tab.text_widget.destroy()
+			del tab.text_widget
+		
 		self.quit()
 		self.destroy()
 
@@ -1438,20 +1480,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.tracefunc_name:
 			self.tracevar_filename.trace_remove('write', self.tracefunc_name)
 
-		# To maximize amount of deleted objects, in case of incomplete init,
-		# Remove in creation order
-		# Object			Line(order)
-		del self.btn_git	#468
-		del self.entry		#472
-		del self.btn_open	#476
-		del self.btn_save	#477
-		del self.ln_widget	#505
-		del self.contents	#513
-		del self.scrollbar	#515
-		del self.expander	#518
-		del self.popup		#524
-		#print('cleanup: All removed')
-
+		del self.btn_git
+		del self.entry
+		del self.btn_open
+		del self.btn_save
+		del self.ln_widget
+		del self.contents
+		del self.scrollbar
+		del self.expander
+		del self.popup
+		
 
 	def quit_me(self, event=None, quit_debug=False, restart=False):
 
@@ -1485,8 +1523,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Below this line, 1: debug=False (normal mode) or 2: quit_debug or restart
 		# --> cleanup is reasonable
 
-		tab = self.tabs[self.tabindex]
-		self.save_bookmarks(tab)
+		for tab in self.tabs: self.save_bookmarks(tab)
 		self.save_config()
 		self.config(bg='black') # Prevent flashing if slow machine
 		self.cleanup()
@@ -1702,7 +1739,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ############## Init etc End
 ############## Bindings Begin
 
-	def set_bindings(self, text_widget):
+	def set_bindings(self, tab):
 		''' Set bindings for text_widget
 
 			text_widget:	tkinter Text-widget
@@ -1711,7 +1748,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		'''
 
-		w = text_widget
+		w = tab.text_widget
 
 
 		if self.os_type == 'linux':
@@ -1901,8 +1938,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
 
 		# Used in searching
-		self.bid_space = w.bind( "<space>", self.space_override)
-
+		tab.bid_space = w.bind( "<space>", self.space_override)
 		w.bind( "<Control-n>", self.search_next)
 		w.bind( "<Control-p>",
 				lambda event: self.search_next(event, **{'back':True}) )
@@ -2245,33 +2281,60 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.entry.insert(0, curtab.filepath)
 			self.entry.xview_moveto(1.0)
 
+		self.anchorname = curtab.anchorname
+		self.tcl_name_of_contents = curtab.tcl_name_of_contents
+ 
+ 
 
-		self.line_can_update = False
-		self.contents.delete('1.0', tkinter.END)
-		self.contents.insert(tkinter.INSERT, curtab.contents)
+		########
+		self.orig_bg_color = self.cget('bg')
+		self.config(bg='black')
+			
+		self.scrollbar.config(command='')
+		
+		self.contents.grid_forget()
+		self.contents = curtab.text_widget
+		
+		#self.scrollbar.config(command=self.contents.yview)
+		#self.scrollbar.set(*self.contents.yview())
 
-		# Set cursor pos
-		try:
-			line = curtab.position
-			self.contents.focus_set()
-			self.contents.mark_set('insert', line)
-			self.ensure_idx_visibility(line)
+		self.contents.grid_configure(row=1, column=1, columnspan=3, sticky='nswe')
+		#self.scrollbar.grid(row=1,column=3, sticky='nse')
+		
+		self.contents.focus_set()
+		self.config(bg=self.orig_bg_color)
+		self.update_idletasks()
+		########
+		
 
-		except tkinter.TclError:
-			curtab.position = '1.0'
+	
 
-
-		if self.can_do_syntax():
-			self.update_lineinfo()
-			self.insert_tokens(self.get_tokens())
-			self.line_can_update = True
-
-
-		self.clear_bookmarks() ## --> tab_close?
-		self.restore_bookmarks(curtab)
-
-		self.contents.edit_reset()
-		self.contents.edit_modified(0)
+##		self.line_can_update = False
+##		self.contents.delete('1.0', tkinter.END)
+##		self.contents.insert(tkinter.INSERT, curtab.contents)
+##
+##		# Set cursor pos
+##		try:
+##			line = curtab.position
+##			self.contents.focus_set()
+##			self.contents.mark_set('insert', line)
+##			self.ensure_idx_visibility(line)
+##
+##		except tkinter.TclError:
+##			curtab.position = '1.0'
+##
+##
+##		if self.can_do_syntax():
+##			self.update_lineinfo()
+##			self.insert_tokens(self.get_tokens())
+##			self.line_can_update = True
+##
+##
+##		self.clear_bookmarks() ## --> tab_close?
+##		self.restore_bookmarks(curtab)
+##
+##		self.contents.edit_reset()
+##		self.contents.edit_modified(0)
 
 
 	def tab_close(self):
@@ -2289,25 +2352,27 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			help
 		'''
 
-		# Save cursor position
-		oldtab = self.tabs[self.tabindex]
+		pass
 
-		try: pos = self.contents.index(tkinter.INSERT)
-		except tkinter.TclError: pos = '1.0'
-
-		oldtab.position = pos
-
-		# Save contents and bookmarks
-		tmp = self.contents.get('1.0', tkinter.END)
-		# [:-1]: remove unwanted extra newline
-		oldtab.contents = tmp[:-1]
-		self.save_bookmarks(oldtab)
-		#self.clear_bookmarks()?
-
-
-		self.line_can_update = False
-		self.entry.delete(0, tkinter.END)
-		self.contents.delete('1.0', tkinter.END)
+##		# Save cursor position
+##		oldtab = self.tabs[self.tabindex]
+##
+##		try: pos = self.contents.index(tkinter.INSERT)
+##		except tkinter.TclError: pos = '1.0'
+##
+##		oldtab.position = pos
+##
+##		# Save contents and bookmarks
+##		tmp = self.contents.get('1.0', tkinter.END)
+##		# [:-1]: remove unwanted extra newline
+##		oldtab.contents = tmp[:-1]
+##		self.save_bookmarks(oldtab)
+##		#self.clear_bookmarks()?
+##
+##
+##		self.line_can_update = False
+##		self.entry.delete(0, tkinter.END)
+##		self.contents.delete('1.0', tkinter.END)
 
 
 	def walk_tabs(self, event=None, back=False):
@@ -2318,8 +2383,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		oldtab = self.tabs[self.tabindex]
 		oldtab.active = False
-		self.tab_close()
-
+		#self.tab_close()
+		
+		
 
 		idx = self.tabindex
 
@@ -2437,14 +2503,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tab.filepath = tab.filepath.__str__()
 			else:
 				tab.bookmarks.clear()
-
-		# Should be whitelist instead of __dict__?
-		d['tabs'] = [ tab.__dict__.copy() for tab in self.tabs ]
-
-		for t in d['tabs']:
-			if 'text_widget' in t.keys(): t.pop('text_widget')
-
-
+		
+		
+		whitelist = (
+					'active',
+					'filepath',
+					'contents',
+					'oldcontents',
+					'position',
+					'type',
+					'bookmarks'
+					)
+		
+		
+		d['tabs'] = [ dict( map(
+							lambda key: (key, tab.__dict__.get(key)), whitelist
+								)
+							) for tab in self.tabs ]
+		
+		
 		return dictionary
 
 
@@ -2573,10 +2650,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			for item in w.mark_names():
 				if 'tk::' in item:
 					tab.anchorname = item
-					print(tab.anchorname)
+					#print(tab.anchorname)
 					break
 
 			w.delete('1.0', '1.3')
+
+
+			tab.tcl_name_of_contents = str( w.nametowidget(w) )
 
 
 			for tagname in self.themes[self.curtheme]:
@@ -2683,7 +2763,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
-				self.insert_tokens(self.get_tokens(update=True))
+				self.insert_tokens(self.get_tokens(self.tabs[self.tabindex], update=True))
 				self.line_can_update = True
 
 			return 'break'
@@ -2708,13 +2788,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return self.syntax and self.is_pyfile()
 
 
-	def get_tokens(self, update=False):
+	def get_tokens(self, tab, update=False):
 		''' Get syntax-tokens for insert_tokens()
 
 			Called from: walk_tabs
 		'''
-		if update: tmp = self.contents.get('1.0', 'end')
-		else: tmp = self.tabs[self.tabindex].contents
+		if update: tmp = tab.text_widget.get('1.0', 'end')
+		else: tmp = tab.contents
 
 		g = iter( tmp.splitlines(keepends=True) )
 		tokens = tokenize.generate_tokens( g.__next__ )
@@ -4186,7 +4266,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		else:
 			self.contents.mark_set('insert', idx_scope_start)
 
-		self.contents.mark_set(self.tabs[self.tabindex].anchorname, idx_scope_end)
+		self.contents.mark_set(self.anchorname, idx_scope_end)
 		self.contents.tag_add('sel', idx_scope_start, idx_scope_end )
 
 		return 'break'
@@ -4384,7 +4464,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# It gives something like this if there has been or is a selection:
 		# 'insert', 'current', 'tk::anchor1'.
 		# This: 'tk::anchor1' is name of the selection-start-mark
-		# used here as in self.tabs[self.tabindex].anchorname below.
+		# used here as in self.anchorname below.
 		# This is done because adjusting only 'sel' -tags
 		# is not sufficient in selection handling, when not using
 		# builtin-events, <<SelectNextWord>> and <<SelectPrevWord>>.
@@ -4395,7 +4475,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
 
 				if selection_started_from_top:
-					self.contents.mark_set(self.tabs[self.tabindex].anchorname, sel_start)
+					self.contents.mark_set(self.anchorname, sel_start)
 					self.contents.tag_add('sel', sel_start, ins_new)
 				else:
 					# Check if selection is about to be closed
@@ -4403,16 +4483,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					# to avoid one char selection -leftovers.
 					if self.contents.compare( '%s +1 chars' % ins_new, '>=' , sel_end ):
 						self.contents.mark_set('insert', sel_end)
-						self.contents.mark_set(self.tabs[self.tabindex].anchorname, sel_end)
+						self.contents.mark_set(self.anchorname, sel_end)
 						return
 
-					self.contents.mark_set(self.tabs[self.tabindex].anchorname, sel_end)
+					self.contents.mark_set(self.anchorname, sel_end)
 					self.contents.tag_add('sel', ins_new, sel_end)
 
 			# No selection,
 			# no need to check direction of selection:
 			else:
-				self.contents.mark_set(self.tabs[self.tabindex].anchorname, ins_old)
+				self.contents.mark_set(self.anchorname, ins_old)
 				self.contents.tag_add('sel', ins_old, ins_new)
 
 
@@ -4426,20 +4506,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					# to avoid one char selection -leftovers.
 					if self.contents.compare( '%s -1 chars' % ins_new, '<=' , sel_start ):
 						self.contents.mark_set('insert', sel_start)
-						self.contents.mark_set(self.tabs[self.tabindex].anchorname, sel_start)
+						self.contents.mark_set(self.anchorname, sel_start)
 						return
 
-					self.contents.mark_set(self.tabs[self.tabindex].anchorname, sel_start)
+					self.contents.mark_set(self.anchorname, sel_start)
 					self.contents.tag_add('sel', sel_start, ins_new)
 
 				else:
-					self.contents.mark_set(self.tabs[self.tabindex].anchorname, sel_end)
+					self.contents.mark_set(self.anchorname, sel_end)
 					self.contents.tag_add('sel', ins_new, sel_end)
 
 			# No selection,
 			# no need to check direction of selection:
 			else:
-				self.contents.mark_set(self.tabs[self.tabindex].anchorname, ins_old)
+				self.contents.mark_set(self.anchorname, ins_old)
 				self.contents.tag_add('sel', ins_new, ins_old)
 
 
@@ -4913,16 +4993,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
 
 				if from_top:
-					self.contents.mark_set(self.tabs[self.tabindex].anchorname, s)
+					self.contents.mark_set(self.anchorname, s)
 					self.contents.tag_add('sel', s, 'insert')
 
 				# From bottom:
 				else:
-					self.contents.mark_set(self.tabs[self.tabindex].anchorname, e)
+					self.contents.mark_set(self.anchorname, e)
 					self.contents.tag_add('sel', 'insert', e)
 
 			else:
-				self.contents.mark_set(self.tabs[self.tabindex].anchorname, i)
+				self.contents.mark_set(self.anchorname, i)
 				self.contents.tag_add('sel', i, 'insert')
 
 
@@ -5043,7 +5123,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 					if all(tests):
 						pos = self.contents.index('%s linestart' % idx )
-						self.contents.mark_set(self.tabs[self.tabindex].anchorname, 'insert')
+						self.contents.mark_set(self.anchorname, 'insert')
 						self.contents.tag_add('sel', pos, 'insert')
 
 					else:
@@ -5499,7 +5579,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.ensure_idx_visibility(ins_old)
 			self.wait_for(100)
 			self.contents.tag_add('sel', ins_old, 'paste')
-			self.contents.mark_set(self.tabs[self.tabindex].anchorname, 'paste')
+			self.contents.mark_set(self.anchorname, 'paste')
 
 		elif selection_started_from_top:
 				self.ensure_idx_visibility(ins_old)
@@ -7340,23 +7420,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			last_state = self.state
 
 
-		# Update active tab first
-		try:
-			pos = self.contents.index(tkinter.INSERT)
-		except tkinter.TclError:
-			pos = '1.0'
-
-		tmp = self.contents.get('1.0', tkinter.END)
-
-		self.tabs[self.tabindex].position = pos
-		self.tabs[self.tabindex].contents = tmp
-
 
 		res = True
 
-		# Then save tabs to disk
 		for tab in self.tabs:
 			if tab.type == 'normal':
+
+				try:
+					pos = tab.text_widget.index(tkinter.INSERT)
+				except tkinter.TclError:
+					pos = '1.0'
+
+				tab.position = pos
+				tab.contents = tab.text_widget.get('1.0', tkinter.END)[:-1]
+				
 
 				if '.py' in tab.filepath.suffix:
 					# Check indent (tabify) and rstrip:
@@ -7365,11 +7442,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					tmp = ''.join(tmp)
 				else:
 					tmp = tab.contents
-
-				if tab.active == True:
-					tmp = tmp[:-1]
-
-				tab.contents = tmp
+				
 
 				if tab.contents == tab.oldcontents:
 					continue
@@ -7491,7 +7564,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					if self.can_do_syntax():
 						self.update_lineinfo()
 						self.line_can_update = False
-						self.insert_tokens(self.get_tokens())
+						self.insert_tokens(self.get_tokens(oldtab))
 						self.line_can_update = True
 
 
@@ -7536,7 +7609,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if self.can_do_syntax():
 					self.update_lineinfo()
-					self.insert_tokens(self.get_tokens())
+					self.insert_tokens(self.get_tokens(newtab))
 					self.line_can_update = True
 
 
@@ -7638,7 +7711,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			Info is in restore_bookmarks
 		'''
-		tab.bookmarks = list({ self.contents.index(mark) for mark in tab.bookmarks })
+		tab.bookmarks = list({ tab.text_widget.index(mark) for mark in tab.bookmarks })
 		tab.bookmarks.sort()
 
 
@@ -7656,11 +7729,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 
 		for i, pos in enumerate(tab.bookmarks):
-			self.contents.mark_set('bookmark%d' % i, pos)
+			tab.text_widget.mark_set('bookmark%d' % i, pos)
 
 		tab.bookmarks.clear()
 
-		for mark in self.contents.mark_names():
+		for mark in tab.text_widget.mark_names():
 			if 'bookmark' in mark:
 				tab.bookmarks.append(mark)
 
@@ -8541,7 +8614,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.wait_for(33)
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
-		self.contents.mark_set(self.tabs[self.tabindex].anchorname, pos)
+		self.contents.mark_set(self.anchorname, pos)
 		self.wait_for(12)
 		self.contents.tag_add('sel', pos, word_end)
 		self.contents.mark_set('insert', word_end)
@@ -8756,7 +8829,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def reset_search_setting(self):
 
 		defaults = [
-				self.contents._w,
 				'search',
 				'-all',
 				'-count',
@@ -8774,7 +8846,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.reset_search_setting()
 
 		print(
-			self.search_settings[5:],
+			self.search_settings[4:],
 			'\n'
 			'start:', self.search_starts_at,
 			'\n'
@@ -8927,7 +8999,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.reset_search_setting()
 
 		defaults = [
-				self.contents._w,
 				'search',
 				'-all',
 				'-count',
@@ -9064,6 +9135,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		s = self.search_settings[:]
+		s.insert(0, self.contents._w)
 		s.append( '--' )
 		s.append(search_word)
 		s.append( handle_search_start() )
@@ -9294,7 +9366,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			flag_all = True
 			if self.can_do_syntax():
 				self.update_lineinfo()
-				self.insert_tokens(self.get_tokens(update=True))
+				self.insert_tokens(self.get_tokens(curtab, update=True))
 
 		if self.can_do_syntax(): self.line_can_update = True
 
@@ -9332,8 +9404,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# Release space
 		self.wait_for(200)
 		self.contents.unbind( "<space>", funcid=bid_tmp )
-		self.bid_space = self.contents.bind( "<space>", self.space_override)
-
+		curtab.bid_space = self.contents.bind( "<space>", self.space_override)
 		return 'break'
 
 
@@ -9372,12 +9443,12 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			func=lambda event: self.update_curpos(event, **{'on_stop':self.stop_search}),
 				add=True )
 
-		self.contents.unbind( "<space>", funcid=self.bid_space )
+		self.contents.unbind( "<space>", funcid=self.tabs[self.tabindex].bid_space )
 		self.bid4 = self.contents.bind( "<space>", self.space_override )
 
 		self.entry.delete(0, tkinter.END)
 
-
+		
 		tmp = False
 
 		# Suggest selection as search_word if appropiate, else old_word.
@@ -9477,7 +9548,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			func=lambda event: self.update_curpos(event, **{'on_stop':self.stop_search}),
 				add=True )
 
-		self.contents.unbind( "<space>", funcid=self.bid_space )
+		self.contents.unbind( "<space>", funcid=self.tabs[self.tabindex].bid_space )
 		self.bid4 = self.contents.bind("<space>", func=self.space_override )
 
 

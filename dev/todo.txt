@@ -677,7 +677,8 @@ tab.text_widget = Text}
 set_syntags() contents.tag_config combine?
 
 
-self.anchorname --> self.tabs[self.tabindex].anchorname
+self.anchorname --> tab.anchorname
+	currently changed when walk_tabs, in close_tab
 
 
 self.text_widget_basic_config
@@ -703,16 +704,10 @@ Currently, single tkinter.Text -widget /Editor
 - help, error
 - save load walk_tabs
 
-###
+
 get_config():
-	# Should be whitelist instead of __dict__?
-	or just tab.pop('text_widget')
-	
-	pop_list.append('text_widget')
-	pop_list.append('tcl_name_of_contents')
-	for item in pop_list
-		tab.pop(item)
-###
+	whitelist instead of __dict__?
+	done ok?
 
 
 
@@ -738,10 +733,10 @@ for tab in self.tabs:
 	
 	self.set_bindings(tab)
 	
-	
-	
-	
-	
+
+init is about done
+no conf: can not be tested until load() etc is checked
+check bookmarks next?
 ### init check end #######
 
 
@@ -2394,4 +2389,6 @@ class Ed(tkinter.Toplevel):
 		# about double cpu compared to after(100ms), but is smoother
 ##		cls.updateId = ed.contents.after_idle(
 ##			cls.updateAllLineNumbers)
+
+
 
