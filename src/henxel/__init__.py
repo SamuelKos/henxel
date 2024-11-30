@@ -172,8 +172,10 @@ class Tab:
 			oldcontents,
 			position,
 			type		String
+			text_widget tkinter.Text
 			bookmarks	List
 		'''
+		
 		self.active = False
 		self.filepath = None
 		self.contents = ''
@@ -181,6 +183,8 @@ class Tab:
 		self.position = '1.0'
 		self.type = 'newtab'
 		self.bookmarks = list()
+		self.text_widget = None
+		self.tcl_name_of_contents = ''
 
 		self.__dict__.update(entries)
 
@@ -749,6 +753,7 @@ class Editor(tkinter.Toplevel):
 				# Use this in measuring padding
 				pad_x =  self.tab_width // self.ind_depth // 3
 				pad_y = pad_x
+				self.pad = pad_x ####################################
 
 				print(self.btn_open.cget('bd'), pad_x)
 
@@ -868,7 +873,8 @@ class Editor(tkinter.Toplevel):
 			self.boldfont.config(weight='bold')
 
 
-			self.set_syntags()
+			self.init_syntags()
+			for tab in self.tabs: self.set_syntags(tab)
 
 
 ##			# Widget visibility-check
@@ -935,13 +941,14 @@ class Editor(tkinter.Toplevel):
 			for tab in self.tabs:
 				
 				if tab.type == 'normal':
-					tab.text_widget.insert('insert', tab.contents)
+					tab.text_widget.insert('1.0', tab.contents)
 					self.restore_bookmarks(tab)
 					
 					# Set cursor pos
 					line = tab.position
 					try:
 						tab.text_widget.mark_set('insert', line)
+						tab.text_widget.see(tab.position)
 						#self.ensure_idx_visibility(line)
 
 					except tkinter.TclError:
@@ -1004,8 +1011,10 @@ class Editor(tkinter.Toplevel):
 			curtab.text_widget.edit_reset()
 			curtab.text_widget.edit_modified(0)
 
-			self.entry.insert(0, curtab.filepath)
-			self.entry.xview_moveto(1.0)
+			if curtab.filepath:
+				self.entry.insert(0, curtab.filepath)
+
+				self.entry.xview_moveto(1.0)
 			
 			
 
@@ -1750,7 +1759,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		w = tab.text_widget
 
-
+		# Binds with ID Begin
+		tab.bid_space = w.bind( "<space>", self.space_override)
+		# Binds with ID End
+		
 		if self.os_type == 'linux':
 			w.bind( "<ISO_Left_Tab>", self.unindent)
 		else:
@@ -1802,7 +1814,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind( "<Alt-s>", self.color_choose)
 			w.bind( "<Alt-t>", self.toggle_color)
 
-			w.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
+			w.bind( "<Alt-Return>", self.load)
 			w.bind( "<Alt-l>", self.toggle_ln)
 			w.bind( "<Alt-x>", self.toggle_syntax)
 			w.bind( "<Alt-f>", self.font_choose)
@@ -1836,6 +1848,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			w.bind("<Left>", self.check_sel)
 			w.bind("<Right>", self.check_sel)
+			
+			w.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
 
 
 		# self.os_type == 'mac_os':
@@ -1900,7 +1914,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind( "<function>", self.font_choose)		# Alt-f
 			w.bind( "<dagger>", self.toggle_color)		# Alt-t
 			w.bind( "<ssharp>", self.color_choose)		# Alt-s
-
+			
+			w.bind( "<Mod1-Key-BackSpace>", self.del_to_dot)
+			w.bind( "<Mod1-Key-Return>", self.load)
+		
 
 		#######################################################
 
@@ -1932,13 +1949,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.bind( "<Return>", self.return_override)
 		w.bind( "<BackSpace>", self.backspace_override)
 
-		if self.os_type == 'mac_os':
-			w.bind( "<Mod1-Key-BackSpace>", self.del_to_dot)
-		else:
-			w.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
-
+		
 		# Used in searching
-		tab.bid_space = w.bind( "<space>", self.space_override)
 		w.bind( "<Control-n>", self.search_next)
 		w.bind( "<Control-p>",
 				lambda event: self.search_next(event, **{'back':True}) )
@@ -2191,61 +2203,80 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
+
 		self.tab_close()
-		self.clear_bookmarks()
-		self.tabs[self.tabindex].active = False
 
 		newtab = Tab()
-		newtab.active = True
-
+		###
+		self.set_textwidget(newtab)
+		self.set_syntags(newtab)
+		self.set_bindings(newtab)
+		newtab.position = '1.0'
+		newtab.text_widget.mark_set('insert', '1.0')
+		###
+		
 		self.tabindex += 1
 		self.tabs.insert(self.tabindex, newtab)
+		
 
-		self.contents.focus_set()
-		self.contents.see('1.0')
-		self.contents.mark_set('insert', '1.0')
-
-		self.contents.edit_reset()
-		self.contents.edit_modified(0)
-
+		self.tab_open()
 		self.update_title()
 		return 'break'
 
 
 	def del_tab(self, event=None, save=True):
-		''' save=False from cmd/Control-Shift-Q
+		''' save=False from Cmd/Control-Shift-Q
 		'''
 
 		if self.state != 'normal':
 			self.bell()
 			return 'break'
 
-		if len(self.tabs) == 1 and self.tabs[self.tabindex].type == 'newtab':
+
+		oldtab = self.tabs[self.tabindex]
+
+		
+		if len(self.tabs) == 1 and oldtab.type == 'newtab':
 			self.clear_bookmarks()
-			self.tabs[self.tabindex].bookmarks.clear()
+			oldtab.bookmarks.clear()
 			self.contents.delete('1.0', tkinter.END)
 			self.bell()
 			return 'break'
 
-		if self.tabs[self.tabindex].type == 'normal' and save:
+
+		if oldtab.type == 'normal' and save:
 			if not self.save(activetab=True):
 				self.bell()
 				return 'break'
 
-
+		
+		###
+		self.tab_close()
+		oldtab.text_widget.destroy()
+		del oldtab.text_widget
+		###
+		
 		self.tabs.pop(self.tabindex)
 
 
 		if len(self.tabs) == 0:
 			newtab = Tab()
+
+			###
+			self.set_textwidget(newtab)
+			self.set_syntags(newtab)
+			self.set_bindings(newtab)
+			newtab.position = '1.0'
+			newtab.text_widget.mark_set('insert', '1.0')
+			###
+
 			self.tabs.append(newtab)
+
 
 		if self.tabindex > 0:
 			self.tabindex -= 1
 
-		tab = self.tabs[self.tabindex]
-		tab.active = True
-
+		
 		self.tab_open()
 		self.update_title()
 
@@ -2275,8 +2306,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 
 		curtab = self.tabs[self.tabindex]
+		curtab.active = True
 
-		self.entry.delete(0, tkinter.END)
+		#self.entry.delete(0, tkinter.END)
 		if curtab.filepath:
 			self.entry.insert(0, curtab.filepath)
 			self.entry.xview_moveto(1.0)
@@ -2287,12 +2319,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
  
 
 		########
-		self.orig_bg_color = self.cget('bg')
-		self.config(bg='black')
-			
-		self.scrollbar.config(command='')
-		
-		self.contents.grid_forget()
+##		self.orig_bg_color = self.cget('bg')
+##		self.config(bg='black')
+##			
+##		self.scrollbar.config(command='')
+##		
+##		self.contents.grid_forget()
 		self.contents = curtab.text_widget
 		
 		#self.scrollbar.config(command=self.contents.yview)
@@ -2351,9 +2383,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			run
 			help
 		'''
-
-		pass
-
+		
+		curtab = self.tabs[self.tabindex]
+		curtab.active = False
+		
+		self.entry.delete(0, tkinter.END)
+		self.orig_bg_color = self.cget('bg')
+		self.config(bg='black')
+		self.scrollbar.config(command='')
+		self.contents.grid_forget()
+		
+		
 ##		# Save cursor position
 ##		oldtab = self.tabs[self.tabindex]
 ##
@@ -2381,12 +2421,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		oldtab = self.tabs[self.tabindex]
-		oldtab.active = False
-		#self.tab_close()
+		
+		self.tab_close()
 		
 		
-
 		idx = self.tabindex
 
 		if back:
@@ -2401,9 +2439,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.tabindex = idx
 
-
-		newtab = self.tabs[self.tabindex]
-		newtab.active = True
 
 		self.tab_open()
 		self.update_title()
@@ -2495,9 +2530,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['themes'] = self.themes
 
 		for tab in self.tabs:
-			tab.contents = ''
-			tab.oldcontents = ''
-
 			# Convert tab.filepath to string for serialization
 			if tab.filepath:
 				tab.filepath = tab.filepath.__str__()
@@ -2508,18 +2540,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		whitelist = (
 					'active',
 					'filepath',
-					'contents',
-					'oldcontents',
 					'position',
 					'type',
 					'bookmarks'
 					)
 		
 		
-		d['tabs'] = [ dict( map(
-							lambda key: (key, tab.__dict__.get(key)), whitelist
-								)
-							) for tab in self.tabs ]
+		d['tabs'] = [ dict([
+							(key, tab.__dict__.get(key)) for key in whitelist
+							]) for tab in self.tabs ]
 		
 		
 		return dictionary
@@ -2609,6 +2638,44 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				break
 
 
+	def set_textwidget(self, tab, tab_is_contents=False):
+		''' tab_is_contents == True when loading conf in init
+		'''
+		
+		if tab_is_contents:
+			tab.text_widget = self.contents
+		else:
+			tab.text_widget = tkinter.Text(self, **self.text_widget_basic_config)
+			
+		w = tab.text_widget
+
+		w.insert(1.0, 'asd')
+		w.event_generate('<<SelectNextWord>>')
+		w.event_generate('<<PrevLine>>')
+
+		tab.anchorname = None
+		for item in w.mark_names():
+			if 'tk::' in item:
+				tab.anchorname = item
+				#print(tab.anchorname)
+				break
+
+		w.delete('1.0', '1.3')
+
+
+		tab.tcl_name_of_contents = str( w.nametowidget(w) )
+
+
+		for tagname in self.themes[self.curtheme]:
+			bg, fg = self.themes[self.curtheme][tagname][:]
+			w.tag_config(tagname, background=bg, foreground=fg)
+
+
+		w.config(font=self.font, foreground=self.fgcolor,
+			background=self.bgcolor, insertbackground=self.fgcolor,
+			tabs=(self.tab_width, ), padx=self.pad, pady=self.pad)
+	
+
 	def apply_config(self):
 
 		if self.tabindex == None:
@@ -2629,46 +2696,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		pad_x =  self.tab_width // self.ind_depth // 3
 		pad_y = pad_x
+		self.pad = pad_x ###################################
 
 
-
-		###################################################
+		#######
 		for tab in self.tabs:
-
-			if not tab.active:
-				tab.text_widget = tkinter.Text(self, **self.text_widget_basic_config)
-			else:
-				tab.text_widget = self.contents
-
-			w = tab.text_widget
-
-			w.insert(1.0, 'asd')
-			w.event_generate('<<SelectNextWord>>')
-			w.event_generate('<<PrevLine>>')
-
-			tab.anchorname = None
-			for item in w.mark_names():
-				if 'tk::' in item:
-					tab.anchorname = item
-					#print(tab.anchorname)
-					break
-
-			w.delete('1.0', '1.3')
-
-
-			tab.tcl_name_of_contents = str( w.nametowidget(w) )
-
-
-			for tagname in self.themes[self.curtheme]:
-				bg, fg = self.themes[self.curtheme][tagname][:]
-				w.tag_config(tagname, background=bg, foreground=fg)
-
-
-			w.config(font=self.font, foreground=self.fgcolor,
-				background=self.bgcolor, insertbackground=self.fgcolor,
-				tabs=(self.tab_width, ), padx=pad_x, pady=pad_y)
-		################################################
-
+			if tab.active: self.set_textwidget(tab, tab_is_contents=True)
+			else: self.set_textwidget(tab)
+		#######
 
 
 		self.scrollbar.config(width=self.scrollbar_width)
@@ -2687,7 +2722,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Configuration Related End
 ########## Syntax highlight Begin
 
-	def set_syntags(self):
+	def init_syntags(self):
 
 		self.keywords = keyword.kwlist
 		self.keywords.insert(0, 'self')
@@ -2724,26 +2759,29 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.tags = dict()
 		for tag in self.tagnames: self.tags[tag] = list()
+	
+	
+	def set_syntags(self, tab):
+	
+		w = tab.text_widget
+		
+		w.tag_config('keywords', font=self.boldfont)
+		w.tag_config('numbers', font=self.boldfont)
+		w.tag_config('comments', font=self.boldfont)
+		w.tag_config('breaks', font=self.boldfont)
+		w.tag_config('calls', font=self.boldfont)
 
-		for tab in self.tabs:
-			w = tab.text_widget
-			w.tag_config('keywords', font=self.boldfont)
-			w.tag_config('numbers', font=self.boldfont)
-			w.tag_config('comments', font=self.boldfont)
-			w.tag_config('breaks', font=self.boldfont)
-			w.tag_config('calls', font=self.boldfont)
+		w.tag_config('focus', underline=True)
+		w.tag_config('elIdel', elide=True)
+		w.tag_config('animate')
+		w.tag_config('highlight_line')
+		w.tag_config('match_zero_lenght')
 
-			w.tag_config('focus', underline=True)
-			w.tag_config('elIdel', elide=True)
-			w.tag_config('animate')
-			w.tag_config('highlight_line')
-			w.tag_config('match_zero_lenght')
-
-			# Search-tags have highest priority
-			w.tag_raise('match')
-			w.tag_raise('replaced')
-			w.tag_raise('sel')
-			w.tag_raise('focus')
+		# Search-tags have highest priority
+		w.tag_raise('match')
+		w.tag_raise('replaced')
+		w.tag_raise('sel')
+		w.tag_raise('focus')
 
 
 	def toggle_syntax(self, event=None):
@@ -2751,16 +2789,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.syntax:
 			self.syntax = False
 			self.line_can_update = False
-
-			for tag in self.tagnames:
-				self.contents.tag_remove( tag, '1.0', tkinter.END )
+			
+			for tab in self.tabs:
+				for tag in self.tagnames:
+					tab.text_widget.tag_remove( tag, '1.0', tkinter.END )
 
 			return 'break'
 
 		else:
 			self.syntax = True
 			self.line_can_update = False
-
+			
+			#for tab in self.tabs:
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.insert_tokens(self.get_tokens(self.tabs[self.tabindex], update=True))
@@ -6018,12 +6058,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
-		# macOS, open file with cmd-return:
-		if self.os_type == 'mac_os' and event.state == 8:
-			self.btn_open.invoke()
-			return 'break'
-
-
 		# Cursor indexes when pressed return:
 		line, col = self.get_line_col_as_int()
 
@@ -7241,7 +7275,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.entry.xview_moveto(1.0)
 
 		else:
-			# update self.lastdir
+			# Update self.lastdir
 			filename = pathlib.Path().cwd() / self.tracevar_filename.get()
 			self.lastdir = pathlib.Path(*filename.parts[:-1])
 
@@ -7252,9 +7286,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tracefunc_name = None
 
 		if self.os_type == 'mac_os':
-			self.contents.bind( "<Return>", self.return_override)
+			self.contents.bind( "<Mod1-Key-Return>", self.load)
 		else:
-			self.contents.bind( "<Alt-Return>", lambda event: self.btn_open.invoke())
+			self.contents.bind( "<Alt-Return>", self.load)
 
 		self.state = 'normal'
 
@@ -7317,7 +7351,29 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				curtab.type = 'normal'
 				curtab.position = '1.0'
 				self.remove_bookmarks(all_tabs=False)
-				self.tab_open()
+				
+				######
+				self.line_can_update = False
+				##
+				self.entry.delete(0, tkinter.END)
+				if curtab.filepath != None:
+					self.entry.insert(0, curtab.filepath)
+					self.entry.xview_moveto(1.0)
+				##
+				self.contents.delete('1.0', tkinter.END)
+				self.contents.insert(tkinter.INSERT, curtab.contents)
+				self.line_can_update = True
+				
+##				if self.can_do_syntax():
+##					self.update_lineinfo()
+##					self.insert_tokens(self.get_tokens())
+##					self.line_can_update = True
+		
+				self.contents.edit_reset()
+				self.contents.edit_modified(0)
+				######
+		
+				#self.tab_open()
 
 
 		except (EnvironmentError, UnicodeDecodeError) as e:
@@ -7349,12 +7405,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return 'break'
 
 
-		# Pressed Open-button
-		if event == None:
+		# Called by: Open-button or shortcut
+		if event.widget != self.entry:
 
 			self.state = 'filedialog'
 
-			shortcut = "<Return>"
+			shortcut = "<Mod1-Key-Return>"
 			if self.os_type != 'mac_os':
 				shortcut = "<Alt-Return>"
 
@@ -7515,7 +7571,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		oldtab.position = pos
 
 		# Update oldtabs contents
-		cur_contents = oldtab.contents = self.contents.get('1.0', tkinter.END)
+		# [:-1]: text widget adds dummy newline at end of file when editing
+		cur_contents = oldtab.contents = self.contents.get('1.0', tkinter.END)[:-1]
 		##############################
 
 
@@ -7616,25 +7673,26 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 
-
+		
+		# Not creating a new file
 		else:
 			# Skip disk-writing
+			# When this happens? ##########################
 			if not activetab:
 				return True
 
-			# NOTE: oldtab.contents is updated at beginning
-			# If closing tab or loading file:
+			# NOTE: oldtab.contents is updated at beginning.
+			# Closing tab or loading file
 			if '.py' in oldtab.filepath.suffix:
 				# Check indent (tabify) and strip
 				tmp = oldtab.contents.splitlines(True)
 				tmp[:] = [self.tabify(line) for line in tmp]
-				tmp = ''.join(tmp)[:-1]
+				tmp = ''.join(tmp)
 			else:
 				tmp = oldtab.contents
-				tmp = tmp[:-1]
+				tmp = tmp
 
 
-			# [:-1]: text widget adds dummy newline at end of file when editing
 			if tmp == oldtab.oldcontents:
 				return True
 

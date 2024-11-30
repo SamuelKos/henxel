@@ -665,6 +665,7 @@ removed self.token_err
 Below this: not done ################################################
 
 
+
 apply_config():
 tab.text_widget = tkinter.Te<insert>
 
@@ -672,6 +673,8 @@ then tab complete
 -->
 tab.text_widget = Text}
 
+
+toggle_syntax() fix, when fixing tokens for ungrid
 
 
 set_syntags() contents.tag_config combine?
@@ -683,6 +686,13 @@ self.anchorname --> tab.anchorname
 
 self.text_widget_basic_config
 
+
+self.pad 
+bd etc, needs fix
+--> when no conf and opened two tabs: editor geometry changing when walk_tabs
+
+
+tabify no work? rstrip no work
 
 
 ################################################
@@ -737,6 +747,9 @@ for tab in self.tabs:
 init is about done
 no conf: can not be tested until load() etc is checked
 check bookmarks next?
+deltab
+newtab
+init set pos
 ### init check end #######
 
 
