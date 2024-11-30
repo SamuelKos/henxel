@@ -687,7 +687,13 @@ self.anchorname --> tab.anchorname
 self.text_widget_basic_config
 
 
-self.pad 
+space to exit gotodef?
+
+
+all ctrl-somekey --> alt-somekey
+like ctrl-gf etc
+
+self.pad
 bd etc, needs fix
 --> when no conf and opened two tabs: editor geometry changing when walk_tabs
 

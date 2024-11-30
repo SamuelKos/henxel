@@ -1013,7 +1013,6 @@ class Editor(tkinter.Toplevel):
 
 			if curtab.filepath:
 				self.entry.insert(0, curtab.filepath)
-
 				self.entry.xview_moveto(1.0)
 			
 			
@@ -1084,6 +1083,7 @@ Editor did not Launch!
 help(henxel.stash_pop) Begin
 
 '''
+				
 				ending = '''
 ################################################
 Error messages Begin
@@ -1803,12 +1803,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		##############################################################
 		if self.os_type != 'mac_os':
 
-			w.bind( "<Control-b>", self.goto_bookmark)
-			w.bind( "<Control-B>",
+			w.bind( "<Alt-b>", self.goto_bookmark)
+			w.bind( "<Alt-B>",
 				lambda event: self.goto_bookmark(event, **{'back':True}) )
 
 			w.bind( "<Control-l>", self.gotoline)
-			w.bind( "<Control-g>", self.goto_def)
+			w.bind( "<Alt-g>", self.goto_def)
 			w.bind( "<Alt-p>", self.toggle_bookmark)
 
 			w.bind( "<Alt-s>", self.color_choose)
@@ -2203,23 +2203,24 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-
-		self.tab_close()
+		
 
 		newtab = Tab()
-		###
+		
 		self.set_textwidget(newtab)
 		self.set_syntags(newtab)
 		self.set_bindings(newtab)
 		newtab.position = '1.0'
 		newtab.text_widget.mark_set('insert', '1.0')
-		###
+
+
+		
+		self.tab_close(self.tabs[self.tabindex])
+		self.tab_open(newtab)
 		
 		self.tabindex += 1
 		self.tabs.insert(self.tabindex, newtab)
 		
-
-		self.tab_open()
 		self.update_title()
 		return 'break'
 
@@ -2232,8 +2233,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-
-		oldtab = self.tabs[self.tabindex]
+		oldindex = self.tabindex
+		oldtab = self.tabs[oldindex]
 
 		
 		if len(self.tabs) == 1 and oldtab.type == 'newtab':
@@ -2250,40 +2251,40 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return 'break'
 
 		
-		###
-		self.tab_close()
-		oldtab.text_widget.destroy()
-		del oldtab.text_widget
-		###
 		
-		self.tabs.pop(self.tabindex)
-
-
-		if len(self.tabs) == 0:
+		if self.tabindex > 0:
+			self.tabindex -= 1
+		
+		
+		if len(self.tabs) == 1:
 			newtab = Tab()
 
-			###
 			self.set_textwidget(newtab)
 			self.set_syntags(newtab)
 			self.set_bindings(newtab)
 			newtab.position = '1.0'
 			newtab.text_widget.mark_set('insert', '1.0')
-			###
-
+			
 			self.tabs.append(newtab)
+		
+		else:
+			newtab = self.tabs[self.tabindex]
 
-
-		if self.tabindex > 0:
-			self.tabindex -= 1
 
 		
-		self.tab_open()
+		self.tab_close(oldtab)		
+		self.tab_open(newtab)
+
+		oldtab.text_widget.destroy()
+		del oldtab.text_widget
+		self.tabs.pop(oldindex)
+
 		self.update_title()
 
 		return 'break'
 
 
-	def tab_open(self):
+	def tab_open(self, tab):
 		'''
 			1: Show filepath if tab have one
 			2: Delete old contents
@@ -2305,16 +2306,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		'''
 
-		curtab = self.tabs[self.tabindex]
-		curtab.active = True
+		tab.active = True
 
-		#self.entry.delete(0, tkinter.END)
-		if curtab.filepath:
-			self.entry.insert(0, curtab.filepath)
-			self.entry.xview_moveto(1.0)
-
-		self.anchorname = curtab.anchorname
-		self.tcl_name_of_contents = curtab.tcl_name_of_contents
+		self.anchorname = tab.anchorname
+		self.tcl_name_of_contents = tab.tcl_name_of_contents
  
  
 
@@ -2325,7 +2320,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##		self.scrollbar.config(command='')
 ##		
 ##		self.contents.grid_forget()
-		self.contents = curtab.text_widget
+		self.contents = tab.text_widget
 		
 		#self.scrollbar.config(command=self.contents.yview)
 		#self.scrollbar.set(*self.contents.yview())
@@ -2333,9 +2328,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.contents.grid_configure(row=1, column=1, columnspan=3, sticky='nswe')
 		#self.scrollbar.grid(row=1,column=3, sticky='nse')
 		
+		#self.update_idletasks()
 		self.contents.focus_set()
+		
+		#self.entry.delete(0, tkinter.END)
+		if tab.filepath:
+			self.entry.insert(0, tab.filepath)
+			self.entry.xview_moveto(1.0)
+			
 		self.config(bg=self.orig_bg_color)
-		self.update_idletasks()
+		#self.update_idletasks()
 		########
 		
 
@@ -2369,7 +2371,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##		self.contents.edit_modified(0)
 
 
-	def tab_close(self):
+	def tab_close(self, tab):
 		''' Save cursor position
 			Save contents and bookmarks
 			self.line_can_update = False
@@ -2384,13 +2386,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			help
 		'''
 		
-		curtab = self.tabs[self.tabindex]
-		curtab.active = False
+		tab.active = False
 		
-		self.entry.delete(0, tkinter.END)
 		self.orig_bg_color = self.cget('bg')
 		self.config(bg='black')
+		self.entry.delete(0, tkinter.END)
 		self.scrollbar.config(command='')
+		#self.update_idletasks()
 		self.contents.grid_forget()
 		
 		
@@ -2422,7 +2424,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 		
-		self.tab_close()
+		self.tab_close(self.tabs[self.tabindex])
 		
 		
 		idx = self.tabindex
@@ -2440,7 +2442,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tabindex = idx
 
 
-		self.tab_open()
+		self.tab_open(self.tabs[self.tabindex])
 		self.update_title()
 
 		return 'break'
@@ -2726,7 +2728,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.keywords = keyword.kwlist
 		self.keywords.insert(0, 'self')
-
+		
 		self.bools = [ 'False', 'True', 'None' ]
 		self.breaks = [
 						'break',
@@ -3927,7 +3929,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		line = errline + '.0'
 		self.tabs[self.tabindex].position = line
-		self.tab_open()
+		self.tab_open(self.tabs[self.tabindex])
 
 		self.bind("<Escape>", self.esc_override)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
@@ -3973,7 +3975,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bind("<Escape>", self.stop_show_errors)
 			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 
-			self.tab_close()
+			self.tab_close(curtab)
 
 			self.state = 'error'
 
@@ -4056,7 +4058,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.state = 'error'
 
-			self.tab_close()
+			self.tab_close(self.tabs[self.tabindex])
 
 			openfiles = [tab.filepath for tab in self.tabs]
 
@@ -4114,7 +4116,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 
-		self.tab_open()
+		self.tab_open(self.tabs[self.tabindex])
 
 		return 'break'
 
@@ -6168,7 +6170,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 					self.line_can_update = False
 
-					# new_tab() calls tab_close(), which saves contents etc. of oldtab
+					# new_tab() calls tab_close()
 					self.new_tab()
 
 					curtab = self.tabs[self.tabindex]
@@ -6187,7 +6189,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					else:
 						curtab.contents = fcontents
 
-					self.tab_open()
+					self.tab_open(curtab)
 
 					return 'break'
 
@@ -6219,7 +6221,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.line_can_update = False
 
-				# new_tab() calls tab_close(), which saves contents etc. of oldtab
+				# new_tab() calls tab_close()
 				self.new_tab()
 
 				curtab = self.tabs[self.tabindex]
@@ -6234,7 +6236,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				# This flag is used in handle_search_entry()
 				curtab.inspected = True
 
-				self.tab_open()
+				self.tab_open(curtab)
 
 				return 'break'
 
@@ -7354,14 +7356,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				
 				######
 				self.line_can_update = False
-				##
+				
 				self.entry.delete(0, tkinter.END)
 				if curtab.filepath != None:
 					self.entry.insert(0, curtab.filepath)
 					self.entry.xview_moveto(1.0)
-				##
+				
 				self.contents.delete('1.0', tkinter.END)
 				self.contents.insert(tkinter.INSERT, curtab.contents)
+				self.contents.mark_set('insert', '1.0')
+				self.contents.see('1.0')
+						
 				self.line_can_update = True
 				
 ##				if self.can_do_syntax():
@@ -7373,7 +7378,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.contents.edit_modified(0)
 				######
 		
-				#self.tab_open()
+				#self.tab_open(curtab)
 
 
 		except (EnvironmentError, UnicodeDecodeError) as e:
@@ -7648,7 +7653,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.line_can_update = False
 
-				# new_tab() calls tab_close(), which saves contents etc. of oldtab
+				# new_tab() calls tab_close()
 				self.new_tab()
 				newtab = self.tabs[self.tabindex]
 
@@ -8028,7 +8033,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 
-		self.tab_open()
+		self.tab_open(self.tabs[self.tabindex])
 
 		self.bind("<Escape>", self.esc_override)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
@@ -8042,7 +8047,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.state = 'help'
 
-		self.tab_close()
+		self.tab_close(self.tabs[self.tabindex])
 
 		self.contents.insert(tkinter.INSERT, self.helptxt)
 
