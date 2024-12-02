@@ -690,12 +690,16 @@ self.text_widget_basic_config
 space to exit gotodef?
 
 
+Frame skip bindlevel etc check ########
+
+
+deltab should not move left index
+
+
 all ctrl-somekey --> alt-somekey
 like ctrl-gf etc
 
 self.pad
-bd etc, needs fix
---> when no conf and opened two tabs: editor geometry changing when walk_tabs
 
 
 tabify no work? rstrip no work

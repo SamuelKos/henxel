@@ -26,10 +26,11 @@ class ExpandWord:
 	# string.ascii_letters + string.digits + "_" + "."
 
 
-	def __init__(self):
+	def __init__(self, editor):
 		# text_widget is tkinter.Text -widget
 		self.text_widget = None
 		self.state = None
+		self.editor = editor
 
 
 	def expand_word(self, event=None):
@@ -112,7 +113,6 @@ class ExpandWord:
 
 		'''
 
-		editor = self.text_widget.master
 		all_words = False
 		word = self.getprevword()
 		words = []
@@ -125,7 +125,7 @@ class ExpandWord:
 				% (word, self.tcl_name_of_contents)
 
 
-		if editor.can_do_syntax():
+		if self.editor.can_do_syntax():
 
 			# Get atrributes of 'self' faster. For example, if want: self.attribute1,
 			# one writes single s-letter and hits Tab, and gets 'self.'
@@ -140,10 +140,10 @@ class ExpandWord:
 			####################################################################
 
 			# On fail, scope_start == '1.0'
-			scope_line, ind_defline, scope_start = editor.get_scope_start()
+			scope_line, ind_defline, scope_start = self.editor.get_scope_start()
 			scope_end = False
 			if scope_line != '__main__()':
-				scope_end = editor.get_scope_end(ind_defline, scope_start)
+				scope_end = self.editor.get_scope_end(ind_defline, scope_start)
 
 			#print(scope_line, ind_defline, scope_start, scope_end)
 			l1 = False
