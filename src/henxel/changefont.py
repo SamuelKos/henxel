@@ -4,10 +4,12 @@ import tkinter
 
 class FontChooser:
 
-	def __init__(self, master, fontlist, big=False, on_fontchange=None, os_type='linux'):
+	def __init__(self, master, fontlist, big=False, sb_widths=None, on_fontchange=None):
 		'''	master		tkinter.Toplevel
 			fontlist	list of tkinter.font.Font instances
 			big			If true start with bigger font.
+			sb_widths	Tuple containing scrollbar_width and elementborderwidth
+
 			on_fontchange	function, used in change_font()
 							and checkbutton_command(). It is executed after
 							change on any item in fontlist.
@@ -17,6 +19,8 @@ class FontChooser:
 
 		self.top = master
 		self.fonts = fontlist
+		self.scrollbar_width, self.elementborderwidth = sb_widths
+
 
 		if on_fontchange:
 			self.on_fontchange = on_fontchange
@@ -42,7 +46,8 @@ class FontChooser:
 		self.var.set(self.option_menu_list[0])
 		self.font = tkinter.font.nametofont(self.var.get())
 
-		self.optionmenu = tkinter.OptionMenu(self.topframe, self.var, *self.option_menu_list, command=self.optionmenu_command)
+		self.optionmenu = tkinter.OptionMenu(self.topframe, self.var, *self.option_menu_list,
+											command=self.optionmenu_command)
 
 		# Set font of dropdown button:
 		self.optionmenu.config(font=('TkDefaultFont',10))
@@ -60,46 +65,37 @@ class FontChooser:
 		self.scrollbar = tkinter.Scrollbar(self.topframe)
 
 		# Listbox contains font-choises to select from:
-		self.lb = tkinter.Listbox(self.topframe, font=('TkDefaultFont', 10), selectmode=tkinter.SINGLE, width=40, yscrollcommand=self.scrollbar.set)
+		self.lb = tkinter.Listbox(self.topframe, font=('TkDefaultFont', 10),
+								selectmode=tkinter.SINGLE, width=40,
+								yscrollcommand=self.scrollbar.set)
 		self.lb.pack(pady=10, side='left')
 		self.scrollbar.pack(side='left', fill='y')
-		self.scrollbar.config(width=30, elementborderwidth=4, command=self.lb.yview)
 
-		if os_type != 'linux':
-			self.scrollbar.configure(width=16, elementborderwidth=2)
+		self.scrollbar.config(width=self.scrollbar_width,
+							elementborderwidth=self.elementborderwidth, command=self.lb.yview)
 
 
 		# With spinbox we set font size:
-		self.sb = tkinter.Spinbox(self.topframe, font=('TkDefaultFont', 10), from_=self.min, to=self.max, increment=2, width=3, command=self.change_font)
+		self.sb = tkinter.Spinbox(self.topframe, font=('TkDefaultFont', 10), from_=self.min,
+								to=self.max, increment=2, width=3, command=self.change_font)
 		self.sb.pack(pady=10, anchor='w')
 
 		# Make checkboxes for other font configurations
 		self.bold = tkinter.StringVar()
-		self.cb1 = tkinter.Checkbutton(self.topframe, font=('TkDefaultFont', 10), offvalue='normal', onvalue='bold', text='Bold', variable=self.bold)
+		self.cb1 = tkinter.Checkbutton(self.topframe, font=('TkDefaultFont', 10),
+									offvalue='normal', onvalue='bold', text='Bold',
+									variable=self.bold)
 		self.cb1.pack(pady=10, anchor='w')
-		self.cb1.config(command=lambda args=[self.bold, 'weight']: self.checkbutton_command(args))
+		self.cb1.config(command=lambda args=[self.bold, 'weight']:
+						self.checkbutton_command(args))
 
-
-##		self.italic = tkinter.StringVar()
-##		self.cb2 = tkinter.Checkbutton(self.topframe, font=('TkDefaultFont', 10), offvalue='roman', onvalue='italic', text='Italic', variable=self.italic)
-##		self.cb2.pack(pady=10, anchor='w')
-##		self.cb2.config(command=lambda args=[self.italic, 'slant']: self.checkbutton_command(args))
-##
-##		self.underline = tkinter.StringVar()
-##		self.cb3 = tkinter.Checkbutton(self.topframe, font=('TkDefaultFont', 10), offvalue=0, onvalue=1, text='Underline', variable=self.underline)
-##		self.cb3.pack(pady=10, anchor='w')
-##		self.cb3.config(command=lambda args=[self.underline, 'underline']: self.checkbutton_command(args))
-##
-##		self.overstrike = tkinter.StringVar()
-##		self.cb4 = tkinter.Checkbutton(self.topframe, font=('TkDefaultFont', 10), offvalue=0, onvalue=1, text='Overstrike', variable=self.overstrike)
-##		self.cb4.pack(pady=10, anchor='w')
-##		self.cb4.config(command=lambda args=[self.overstrike, 'overstrike']: self.checkbutton_command(args))
 
 
 		self.filter_mono = tkinter.IntVar()
-		self.cb5 = tkinter.Checkbutton(self.topframe, font=('TkDefaultFont', 10), offvalue=0, onvalue=1, text='Mono', variable=self.filter_mono)
+		self.cb5 = tkinter.Checkbutton(self.topframe, font=('TkDefaultFont', 10), offvalue=0,
+									onvalue=1, text='Mono', variable=self.filter_mono)
 		self.cb5.pack(pady=10, anchor='w')
-		self.cb5.config(command=self.filter_fonts)
+		self.cb5.config(command=self.update_fontlistbox)
 
 
 		# Get current fontsize and show it in spinbox
@@ -110,15 +106,9 @@ class FontChooser:
 
 		# Check rest font configurations:
 		self.cb1.deselect()
-##		self.cb2.deselect()
-##		self.cb3.deselect()
-##		self.cb4.deselect()
 		self.cb5.deselect()
 
 		if self.font['weight'] == 'bold': self.cb1.select()
-##		if self.font['slant'] == 'italic': self.cb2.select()
-##		if self.font['underline'] == 1: self.cb3.select()
-##		if self.font['overstrike'] == 1: self.cb4.select()
 
 		self.lb.bind('<ButtonRelease-1>', self.change_font)
 
@@ -145,9 +135,6 @@ class FontChooser:
 					self.lb,
 					self.sb,
 					self.cb1,
-##					self.cb2,
-##					self.cb3,
-##					self.cb4,
 					self.cb5
 					]
 
@@ -166,7 +153,7 @@ class FontChooser:
 
 
 
-	def filter_fonts(self, event=None):
+	def update_fontlistbox(self, event=None):
 		'''	Show all fonts or mono-spaced,
 			depending on cb5 setting.
 		'''
@@ -219,17 +206,7 @@ class FontChooser:
 		'''	When font(instance) is selected from optionmenu.
 		'''
 		self.font = tkinter.font.nametofont(self.var.get())
-		self.top.selection_clear()
-
-		try:
-			fontname = self.font.actual("family")
-			fontindex = self.fontnames.index(fontname)
-			self.lb.select_set(fontindex)
-			self.lb.see(fontindex)
-
-		except ValueError:
-			# not in list
-			pass
+		self.update_fontlistbox()
 
 
 		self.sb.delete(0, 'end')
@@ -237,14 +214,8 @@ class FontChooser:
 		self.sb.insert(0, fontsize)
 
 		self.cb1.deselect()
-##		self.cb2.deselect()
-##		self.cb3.deselect()
-##		self.cb4.deselect()
 
 		if self.font['weight'] == 'bold': self.cb1.select()
-##		if self.font['slant'] == 'italic': self.cb2.select()
-##		if self.font['underline'] == 1: self.cb3.select()
-##		if self.font['overstrike'] == 1: self.cb4.select()
 
 
 	def change_font(self, event=None):
@@ -254,7 +225,6 @@ class FontChooser:
 		l = None
 		l = self.lb.curselection()
 
-		#print(type(l), l)
 
 		if l in [(), None, ""]:
 			self.font.config(
@@ -285,9 +255,6 @@ class FontChooser:
 
 
 	def get_fonts(self):
-		'''	Return list of fonts, that have: same lineheight between normal
-			lines and lines with bold font.
-		'''
 
 		font = tkinter.font.Font(family='TkDefaultFont', size=12)
 

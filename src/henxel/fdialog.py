@@ -28,11 +28,13 @@ class FDialog:
 	'''
 
 
-	def __init__(self, master, path, stringvar, font=None, menufont=None, os_type='linux'):
+	def __init__(self, master, path, stringvar, font=None, menufont=None, sb_widths=None,
+				os_type='linux'):
 		'''	master		tkinter.Toplevel
 			path		pathlib.Path
 			stringvar	tkinter.StringVar
 			fonts		tkinter.font.Font
+			sb_widths	Tuple containing scrollbar_width and elementborderwidth
 			os_type		'linux', 'mac_os', 'windows'
 		'''
 
@@ -41,6 +43,7 @@ class FDialog:
 		self.var = stringvar
 		self.font = font
 		self.menufont = menufont
+		self.scrollbar_width, self.elementborderwidth = sb_widths
 
 		s0, s1 = 12, 10
 		if os_type == 'mac_os': s0, s1 = 22, 16
@@ -60,35 +63,39 @@ class FDialog:
 		self.dotfilelist = list()
 
 
-		self.entry = tkinter.Entry(self.top, takefocus=0, bd=4, font=self.menufont, highlightthickness=0)
+		self.entry = tkinter.Entry(self.top, takefocus=0, bd=4, font=self.menufont,
+								highlightthickness=0)
 
 		self.filesbar = tkinter.Scrollbar(self.top, takefocus=0)
 
 		# choosed activestyle:underline because dotbox was almost invisible.
-		self.files = tkinter.Listbox(self.top, exportselection=0, activestyle='underline', setgrid=1)
+		self.files = tkinter.Listbox(self.top, exportselection=0, activestyle='underline',
+									setgrid=1)
 		self.files['yscrollcommand'] = self.filesbar.set
 		self.filesbar.config(command=self.files.yview)
 
 		self.dirsbar = tkinter.Scrollbar(self.top, takefocus=0)
-		self.dirs = tkinter.Listbox(self.top, exportselection=0, activestyle='underline', setgrid=1)
+		self.dirs = tkinter.Listbox(self.top, exportselection=0, activestyle='underline',
+									setgrid=1)
 		self.dirs['yscrollcommand'] = self.dirsbar.set
 		self.dirsbar.config(command=self.dirs.yview)
 
-		self.dirs.configure(font=self.font, width=30, selectmode='single', highlightthickness=0)
+		self.dirs.configure(font=self.font, width=30, selectmode='single',
+							highlightthickness=0)
 
-		self.files.configure(font=self.font, width=30, selectmode='single', highlightthickness=0)
+		self.files.configure(font=self.font, width=30, selectmode='single',
+							highlightthickness=0)
 
 		if os_type != 'mac_os':
 			self.dirs.config(bg='#d9d9d9', bd=4)
 			self.files.config(bg='#d9d9d9', bd=4)
-			self.entry.config(bg='#d9d9d9', disabledbackground='#d9d9d9', disabledforeground='black')
+			self.entry.config(bg='#d9d9d9', disabledbackground='#d9d9d9',
+							disabledforeground='black')
 
-		if os_type != 'linux':
-			self.dirsbar.configure(width=16, elementborderwidth=2)
-			self.filesbar.configure(width=16, elementborderwidth=2)
-		else:
-			self.dirsbar.configure(width=30, elementborderwidth=4)
-			self.filesbar.configure(width=30, elementborderwidth=4)
+		self.dirsbar.configure(width=self.scrollbar_width,
+							elementborderwidth=self.elementborderwidth)
+		self.filesbar.configure(width=self.scrollbar_width,
+							elementborderwidth=self.elementborderwidth)
 
 
 		self.dirs.bind('<Double-ButtonRelease-1>', self.chdir)

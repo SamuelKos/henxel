@@ -1,7 +1,3 @@
-''' jou
-
-'''
-
 ############ Stucture briefing Begin
 
 # Stucture briefing
@@ -541,20 +537,19 @@ class Editor(tkinter.Toplevel):
 
 			# Initiate widgets
 			####################################
-			self.btn_git = tkinter.Button(self, takefocus=0, font=self.menufont, relief='flat',
+			self.btn_git = tkinter.Button(self, takefocus=0, relief='flat',
 										highlightthickness=0, padx=0, state='disabled')
 			self.restore_btn_git() # Show git-branch if on one
 
-			self.entry = tkinter.Entry(self, bd=4, highlightthickness=0, takefocus=0)
+			self.entry = tkinter.Entry(self, highlightthickness=0, takefocus=0)
 			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
 
-			self.btn_open = tkinter.Button(self, takefocus=0, text='Open', bd=4,
+			self.btn_open = tkinter.Button(self, takefocus=0, text='Open',
 										highlightthickness=0, command=self.load)
-			self.btn_save = tkinter.Button(self, takefocus=0, text='Save', bd=4,
+			self.btn_save = tkinter.Button(self, takefocus=0, text='Save',
 										highlightthickness=0, command=self.save)
 
-			self.ln_widget = tkinter.Text(self, width=4, padx=10, highlightthickness=0,
-										bd=4, pady=4, relief='flat')
+			self.ln_widget = tkinter.Text(self, width=4, highlightthickness=0, relief='flat')
 			self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
 
 
@@ -562,10 +557,11 @@ class Editor(tkinter.Toplevel):
 											tabstyle='wordprocessor', highlightthickness=0,
 											relief='flat')
 			#############
-			self.frame = tkinter.Frame(self, bd=0, padx=0, pady=0, highlightthickness=0, bg='black')
+			self.frame = tkinter.Frame(self, bd=0, padx=0, pady=0, highlightthickness=0,
+									bg='black')
 
-			self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL, highlightthickness=0,
-										bd=0, takefocus=0)
+			self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL,
+											highlightthickness=0, bd=0, takefocus=0)
 
 			# Tab-completion, used in indent() and unindent()
 			self.expander = wordexpand.ExpandWord(self)
@@ -622,7 +618,7 @@ class Editor(tkinter.Toplevel):
 			if data:
 				self.oldconf = string_representation
 				self.load_config(data)
-				
+
 
 
 			# Colors Begin #######################
@@ -708,29 +704,31 @@ class Editor(tkinter.Toplevel):
 
 				self.ind_depth = TAB_WIDTH
 				self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
-				# One char lenght is: self.tab_width // self.ind_depth
+				# One char width is: self.tab_width // self.ind_depth
 				# Use this in measuring padding
 				pad_x =  self.tab_width // self.ind_depth // 3
 				pad_y = pad_x
+				# Currently self.pad == One char width // 3
+				# This is ok?
 				self.pad = pad_x ####################################
 
 				print(self.btn_open.cget('bd'), pad_x)
 
 				self.scrollbar_width, self.elementborderwidth = 9, 1
-				diff = pad_x - self.elementborderwidth
+				diff = pad_x - self.elementborderwidth -2
 				if diff <= 0: pass
 				else:
 					for i in range(diff):
 						self.scrollbar_width += 7
 						self.elementborderwidth += 1
-				
+
 				## No conf End ########
 
 
 
 			#################
 			self.apply_config()
-			
+
 
 			# Needed in leave() taglink in: Run file Related
 			self.name_of_cursor_in_text_widget = self.contents['cursor']
@@ -2211,10 +2209,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 
-		if self.tabindex > 0:
-			self.tabindex -= 1
-
-
 		if len(self.tabs) == 1:
 			newtab = Tab()
 
@@ -2226,9 +2220,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			self.tabs.append(newtab)
 
-		else:
-			newtab = self.tabs[self.tabindex]
 
+		flag_at_end = False
+		# Popping at end
+		if len(self.tabs) == self.tabindex +1:
+			# Note: self.tabindex decreases by one in this case
+			newtab = self.tabs[-2]
+			flag_at_end = True
+		else:
+			# Note: self.tabindex remains same in this case
+			newtab = self.tabs[self.tabindex +1]
 
 
 		self.tab_close(oldtab)
@@ -2237,6 +2238,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		oldtab.text_widget.destroy()
 		del oldtab.text_widget
 		self.tabs.pop(oldindex)
+		if flag_at_end: self.tabindex -= 1
 
 		self.update_title()
 
@@ -2551,7 +2553,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.curtheme = d['curtheme']
 
 		self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
-		
+
 		###
 		self.tab_width = self.font.measure(self.ind_depth * TAB_WIDTH_CHAR)
 
@@ -2628,7 +2630,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		w.config(font=self.font, tabs=(self.tab_width, ), bd=self.pad,
-				padx=self.pad, pady=self.pad)
+				padx=self.pad, pady=self.pad, foreground=self.fgcolor,
+				background=self.bgcolor, insertbackground=self.fgcolor)
 
 
 	def apply_config(self):
@@ -2645,6 +2648,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			else:
 				self.tabindex = 0
 				self.tabs[self.tabindex].active = True
+
+
+		self.frame.config(bg=self.bgcolor)
 
 		for tab in self.tabs:
 			self.set_textwidget(tab)
@@ -2799,11 +2805,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		last_token = False
 		last = False # Used only at errors
 
+
 		for tag in self.tagnames: self.tags[tag].clear()
 		t0 = int(self.root.tk.eval('clock milliseconds'))
 		try:
 			for token in tokens:
 				last = token
+
 
 				if token.type == tokenize.NAME:
 					last_token = token
@@ -2869,6 +2877,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			elif 'multi-line string' in ee.args[0]:
 				flag_err = True
 				self.check_scope = True
+
+
 
 
 		t1 = int(self.root.tk.eval('clock milliseconds'))
@@ -3284,46 +3294,50 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.contents.tag_config('highlight_line', background=color)
 		self.contents.tag_add('highlight_line', s, e)
 
-	
-	def set_ln_widget(self):
+
+	def set_text_widget_colors(self, tab):
+		tab.text_widget.config(foreground=self.fgcolor,
+							background=self.bgcolor,
+							insertbackground=self.fgcolor)
+
+
+	def set_ln_widget_colors(self):
 		self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor,
 							selectbackground=self.bgcolor,
 							selectforeground=self.fgcolor,
 							inactiveselectbackground=self.bgcolor )
 
-	
+
 	def toggle_color(self, event=None):
 
 		if self.curtheme == 'day':
 			self.curtheme = 'night'
 		else:
 			self.curtheme = 'day'
-		
+
+		self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
+
 		for tab in self.tabs:
 			self.update_syntags_colors(tab)
-			
-		self.set_ln_widget()
+			self.set_text_widget_colors(tab)
+
+		self.frame.config(bg=self.bgcolor)
+		self.set_ln_widget_colors()
 
 		return 'break'
 
 
 	def update_syntags_colors(self, tab):
 
-		self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
-
 		for tagname in self.themes[self.curtheme]:
 			bg, fg = self.themes[self.curtheme][tagname][:]
 			tab.text_widget.tag_config(tagname, background=bg, foreground=fg)
-	
-			tab.text_widget.config(foreground=self.fgcolor,
-								background=self.bgcolor,
-								insertbackground=self.fgcolor)
 
 
 	def update_fonts(self):
 		self.boldfont.config(**self.font.config())
 		self.boldfont.config(weight='bold')
-		
+
 		self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
 		pad_x =  self.tab_width // self.ind_depth // 3
 		self.pad = pad_y = pad_x
@@ -3336,8 +3350,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tab.text_widget.tag_config('breaks', font=self.boldfont)
 			tab.text_widget.tag_config('calls', font=self.boldfont)
 			tab.text_widget.config(tabs=(self.tab_width, ), padx=self.pad, pady=self.pad)
-	
-	
+
+
 		self.ln_widget.config(padx=self.pad, pady=self.pad)
 		self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
 		#self.bbox_height = self.contents.bbox('@0,0')[3]
@@ -3364,7 +3378,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.contents.bind( shortcut, self.font_choose)) )
 
 		changefont.FontChooser( fonttop, [self.font, self.menufont], big,
-			on_fontchange=self.update_fonts, os_type=self.os_type )
+			sb_widths=(self.scrollbar_width, self.elementborderwidth),
+			on_fontchange=self.update_fonts )
 		self.contents.bind( shortcut, self.do_nothing)
 		self.to_be_closed.append(fonttop)
 
@@ -3476,11 +3491,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.themes[self.curtheme][tagname][1] = tmpcolor
 				else:
 					self.themes[self.curtheme][tagname][0] = tmpcolor
-				
+
+				self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
+
 				for tab in self.tabs:
 					self.update_syntags_colors(tab)
-					
-				self.set_ln_widget()
+					self.set_text_widget_colors(tab)
+
+				self.frame.config(bg=self.bgcolor)
+				self.set_ln_widget_colors()
 
 			# if closed editor and still pressing ok in colorchooser:
 			except (tkinter.TclError, AttributeError) as e:
@@ -3577,10 +3596,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 			if (tagname in ['Defaults', 'Start']) or (tagname == 'TMP' and wid.flag_tmp):
+
+				self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
+
 				for tab in self.tabs:
 					self.update_syntags_colors(tab)
-				
-				self.set_ln_widget()
+					self.set_text_widget_colors(tab)
+
+				self.frame.config(bg=self.bgcolor)
+				self.set_ln_widget_colors()
 
 
 		wid.focus_set()
@@ -7378,7 +7402,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.to_be_closed.append(filetop)
 
 
-			fd = fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.font, menufont=self.menufont, os_type=self.os_type)
+			fd = fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.font, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
 
 			return 'break'
 
@@ -7445,6 +7469,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				else:
 					tmp = tab.contents
 
+				tab.contents = tmp
 
 				if tab.contents == tab.oldcontents:
 					continue
@@ -9830,5 +9855,4 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 ################ Replace End
 ########### Class Editor End
-
 

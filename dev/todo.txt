@@ -660,6 +660,9 @@ removed self.token_err
 --> tokens of whole content is updated not so often
 --> When?
 #######################
+deltab should not move left index
+done, ok?
+#######################
 
 
 Below this: not done ################################################
@@ -693,16 +696,13 @@ space to exit gotodef?
 Frame skip bindlevel etc check ########
 
 
-deltab should not move left index
-
-
 all ctrl-somekey --> alt-somekey
 like ctrl-gf etc
 
 self.pad
 
 
-tabify no work? rstrip no work
+set_textwidget, return widget instead of side-effect?
 
 
 ################################################
@@ -721,7 +721,7 @@ Currently, single tkinter.Text -widget /Editor
 - bindings not triggered when ungridded --> no need to unbind
 - theme changes
 - tag-changes
-- help, error
+- help_tab, error_tab
 - save load walk_tabs
 
 
@@ -730,32 +730,6 @@ get_config():
 	done ok?
 
 
-
-### init check ######
-
-popup, expander done, ok?
-
-
-basic_conf = {asd,asd}
-Text(**basic_conf)
-
-for tab in self.tabs:
-
-	tab.config(**basic_conf)
-
-	tab.anchorname
-
-	for tagname in self.themes[self.curtheme]:
-		bg, fg = self.themes[self.curtheme][tagname][:]
-		tab.text_widget.tag_config(tagname, background=bg, foreground=fg)
-	
-	tab.tcl_name_of_contents = str( tab.text_widget.nametowidget(tab.text_widget) )
-	
-	self.set_bindings(tab)
-	
-
-init is about done
-no conf: can not be tested until load() etc is checked
 check bookmarks next?
 deltab
 newtab
