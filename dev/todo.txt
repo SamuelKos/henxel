@@ -693,13 +693,19 @@ self.text_widget_basic_config
 space to exit gotodef?
 
 
-Frame skip bindlevel etc check ########
+Frame skip bindlevel etc check, no check?
 
 
 all ctrl-somekey --> alt-somekey
 like ctrl-gf etc
 
+
 self.pad
+
+
+stash info remove 1:
+done ok?
+stashing --> automatic, or at least importflag?
 
 
 set_textwidget, return widget instead of side-effect?

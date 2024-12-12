@@ -942,7 +942,6 @@ class Editor(tkinter.Toplevel):
 
 
 
-
 			curtab = self.tabs[self.tabindex]
 			self.oldline = ''
 			self.check_scope = False
@@ -1024,18 +1023,11 @@ class Editor(tkinter.Toplevel):
 ################################################
 Editor did not Launch!
 
-1: If tried with debug=True, try launching again with: e=henxel.Editor()
 
-   If it works, fix the error immediately, close normally,
-   exit python console, launch python and editor again with: e=henxel.Editor().
-   If it launches, close editor and it should be working again with debug=True.
-
-2: Editor is not launching, with or without debug=True
-
-   Below is printed help(henxel.stash_pop), read and follow.
+1: Below is printed help(henxel.stash_pop), read and follow.
 
 
-3: This should not happen but, in worst case: git restore __init__.py
+2: If that did not help (this should not happen): git restore __init__.py
 ################################################
 help(henxel.stash_pop) Begin
 
@@ -1491,6 +1483,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		for tab in self.tabs: self.save_bookmarks(tab)
 		self.save_config()
+
 		self.config(bg='black') # Prevent flashing if slow machine
 		self.cleanup()
 
@@ -2296,7 +2289,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.contents.focus_set()
 
 		#self.config(bg=self.orig_bg_color)
-		#self.update_idletasks()
+		# This is needed for some reason to prevent flashing
+		# when using fast machine
+		self.update_idletasks()
 		########
 
 
@@ -2662,27 +2657,40 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def init_syntags(self):
 
-		self.keywords = keyword.kwlist
-		self.keywords.insert(0, 'self')
+		keywords = keyword.kwlist
+		keywords.insert(0, 'self')
+		#self.keywords = set(self.keywords)
+		self.keywords = dict()
+		[self.keywords.setdefault(key, 1) for key in keywords]
 
-		self.bools = [ 'False', 'True', 'None' ]
-		self.breaks = [
-						'break',
-						'return',
-						'continue',
-						'pass',
-						'raise',
-						'assert',
-						'yield'
-						]
+		bools = [ 'False', 'True', 'None' ]
+		#self.bools = set(self.bools)
+		self.bools = dict()
+		[self.bools.setdefault(key, 1) for key in bools]
 
-		self.tests = [
-					'not',
-					'or',
-					'and',
-					'in',
-					'as'
-					]
+		breaks =[
+				'break',
+				'return',
+				'continue',
+				'pass',
+				'raise',
+				'assert',
+				'yield'
+				]
+		#self.breaks = set(self.breaks)
+		self.breaks = dict()
+		[self.breaks.setdefault(key, 1) for key in breaks]
+
+		tests = [
+				'not',
+				'or',
+				'and',
+				'in',
+				'as'
+				]
+		#self.tests = set(self.tests)
+		self.tests = dict()
+		[self.tests.setdefault(key, 1) for key in tests]
 
 		self.tagnames = [
 				'keywords',
@@ -2694,6 +2702,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				'calls',
 				'selfs'
 				]
+		self.tagnames = set(self.tagnames)
+
 
 		self.tags = dict()
 		for tag in self.tagnames: self.tags[tag] = list()
@@ -2798,6 +2808,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##		for tag in self.tagnames:
 ##			self.contents.tag_remove( tag, '1.0', 'end')
 
+
 		patt = f'{self.tcl_name_of_contents} tag add '
 		flag_err = False
 		par_err = None
@@ -2810,23 +2821,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		t0 = int(self.root.tk.eval('clock milliseconds'))
 		try:
 			for token in tokens:
-				last = token
-
 
 				if token.type == tokenize.NAME:
-					last_token = token
-					if token.string in self.keywords:
+
+					#if token.string in self.keywords:
+					if self.keywords.get(token.string):
 
 						if token.string == 'self':
 							self.tags['selfs'].append((token.start, token.end))
 
-						elif token.string in self.bools:
+						#elif token.string in self.bools:
+						elif self.bools.get(token.string):
 							self.tags['bools'].append((token.start, token.end))
 
 ##						elif token.string in self.tests:
+##						elif self.tests.get(token.string):
 ##							self.tags['tests'].append((token.start, token.end))
 
-						elif token.string in self.breaks:
+						#elif token.string in self.breaks:
+						elif self.breaks.get(token.string):
 							self.tags['breaks'].append((token.start, token.end))
 
 						else:
@@ -2836,8 +2849,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				elif token.exact_type == tokenize.LPAR:
 					# Need to know if last char before '(' was not empty.
 					# token.line contains line as string which contains token.
-					prev_char_idx = token.start[1]-1
-					if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
+					# Previously used test was:
+					#prev_char_idx = token.start[1]-1
+					#if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
+					if last_token.type == tokenize.NAME:
 						self.tags['calls'].append((last_token.start, last_token.end))
 
 				elif token.type == tokenize.STRING:
@@ -2849,7 +2864,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				elif token.type == tokenize.NUMBER:
 					self.tags['numbers'].append((token.start, token.end))
 
-				else: pass
+				last_token = token
 
 				################## END ####################
 
@@ -2870,14 +2885,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tokenize.TokenError as ee:
 
 			if 'EOF in multi-line statement' in ee.args[0]:
-				idx_start = str(last.start[0]) + '.0'
+				idx_start = str(last_token.start[0]) + '.0'
 				check_pars = idx_start
 
 
 			elif 'multi-line string' in ee.args[0]:
 				flag_err = True
 				self.check_scope = True
-
 
 
 
@@ -2893,6 +2907,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		t2 = int(self.root.tk.eval('clock milliseconds'))
 		#print(t2-t1, t1-t0, 'ms')
+
+
 
 		##### Check parentheses ####
 		if check_pars:
@@ -2915,6 +2931,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not flag_err:
 			#print('ok')
 			self.check_scope = False
+
 
 
 	def update_tokens(self, start=None, end=None, line=None):
@@ -2956,22 +2973,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		try:
 			for token in tokens:
-				last = token
 
 				if token.type == tokenize.NAME:
-					last_token = token
-					if token.string in self.keywords:
+
+					#if token.string in self.keywords:
+					if self.keywords.get(token.string):
 
 						if token.string == 'self':
 							self.tags['selfs'].append((token.start, token.end))
 
-						elif token.string in self.bools:
+						#elif token.string in self.bools:
+						elif self.bools.get(token.string):
 							self.tags['bools'].append((token.start, token.end))
 
 ##						elif token.string in self.tests:
+##						elif self.tests.get(token.string):
 ##							self.tags['tests'].append((token.start, token.end))
 
-						elif token.string in self.breaks:
+##						elif token.string in self.breaks:
+						elif self.breaks.get(token.string):
 							self.tags['breaks'].append((token.start, token.end))
 
 						else:
@@ -2981,8 +3001,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				elif token.exact_type == tokenize.LPAR:
 					# Need to know if last char before '(' was not empty.
 					# token.line contains line as string which contains token.
-					prev_char_idx = token.start[1]-1
-					if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
+					# Previously used test was:
+					#prev_char_idx = token.start[1]-1
+					#if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
+					if last_token.type == tokenize.NAME:
 						self.tags['calls'].append((last_token.start, last_token.end))
 
 				elif token.type == tokenize.STRING:
@@ -2994,7 +3016,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				elif token.type == tokenize.NUMBER:
 					self.tags['numbers'].append((token.start, token.end))
 
-				else: pass
+				last_token = token
 
 				################## END ####################
 
@@ -3015,7 +3037,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tokenize.TokenError as ee:
 
 			if 'EOF in multi-line statement' in ee.args[0]:
-				idx_start = str(last.start[0] +linenum -1) + '.0'
+				idx_start = str(last_token.start[0] +linenum -1) + '.0'
 				check_pars = idx_start
 
 
@@ -8861,7 +8883,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				'search',
 				'-all',
 				'-count',
-				self.match_lenghts_var,
+				self.match_lenghts_var
 				]
 
 		self.search_settings = defaults
@@ -9083,6 +9105,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# With s = settings one gets reference to original list.
 		# If want copy(dont want to mess original), and one likely does, one writes:
 		s = settings[:]
+		# Because tabs have their own text-widgets, which act as tcl-command,
+		# tcl-name of current widget/command is added here.
+		# See Tcl/Tk -literature for more info about this
+		s.insert(0, self.contents._w)
 		s.append( '--' )
 		tmp = self.contents.get('1.0', '1.1')
 
@@ -9164,6 +9190,9 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		s = self.search_settings[:]
+		# Because tabs have their own text-widgets, which act as tcl-command,
+		# tcl-name of current widget/command is added here.
+		# See Tcl/Tk -literature for more info about this
 		s.insert(0, self.contents._w)
 		s.append( '--' )
 		s.append(search_word)
