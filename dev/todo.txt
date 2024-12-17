@@ -663,7 +663,16 @@ removed self.token_err
 deltab should not move left index
 done, ok?
 #######################
+def set_scrollbar_widths(self, width, elementborderwidth)
+	removed incr decr scrollbar width
+	removed binds also
+	done, ok?
 
+class LastToken
+last_token = self.LastToken()
+
+win, cut in entry, fixed cut, copy win
+#######################
 
 Below this: not done ################################################
 
@@ -703,8 +712,7 @@ like ctrl-gf etc
 self.pad
 
 
-stash info remove 1:
-done ok?
+stash info remove 1: done ok?
 stashing --> automatic, or at least importflag?
 
 

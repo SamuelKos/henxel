@@ -712,15 +712,10 @@ class Editor(tkinter.Toplevel):
 				# This is ok?
 				self.pad = pad_x ####################################
 
-				print(self.btn_open.cget('bd'), pad_x)
 
-				self.scrollbar_width, self.elementborderwidth = 9, 1
-				diff = pad_x - self.elementborderwidth -2
-				if diff <= 0: pass
-				else:
-					for i in range(diff):
-						self.scrollbar_width += 7
-						self.elementborderwidth += 1
+				self.scrollbar_width = self.tab_width // self.ind_depth
+				self.elementborderwidth = max(self.scrollbar_width // 6, 1)
+				if self.elementborderwidth == 1: self.scrollbar_width = 9
 
 				## No conf End ########
 
@@ -844,49 +839,33 @@ class Editor(tkinter.Toplevel):
 			self.btn_git.grid_configure(row=0, column = 0, sticky='nsew')
 			self.entry.grid_configure(row=0, column = 1, sticky='nsew')
 			self.btn_open.grid_configure(row=0, column = 2, sticky='nsew')
-			self.btn_save.grid_configure(row=0, column = 3, columnspan=2, sticky='nsew')
+			self.btn_save.grid_configure(row=0, column = 3, columnspan=2,
+										sticky='nsew')
 
 
-			self.ln_widget.grid_configure(row=1, column = 0, sticky='nswe')
 
+			self.ln_widget.grid_configure(row=1, column = 0, sticky='nsew')
 
-			###
 			self.frame.rowconfigure(0, weight=1)
 			self.frame.columnconfigure(0, weight=1)
-			self.contents.grid_configure(row=0, column=0, sticky='nswe')
-			###
+			self.contents.grid_configure(row=0, column=0, sticky='nsew')
+
 
 
 			# If want linenumbers:
 			if self.want_ln:
-				self.frame.grid_configure(row=1, column=1, columnspan=3, sticky='nswe')
+				self.frame.grid_configure(row=1, column=1, columnspan=3,
+										sticky='nswe')
 
 			else:
-				self.frame.grid_configure(row=1, column=0, columnspan=4, sticky='nswe')
+				self.frame.grid_configure(row=1, column=0, columnspan=4,
+										sticky='nswe')
 				self.ln_widget.grid_remove()
 
 			self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
+			#################
 
 
-			# Get window positioning to work below
-			self.update_idletasks()
-
-			# Sticky top right corner, to get some space for console on left
-			# Next line seems not to work in macos12 consistently.
-			#self.geometry('-0+0')
-			diff = self.winfo_screenwidth() - self.winfo_width()
-			if diff > 0:
-				self.geometry('+%d+0' % diff )
-
-
-			if self.os_type == 'windows':
-				self.contents.focus_force()
-			else:
-				self.contents.focus_set()
-
-
-
-			############
 			self.line_can_update = False
 
 			self.boldfont.config(**self.font.config())
@@ -983,11 +962,29 @@ class Editor(tkinter.Toplevel):
 			############
 
 
+			############
+			# Get window positioning to work below
+			self.update_idletasks()
 
+			# Sticky top right corner, to get some space for console on left
+			# Next line seems not to work in macos12 consistently.
+			#self.geometry('-0+0')
+			diff = self.winfo_screenwidth() - self.winfo_width()
+
+			if self.os_type == 'windows':
+				self.geometry('-0+0')
+			else:
+				if diff > 0: self.geometry('+%d+0' % diff )
+				self.contents.focus_set()
+
+			############
 			# map Editor, restore original background, which was set to black
 			# during init to prevent flashing when init takes long
 			if self.flags and not self.flags.get('test_is_visible'): pass
 			else: self.deiconify()
+			if self.os_type == 'windows':
+				self.contents.focus_force()
+
 			self.config(bg=self.orig_bg_color)
 
 			self.__class__.alive = True
@@ -1023,11 +1020,7 @@ class Editor(tkinter.Toplevel):
 ################################################
 Editor did not Launch!
 
-
-1: Below is printed help(henxel.stash_pop), read and follow.
-
-
-2: If that did not help (this should not happen): git restore __init__.py
+Below is printed help(henxel.stash_pop), read and follow.
 ################################################
 help(henxel.stash_pop) Begin
 
@@ -1109,14 +1102,10 @@ Error messages Begin
 				tmp = self.selection_get()
 
 
-			if flag_cut:
-				w = self.contents
-
-				# Event should only come when in entry
-				if event:
-					w = event.widget
-
-				w.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
+			if flag_cut and event:
+				# in Entry
+				w = event.widget
+				w.delete('sel.first', 'sel.last')
 
 
 			# https://stackoverflow.com/questions/51921386
@@ -2019,10 +2008,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bind('<KeyPress-Caps_Lock>', self.check_caps)
 			self.bind('<KeyRelease-Caps_Lock>', self.check_caps)
 
+
 		self.bind( "<Escape>", self.esc_override )
 		self.bind( "<Return>", self.do_nothing_without_bell)
-		self.bind( "<Control-minus>", self.decrease_scrollbar_width)
-		self.bind( "<Control-plus>", self.increase_scrollbar_width)
 
 
 		self.entry.bind("<Return>", self.load)
@@ -2659,12 +2647,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		keywords = keyword.kwlist
 		keywords.insert(0, 'self')
-		#self.keywords = set(self.keywords)
 		self.keywords = dict()
 		[self.keywords.setdefault(key, 1) for key in keywords]
 
 		bools = [ 'False', 'True', 'None' ]
-		#self.bools = set(self.bools)
 		self.bools = dict()
 		[self.bools.setdefault(key, 1) for key in bools]
 
@@ -2677,7 +2663,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				'assert',
 				'yield'
 				]
-		#self.breaks = set(self.breaks)
 		self.breaks = dict()
 		[self.breaks.setdefault(key, 1) for key in breaks]
 
@@ -2688,7 +2673,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				'in',
 				'as'
 				]
-		#self.tests = set(self.tests)
 		self.tests = dict()
 		[self.tests.setdefault(key, 1) for key in tests]
 
@@ -2795,6 +2779,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return tokens
 
 
+	class LastToken:
+		''' Dummy helper class, used in insert_tokens and update_tokens
+			to prevent error with line:
+
+				if last_token.type == tokenize.NAME:
+
+			when brace-opener (,[ or { is first character of py-file
+
+		'''
+		type = 999
+
+
 	def insert_tokens(self, tokens):
 		''' Syntax-highlight text
 
@@ -2813,9 +2809,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		flag_err = False
 		par_err = None
 		check_pars = False
-		last_token = False
-		last = False # Used only at errors
-
+		last_token = self.LastToken()
 
 		for tag in self.tagnames: self.tags[tag].clear()
 		t0 = int(self.root.tk.eval('clock milliseconds'))
@@ -2824,21 +2818,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if token.type == tokenize.NAME:
 
-					#if token.string in self.keywords:
 					if self.keywords.get(token.string):
 
 						if token.string == 'self':
 							self.tags['selfs'].append((token.start, token.end))
 
-						#elif token.string in self.bools:
 						elif self.bools.get(token.string):
 							self.tags['bools'].append((token.start, token.end))
 
-##						elif token.string in self.tests:
 ##						elif self.tests.get(token.string):
 ##							self.tags['tests'].append((token.start, token.end))
 
-						#elif token.string in self.breaks:
 						elif self.breaks.get(token.string):
 							self.tags['breaks'].append((token.start, token.end))
 
@@ -2966,8 +2956,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		flag_err = False
 		par_err = None
 		check_pars = False
-		last_token = False
-		last = False # Used only at errors
+		last_token = self.LastToken()
 
 		for tag in self.tagnames: self.tags[tag].clear()
 
@@ -2976,21 +2965,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if token.type == tokenize.NAME:
 
-					#if token.string in self.keywords:
 					if self.keywords.get(token.string):
 
 						if token.string == 'self':
 							self.tags['selfs'].append((token.start, token.end))
 
-						#elif token.string in self.bools:
 						elif self.bools.get(token.string):
 							self.tags['bools'].append((token.start, token.end))
 
-##						elif token.string in self.tests:
 ##						elif self.tests.get(token.string):
 ##							self.tags['tests'].append((token.start, token.end))
 
-##						elif token.string in self.breaks:
 						elif self.breaks.get(token.string):
 							self.tags['breaks'].append((token.start, token.end))
 
@@ -3250,36 +3235,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.contents.config(tabs=(self.tab_width, ))
 
 
-	def increase_scrollbar_width(self, event=None):
-		'''	Change width of scrollbar and self.contents
-			Shortcut: Ctrl-plus
+
+	def set_scrollbar_widths(self, width, elementborderwidth):
+		'''	Change widths of scrollbar
 		'''
-		if self.scrollbar_width >= 100:
-			self.bell()
-			return 'break'
 
-		self.scrollbar_width += 7
-		self.elementborderwidth += 1
-		self.scrollbar.config(width=self.scrollbar_width)
-		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
+		self.scrollbar_width = width
+		self.elementborderwidth = elementborderwidth
 
-		return 'break'
-
-
-	def decrease_scrollbar_width(self, event=None):
-		'''	Change width of scrollbar and self.contents
-			Shortcut: Ctrl-minus
-		'''
-		if self.scrollbar_width <= 0:
-			self.bell()
-			return 'break'
-
-		self.scrollbar_width -= 7
-		self.elementborderwidth -= 1
-		self.scrollbar.config(width=self.scrollbar_width)
-		self.scrollbar.config(elementborderwidth=self.elementborderwidth)
-
-		return 'break'
+		self.scrollbar.config(width=self.scrollbar_width,
+							elementborderwidth=self.elementborderwidth)
 
 
 	def highlight_line(self, index='insert', color=None):
@@ -5348,18 +5313,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def copy_fallback(self, selection=None, flag_cut=False):
 
 		if self.os_type == 'windows':
-			self.copy_windows(selection=selection, flag_cut=flag_cut)
+			self.copy_windows(selection=selection)
 
 		else:
 			try:
 				self.clipboard_clear()
 				self.clipboard_append(self.contents.get('sel.first', 'sel.last'))
-				if flag_cut:
-					self.contents.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
 
 			except tkinter.TclError:
 				# is empty
 				pass
+
+
+		if flag_cut:
+			self.contents.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
 
 		return 'break'
 
@@ -5489,20 +5456,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
 
 
-		if self.os_type != 'windows':
-			self.contents.clipboard_clear()
-			self.contents.clipboard_append(t_orig)
-		else:
-			self.copy_windows(selection=t_orig, flag_cut=flag_cut)
-
+		###################
 		self.flag_fix_indent = True
 		self.checksum_fix_indent = t_orig
 
-		if flag_cut:
-			self.contents.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
-
-		#print('copy ok')
-		return 'break'
+		return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
 		###################
 
 
@@ -7397,8 +7355,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return 'break'
 
 
-		# Called by: Open-button or shortcut
-		if event.widget != self.entry:
+		# Called by: Open-button(event==None) or shortcut
+		if (not event) or (event.widget != self.entry):
 
 			self.state = 'filedialog'
 
@@ -8604,7 +8562,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Info: search 'def search(' in module: tkinter
 		# https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# Note: '-all' is needed in counting position among all matches
-		search_args = [ self.contents._w, 'search', '-all', search_word, '1.0' ]
+		search_args = [ self.tcl_name_of_contents, 'search', '-all',
+						search_word, '1.0' ]
 		res = self.tk.call(tuple(search_args))
 
 		# If no match, res == '' --> False
@@ -9108,7 +9067,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# Because tabs have their own text-widgets, which act as tcl-command,
 		# tcl-name of current widget/command is added here.
 		# See Tcl/Tk -literature for more info about this
-		s.insert(0, self.contents._w)
+		s.insert(0, self.tcl_name_of_contents)
 		s.append( '--' )
 		tmp = self.contents.get('1.0', '1.1')
 
@@ -9193,7 +9152,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# Because tabs have their own text-widgets, which act as tcl-command,
 		# tcl-name of current widget/command is added here.
 		# See Tcl/Tk -literature for more info about this
-		s.insert(0, self.contents._w)
+		s.insert(0, self.tcl_name_of_contents)
 		s.append( '--' )
 		s.append(search_word)
 		s.append( handle_search_start() )
