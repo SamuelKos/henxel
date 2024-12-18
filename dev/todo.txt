@@ -712,7 +712,6 @@ like ctrl-gf etc
 self.pad
 
 
-stash info remove 1: done ok?
 stashing --> automatic, or at least importflag?
 
 
