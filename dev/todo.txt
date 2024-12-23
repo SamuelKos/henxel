@@ -686,9 +686,6 @@ then tab complete
 tab.text_widget = Text}
 
 
-toggle_syntax() fix, when fixing tokens for ungrid
-
-
 set_syntags() contents.tag_config combine?
 
 
@@ -699,7 +696,7 @@ self.anchorname --> tab.anchorname
 self.text_widget_basic_config
 
 
-space to exit gotodef?
+space: exit to defline, when gotodef? like in search
 
 
 Frame skip bindlevel etc check, no check?
@@ -707,6 +704,7 @@ Frame skip bindlevel etc check, no check?
 
 all ctrl-somekey --> alt-somekey
 like ctrl-gf etc
+ctrl-ae --> alt-ae
 
 
 self.pad
@@ -718,6 +716,8 @@ stashing --> automatic, or at least importflag?
 set_textwidget, return widget instead of side-effect?
 
 
+
+
 ################################################
 # tab_open, tab_close(etc) rewrite planning Begin
 
@@ -726,27 +726,22 @@ Currently, single tkinter.Text -widget /Editor
 --> tabs have own widgets
 
 
-- when to create widget?
-- when to delete widget?
-- bindings?
-- etc ?
-- Tab()
 - bindings not triggered when ungridded --> no need to unbind
 - theme changes
 - tag-changes
-- help_tab, error_tab
+
+
+
+self.help_tab
+self.error_tab
+
+
+
+
 - save load walk_tabs
 
 
-get_config():
-	whitelist instead of __dict__?
-	done ok?
-
-
 check bookmarks next?
-deltab
-newtab
-init set pos
 ### init check end #######
 
 

@@ -503,6 +503,7 @@ class Editor(tkinter.Toplevel):
 			# Search related variables End
 
 			self.errlines = list()
+			self.err = False
 
 			# When clicked with mouse button 1 while searching
 			# to set cursor position to that position clicked.
@@ -874,19 +875,44 @@ class Editor(tkinter.Toplevel):
 			self.init_syntags()
 
 
+
+			# Create tabs for help and error pages
+			newtab = Tab()
+			self.set_textwidget(newtab)
+			self.set_syntags(newtab)
+			self.help_tab = newtab
+			self.help_tab.type = 'help'
+			self.help_tab.position = '1.0'
+			self.help_tab.text_widget.insert('insert', self.helptxt)
+			self.help_tab.text_widget.mark_set('insert', newtab.position)
+			self.help_tab.text_widget.see(newtab.position)
+			self.set_bindings(newtab)
+
+
+			newtab = Tab()
+			self.set_textwidget(newtab)
+			self.set_syntags(newtab)
+			self.err_tab = newtab
+			self.err_tab.type = 'error'
+			self.err_tab.position = '1.0'
+			self.err_tab.text_widget.mark_set('insert', newtab.position)
+			self.err_tab.text_widget.see(newtab.position)
+			self.set_bindings(newtab)
+			###
+
+
+
 			for tab in self.tabs:
 
 				self.set_syntags(tab)
-				self.set_bindings(tab)
 
 				if tab.type == 'normal':
 					tab.text_widget.insert('1.0', tab.contents)
 					self.restore_bookmarks(tab)
 
 					# Set cursor pos
-					line = tab.position
 					try:
-						tab.text_widget.mark_set('insert', line)
+						tab.text_widget.mark_set('insert', tab.position)
 						tab.text_widget.see(tab.position)
 						#self.ensure_idx_visibility(line)
 
@@ -906,6 +932,7 @@ class Editor(tkinter.Toplevel):
 						print(t2-t1, 's')
 
 
+				self.set_bindings(tab)
 				tab.text_widget.edit_reset()
 				tab.text_widget.edit_modified(0)
 
@@ -1928,6 +1955,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.os_type == 'mac_os':
 			self.right_mousebutton_num = 2
 
+
+
+		# Binds with ID Begin
+		self.entry.bid_ret = self.entry.bind("<Return>", self.load)
+		# Binds with ID End
+
+
+
 		self.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
 		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
 
@@ -1991,9 +2026,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.bind( "<Escape>", self.esc_override )
 		self.bind( "<Return>", self.do_nothing_without_bell)
-
-
-		self.entry.bind("<Return>", self.load)
 
 
 		self.ln_widget.bind("<Control-n>", self.do_nothing_without_bell)
@@ -2639,11 +2671,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.syntax = True
 			self.line_can_update = False
 
-			#for tab in self.tabs:
-			if self.can_do_syntax():
-				self.update_lineinfo()
-				self.insert_tokens(self.get_tokens(self.tabs[self.tabindex], update=True))
-				self.line_can_update = True
+			for tab in self.tabs:
+
+				if self.can_do_syntax(tab):
+					self.update_lineinfo(tab)
+
+					a = self.get_tokens(tab)
+					self.insert_tokens(a, tab=tab)
+
+
+			self.line_can_update = True
 
 			return 'break'
 
@@ -3723,6 +3760,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def tag_link(self, tagname, event=None):
 		''' Used in error-page, executed when hyperlink tagname is clicked.
 		'''
+		# Currently, error-tab is open and is about to be closed
+		err_tab_index = self.tabindex
+		# Index of tab to be opened
+		new_index = False
 
 		i = int(tagname.split("-")[1])
 		filepath, errline = self.errlines[i]
@@ -3730,17 +3771,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		filepath = pathlib.Path(filepath)
 		openfiles = [tab.filepath for tab in self.tabs]
 
-		# Clicked activetab, do nothing
-		if filepath == self.tabs[self.tabindex].filepath:
-			pass
+		# Clicked activetab
+		if filepath == self.tabs[self.oldindex].filepath:
+			new_index = self.oldindex
 
 		# Clicked file that is open, switch activetab
 		elif filepath in openfiles:
 			for i,tab in enumerate(self.tabs):
 				if tab.filepath == filepath:
-					self.tabs[self.tabindex].active = False
-					self.tabindex = i
-					self.tabs[self.tabindex].active = True
+					new_index = i
 					break
 
 		# else: open file in newtab
@@ -3749,13 +3788,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				with open(filepath, 'r', encoding='utf-8') as f:
 					tmp = f.read()
 
-					if len(self.tabs) > 0:
-						self.tabs[self.tabindex].active = False
 
 					newtab = Tab()
-					newtab.active = True
-					self.tabindex += 1
-					self.tabs.insert(self.tabindex, newtab)
+
+					self.set_textwidget(newtab)
+					self.set_syntags(newtab)
+
+					self.tabs.append(newtab)
+					new_index = self.tabindex
+
 
 					newtab.oldcontents = tmp
 
@@ -3770,12 +3811,27 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 						else:
 							newtab.contents = newtab.oldcontents
+
 					else:
 						newtab.contents = newtab.oldcontents
 
 
 					newtab.filepath = filepath
 					newtab.type = 'normal'
+					newtab.text_widget.insert('1.0', newtab.contents)
+
+					if self.can_do_syntax(newtab):
+						self.update_lineinfo(newtab)
+
+						a = self.get_tokens(newtab)
+						self.insert_tokens(a, tab=newtab)
+
+
+					self.set_bindings(newtab)
+
+					newtab.text_widget.edit_reset()
+					newtab.text_widget.edit_modified(0)
+
 
 			except (EnvironmentError, UnicodeDecodeError) as e:
 				print(e.__str__())
@@ -3784,9 +3840,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return
 
 
+
+		self.tab_close(self.tabs[err_tab_index])
+		self.tabs.pop(err_tab_index)
+
 		line = errline + '.0'
-		self.tabs[self.tabindex].position = line
-		self.tab_open(self.tabs[self.tabindex])
+		self.tabs[new_index].position = line
+		self.tabs[new_index].text_widget.mark_set('insert', line)
+
+		self.tab_open(self.tabs[new_index])
+		self.tabindex = new_index
+		self.err_tab.text_widget.delete('1.0', 'end')
+
 
 		self.bind("<Escape>", self.esc_override)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
@@ -3814,7 +3879,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if you are not 100% sure about your code in except-block.
 		'''
 		curtab = self.tabs[self.tabindex]
-		if (self.state != 'normal') or (curtab.type == 'newtab'):
+		if (self.state != 'normal') or (curtab.type != 'normal'):
 			self.bell()
 			return 'break'
 
@@ -3823,157 +3888,119 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 		# https://docs.python.org/3/library/subprocess.html
-
 		res = subprocess.run(['python', curtab.filepath], stderr=subprocess.PIPE).stderr
 
 		err = res.decode()
 
+		self.err = False
 		if len(err) != 0:
-			self.bind("<Escape>", self.stop_show_errors)
-			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
-
-			self.tab_close(curtab)
-
-			self.state = 'error'
-
-			self.taglinks = dict()
-			self.errlines = list()
-			openfiles = [tab.filepath for tab in self.tabs]
-
-
-			for tag in self.contents.tag_names():
-				if 'hyper' in tag:
-					self.contents.tag_delete(tag)
-
 			self.err = err.splitlines()
 
-			for line in self.err:
-				tmp = line
-
-				tagname = "hyper-%s" % len(self.errlines)
-				self.contents.tag_config(tagname)
-
-				# Why ButtonRelease instead of just Button-1:
-				# https://stackoverflow.com/questions/24113946/unable-to-move-text-insert-index-with-mark-set-widget-function-python-tkint
-
-				self.contents.tag_bind(tagname, "<ButtonRelease-1>",
-					lambda event, arg=tagname: self.lclick(arg, event))
-
-				self.contents.tag_bind(tagname, "<Enter>",
-					lambda event, arg=tagname: self.enter(arg, event))
-
-				self.contents.tag_bind(tagname, "<Leave>",
-					lambda event, arg=tagname: self.leave(arg, event))
-
-				self.taglinks[tagname] = self.tag_link
-
-				# Parse filepath and linenums from errors
-				if 'File ' in line and 'line ' in line:
-					self.contents.insert(tkinter.INSERT, '\n')
-
-					data = line.split(',')[:2]
-					linenum = data[1][6:]
-					path = data[0][8:-1]
-					pathlen = len(path) + 2
-					filepath = pathlib.Path(path)
-
-					self.errlines.append((filepath, linenum))
-
-					self.contents.insert(tkinter.INSERT, tmp)
-					s0 = tmp.index(path) - 1
-					s = self.contents.index('insert linestart +%sc' % s0 )
-					e = self.contents.index('%s +%sc' % (s, pathlen) )
-
-					self.contents.tag_add(tagname, s, e)
-
-					if filepath in openfiles:
-						self.contents.tag_config(tagname, foreground='brown1')
-						self.contents.tag_raise(tagname)
-
-					self.contents.insert(tkinter.INSERT, '\n')
-
-				else:
-					self.contents.insert(tkinter.INSERT, tmp +"\n")
-
-					# Make it look bit nicer:
-					if self.syntax:
-						# -1 lines because linebreak has been added already
-						start = self.contents.index('insert -1 lines linestart')
-						end = self.contents.index('insert -1 lines lineend')
-
-						self.update_lineinfo()
-						self.update_tokens(start=start, end=end, line=line)
-						self.line_can_update = True
+		self.show_errors()
 
 
 	def show_errors(self):
 		''' Show traceback from last run with added hyperlinks.
 		'''
+		if not self.err: return
 
-		if len(self.errlines) != 0:
-			self.bind("<Escape>", self.stop_show_errors)
-			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
-			self.state = 'error'
+		self.bind("<Escape>", self.stop_show_errors)
+		self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 
-			self.tab_close(self.tabs[self.tabindex])
+		self.state = 'error'
 
-			openfiles = [tab.filepath for tab in self.tabs]
-
-			for tag in self.contents.tag_names():
-				if 'hyper' in tag:
-					self.contents.tag_config(tag, foreground=self.fgcolor)
-
-			i = 0
-			for line in self.err:
-				tmp = line
-				tagname = 'hyper-%d' % i
-
-				# Parse filepath and linenums from errors
-				if 'File ' in line and 'line ' in line:
-					self.contents.insert(tkinter.INSERT, '\n')
-					data = line.split(',')[:2]
-					linenum = data[1][6:]
-					path = data[0][8:-1]
-					pathlen = len(path) + 2
-					filepath = pathlib.Path(path)
-
-					self.contents.insert(tkinter.INSERT, tmp)
-					s0 = tmp.index(path) - 1
-					s = self.contents.index('insert linestart +%sc' % s0 )
-					e = self.contents.index('%s +%sc' % (s, pathlen) )
-
-					self.contents.tag_add(tagname, s, e)
-
-					if filepath in openfiles:
-						self.contents.tag_config(tagname, foreground='brown1')
-						self.contents.tag_raise(tagname)
+		self.tab_close(self.tabs[self.tabindex])
+		self.tabs.append(self.err_tab)
+		self.oldindex = self.tabindex
+		self.tabindex = len(self.tabs) -1
+		self.tab_open(self.err_tab)
 
 
-					self.contents.insert(tkinter.INSERT, '\n')
+		self.taglinks = dict()
+		self.errlines = list()
+		openfiles = [tab.filepath for tab in self.tabs]
 
-					i += 1
+		self.line_can_update = False
 
-				else:
-					self.contents.insert(tkinter.INSERT, tmp +"\n")
+		for tag in self.contents.tag_names():
+			if 'hyper' in tag:
+				self.contents.tag_delete(tag)
 
-					# Make it look bit nicer:
-					if self.syntax:
-						# -1 lines because linebreak has been added already
-						start = self.contents.index('insert -1 lines linestart')
-						end = self.contents.index('insert -1 lines lineend')
 
-						self.update_lineinfo()
-						self.update_tokens(start=start, end=end, line=line)
-						self.line_can_update = True
+		for line in self.err:
+			tmp = line
+
+			tagname = "hyper-%s" % len(self.errlines)
+			self.contents.tag_config(tagname)
+
+			# Why ButtonRelease instead of just Button-1:
+			# https://stackoverflow.com/questions/24113946/unable-to-move-text-insert-index-with-mark-set-widget-function-python-tkint
+
+			self.contents.tag_bind(tagname, "<ButtonRelease-1>",
+				lambda event, arg=tagname: self.lclick(arg, event))
+
+			self.contents.tag_bind(tagname, "<Enter>",
+				lambda event, arg=tagname: self.enter(arg, event))
+
+			self.contents.tag_bind(tagname, "<Leave>",
+				lambda event, arg=tagname: self.leave(arg, event))
+
+			self.taglinks[tagname] = self.tag_link
+
+			# Parse filepath and linenums from errors
+			if 'File ' in line and 'line ' in line:
+				self.contents.insert(tkinter.INSERT, '\n')
+
+				data = line.split(',')[:2]
+				linenum = data[1][6:]
+				path = data[0][8:-1]
+				pathlen = len(path) + 2
+				filepath = pathlib.Path(path)
+
+				self.errlines.append((filepath, linenum))
+
+				self.contents.insert(tkinter.INSERT, tmp)
+				s0 = tmp.index(path) - 1
+				s = self.contents.index('insert linestart +%sc' % s0 )
+				e = self.contents.index('%s +%sc' % (s, pathlen) )
+
+				self.contents.tag_add(tagname, s, e)
+
+				if filepath in openfiles:
+					self.contents.tag_config(tagname, foreground='brown1')
+					self.contents.tag_raise(tagname)
+
+				self.contents.insert(tkinter.INSERT, '\n')
+
+			else:
+				self.contents.insert(tkinter.INSERT, tmp +"\n")
+
+				# Make it look bit nicer:
+				if self.syntax:
+					# -1 lines because linebreak has been added already
+					start = self.contents.index('insert -1 lines linestart')
+					end = self.contents.index('insert -1 lines lineend')
+
+					self.update_lineinfo(self.err_tab)
+					self.update_tokens(start=start, end=end, line=line)
+
+
+		if self.syntax:
+			self.line_can_update = True
 
 
 	def stop_show_errors(self, event=None):
 		self.state = 'normal'
+
+		self.tab_close(self.tabs[self.tabindex])
+		self.tabs.pop()
+		self.tabindex = self.oldindex
+		self.tab_open(self.tabs[self.tabindex])
+		self.err_tab.text_widget.delete('1.0', 'end')
+
 		self.bind("<Escape>", self.esc_override)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
-
-		self.tab_open(self.tabs[self.tabindex])
 
 		return 'break'
 
@@ -4449,7 +4476,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''	Pressed ctrl or Alt + shift and arrow left or right.
 			Make <<SelectNextWord>> and <<SelectPrevWord>> to stop at lineends.
 		'''
-		if self.state not in ['normal', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
+		if self.state not in ['normal', 'help', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
 			self.bell()
 			return 'break'
 
@@ -4658,7 +4685,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''	Pressed ctrl or Alt and arrow left or right.
 			Make <<NextWord>> and <<PrevWord>> to handle lineends.
 		'''
-		if self.state not in ['normal', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
+		if self.state not in ['normal', 'help', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
 			self.bell()
 			return 'break'
 
@@ -5709,7 +5736,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''	Enable toggle fullscreen with Esc.
 		'''
 		# Safe escing, if mistakenly pressed during search_next
-		if self.state == 'normal':
+		if self.state in ['normal']:
 			if len(self.contents.tag_ranges('sel')) > 0:
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
 				return 'break'
@@ -7031,7 +7058,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.entry.config(validate='none')
 
-		self.entry.bind("<Return>", self.load)
+		self.entry.bid_ret = self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
 		curtab = self.tabs[self.tabindex]
 
@@ -7058,7 +7085,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def gotoline(self, event=None):
-		if self.state != 'normal':
+		if self.state not in ['normal']:
 			self.bell()
 			return 'break'
 
@@ -7073,7 +7100,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Remove extra line, this is number of lines in contents
 		self.entry.endline = str(self.get_line_col_as_int(index=tkinter.END)[0] - 1)
-
+		self.entry.unbind("<Return>", funcid=self.entry.bid_ret)
 		self.entry.bind("<Return>", self.do_gotoline)
 		self.bind("<Escape>", self.stop_gotoline)
 
@@ -7884,7 +7911,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 
+
+		self.tab_close(self.tabs[self.tabindex])
+
+		self.tabs.pop()
+		self.tabindex = self.oldindex
+
 		self.tab_open(self.tabs[self.tabindex])
+
 
 		self.bind("<Escape>", self.esc_override)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
@@ -7898,9 +7932,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.state = 'help'
 
+
 		self.tab_close(self.tabs[self.tabindex])
 
-		self.contents.insert(tkinter.INSERT, self.helptxt)
+		self.tabs.append(self.help_tab)
+		self.oldindex = self.tabindex
+		self.tabindex = len(self.tabs) -1
+
+		self.tab_open(self.tabs[self.tabindex])
+
 
 		self.entry.config(state='disabled')
 		self.contents.config(state='disabled')
@@ -9246,7 +9286,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.entry.config(validate='none')
 
 
-		self.entry.bind("<Return>", self.load)
+		self.entry.bid_ret = self.entry.bind("<Return>", self.load)
 		self.entry.delete(0, tkinter.END)
 
 		curtab = self.tabs[self.tabindex]
@@ -9334,7 +9374,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		'''	Ctrl-f --> search --> start_search --> show_next / show_prev --> stop_search
 		'''
 
-		if self.state != 'normal':
+		if self.state not in ['normal']:
 			self.bell()
 			return 'break'
 
@@ -9348,9 +9388,11 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		except tkinter.TclError:
 			pass
 
+
 		self.state = 'search'
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
+		self.entry.unbind("<Return>", funcid=self.entry.bid_ret)
 		self.entry.bind("<Return>", self.start_search)
 		self.bind("<Escape>", self.stop_search)
 
@@ -9456,6 +9498,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.state = state
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
+		self.entry.unbind("<Return>", funcid=self.entry.bid_ret)
 		self.entry.bind("<Return>", self.start_search)
 		self.bind("<Escape>", self.stop_search)
 		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
