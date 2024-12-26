@@ -804,8 +804,6 @@ class Editor(tkinter.Toplevel):
 			self.bbox_height = self.contents.bbox('@0,0')[3]
 			self.text_widget_height = self.scrollbar.winfo_height()
 
-			#self.contents['yscrollcommand'] = lambda *args: self.sbset_override(*args)
-
 
 			# Register validation-functions, note the tuple-syntax:
 			self.validate_gotoline = (self.register(self.do_validate_gotoline), '%i', '%S', '%P')
@@ -887,6 +885,7 @@ class Editor(tkinter.Toplevel):
 			self.help_tab.text_widget.mark_set('insert', newtab.position)
 			self.help_tab.text_widget.see(newtab.position)
 			self.set_bindings(newtab)
+			self.help_tab.text_widget['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 
 
 			newtab = Tab()
@@ -898,6 +897,7 @@ class Editor(tkinter.Toplevel):
 			self.err_tab.text_widget.mark_set('insert', newtab.position)
 			self.err_tab.text_widget.see(newtab.position)
 			self.set_bindings(newtab)
+			self.err_tab.text_widget['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 			###
 
 
@@ -933,6 +933,7 @@ class Editor(tkinter.Toplevel):
 
 
 				self.set_bindings(tab)
+				tab.text_widget['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 				tab.text_widget.edit_reset()
 				tab.text_widget.edit_modified(0)
 
@@ -940,6 +941,7 @@ class Editor(tkinter.Toplevel):
 
 			curtab = self.tabs[self.tabindex]
 
+			self.scrollbar.set(*self.contents.yview())
 			self.anchorname = curtab.anchorname
 			self.tcl_name_of_contents = curtab.tcl_name_of_contents
 			self.line_can_update = True
@@ -960,7 +962,6 @@ class Editor(tkinter.Toplevel):
 			############
 			# Get window positioning with geometry call to work below
 			self.update_idletasks()
-
 			# Sticky top right corner, to get some space for console on left
 			# This geometry call has to be before deiconify
 			diff = self.winfo_screenwidth() - self.winfo_width()
@@ -1665,7 +1666,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# More info in update_linenums()
 		self.bbox_height = tab.text_widget.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
-		#self.update_linenums()
+		self.update_linenums()
 
 
 		if self.can_do_syntax(tab) and self.line_can_update:
@@ -2082,7 +2083,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			ll, cc = self.contents.index( indexMask % i).split('.')
 
 			if line == ll:
-				# is the line wrapping:
+				# line is wrapping
 				if col != cc:
 					col = cc
 					ln += nl
@@ -2159,6 +2160,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.set_textwidget(newtab)
 		self.set_syntags(newtab)
 		self.set_bindings(newtab)
+		newtab.text_widget['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 		newtab.position = '1.0'
 		newtab.text_widget.mark_set('insert', '1.0')
 
@@ -2206,6 +2208,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.set_textwidget(newtab)
 			self.set_syntags(newtab)
 			self.set_bindings(newtab)
+			newtab.text_widget['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 			newtab.position = '1.0'
 			newtab.text_widget.mark_set('insert', '1.0')
 
@@ -2253,24 +2256,21 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.anchorname = tab.anchorname
 		self.tcl_name_of_contents = tab.tcl_name_of_contents
 
-		#self.entry.delete(0, tkinter.END)
 		if tab.filepath:
 			self.entry.insert(0, tab.filepath)
 			self.entry.xview_moveto(1.0)
 
-		########
-##		self.scrollbar.config(command='')
-##		self.contents.grid_forget()
 		self.contents = tab.text_widget
-		#self.scrollbar.config(command=self.contents.yview)
-		#self.scrollbar.set(*self.contents.yview())
+		self.scrollbar.config(command=self.contents.yview)
+		self.scrollbar.set(*self.contents.yview())
+		self.update_linenums()
 		self.contents.grid_configure(row=0, column=0, sticky='nswe')
-		#self.scrollbar.grid(row=1,column=3, sticky='nse')
 		self.contents.focus_set()
 
 		# This is needed for some reason to prevent flashing
 		# when using fast machine
 		self.update_idletasks()
+
 		########
 
 
@@ -3975,15 +3975,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			else:
 				self.contents.insert(tkinter.INSERT, tmp +"\n")
 
-				# Make it look bit nicer:
+				# Make it look bit nicer
 				if self.syntax:
 					# -1 lines because linebreak has been added already
 					start = self.contents.index('insert -1 lines linestart')
 					end = self.contents.index('insert -1 lines lineend')
 
 					self.update_lineinfo(self.err_tab)
-					self.update_tokens(start=start, end=end, line=line)
+					self.update_tokens(start=start, end=end, line=line,
+										tab=self.err_tab)
 
+		self.err_tab.position = '1.0'
+		self.err_tab.text_widget.mark_set('insert', self.err_tab.position)
+		self.err_tab.text_widget.see(self.err_tab.position)
+
+		self.contents.edit_reset()
+		self.contents.edit_modified(0)
 
 		if self.syntax:
 			self.line_can_update = True
@@ -5741,13 +5748,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.contents.tag_remove('sel', '1.0', tkinter.END)
 				return 'break'
 
+
 		if self.wm_attributes().count('-fullscreen') != 0:
 			if self.state == 'normal':
 				if self.fullscreen:
 					self.wm_attributes('-fullscreen', 0)
 				else:
 					self.wm_attributes('-fullscreen', 1)
-
 				return 'break'
 
 		self.bell()
@@ -5982,26 +5989,26 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		self.scrollbar.set(*args)
 
-		h = self.text_widget_height
-
-		# Relative position (tuple on two floats) of
-		# slider-top (a[0]) and -bottom (a[1]) in scale 0-1, a[0] is smaller:
-		a = self.scrollbar.get()
-
-		# current slider size:
-		# (a[1]-a[0])*h
-
-		# want to set slider size to at least p (SLIDER_MINSIZE) pixels,
-		# by adding relative amount(0-1) of d to slider, that is: d/2 to both ends:
-		# ( a[1]+d/2 - (a[0]-d/2) )*h = p
-		# a[1] - a[0] + d = p/h
-		# d = p/h - a[1] + a[0]
-
-
-		d = SLIDER_MINSIZE/h - a[1] + a[0]
-
-		if h*(a[1] - a[0]) < SLIDER_MINSIZE:
-			self.scrollbar.set(a[0], a[1]+d)
+##		h = self.text_widget_height
+##
+##		# Relative position (tuple on two floats) of
+##		# slider-top (a[0]) and -bottom (a[1]) in scale 0-1, a[0] is smaller:
+##		a = self.scrollbar.get()
+##
+##		# current slider size:
+##		# (a[1]-a[0])*h
+##
+##		# want to set slider size to at least p (SLIDER_MINSIZE) pixels,
+##		# by adding relative amount(0-1) of d to slider, that is: d/2 to both ends:
+##		# ( a[1]+d/2 - (a[0]-d/2) )*h = p
+##		# a[1] - a[0] + d = p/h
+##		# d = p/h - a[1] + a[0]
+##
+##
+##		d = SLIDER_MINSIZE/h - a[1] + a[0]
+##
+##		if h*(a[1] - a[0]) < SLIDER_MINSIZE:
+##			self.scrollbar.set(a[0], a[1]+d)
 
 		self.update_linenums()
 
@@ -6048,6 +6055,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.line_can_update = False
 
 					# new_tab() calls tab_close()
+					# and updates self.tabindex
 					self.new_tab()
 
 					curtab = self.tabs[self.tabindex]
@@ -6066,7 +6074,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					else:
 						curtab.contents = fcontents
 
-					self.tab_open(curtab)
+
+					curtab.text_widget.insert('1.0', curtab.contents)
+					curtab.text_widget.mark_set('insert', curtab.position)
+					curtab.text_widget.see(curtab.position)
+
+					if self.can_do_syntax(curtab):
+						self.update_lineinfo(curtab)
+						a = self.get_tokens(curtab)
+						self.insert_tokens(a, tab=curtab)
+						self.line_can_update = True
+
+					self.contents.edit_reset()
+					self.contents.edit_modified(0)
 
 					return 'break'
 
@@ -6079,6 +6099,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		except ModuleNotFoundError:
 			print(f'\n Is not a module: {target}')
+			# will continue to next try-block
 		except TypeError as ee:
 			print(ee.__str__())
 			self.bell()
@@ -6099,6 +6120,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.line_can_update = False
 
 				# new_tab() calls tab_close()
+				# and updates self.tabindex
 				self.new_tab()
 
 				curtab = self.tabs[self.tabindex]
@@ -6110,10 +6132,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tmp = ''.join(tmp)
 				curtab.contents = tmp
 
+				curtab.text_widget.insert('1.0', curtab.contents)
+				curtab.text_widget.mark_set('insert', curtab.position)
+				curtab.text_widget.see(curtab.position)
+
+
 				# This flag is used in handle_search_entry()
 				curtab.inspected = True
 
-				self.tab_open(curtab)
+				if self.can_do_syntax(curtab):
+					self.update_lineinfo(curtab)
+					a = self.get_tokens(curtab)
+					self.insert_tokens(a, tab=curtab)
+					self.line_can_update = True
+
+				self.contents.edit_reset()
+				self.contents.edit_modified(0)
 
 				return 'break'
 
@@ -6132,6 +6166,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def tabify_lines(self, event=None):
+		tab = self.tabs[self.tabindex]
 
 		try:
 			startline = self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0]
@@ -6159,9 +6194,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.contents.delete(start, end)
 			self.contents.insert(start, tmp)
 
-			if self.can_do_syntax():
-				self.update_lineinfo()
-				self.update_tokens(start=start, end=end)
+			if self.can_do_syntax(tab):
+				self.update_lineinfo(tab)
+				self.update_tokens(start=start, end=end, tab=tab)
 				self.line_can_update = True
 
 			self.contents.edit_separator()
@@ -7435,7 +7470,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		tmp_entry = self.entry.get().strip()
-		if not isinstance(tmp_entry, str) or tmp_entry.isspace():
+		tests = (isinstance(tmp_entry, str),
+				not tmp_entry.isspace(),
+				not tmp_entry == ''
+				)
+
+		if not all(tests):
 			print('Give a valid filename')
 			self.bell()
 			return False
@@ -7501,21 +7541,21 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				if oldtab.filepath != None:
 					update_entry()
 
-					if self.can_do_syntax():
-						self.update_lineinfo()
+					if self.can_do_syntax(tab=oldtab):
+						self.update_lineinfo(tab=oldtab)
 						self.line_can_update = False
-						self.insert_tokens(self.get_tokens(oldtab))
+						self.insert_tokens(self.get_tokens(oldtab), tab=oldtab)
 						self.line_can_update = True
 
 
-				self.contents.edit_reset()
-				self.contents.edit_modified(0)
+				oldtab.text_widget.edit_reset()
+				oldtab.text_widget.edit_modified(0)
 
 
 
 			# Want to create new file with same contents
 			# (bookmarks are not copied)
-			else:
+			elif oldtab.type == 'normal':
 				try:
 					with open(fpath_in_entry, 'w', encoding='utf-8') as f:
 						pass
@@ -7532,6 +7572,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.line_can_update = False
 
 				# new_tab() calls tab_close()
+				# and updates self.tabindex
 				self.new_tab()
 				newtab = self.tabs[self.tabindex]
 
@@ -7544,23 +7585,32 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				newtab.type = 'normal'
 
 				update_entry()
-				self.contents.insert(tkinter.INSERT, newtab.contents)
+				newtab.text_widget.insert(tkinter.INSERT, newtab.contents)
 				set_cursor_pos()
 
-				if self.can_do_syntax():
-					self.update_lineinfo()
-					self.insert_tokens(self.get_tokens(newtab))
+				if self.can_do_syntax(tab=newtab):
+					self.update_lineinfo(tab=newtab)
+					self.insert_tokens(self.get_tokens(newtab), tab=newtab)
 					self.line_can_update = True
 
 
-				self.contents.edit_reset()
-				self.contents.edit_modified(0)
+				newtab.text_widget.edit_reset()
+				newtab.text_widget.edit_modified(0)
+
+
+			# Should not happen
+			else:
+				print('Error in save() while saving tab:')
+				print(oldtab)
+				return False
 
 
 		# Not creating a new file
 		else:
 			# Skip disk-writing
-			# When this happens? ##########################
+			# Q: When this happens?
+			# A: Pressing Save and fpath_in_entry == oldtab.filepath
+			#    that is, file exist already on disk
 			if not activetab:
 				return True
 

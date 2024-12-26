@@ -710,6 +710,10 @@ ctrl-ae --> alt-ae
 self.pad
 
 
+Save-button behaviour should be changed to: always save curtab
+	and if holding down ctrl --> save_forced
+			
+
 stashing --> automatic, or at least importflag?
 
 
@@ -735,10 +739,6 @@ Currently, single tkinter.Text -widget /Editor
 self.help_tab
 self.error_tab
 
-
-
-
-- save load walk_tabs
 
 
 check bookmarks next?
@@ -826,18 +826,6 @@ ln_widget dark brown or gray
 
 
 
-
-
-
-################################################
-uncomment(), if no selection, check done ok?
-update_curpos() check done, ok?
-##########
-undo_override, redo_override:
-check with multiline actions like indent comment etc
-
-
-
 To help, notes: loadfile always opens file in current tab
 	--> old file is saved and closed but bookmarks are gone
 	--> when planning opening new file from disk,
@@ -860,21 +848,11 @@ quit_me docstring
 idx_lineend() == display line end, this is ok?
 
 
-paste_fallback() fix
-
-paste() mark-insert after paste is wrong?
-
-
-tabify_lines check
-
-
 copy block to empty line indent0 no work?
 
 
-center_view() when search?
 
-
-sel.first last edit_search_setting ?
+sel.first sel.last scope edit_search_setting ?
 
 
 check syntax when no debug?
@@ -907,34 +885,17 @@ pip install build setuptools
 python -m build -nx
 
 
-
-
-in save:
-# Want to create new file with same contents
-# (bookmarks are not copied) this is ok?
-		
-
 tab complete at end of:
 	self.tabs[self.tabindex]
 insert .pos and tab -->
 self.tabs[self.tabindex]nposition
 
 
-check blank etc usage
-
-
-
-
-tab_open
-tab_close
-	clear_bookmarks?
-	no del content?
 	
 docstring:
 	intention
 	called from
 
-	
 
 ####
 curline needs highligh #################
@@ -949,15 +910,19 @@ when update color:
 set geometry remember last pos size
 root with pos ? self,
 
+
 choose font loadfile scrollbar widht same as editor
 launch first, then insert text etc.
+
 
 set waiting cursor in init?
 Reordering test for slow machines
 test with no conf
 
+
 use same padx in every widget
 ln_wid, cont --> relief flat ok?
+
 
 need: select_lines(startline, endline) ############
 maybe put in gotoline? if ',:-?' in linenum: 1,100 then select, show last etc
@@ -978,34 +943,9 @@ self.contents.bind( "<Control-Shift-(>",
 not tested in linux windows
 
 
-
-books:	
-	def tab_open(self):
-	def update_highlight_color(self, color):
-
-
-if clr >= ffffff // 2: make dimmer
-else: make brighter
-
-e.contents.tag_cget('numbers','foreground')
-system_colorname = e.entry.cget('fg')
-
-def update_highlight_color():
-	rgb = list()
-	for clr in e.winfo_rgb(self.bgcolor):
-		if clr >= 65535 // 2: rgb.append(clr-65535//10)
-		else: rgb.append(clr+65535//10)
-	
-	color = r'#' + r''.join([hex(clr//256)[2:] for clr in rgb])
-	
-	return color
-
-
 red = r'#c01c28'
 self.winfo_rgb(red)
 self.winfo_rgb('deep sky blue')
-
-
 ####
 
 
@@ -1024,7 +964,7 @@ view changes, after open tab, restore_bookmarks() is used in:
 	new_tab *
 	tag_link *
 	loadfile *
-	save * not using tab_open/close
+	save *
 	
 
 
@@ -1032,10 +972,6 @@ tokens
 ###########################
 check_line:
 self.check_scope	scope
-
-update_tokens
-self.token_err		all_cont
-
 
 Note:
 When adding inside(after first char and before last char) tag-range,
@@ -1052,30 +988,13 @@ multiline string
 ''<INSERT>'
 
 
-update_line --> check_line?
-
-
 when to check all_cont?
 undo redo paste comment indent tabify_lines
 indent unindent tokens scope?
 # check update range in comment uncomment paste #########
 
 
-run() show_err no set curpos?
-comment uncomment tabify_lines paste undo redo no set cursor, ok?
-
-
 search: when to set line_can_update? #################
-
-
-update_line:
-	if diff: check_line --> check --> after_idle(update)?
-	
-check_line:
-	triples, quotes etc
-	--> all_cont or line
-	all_cont == cur_scope ##################?
-	get scope_start end then update_tokens
 
 
 ######
@@ -1084,142 +1003,11 @@ self.par_err set in backspace_override and in insert/update tokens, when:
 	should be also set when commenting line with pars, done in check_line ok?
 ######
 
-
-self.token_err is set only from backspace_override and insert/update tokens
-	when: indentation error or multiline string error
-could be scope only?
-
-
 backspace_override: no quote tests done ok? --> check_line
 
 
 insert_tokens
-	for loop better, done ok?
 	f-strings green?
-
-########################################################################
-Thinking about tokens
-	
-
-tab.tk_command
-self.token_err --> tab.token_err
-
-
-tab.cache = dict()
-if tab.cache['contents'] != tab.contents:
-	update tab.cache['tokens']
-
-
-view changes == (list is above with bookmarks)
-walk_tabs:
-	1: get tokens of curtab
-	2: delete, insert
-	3: insert_syntags(): eval nexttab.tk_command
-	4: after_idle: update oldtab.tk_command
-		
-
-
-	
-self.tagnames = [
-		'keywords',
-		'numbers',
-		'bools',
-		'strings',
-		'comments',
-		'breaks',
-		'calls',
-		'selfs'
-		]
-
-
-
-
-tab.cache = dict()
-
-for tag in self.tagnames:
-	self.tags[tag] = list()
-
-len(tab.cache) > 0: --> dict is not empty
-tab.cache.clear() --> clear dict
-tab.cache['contents'] update at viewchange
-
-
-tab.cache['tags'] == list of tk_commands, update at viewchange
-	tk_command = patt + tag
-	for ((s0,s1), (e0,e1)) in self.tags[tag]:
-		tk_command += f' {s0}.{s1} {e0}.{e1}'
-
-
-for command in tab.cache['tags']:
-	self.contents.tk.eval(command)
-
-
-should be tcl proc?, nested array: tabs(filepath)(tagname) --> list of indexes or empty
-r'set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} before {^.*(\w\W|\W\w)}] ')
-('array set ::tcl::WordBreakRE $l3 ')
-
-
-tabs = array of arrays(tabs): filepath-string as key, tab-array as value
-	array set tabs [list filepath1 $tab1 filepath2 $tab2]
-
-each tab is array: tagname as key, index-list as value
-	array set tab1 [list tag_a $list_a tag_b $list_b]
-		each key tag_a etc, has list of indexes as value:
-			set list_a {4 5 6 7}
-
-
-foreach tab $tabs {parray $tab}
-	tab1(tagname1) = 1 2 3 4
-	tab1(tagname2) = 1 2 3 4
-	----
-	tab2(tagname1) = 1 2 3 4
-	tab2(tagname2) = 1 2 3 4
-
-
-
-#################
-in init
-
-
-proc addtags {widget array filepath} {
-	foreach {tag, indexlist} $array($filepath) {
-		$widget tag add $tag $indexlist
-	}
-}
-
-
-in update_tokens
-array unset tabs(filepath-string%s) # like clear
-array set tabs(filepath-string%s) long %s-string tag1 indexes tag2 indexes
-
-#################
-
-
-update_tokens ==
-	get_tokens(update=False) --> tokens of tab 
-				tab.contents, if update: get(1.0, end)
-	
-	insert_tokens(tokens)
-	
-	
-when view change:
-	get_tokens
-	delete
-	insert
-	insert_tokens
-	
-walk_tabs
-	
-Thinking about tokens End
-############################################################
-
-
-
-
-
-
-
-
 
 
 
@@ -1604,14 +1392,6 @@ automate exit editor, reopen python and editor
 done only for macos
 
 
-search:
-start of search/replace: insert window in start of entry:
-	dropdown:
-		1 use regexp
-		2 start from filestart/cursor
-		etc
-
-
 #############
 show scope always
 handle_search_entry not done in search_next
@@ -1702,8 +1482,6 @@ undo pause, check what is difference when in callback:
 	two edit_separators
 
 
-check is it necessary to set insert mark before ensure_idx_visibility?
-
 
 self.contents.bind( "<<TkWorldChanged>>", self.test_bind)
 	then: self.menufont.configure(underline=1)
@@ -1722,13 +1500,6 @@ bind with eval from dict --> user editable binds
 tuple after_cancel: (from_who, after_object_id) ?
 
 
-syntax highlight often slow, needs check
-after update --> to list --> after cancel ?
-update scope only if token.err ?
-check use of token_can_update += 1
-show closing paren
-
-
 check before copy, paste:
 	is selection from editor?
 	check indentation if not?
@@ -1736,10 +1507,6 @@ check before copy, paste:
 
 tab-comp in entry?
 
-
-selection handling not perfect when:
-	comment
-	indent
 
 if selecting many lines down then many lines back up, or vice versa:
 	no see selection
