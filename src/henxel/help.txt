@@ -1,59 +1,70 @@
 		Keyboard shortcuts:
 		
-		If key-sequence is like: Ctrl-c
-		It means: while holding Ctrl-key down, press c-key.
 		
-		If key-sequence is like: Ctrl-c-f
-		It means: while holding Ctrl-key down, press first
-		c-key then f-key. It can be quite fast, more like: Ctrl-cf
-		 
-		Ctrl-Return		Open file
-		Ctrl-BackSpace  Show and select next occurence of last search.
-						If got too far, press arrowleft to go to last
-						cursor position. Search again in short.
-						To search backwards press
-						Ctrl-Shift-BackSpace
-						
+		Alt-p	Toggle bookmark
+		Alt-b	Goto next bookmark
+		Alt-B	Goto prev bookmark
+
+		Alt-g	Goto definition ( when cursor is at or in between:
+									self.<INS>walk_scop<INS>e )
+		
+		Ctrl-l  Gotoline:	-1 and empty goes to file-end.
+							-20 goes to 20 lines before file-end etc.
+		
+		
+		Alt-n		Open new tab
+		Alt-Return	Open file to current tab
+		
+		Ctrl-d  Close current tab and save it
+		Ctrl-Q  Close current tab without saving it
+		
+		Alt-w	Walk tabs forward
+		Alt-q	Walk tabs backwards
+		
+		
+		Ctrl-e  Move cursor to lineend
+		Ctrl-a  Move cursor to linestart
+		
+		
 		Ctrl-f  Search
 		Ctrl-r  Replace
 		Ctrl-R  Replace all
-		Ctrl-g  Gotoline:	-1 and empty goes to file-end.
-							-20 goes to 20 lines before file-end etc.
-		Shift-Tab  Unindent
-		Tab        Indent, complete word
-		Ctrl-Tab   Insert Tab
+		
+		
+		Esc		Toggle fullscreen, clear search-tags, clear selection,
+				close help, close show errors, exit goto_def, exit gotoline,
+				exit search, exit replace etc.
 		
 		Shift-Return	Comment
 		Shift-BackSpace	Uncomment
 		
-		Ctrl-c  Copy		Try this: Ctrl-c-f
+		
+		Shift-Tab  Unindent
+		Tab        Indent or walk complete-word expansions
+		Ctrl-Tab   Insert Tab
+		
+		Alt-BackSpace	Delete backwards from cursor until dot
+
+		
+		Ctrl-c  Copy
 		Ctrl-v  Paste
 		Ctrl-x  Cut
 		Ctrl-y  Copy current line without newline, (yank line)
 		Ctrl-z  Undo
 		Ctrl-Z  Redo
 		
+		
 		Alt-l   Toggle linenumbers
 		Alt-x   Toggle syntax highlight
+		
 		
 		Alt-f   Font setting
 		Alt-s   Color setting
 		Alt-t   Toggle color setting
 		
-		Alt-n   Open new tab			Try this: Alt-n-Return
 		
-		Ctrl-d  Close current tab and save it
-		Ctrl-Q  Close current tab without saving it
-		Ctrl-q  Close editor and save files and configuration.
-		
-		Alt-w   Walk tabs forward
-		Alt-q   Walk tabs backwards
-		
-		Ctrl-e  Move cursor to lineend
-		Ctrl-a  Move cursor to linestart
-		
-		Ctrl-shift-e  Select from cursor to lineend
-		Ctrl-shift-a  Select from cursor to linestart
+		Ctrl-shift-E	Select from cursor to lineend
+		Ctrl-shift-A	Select from cursor to linestart
 		
 		Ctrl-j  Scroll down without moving cursor
 		Ctrl-u  Scroll up without moving cursor
@@ -65,33 +76,67 @@
 		Ctrl-up			Move 10 more line up
 		Ctrl-down		Move 10 more line down
 		
-		Ctrl-left  		Move cursor one word left
-		Ctrl-right 		Move cursor one word right
+		Alt-left  		Move cursor one word left
+		Alt-right 		Move cursor one word right
 		Ctrl-shift-left 	Select one more word to left
 		Ctrl-shift-right	Select one more word to right
 		
+		left/right		If cursor is not visible, goto cursor
+						If have selection, clear selection
+		
 		
 		# Not often needed:
-		Ctrl-plus 	Increase scrollbar-width
-		Ctrl-minus	Decrease scrollbar-width
+		Ctrl-89
+			walk scopes (with rising tendency)
+			8 goto next(up) defline
+			9 goto next(down) defline
+
+		Ctrl-Shift-()
+			walk scopes (with diving tendency)
+		 	( goto absolutely next(up) defline
+			) goto absolutely next(down) defline
+
 		
-		Ctrl-t  	Change indentation of selected lines to current setting
+		Alt-Shift-E		toggle, elide scope, if cursor is on defline
+		Alt-Shift-F		select scope, where cursor is in
+		
+		Ctrl-t	Change indentation of selected lines to current setting
+		
+		------------------------------------------------------
 		
 		
 		While searching:
 			Ctrl-n  Next match
 			Ctrl-p  Prev match
 			-	Copying text to clipboard is possible with yank-line etc.
+			-	Add bookmark is possible so is goto_def. Ctrl-np -> back to matches
 			-	Changing the replacement string is possible while replacing.
 			-	1: Press Space to exit search to focus.
 				2: Double-click to exit to cursor.
 				3: Press Esc to exit to cursor position at the start of the search.
 				Press arrow-key to refresh view back to cursor, if necessary.
 		
+		Also, after searching, show and select next/prev occurence of last search
+		(if no selection, else uses selection)
+			Ctrl-n  Next match
+			Ctrl-p  Prev match
+
 		While replacing:
 			Return does what is expected.
 		
 		Default bindings: https://tcl.tk/man/tcl9.0/TkCmd/text.html#M192
+	
+	
+	------------------------------------------------------
+	
+	Below this, it is expected one started editor with:
+	
+		import henxel
+		e=henxel.Editor()
+		
+	This is then referenced like:
+		e.print_bookmarks()	
+	------------------------------------------------------
 	
 	
 	When is my file Saved to Disk?
@@ -117,7 +162,7 @@
 		  
 		  - instead close python-console with ctrl-d
 		
-		
+	
 	Editor
 	  - Editor configuration is related to python-environment (sys.prefix)
 		in which python console was launched. So if you have say two
@@ -134,10 +179,9 @@
 		Editor will be freezed during that time, like when viewing help
 		of some function.
 		
-			
-	Undo
-	  - Undo is only partly functional due to lack of motivation. But it
-		usually works just fine. Undo is reset when ever view is changed.
+	  - If using win11 and not using IDLE-shell:
+		1: After changing focus from editor to terminal: press return once
+		2: Before changing focus from terminal to editor: press return once
 	
 	
 	Save-button
@@ -165,24 +209,41 @@
 		
 	  - If entered filename in entry and pressed open, entry is ignored.
 	
+	  - Files from disk are always opened into current tab,
+	  	old file is saved and closed but bookmarks are gone
+	  	--> When planning opening new file from disk,
+			check is current tab something one wants to keep open,
+			or does it have important bookmarks.
+			If is, then open new tab first, and then open file to it.
+			
+	  - It is good practise to always: open newtab, open file
+
 	
-	How to: copy-paste code-blocks in editor
-	  - When copying, select additional empty line before block.
-		This ensures indentation of whole block. If you do not do this,
-		and select for example from 'def' - word, which has indentation,
-		then indentation of this first line is wrong when pasted, compared
-		to other lines. But editor moves cursor at the start of block so
-		you can start fixing indentation of that line.
+	Bookmarks
+	  - Are very useful, more than for example, syntax-highlighting
+	  - Create/remove bookmark with Cmd/Alt-p
+	  - Walk bookmarks with Cmd/Alt-bB
+	  - Can be created when searching
+	  - Are saved in configuration
+	  - There is no shortcut for:
+		e.remove_bookmarks(all_tabs=True) note: all_tabs is True by default
+		e.print_bookmarks() of current tab
+
 	
-	
-	How to: Execute part of the code from editor in Python-console
-	  - Remember to put import-lines before the desired code-blocks. Then
-		just select whole thing, copy and paste to console. You may have
-		to press Return before last block executes. This is very useful,
-		compared to writing all that in console is much more difficult.
-		You might need to reduce indentation.
+	Goto definition
+	  - Of function in current tab with Cmd/Alt-g
+		when cursor is at or in between: self.<INS>walk_scop<INS>e
+		(or if there is selection, uses it)
+		
+	  - Can be done also when searching,
+		just press Ctrl-np to get back to matches, because esc will exit search
 		
 	
+	Selection
+	  - Long selection: if cursor is not visible,
+		to show wanted side of selection, toggle left/right -keys
+
+
 	How to: expand word
 	  - When starting to write object-name that has already been used
 		somewhere in contents like:
@@ -195,6 +256,114 @@
 			
 			self.attribute1
 			
+		If expansion got too long, one can delete to previous dot with:
+			self.attribute1.extra<INS>
+			--> Cmd/Ctrl-BackSpace
+			--> self.attribute1.
+			
+	  - Only single 's' is needed to expand to: self. 
+
+	
+	Inspecting objects
+	  - Just write the name of the module, like tkinter.font in the editor,
+		select it and choose inspect from popup-menu. Then search.
+				
+	
+	Elide
+	  - Eliding is work-in-progress, it works but is not fully implemented:
+		For example, searching, gotoing is not done. Nested eliding, not done.
+		And is not preserved.
+	
+	
+	Search and Replace
+		
+		Resources:
+			e.print_search_help()
+			e.print_search_setting()
+			e.reset_search_setting()
+			help(e.edit_search_setting)
+			e.edit_search_setting()
+			https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
+			https://www.tcl.tk/man/tcl9.0/TclCmd/re_syntax.html
+			https://www.tcl.tk/man/tcl9.0/TclCmd/regexp.html
+		
+		
+	  - Good news is, most of the time one does not need these.
+	  - When does, it most likely is:
+			
+			e.edit_search_setting('-start insert')
+		
+		This changes searching to start from insertion cursor
+		
+		If that wont help, below is couple more examples
+	
+	
+	SUBSTITUTION WITH REGEXP
+		
+	  - Example 1 Begin
+		If contents of tab is
+		
+		Example: 121 212
+		
+		Example: 121 212
+		
+		Example: 121 212
+		
+		
+		And there is "-regexp" in search_setting, and doing replace
+		
+		Then if search_word(old_word) would be
+		"(\d+) (\d+)"
+		And if substitution(new_word) would be
+		"\2 \1"
+		
+		Result after replacing would then be
+		Example: 212 121
+		
+		Example: 212 121
+		
+		Example: 212 121
+		
+		Example 1 End
+
+
+		Example 2 Begin
+		Adding space to end of substitution
+
+		search_word + () ==empty string
+		If search_word is "A", then using search_word
+			A()
+		
+		And if want to add for example: " BB " after search_word,
+		Then use as substitution(new_word): 
+			\0 BB \1
+			
+		where \0 is whole matched string and \1 is the empty string
+		"&" can be used inplace of "\0"
+		
+		Result
+		--> "A BB "
+		
+		Example 2 End
+
+		
+		Some more info
+			Adding to linestart: "^"
+			Adding to lineend: "$"
+			Concatenate lines: "\n+"
+
+	
+	How to: set scrollbar width
+	  - e.set_scrollbar_widths(width, elementborderwidth)
+	
+
+	How to: Execute part of the code from editor in Python-console
+	  - Remember to put import-lines before the desired code-blocks. Then
+		just select whole thing, copy and paste to console. You may have
+		to press Return before last block executes. This is very useful,
+		compared to writing all that in console is much more difficult.
+		You might need to reduce indentation.
+	
 	
 	How to: change indent-depth
 		For all files:
@@ -210,7 +379,7 @@
 		1: Make sure you copied the block starting with one empty line.
 		2: Click cursor to start of empty line and paste.
 		
-		Then select that code and press Control-t, and
+		Then select that code and press Ctrl-t, and
 		it should then be indented as you wanted and you can then continue
 		indenting the pasted code to the right place.
 		
@@ -235,11 +404,26 @@
 		and it will exit to python debugger after your breakpoint.
 		
 
-	Inspecting objects:
-	  - Just write the name of the module, like tkinter.font in the editor,
-		select it and choose inspect from popup-menu. Then search.
-				
-
+	Developing
+	  - To automate exit editor, check syntax, reopen python and editor
+		start editor with: e=henxel.Editor(debug=True)
+		
+		Then Cmd-q will do syntax checking on all python-files in package
+		and test-launch. This can also be done from popup-menu: test
+	  
+	  - If wanting to start editor using new code, from popup-menu: restart
+		Test-launch is then not done.
+		
+	  - Editor can be closed by pressing close button
+	
+	  - If editor did not launch, error message and info about recovering is printed
+		See: help(henxel.stash_pop)
+	
+	  - Currently there is restart-script only for MacOS
+	
+	  - More info is in function: e.build_launch_test
+	
+	
 	Homepage: https://github.com/SamuelKos/henxel
 	
 	

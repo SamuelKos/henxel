@@ -1,6 +1,488 @@
 # Changelog
-* To version: 	0.3.2
+* To version: 	0.3.3
 * From version:	0.0.3
+
+
+# 0.3.3
+
+More important changes Begin
+
+################################################
+# ungrid Begin
+
+From single tkinter.Text -widget /Editor --> tab.text_widget
+--> like in dev/ungridtest.py
+--> tabs have own widgets
+
+- bindings not triggered when ungridded --> no need to unbind
+
+self.help_tab
+self.error_tab
+
+# ungrid End
+################################################
+
+Elide
+
+Cmd-shift-F
+select cur scope
+
+
+Control-89
+Cmd-89
+	walk_scope() (rising tendency)
+	8 goto next(up) defline
+	9 goto prev(down) defline
+
+
+Control-Shift-()
+Cmd-Shift-()
+	walk_scope() (diving tendency)
+ 	( goto absolutely next(up) defline
+	) goto absolutely prev(down) defline
+###############################################
+
+cmd/Alt-p		save cursor position as bookmark
+cmd/Control-bB	walk bookmarks
+cmd/Alt-g		goto_def, if selection use it
+###############################################
+bookmark Begin
+
+toggle_bookmark cmd/alt-p
+walk_bookmarks cmd/Control-bB
+
+remove_bookmarks(all_tabs=True)	no shortcut, default=all_tabs
+print_bookmarks		no shortcut
+
+bookmark while searching, replacing
+
+have to use real marks because of empty lines
+currently marks persist in conf
+
+bookmark End
+############################################################
+
+while replace: space to exit
+##########
+
+cmd/Alt-g --> goto_def, without selection
+cmd/ctrl-l --> gotoline
+########
+
+long selection: if index not visible,
+show wanted side of selection at first left/right -keypress
+########
+
+search: no strip searchword
+search, show scope in entry when show_next prev
+show_next/prev: entry handling to function
+#########
+
+esc_override(): Enable toggle fullscreen with Esc.
+rename handle_config --> handle_window_resize
+
+esc toggles fullscreen, done with esc_override()
+######################
+
+search, replace:
+search_word:
+	suggest
+	1: selection if short enough, update oldword if found
+	2: old_word
+#####################
+
+search_next now searches with old_word if no selection
+#####################
+
+pressing space when: search_next, search, replace
+--> exit to cursor
+
+also safe esc: if normal and selection --> selection clear
+	for search_next
+##############################
+
+search, replace:
+
+Have to use marks to get overlapping searches work.
+
+Can not replace/replace_all while "-overlap" in search_settings
+
+if -start == 'insert' and search_word == selection_get:
+	start search from sel_start
+	done in do_search()
+
+
+search ACA:
+ACABACABA
+ACA
+
+can search with -overlap, if want to replace, use -regexp:
+boundary == A
+want change contents B:
+B(?=A)
+
+(also matches BBA etc, so must check first with search)
+
+
+search, replace, search_next:
+- Control-np in help, error, normal
+
+reset_search_setting()
+print_search_setting()
+edit_search_setting(search_setting)
+
+
+if selection, use it, else oldword.
+
+
+search_next in help and error works
+###################
+
+tab on line, if at indent0, move line/cursor to same indent than nearest line
+	tab_over_indent
+###################
+
+wordexpand now does expand from single letter at indent0
+	also removed re-import
+	# Get atrributes of 'self' faster. For example, if want: self.attribute1,
+	# one writes any single letter, like 'a' and hits Tab, and gets 'self.'
+	# Then add 'a' --> prevword is now 'self.a'. Now continue Tabbing:
+	# --> self.attribute1 is now likely to appear soon.
+###################
+
+Alt - BackSpace
+Cmd - BackSpace
+del_to_dot()
+delete previous word
+#########################
+
+yank also when help
+yank whole line(even if wrapped)
+search: now can yank without clicking
+yank_line() and bookmark_animate(): not ideal usage of tag 'sel'
+--> use tag 'animate'
+#########################
+
+automate exit editor, check syntax, reopen python and editor
+check syntax of python-files in henxel in quit_me()
+e=henxel.Editor(debug=True)
+	done with: import ast
+#########################
+
+created new placeholder module, importflags, for test-launch
+https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
+-->
+src/importflags
+	__init__.py
+		FLAGS=False
+		
+henxel:
+import importflags
+FLAGS = importflags.FLAGS
+
+cls.flags = FLAGS
+
+if cls.flags:
+	skip some subprocess calls (subprocess in subprocess does work)
+	etc
+
+quit_debug: can quit debug by pressing close button --> no close python console
+	(or by closing python console)
+#######################
+
+only single 's' expands to self. not all single letters
+#######################
+
+when debug, different popup, test, restart
+test: do test-launch in quit_me
+restart: everything in quit_me, and restart
+Close-Button, quit_debug=True does not do test-launch
+
+henxel.stash_pop()
+#######################
+
+undo_override, redo_override
+#######################
+
+ENABLE SUBSTITUTION WITH REGEXP
+
+
+replace/all is now done with "tcl regsub" instead of "tk text replace"
+--> Replacing with regexp, back references etc..
+
+
+###
+Example: If contents of tab is:
+Example: 121 212
+
+Example: 121 212
+
+Example: 121 212
+
+
+And there is "-regexp" in search_setting, And doing replace:
+
+Then if search_word(old_word) would be:
+"(\d+) (\d+)"
+And if substitution(new_word) would be:
+"\2 \1"
+
+Result after replacing would then be:
+Example: 212 121
+
+Example: 212 121
+
+Example: 212 121
+###
+
+###
+Adding space to end of substitution:
+	search_word + () ==empty string, if search_word is "A", then using
+		A()
+	with substitution, if want for example " BB "
+		\0 BB \1
+		
+	where \0 is whole matched string and \1 is the empty string
+	"&" can be used inplace of "\0"
+	
+	--> "A BB "
+
+###
+
+
+Adding to linestart: "^"
+Adding to lineend: "$"
+Concatenate lines: "\n+"
+###
+
+#######################
+
+new state: 'goto_def'
+	in goto_def(), when not already searching
+	
+esc: return to cursor, after goto_def
+double-click: stop to mouse
+goto_def(): content is now disabled like when searching
+	stop_goto_def()
+	self.state = 'goto_def'
+#######################
+
+tab_over_indent(), choose indentation of previous lines or next lines,
+	which is closer to insert
+#######################
+
+deltab not move left index anymore
+#######################
+
+def set_scrollbar_widths(self, width, elementborderwidth)
+	removed incr decr scrollbar width
+	removed binds also
+#######################
+
+More important changes End
+
+
+Less important changes Begin
+
+removed unused move_line and updown_override
+#######################
+macos when trying to open: /home
+
+	PermissionError: [Errno 1] Operation not permitted: '/usr/bin/../../home'
+
+fixed
+###########
+
+check if other than py-files are tabified
+	done they now are not tabified
+	update help?
+###########
+
+fixed capslock macos linux windows
+########
+
+async can be before def
+##########
+
+added get_scope_path
+#############
+
+save() now generates esc in while-loop and returns False if save fails
+save is too big: splitted to save_forced/save
+#########
+
+renamed no_copy_ln --> do_nothing_without_bell
+#########
+
+added state check in save()
+######################
+
+removed tab_override()
+# can_expand_word called before indent and unindent
+
+# Reason is that before commit 5300449a75c4826
+# when completing with Tab word1_word2 at word1:
+# first, pressing Shift down to enter underscore '_'
+# then fast pressing Tab after that.
+
+# Now, Shift might still be pressed down
+# --> get: word1_ and unindent line but no completion
+
+# Want: indent, unindent one line (no selection) only when:
+# cursor_index <= idx_linestart
+
+# Solution
+# Tab-completion also with Shift-Tab,
+# which is intended to help tab-completing with slow/lazy fingers
+#####################
+
+Sticky top right corner, to get some space for console on left
+#####################
+
+cmd-shift-left select indentation same as alt-left
+cmd-shift-left/right, selects from, space only lines also
+#####################
+
+replace with replace(idx1 idx2 new_word)
+now undo works better
+#####################
+
+capslock more visual
+############################
+
+tab completion first suggests from function scope
+############################
+
+strip empty lines, done in tabify()
+############################
+
+idx_linestart() and bookmark_animate()
+were broken due self.contents.bbox('insert') --> None if cursor is offscreen
+	bbox() check done
+	idx_linestart() done
+	bookmark_animate(): done with this check at toggle_bookmark()
+		not self.contents.bbox('insert')
+
+idx_linestart() now returns pos, line_starts_from_curline
+#########################
+
+line_is_defline()
+tab is_pyfile()
+can_do_syntax()
+#########################
+
+searching, if scrolled manually to see next match and then ctrl-n,
+	-->show_next is not ideal
+
+	Control-np removed from NextLine PrevLine virtual events because of this
+	at end of init
+#########################
+
+with io.BytesIO( tmp.encode('utf-8') ) as fo:
+	tokens = tokenize.tokenize( fo.readline )
+-->
+g = iter( tmp.splitlines(keepends=True) )
+tokens = tokenize.generate_tokens( g.__next__ )
+removed import io
+removed do_syntax
+avoid_viewsync_mess --> update_lineinfo
+viewsync --> update_line
+#######################
+
+self.tabs[self.tabindex] --> tab, curtab, newtab, oldtab
+WIP
+#######################
+
+new dev/stash_start folder, basicly garbage
+
+restart_editor.scpt --> back to previous
+restart scripts are now in /src/henxel
+updated MANIFEST.in for that
+#######################
+
+removed requirements.txt because github was confused by it and it was unneeded
+#######################
+
+self.build_launch_test() --> byte-string: launch-test
+
+in quit_me:
+	tmp = self.build_launch_test()
+	d = dict(capture_output=True)
+	p = subprocess.run(['python','-'], input=tmp, **d)
+#######################
+
+pyproject.toml + setup.cfg --> pyproject.toml
+#######################
+
+token_can_update --> line_can_update
+#######################	
+
+save_forced: check alive
+quit_me: check alive
+	if not: fast quit with cleanup()
+#######################
+
+self.cleanup() --> called when quitting etc.
+
+__init__ is now completely in try-block:
+try:
+	all init code
+except Exception as init_err:
+	try: self.cleanup()
+	except Exception as err:
+		# Some object, that cleanup tried to delete,
+		# did not yet had been created.
+		#print(err)
+	raise init_err
+	
+With this setup, no matter how editor was launched, if init fails,
+there will not be any zombie editor window (root) leftovers.
+
+
+when editor launch fails:
+except Exception as init_err:
+if not doing launch_test:
+	give info about recovering: like help(henxel.stash_pop) etc
+	
+
+	
+only debug mode is currently used in testlaunch to speed up testing
+#######################
+
+fonts:
+	from instance attributes --> class attributes like cls.root
+	set in __new__()
+
+they are never deleted
+#######################
+
+give focus to terminal, with activate_terminal, after error in:
+ - syntax
+ - launch-test
+
+if restart fails with error, terminal naturally has focus
+#######################
+
+ensure_idx_visibility: does not set insert-mark anymore
+goto_def: no longer set insert-mark
+#######################
+
+added FreeMono to goodfonts
+#######################
+
+apply_conf no insert contents
+moved to end of init
+
+planning to use magic colors instead in line highlight
+#######################
+
+utilize check_line() as, filtering range for syntax-highlighting,
+which was previously done in update_tokens()
+
+removed self.token_err
+--> tokens of whole content is updated not so often
+
+Less important changes End
 
 
 # 0.3.2

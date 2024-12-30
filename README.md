@@ -97,8 +97,8 @@ myproject> env\launch_ed.bat
 
 
 # Prerequisites in macOS and venv-creation
-You will need to install newer version of python with Homebrew. Look info on the ARR-repository
-about how to do that. There currently is no mkvenv script for macOS,
+You will need to install newer version of python for example with Homebrew. Look info on the ARR-repository
+about how to do that. Or just simply use pkg-installer from python-homepage. There currently is no mkvenv script for macOS,
 but making venv is quite same as in Linux. It seems to be enough to make venv
 and then install henxel to it without anything else.
 

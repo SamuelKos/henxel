@@ -926,10 +926,10 @@ class Editor(tkinter.Toplevel):
 						self.update_lineinfo(tab)
 
 						a = self.get_tokens(tab)
-						t1 = int(self.root.tk.eval('clock seconds'))
+						#t1 = int(self.root.tk.eval('clock seconds'))
 						self.insert_tokens(a, tab=tab) ##### this takes times
-						t2 = int(self.root.tk.eval('clock seconds'))
-						print(t2-t1, 's')
+						#t2 = int(self.root.tk.eval('clock seconds'))
+						#print(t2-t1, 's')
 
 
 				self.set_bindings(tab)
@@ -965,7 +965,9 @@ class Editor(tkinter.Toplevel):
 			# Sticky top right corner, to get some space for console on left
 			# This geometry call has to be before deiconify
 			diff = self.winfo_screenwidth() - self.winfo_width()
-			if diff > 0:
+			if self.os_type == 'windows':
+				self.geometry('-0+0')
+			elif diff > 0:
 				self.geometry('+%d+0' % diff )
 
 			############
@@ -1051,13 +1053,15 @@ Error messages Begin
 
 		# Check if setting attribute '-fullscreen' is supported
 		# type(self.wm_attributes()) == tuple
-		if self.wm_attributes().count('-fullscreen') != 0:
-			if self.wm_attributes('-fullscreen') == 1:
-				if self.fullscreen == False:
-					self.fullscreen = True
-			else:
-				if self.fullscreen == True:
-					self.fullscreen = False
+		# Not used because this interferes with esc_override when
+		# using slow machine.
+##		if self.wm_attributes().count('-fullscreen') != 0:
+##			if self.wm_attributes('-fullscreen') == 1:
+##				if self.fullscreen == False:
+##					self.fullscreen = True
+##			else:
+##				if self.fullscreen == True:
+##					self.fullscreen = False
 
 
 		self.text_widget_height = self.scrollbar.winfo_height()
@@ -1414,7 +1418,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		for widget in self.to_be_closed:
 			widget.destroy()
 
-		for tab in self.tabs:
+		for tab in self.tabs + [self.help_tab, self.err_tab]:
 			tab.text_widget.destroy()
 			del tab.text_widget
 
@@ -1435,6 +1439,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		del self.scrollbar
 		del self.expander
 		del self.popup
+		del self.frame
 
 
 	def quit_me(self, event=None, quit_debug=False, restart=False):
@@ -1792,6 +1797,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
 
 			w.bind( "<Alt-Shift-F>", self.select_scope)
+			w.bind( "<Alt-Shift-E>", self.elide_scope)
 
 			w.bind("<Left>", self.check_sel)
 			w.bind("<Right>", self.check_sel)
@@ -2243,6 +2249,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		''' Called from:
 
 			del_tab
+			new_tab		also calls tab_close() before this
 			walk_tabs	also calls tab_close() before this
 			tag_link
 			stop_help
@@ -2271,15 +2278,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# when using fast machine
 		self.update_idletasks()
 
-		########
-
 
 	def tab_close(self, tab):
-		''' self.line_can_update = False
-			self.entry.delete(0, tkinter.END)
-
-			Called from:
-			new_tab		only one that calls clear_bookmarks() after this
+		''' Called from:
+			new_tab		also calls tab_open() after this
 			walk_tabs	also calls tab_open() after this
 			show_errors
 			run
@@ -2291,6 +2293,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.entry.delete(0, tkinter.END)
 		self.scrollbar.config(command='')
 		self.contents.grid_forget()
+
+		if len(self.contents.tag_ranges('sel')) > 0:
+			self.contents.tag_remove('sel', '1.0', 'end')
 
 
 	def walk_tabs(self, event=None, back=False):
@@ -2761,7 +2766,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		for tag in self.tagnames: self.tags[tag].clear()
-		t0 = int(self.root.tk.eval('clock milliseconds'))
+		#t0 = int(self.root.tk.eval('clock milliseconds'))
 		try:
 			for token in tokens:
 
@@ -2834,7 +2839,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 
-		t1 = int(self.root.tk.eval('clock milliseconds'))
+		#t1 = int(self.root.tk.eval('clock milliseconds'))
 		for tag in self.tags:
 			if len(self.tags[tag]) > 0:
 
@@ -2844,7 +2849,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.tk.eval(tk_command)
 
-		t2 = int(self.root.tk.eval('clock milliseconds'))
+		#t2 = int(self.root.tk.eval('clock milliseconds'))
 		#print(t2-t1, t1-t0, 'ms')
 
 
@@ -3246,7 +3251,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
 
-		for tab in self.tabs:
+		for tab in self.tabs + [self.help_tab, self.err_tab]:
 			self.update_syntags_colors(tab)
 			self.set_text_widget_colors(tab)
 
@@ -3271,8 +3276,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		pad_x =  self.tab_width // self.ind_depth // 3
 		self.pad = pad_y = pad_x
 
+		self.scrollbar_width = self.tab_width // self.ind_depth
+		self.elementborderwidth = max(self.scrollbar_width // 6, 1)
+		if self.elementborderwidth == 1: self.scrollbar_width = 9
+		self.scrollbar.config(width=self.scrollbar_width,
+							elementborderwidth=self.elementborderwidth)
 
-		for tab in self.tabs:
+
+
+		for tab in self.tabs + [self.help_tab, self.err_tab]:
 			tab.text_widget.tag_config('keywords', font=self.boldfont)
 			tab.text_widget.tag_config('numbers', font=self.boldfont)
 			tab.text_widget.tag_config('comments', font=self.boldfont)
@@ -3423,7 +3435,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
 
-				for tab in self.tabs:
+				for tab in self.tabs + [self.help_tab, self.err_tab]:
 					self.update_syntags_colors(tab)
 					self.set_text_widget_colors(tab)
 
@@ -3528,7 +3540,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
 
-				for tab in self.tabs:
+				for tab in self.tabs + [self.help_tab, self.err_tab]:
 					self.update_syntags_colors(tab)
 					self.set_text_widget_colors(tab)
 
@@ -3989,6 +4001,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.err_tab.text_widget.mark_set('insert', self.err_tab.position)
 		self.err_tab.text_widget.see(self.err_tab.position)
 
+		self.err_tab.text_widget.focus_set()
 		self.contents.edit_reset()
 		self.contents.edit_modified(0)
 
@@ -5751,7 +5764,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.wm_attributes().count('-fullscreen') != 0:
 			if self.state == 'normal':
-				if self.fullscreen:
+				if self.wm_attributes('-fullscreen') == 1:
 					self.wm_attributes('-fullscreen', 0)
 				else:
 					self.wm_attributes('-fullscreen', 1)
@@ -5914,7 +5927,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					break
 
 			self.contents.delete( tkinter.SEL_FIRST, tkinter.SEL_LAST )
-
 			return 'break'
 
 
@@ -6085,6 +6097,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						self.insert_tokens(a, tab=curtab)
 						self.line_can_update = True
 
+					curtab.text_widget.focus_set()
 					self.contents.edit_reset()
 					self.contents.edit_modified(0)
 
@@ -6146,6 +6159,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.insert_tokens(a, tab=curtab)
 					self.line_can_update = True
 
+				curtab.text_widget.focus_set()
 				self.contents.edit_reset()
 				self.contents.edit_modified(0)
 
@@ -7290,9 +7304,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.contents.edit_modified(0)
 				######
 
-				#self.tab_open(curtab)
-
-
 		except (EnvironmentError, UnicodeDecodeError) as e:
 			print(e.__str__())
 			print(f'\n Could not open file: {filename}')
@@ -7320,6 +7331,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if not self.save(activetab=True):
 				self.bell()
 				return 'break'
+
+
+		if len(self.contents.tag_ranges('sel')) > 0:
+			self.contents.tag_remove('sel', '1.0', 'end')
 
 
 		# Called by: Open-button(event==None) or shortcut
@@ -7990,6 +8005,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tabindex = len(self.tabs) -1
 
 		self.tab_open(self.tabs[self.tabindex])
+		self.help_tab.text_widget.focus_set()
 
 
 		self.entry.config(state='disabled')
@@ -8469,7 +8485,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.contents.tag_add('elIdel', s, e)
 
 
-		# If cursor was at defline lineend, it was moved 1 char left,
+		# If cursor was at defline lineend, it was moved one char left,
 		# put it back to lineend
 		if self.contents.compare(idx, '!=', ref):
 			# 	Q: Why not '%s lineend' % idx ?
