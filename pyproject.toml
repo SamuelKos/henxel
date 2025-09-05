@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "henxel"
 version = "0.3.3"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 authors = [{name = "SamuelKos", email = "koskinens371@gmail.com"}]
 description = "GUI-editor for Python development."
 readme = "README.md"

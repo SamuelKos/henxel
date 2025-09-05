@@ -4,6 +4,75 @@
 Below this: not done ################################################
 
 
+* help ctrl-q, chk cmd-q, done
+
+
+if want ln update ln, done
+ch bg of self like in start of init
+
+
+
+* walk_scope absolutely next bind no work linux windows fixed
+parenleft right
+
+
+
+
+cursor is in multiline string does not always work
+because strings tag are not updated correctly
+check insert triples, then write in them couple lines
+
+
+
+
+
+################
+definition tag
+fix indent if async in update ins tokens
+
+count max ind depth in check indent
+if > then update maxind and update ind tags in all tabs
+
+
+
+get scope path:
+
+	#this speeds up getting path, but need to get first defline 
+	get first defline using old method:
+		
+		#this speeds up when there is long scope at indent0(like class Editor)
+		count indent, if line has indent1:
+			get tagprevrange(indent0)
+		else:
+			continue getting first defline
+			
+	get rest of path using new method:
+		get tagprevrange(indent?)
+
+#################
+
+
+
+
+
+
+get_tokens(self, tab, update=False):
+		''' Get syntax-tokens for insert_tokens()
+
+	fix this		Called from: walk_tabs
+			
+
+detect slow machine
+
+
+
+
+
+
+
+
+
+
 
 apply_config():
 tab.text_widget = tkinter.Te<insert>

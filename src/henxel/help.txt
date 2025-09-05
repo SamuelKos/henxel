@@ -17,6 +17,7 @@
 		
 		Ctrl-d  Close current tab and save it
 		Ctrl-Q  Close current tab without saving it
+		Ctrl-q  Close editor and save files and configuration.
 		
 		Alt-w	Walk tabs forward
 		Alt-q	Walk tabs backwards

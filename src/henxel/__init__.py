@@ -926,10 +926,10 @@ class Editor(tkinter.Toplevel):
 						self.update_lineinfo(tab)
 
 						a = self.get_tokens(tab)
-						#t1 = int(self.root.tk.eval('clock seconds'))
+						t1 = int(self.root.tk.eval('clock seconds'))
 						self.insert_tokens(a, tab=tab) ##### this takes times
-						#t2 = int(self.root.tk.eval('clock seconds'))
-						#print(t2-t1, 's')
+						t2 = int(self.root.tk.eval('clock seconds'))
+						print(t2-t1, 's')
 
 
 				self.set_bindings(tab)
@@ -1577,7 +1577,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Check if need to update tokens in whole scope
 		if not tab.check_scope:
 
-			if self.cursor_is_in_multiline_string(tab): tab.check_scope = True
+			if self.cursor_is_in_multiline_string(tab):tab.check_scope = True
 
 			elif on_oldline:
 
@@ -1671,7 +1671,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# More info in update_linenums()
 		self.bbox_height = tab.text_widget.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
-		self.update_linenums()
+		if self.want_ln: self.update_linenums()
 
 
 		if self.can_do_syntax(tab) and self.line_can_update:
@@ -1690,10 +1690,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if tab.oldline != curline or not on_oldline:
 				tab.oldline = curline
 				tab.oldlinenum = linenum
-
+				#t1 = int(self.root.tk.eval('clock milliseconds'))
 				self.check_line( oldline=tab.oldline, newline=curline,
 								on_oldline=on_oldline, tab=tab)
 
+				#t2 = int(self.root.tk.eval('clock milliseconds'))
+				#print(t2-t1, 'ms')
 				#print('sync')
 
 
@@ -1789,11 +1791,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind( "<Control-Shift-Down>", self.move_many_lines)
 
 			w.bind( "<Control-8>", self.walk_scope)
-			w.bind( "<Control-Shift-8>",
+			w.bind( "<Control-Shift-parenleft>",
 				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
 			w.bind( "<Control-9>",
 				lambda event: self.walk_scope(event, **{'down':True}) )
-			w.bind( "<Control-Shift-9>",
+			w.bind( "<Control-Shift-parenright>",
 				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
 
 			w.bind( "<Alt-Shift-F>", self.select_scope)
@@ -2270,7 +2272,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.contents = tab.text_widget
 		self.scrollbar.config(command=self.contents.yview)
 		self.scrollbar.set(*self.contents.yview())
-		self.update_linenums()
+		if self.want_ln: self.update_linenums()
 		self.contents.grid_configure(row=0, column=0, sticky='nswe')
 		self.contents.focus_set()
 
@@ -2615,6 +2617,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tests = dict()
 		[self.tests.setdefault(key, 1) for key in tests]
 
+
+		# Used in insert_tokens()
+		deflines = list()
+		for i in range(30):
+			deflines.append('defline%i' % i)
+		self.deflines = dict()
+		[self.deflines.setdefault(key, 1) for key in deflines]
+
+
 		self.tagnames = [
 				'keywords',
 				'numbers',
@@ -2625,6 +2636,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				'calls',
 				'selfs'
 				]
+		self.tagnames.extend(deflines)
 		self.tagnames = set(self.tagnames)
 
 
@@ -2650,6 +2662,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.tag_config('focus', underline=True)
 		w.tag_config('elIdel', elide=True)
 		w.tag_config('animate')
+
+		# Used in insert_tokens()
+		for key in self.deflines.keys():
+			w.tag_config(key)
+
 		w.tag_config('highlight_line')
 		w.tag_config('match_zero_lenght')
 
@@ -2788,6 +2805,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 						else:
 							self.tags['keywords'].append((token.start, token.end))
+							if token.string in ('def', 'class'):
+								ind_depth = token.start[1]
+								tagname = f'defline{ind_depth}'
+								self.tags[tagname].append((token.start, token.end))
 
 				# Calls
 				elif token.exact_type == tokenize.LPAR:
@@ -2877,7 +2898,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tab.check_scope = False
 
 
-
 	def update_tokens(self, start=None, end=None, line=None, tab=None):
 		''' Update syntax highlighting after some change in contents.
 		'''
@@ -2932,6 +2952,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 						else:
 							self.tags['keywords'].append((token.start, token.end))
+							if token.string in ('def', 'class'):
+								ind_depth = token.start[1]
+								tagname = f'defline{token.start[1]}'
+								self.tags[tagname].append((token.start, token.end))
 
 				# Calls
 				elif token.exact_type == tokenize.LPAR:
@@ -4064,6 +4088,43 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return res
 
 
+	def get_absolutely_next_defline(self, index='insert', down=True):
+		'''asdf
+		'''
+
+		curlinenum = float(self.contents.index(index))
+
+		# get non empty ranges
+		tagnames = [ tag for tag in self.tagnames if 'defline' in tag ]
+		tagnames.sort(key=lambda s: int(s.split('defline')[1]) )
+		linenums = list()
+		for tag in tagnames:
+			# [::2] get first item then every other item
+			# --> get only range start -indexes
+			if r := self.contents.tag_ranges(tag)[::2]:
+				defline_nums = [ float(str(idx)) for idx in r ]
+				linenums.extend(defline_nums)
+			else: break
+
+		if down:
+			linenums.sort()
+			for i in range(len(linenums)):
+				if linenums[i] > curlinenum: break
+			else:
+				return False
+
+			return str(linenums[i])
+
+		else:
+			linenums.sort(reverse=True)
+			for i in range(len(linenums)):
+				if linenums[i] < curlinenum: break
+			else:
+				return False
+
+			return str(linenums[i])
+
+
 	def walk_scope(self, event=None, down=False, absolutely_next=False):
 		''' Walk definition lines up or down.
 
@@ -4090,10 +4151,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
-		if not down:
-			(scope_line, ind_defline,
-			idx_scope_start) = self.get_scope_start(absolutely_next=absolutely_next)
+		if absolutely_next:
+			if next_deflinenum_as_str := self.get_absolutely_next_defline(down=down):
+				pos,_ = self.idx_linestart(next_deflinenum_as_str)
+			else:
+				self.bell()
+				return 'break'
 
+		elif not down:
+			(scope_line, ind_defline,
+			idx_scope_start) = self.get_scope_start()
+			print(ind_defline, idx_scope_start)
 			if scope_line == '__main__()':
 				self.bell()
 				return 'break'
@@ -4104,21 +4172,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# +1 lines: Because cursor could be at defline, start at next line(down)
 			# to catch that defline
 			pos = 'insert +1 lines'
-			if not absolutely_next:
-				(scope_line, ind_defline,
-				idx_scope_start) = self.get_scope_start(index=pos)
 
-				if scope_line != '__main__()':
-					idx_scope_end = pos = self.get_scope_end(ind_defline, idx_scope_start)
-				# Q: Why not: else: return here, after if?
-				# A: 'insert' could be before(more up) than first defline
+			(scope_line, ind_defline,
+			idx_scope_start) = self.get_scope_start(index=pos)
+
+			if scope_line != '__main__()':
+				idx_scope_end = pos = self.get_scope_end(ind_defline, idx_scope_start)
+			# Q: Why not: else: return here, after if?
+			# A: 'insert' could be before(more up) than first defline
 
 
 			# Now have idx_scope_start, idx_scope_end of current scope.
 			# Below, searching for: idx_scope_start of next defline(down)
 			#####################################
-			if absolutely_next: blank_range = '{0,}'
-			else: blank_range = '{0,%d}' % ind_defline
+			blank_range = '{0,%d}' % ind_defline
 			p1 = r'^[[:blank:]]%s' % blank_range
 			p2  = r'[acd]'
 
@@ -4139,7 +4206,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if 'strings' in self.contents.tag_names(pos):
 					#print('strings3', pos)
-					# Dont want rematch curline
+					# Don't want rematch curline
 					pos = '%s +1 lines' % pos
 					continue
 
@@ -5997,7 +6064,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def sbset_override(self, *args):
-		'''	Fix for: not being able to config slider min-size
+		'''	Can be used for: config slider min-size
 		'''
 		self.scrollbar.set(*args)
 
@@ -6022,7 +6089,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##		if h*(a[1] - a[0]) < SLIDER_MINSIZE:
 ##			self.scrollbar.set(a[0], a[1]+d)
 
-		self.update_linenums()
+		if self.want_ln: self.update_linenums()
 
 ########## Overrides End
 ########## Utilities Begin
@@ -6471,6 +6538,42 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.entry.insert(0, patt)
 
 
+	def get_scope_path_using_defline_tag(self, index, ind_depth, scope_path='', get_idx_linestart=False):
+		''' Speed up getting scope path by using defline -tag
+			Called from get_scope_path, get_scope_start
+		'''
+
+		ind = ind_depth
+		pos = index
+
+		while ind+1:
+
+			r = self.contents.tag_prevrange(f'defline{ind}', pos)
+			if r:
+
+				pos = r[0]
+
+				tmp = self.contents.get( pos, '%s lineend' % pos)
+				if scope_name := self.line_is_defline(tmp):
+					if scope_path != '':
+						scope_path = scope_name +'.'+ scope_path
+					else:
+						scope_path = scope_name
+
+				ind -= 1
+
+			else:
+				break
+
+
+		if not scope_path: scope_path = '__main__()'
+		# If called from get_scope_start:
+		if get_idx_linestart:
+			return scope_path, pos
+
+		return scope_path
+
+
 	def get_scope_path(self, index):
 		''' Get info about function or class where insertion-cursor is in.
 
@@ -6542,39 +6645,32 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			else: break
 
 
+
 		# Check possible early defline
 		##################################################
 		if scope_name := self.line_is_defline(index_line_contents):
 			scope_path = scope_name
 
-		# Reached indent0,
-		# Since not actually looking next defline but scope-path of index
+		# If reached indent0
 		# --> exit
 		if ind_last_line == 0:
 			if not scope_path: scope_path = '__main__()'
 			return scope_path
+
+		elif ind_last_line == 1:
+			return self.get_scope_path_using_defline_tag(pos, 0, scope_path)
+
+
+
 		############################
-		# Below this, real start
+		# Find fisrt defline using just regexp
+		# After getting it, one can build rest of scope_path faster
+		# by using defline_tag
 
-
-		flag_finish = False
-
-		if ind_last_line > 1:
-			# Why: [^[:blank:]#] instead of: [acd], as from: (a)sync, (c)lass, (d)ef?
-			# Reason: need to update indentation level of pos line or else path
-			# would be corrupted by possible nested function definitions (function in function).
-			patt = r'^[[:blank:]]{1,%d}[^[:blank:]#]' % (ind_last_line-1)
-
-		# ind_last_line == 1
-		# No need to update indentation level of pos line anymore.
-		else:
-			# Can now change pattern to:
-			# From start of line, [acd], as from: (a)sync, (c)lass or (d)ef
-			patt = r'^[acd]'
-			flag_finish = True
-
-
-		flag_match = False
+		# Why: [^[:blank:]#] instead of: [acd], as from: (a)sync, (c)lass, (d)ef?
+		# Reason: need to update indentation level of pos line or else path
+		# would be corrupted by possible nested function definitions (function in function).
+		patt = r'^[[:blank:]]{1,%d}[^[:blank:]#]' % (ind_last_line-1)
 
 		while pos:
 			try:
@@ -6612,30 +6708,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				else:
 					scope_path = scope_name
 
-				flag_match = True
+				# SUCCESS
+				return self.get_scope_path_using_defline_tag(pos, ind_curline-1, scope_path)
 			########
 
 
 			# Update search pattern and indentation of matched pos line
-			if not flag_finish: ind_last_line = ind_curline
-
-
-			# SUCCESS
-			if flag_match and flag_finish:
-				break
-
-
-			flag_match = False
-
-
-			if ind_curline > 1:
-				patt = r'^[[:blank:]]{1,%d}[^[:blank:]#]' % (ind_curline-1)
-
-			# ind_last_line == 1
-			# No need to update indentation level of pos line anymore.
-			else:
-				patt = r'^[acd]'
-				flag_finish = True
+			ind_last_line = ind_curline
+			patt = r'^[[:blank:]]{0,%d}[^[:blank:]#]' % (ind_curline-1)
 
 			# Question: Why not:
 			# 	pos = '%s -1c' % pos
@@ -6653,14 +6733,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			#### END OF WHILE #########
 
 
-		if scope_path == '':
-			scope_path = '__main__()'
-			return scope_path
-		else:
-			return scope_path + '()'
+		# FAIL
+		return '__main__()'
 
 
-	def get_scope_start(self, index='insert', absolutely_next=False):
+	def get_scope_start(self, index='insert'):
 		''' Find next(up) function or class definition
 
 			On success returns:
@@ -6730,11 +6807,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		patt = r'^[acd]'
 
-		if absolutely_next:
-			patt = r'^[[:blank:]]{0,}[acd]'
-			pass
-		elif ind_last_line == 1:
-			pass
+		if ind_last_line == 1:
+			def_line, pos = self.get_scope_path_using_defline_tag(pos, 0, get_idx_linestart=True)
+
+			idx = self.idx_linestart(pos)[0]
+			return def_line, 0, idx
+
 		else:
 			if ind_last_line > 1:
 				# Stage 2: Search backwards(up) from pos updating indentation level until:
@@ -6789,16 +6867,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return def_line_contents.strip(), ind_curline, idx
 			#####
 
-			elif absolutely_next: pass
 
 			# Update search pattern and indentation of matched pos line
 			elif ind_curline > 1:
 				patt = r'^[[:blank:]]{0,%d}[^[:blank:]#]' % (ind_curline-1)
 
 			# ind_last_line == 1
-			# No need to update indentation level of pos line anymore.
 			else:
-				patt = r'^[acd]'
+				def_line, pos = self.get_scope_path_using_defline_tag(pos, 0, get_idx_linestart=True)
+
+				idx = self.idx_linestart(pos)[0]
+				return def_line, 0, idx
 
 			### Stage 2 End ###
 
@@ -8709,7 +8788,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# idx: int
 		# start: tkinter.Text -index
+		#t0 = int(self.root.tk.eval('clock milliseconds'))
 		self.handle_search_entry(idx, start)
+		#t1 = int(self.root.tk.eval('clock milliseconds'))
+		#print(t1-t0, 'ms')
 
 		# Is it not viewable?
 		if not self.contents.bbox(start):
