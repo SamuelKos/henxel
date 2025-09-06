@@ -30,7 +30,6 @@
 # Replace
 #
 # Class Editor End
-
 ############ Stucture briefing End
 ############ TODO Begin
 #
@@ -467,6 +466,8 @@ class Editor(tkinter.Toplevel):
 			self.version = VERSION
 			self.os_type = self.__class__.os_type
 
+			self.geom = '+%d+0'
+			if self.os_type == 'windows': self.geom = '-0+0'
 
 			self.font = self.__class__.font
 			self.menufont = self.__class__.menufont
@@ -962,13 +963,16 @@ class Editor(tkinter.Toplevel):
 			############
 			# Get window positioning with geometry call to work below
 			self.update_idletasks()
-			# Sticky top right corner, to get some space for console on left
+			# Sticky top right corner by default,
+			# --> get some space for console on left
 			# This geometry call has to be before deiconify
 			diff = self.winfo_screenwidth() - self.winfo_width()
-			if self.os_type == 'windows':
-				self.geometry('-0+0')
-			elif diff > 0:
-				self.geometry('+%d+0' % diff )
+			tests = (self.os_type != 'windows', self.geom == '+%d+0', diff > 0)
+			if self.geom:
+				if all(tests):
+					self.geometry('+%d+0' % diff )
+				else:
+					self.geometry(self.geom)
 
 			############
 			# map Editor, restore original background, which was set to black
@@ -2409,6 +2413,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['elementborderwidth'] = self.elementborderwidth
 		d['want_ln'] = self.want_ln
 		d['syntax'] = self.syntax
+		d['geom'] = self.geom
 		d['ind_depth'] = self.ind_depth
 		d['themes'] = self.themes
 
@@ -2472,6 +2477,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.elementborderwidth	= d['elementborderwidth']
 		self.want_ln = d['want_ln']
 		self.syntax = d['syntax']
+		self.geom = d['geom']
 		self.ind_depth = d['ind_depth']
 		self.themes = d['themes']
 		self.curtheme = d['curtheme']
@@ -2620,7 +2626,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Used in insert_tokens()
 		deflines = list()
-		for i in range(30):
+		for i in range(10):
 			deflines.append('defline%i' % i)
 		self.deflines = dict()
 		[self.deflines.setdefault(key, 1) for key in deflines]
@@ -2779,6 +2785,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		flag_err = False
 		par_err = None
 		check_pars = False
+		flag_async = False
 		last_token = self.LastToken()
 
 
@@ -2805,10 +2812,26 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 						else:
 							self.tags['keywords'].append((token.start, token.end))
-							if token.string in ('def', 'class'):
-								ind_depth = token.start[1]
+
+							# These below are used only to tag deflines with indentation information,
+							# which is used to make finding scope limits faster for example in walk_scope.
+							# --> if thinking this is not usable, these can simply be removed from here and
+							# update_tokens, and fixing places were it was actually used
+							if token.string == 'async':
+								# line, col of tag start
+								# save line of async for check, in elif below
+								flag_async, ind_depth = token.start
 								tagname = f'defline{ind_depth}'
 								self.tags[tagname].append((token.start, token.end))
+
+							elif token.string in ('def', 'class'):
+								if flag_async and flag_async == token.start[0]: pass
+								else:
+									ind_depth = token.start[1]
+									tagname = f'defline{ind_depth}'
+									self.tags[tagname].append((token.start, token.end))
+								flag_async = False
+
 
 				# Calls
 				elif token.exact_type == tokenize.LPAR:
@@ -2927,6 +2950,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		flag_err = False
 		par_err = None
 		check_pars = False
+		flag_async = False
 		last_token = self.LastToken()
 
 		for tag in self.tagnames: self.tags[tag].clear()
@@ -2952,10 +2976,30 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 						else:
 							self.tags['keywords'].append((token.start, token.end))
-							if token.string in ('def', 'class'):
-								ind_depth = token.start[1]
-								tagname = f'defline{token.start[1]}'
+
+							# These below are used only to tag deflines with indentation information,
+							# which is used to make finding scope limits faster for example in walk_scope.
+							# --> if thinking this is not usable, these can simply be removed from here and
+							# insert_tokens, and fixing places were it was actually used
+							if token.string == 'async':
+								# line, col of tag start
+								# save line of async for check, in elif below
+								flag_async, ind_depth = token.start
+								tagname = f'defline{ind_depth}'
 								self.tags[tagname].append((token.start, token.end))
+
+							elif token.string in ('def', 'class'):
+								if flag_async and flag_async == token.start[0]: pass
+								else:
+									ind_depth = token.start[1]
+									tagname = f'defline{ind_depth}'
+									try:
+										self.tags[tagname].append((token.start, token.end))
+									except KeyError:
+										print(token.start, token.end)
+
+								flag_async = False
+
 
 				# Calls
 				elif token.exact_type == tokenize.LPAR:
@@ -3191,6 +3235,59 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 ########## Syntax highlight End
 ########## Theme Related Begin
+
+	def change_geometry(self, geom_string):
+		'''
+			To let window-manager handle positioning and size of the editor,
+			use one of: False, 0 or '' as geom_string
+
+			To reset to default handling, (no size changing, only put editor
+			to top-right corner), use 'default' as geom_string
+
+
+			A geometry string is a standard way of describing the size and location of a top-level window
+			on a desktop. A geometry string has this general form:
+				'wxh±x±y' where:
+				The w and h parts give the window width and height in pixels.
+				They are separated by the character 'x'.
+
+			If the next part has the form +x,
+			it specifies that the left side of the window should be x pixels from the left side of the desktop.
+			If it has the form -x,
+			the right side of the window is x pixels from the right side of the desktop.
+
+			If the next part has the form +y,
+			it specifies that the top of the window should be y pixels below the top of the desktop.
+			If it has the form -y,
+			the bottom of the window will be y pixels above the bottom edge of the desktop.
+
+		'''
+
+		if geom_string in (False, 0, ''):
+			self.geom = False
+			print('Geometry changes are applied at next restart')
+			return
+		elif type(geom_string) != str: return
+		elif geom_string == self.geom: return
+		elif geom_string == 'default':
+			geom_string =self.geom= '+%d+0'
+			if self.os_type == 'windows':
+				geom_string =self.geom= '-0+0'
+			diff = self.winfo_screenwidth() - self.winfo_width()
+			tests = (self.os_type != 'windows', self.geom == '+%d+0', diff > 0)
+			if all(tests): self.geometry('+%d+0' % diff )
+			else: self.geometry(self.geom)
+			print('Possible size change is reset to default at next restart')
+			return
+
+		# Actually wanting to set some size and position to be used at startup
+		# geom_string is 'wxh±x±y'
+		try:
+			self.geometry(geom_string)
+			self.geom = geom_string
+		except tkinter.TclError as e:
+			print(e)
+
 
 	def change_indentation_width(self, width):
 		''' width is integer between 1-8
@@ -4088,41 +4185,51 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return res
 
 
-	def get_absolutely_next_defline(self, index='insert', down=True):
-		'''asdf
+	def get_deflines(self, tab):
+		''' get deflines
 		'''
 
-		curlinenum = float(self.contents.index(index))
-
-		# get non empty ranges
+		# Get non empty ranges
 		tagnames = [ tag for tag in self.tagnames if 'defline' in tag ]
 		tagnames.sort(key=lambda s: int(s.split('defline')[1]) )
-		linenums = list()
+		self.linenums = list()
 		for tag in tagnames:
 			# [::2] get first item then every other item
 			# --> get only range start -indexes
-			if r := self.contents.tag_ranges(tag)[::2]:
-				defline_nums = [ float(str(idx)) for idx in r ]
-				linenums.extend(defline_nums)
+			if r := tab.text_widget.tag_ranges(tag)[::2]:
+				# defline_nums are stored as tuples: (tagname, idx), like ('defline2', 1234.2)
+				defline_nums = [ ( tag, float(str(idx)) ) for idx in r ]
+				self.linenums.extend(defline_nums)
 			else: break
 
+
+	def get_absolutely_next_defline(self, index='insert', down=False):
+		''' get absolutely next defline
+
+			Called from walk_scope
+
+		'''
+
+		curlinenum = float(self.contents.index(index))
+		linenums = self.linenums[:]
+
 		if down:
-			linenums.sort()
+			linenums.sort(key=lambda t: t[1])
 			for i in range(len(linenums)):
-				if linenums[i] > curlinenum: break
+				if linenums[i][1] > curlinenum: break
 			else:
 				return False
 
-			return str(linenums[i])
+			return linenums[i]
 
 		else:
-			linenums.sort(reverse=True)
+			linenums.sort(reverse=True, key=lambda t: t[1])
 			for i in range(len(linenums)):
-				if linenums[i] < curlinenum: break
+				if linenums[i][1] < curlinenum: break
 			else:
 				return False
 
-			return str(linenums[i])
+			return linenums[i]
 
 
 	def walk_scope(self, event=None, down=False, absolutely_next=False):
@@ -4152,16 +4259,26 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		if absolutely_next:
-			if next_deflinenum_as_str := self.get_absolutely_next_defline(down=down):
-				pos,_ = self.idx_linestart(next_deflinenum_as_str)
+			if t := self.get_absolutely_next_defline(down=down):
+				defline_tagname, next_deflinenum_as_float = t
+				line = str(next_deflinenum_as_float).split('.')[0]
+				col = defline_tagname.split('defline')[1]
+				pos = line +'.'+ col
 			else:
 				self.bell()
 				return 'break'
 
+##		# is cursor already at defline?
+##		idx = self.get_safe_index()
+##		line = self.contents.get('%s linestart' % idx, '%s lineend' % idx)
+##		if self.line_is_defline(line):
+##			use defline tag
+##		else:
+##			find scope start normally
+
 		elif not down:
 			(scope_line, ind_defline,
 			idx_scope_start) = self.get_scope_start()
-			print(ind_defline, idx_scope_start)
 			if scope_line == '__main__()':
 				self.bell()
 				return 'break'
@@ -4169,9 +4286,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			pos = idx_scope_start
 
 		else:
-			# +1 lines: Because cursor could be at defline, start at next line(down)
-			# to catch that defline
+			# +1 lines: Because cursor could be at defline,
+			# start at next line(down) to catch that defline
 			pos = 'insert +1 lines'
+			#pos = 'insert'
 
 			(scope_line, ind_defline,
 			idx_scope_start) = self.get_scope_start(index=pos)
@@ -4307,6 +4425,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if event.state not in [ 262156, 262148, 262157, 262149 ]: return
 
 
+		# Taken from center_view:
+		num_lines = self.text_widget_height // self.bbox_height
+		# Lastline of visible window
+		lastline_screen = int(float(self.contents.index('@0,65535')))
+		firstline_screen = lastline_screen - num_lines
+		# Lastline of file would be:
+		#last = int(float(self.contents.index('end'))) - 1
+		curline = int(float(self.contents.index('insert')))
+		to_up = curline - firstline_screen
+		to_down = lastline_screen - curline
+
+
 		# Pressed Control + Shift + arrow up or down.
 		# Want: select 10 lines from cursor.
 
@@ -4315,6 +4445,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if event.keysym == 'Up':
 			e = '<<SelectPrevLine>>'
+
+			# Near screen end
+			# Without this, selecting would became much slower
+			# (But even with this, selecting will, soon again, be slow, after selection grows larger)
+			# This adds 'jumping' (previously, selecting small regions was very smooth), but that is ok price for what is gained.
+			if to_up < 10:
+				self.contents.yview_scroll(-1*to_down, 'units')
 
 			if event.state not in [ 5, 262157, 262149 ]:
 				e = '<<PrevLine>>'
@@ -4333,6 +4470,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		elif event.keysym == 'Down':
 			e = '<<SelectNextLine>>'
+
+			# Near screen end
+			if to_down < 10:
+				self.contents.yview_scroll(to_up, 'units')
 
 			if event.state not in [ 5, 262157, 262149 ]:
 				e = '<<NextLine>>'
@@ -6737,7 +6878,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return '__main__()'
 
 
-	def get_scope_start(self, index='insert'):
+	def get_scope_start(self, index='insert', line=False):
 		''' Find next(up) function or class definition
 
 			On success returns:
@@ -6751,6 +6892,30 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			Called from walk_scope, select_scope, self.expander.getwords
 		'''
+
+
+##		###
+##		# Check if defline already
+##		if line:
+##
+##			ind_last_line = 0
+##			for char in line:
+##				if char in ['\t']: ind_last_line += 1
+##				else: break
+##
+##			# Skip possible first defline at index
+##			safe_index = self.get_safe_index(index)
+##			pos = '%s linestart' % safe_index
+##
+##			if res := self.line_is_defline(line):
+##				idx = self.idx_linestart(pos)[0]
+##				return pos_line_contents.strip(), ind_last_line, idx
+##
+##			elif ind_last_line == 0:
+##				return '__main__()', 0, '1.0'
+##		###
+
+
 
 		# Stage 1: Search backwards(up) from index for:
 		# pos = Uncommented line with 0 blank or more
@@ -6802,30 +6967,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			idx = self.idx_linestart(pos)[0]
 			return pos_line_contents.strip(), ind_last_line, idx
 
+		elif ind_last_line == 0:
+			return '__main__()', 0, '1.0'
+
 		### Stage 1 End ########
 
 
-		patt = r'^[acd]'
-
+		# Stage 2: Search backwards(up) from pos updating indentation level until:
+		# defline with ind_last_line-1 blanks or less
 		if ind_last_line == 1:
-			def_line, pos = self.get_scope_path_using_defline_tag(pos, 0, get_idx_linestart=True)
-
-			idx = self.idx_linestart(pos)[0]
-			return def_line, 0, idx
+			patt = p2 = r'[^[:blank:]#]'
 
 		else:
-			if ind_last_line > 1:
-				# Stage 2: Search backwards(up) from pos updating indentation level until:
-				# defline with ind_last_line-1 blanks or less
-				blank_range = '{0,%d}' % (ind_last_line - 1)
-
-			# ind_last_line == 0:
-			else:
-				# Curline is not defline
-				# --> can search with: '{1,}'
-				blank_range = '{1,}'
-
-
+			# ind_last_line > 1
+			blank_range = '{0,%d}' % (ind_last_line - 1)
 			p1 = r'^[[:blank:]]%s' % blank_range
 			# Not blank, not comment
 			p2 = r'[^[:blank:]#]'
@@ -6872,12 +7027,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			elif ind_curline > 1:
 				patt = r'^[[:blank:]]{0,%d}[^[:blank:]#]' % (ind_curline-1)
 
-			# ind_last_line == 1
-			else:
-				def_line, pos = self.get_scope_path_using_defline_tag(pos, 0, get_idx_linestart=True)
+			elif ind_curline == 1:
+				patt = r'[^[:blank:]#]'
 
-				idx = self.idx_linestart(pos)[0]
-				return def_line, 0, idx
+			else:
+				# ind_curline == 0
+				return '__main__()', 0, '1.0'
 
 			### Stage 2 End ###
 
@@ -8501,10 +8656,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def line_is_elided(self, index='insert'):
 
-		# Cursor is at elided defline
 		r = self.contents.tag_nextrange('elIdel', index)
 
 		if len(r) > 0:
+			# Is cursor at elided defline?
 			if self.get_line_col_as_int(index=r[0])[0] == self.get_line_col_as_int(index=index)[0]:
 				return r
 

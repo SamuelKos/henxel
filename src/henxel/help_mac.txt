@@ -220,7 +220,7 @@
 	  - Are very useful, more than for example, syntax-highlighting
 	  - Create/remove bookmark with Cmd/Alt-p
 	  - Walk bookmarks with Cmd/Alt-bB
-	  - Can be created when searching
+	  - Can also be created while searching
 	  - Are saved in configuration
 	  - There is no shortcut for:
 		e.remove_bookmarks(all_tabs=True) note: all_tabs is True by default
@@ -232,13 +232,49 @@
 		when cursor is at or in between: self.<INS>walk_scop<INS>e
 		(or if there is selection, uses it)
 		
-	  - Can be done also when searching,
+	  - Can be done also while searching,
 		just press Control-np to get back to matches, because esc will exit search
 		
 	
 	Selection
 	  - Long selection: if cursor is not visible,
 		to show wanted side of selection, toggle left/right -keys
+
+	
+	How to: set editor size and position
+	  - help(e.change_geometry)
+	  - Editor is normally using default size and positioned on top-right corner
+	  - One can choose to let window manager do everything with:
+		  e.change_geometry(False)
+	  - Restore default setting:
+		  e.change_geometry('default')
+		
+	  - Get current(and efective) setting
+		  e.geometry()
+		
+	  - Change position (to top-left corner)
+		(note using of geometry instead of change_geometry, this is for
+		some reasons. One can play with this, and once happy give full
+		geometry_string as in Usage Example below)
+		  e.geometry('+0+0')
+		
+	  - Change size
+		(note using of geometry instead of change_geometry, this is for
+		some reasons. One can play with this, and once happy give full
+		geometry_string as in Usage Example below)
+		  e.geometry('881x600')
+		
+	  - Change size and position
+		  e.change_geometry('881x600+0+50')
+		  This setting will then be used at next startup onwards.
+	
+	  Usage Example
+	  Drag editor-window to place one likes. Resize it to size one wants.
+	  Then call: e.geometry() to get that geometry string,
+	  something like: '881x600+0+50'
+	  Copy this string, with for example: my_geom_string=e.geometry()
+	  And use it to change geometry at future startups with:
+	  e.change_geometry(my_geom_string)
 
 
 	How to: expand word
@@ -255,13 +291,13 @@
 			
 		If expansion got too long, one can delete to previous dot with:
 			self.attribute1.extra<INS>
-			--> Cmd/Control-BackSpace
+			--> Cmd/Alt-BackSpace
 			--> self.attribute1.
 			
 	  - Only single 's' is needed to expand to: self. 
 
 	
-	Inspecting objects
+	Inspecting modules
 	  - Just write the name of the module, like tkinter.font in the editor,
 		select it and choose inspect from popup-menu. Then search.
 				
@@ -325,17 +361,17 @@
 
 
 		Example 2 Begin
-		Adding space to end of substitution
-
+		Adding space to end of substitution using:
 		search_word + () ==empty string
-		If search_word is "A", then using search_word
-			A()
+		
+		If search_word(old_word) is "A", add empty string after it:
+			"A()"
 		
 		And if want to add for example: " BB " after search_word,
 		Then use as substitution(new_word): 
-			\0 BB \1
+			"\0 BB \1"
 			
-		where \0 is whole matched string and \1 is the empty string
+		where \0 is whole matched string and \1 is the empty string.
 		"&" can be used inplace of "\0"
 		
 		Result
@@ -344,7 +380,7 @@
 		Example 2 End
 
 		
-		Some more info
+		Some more info, examples below are search_word(old_word)
 			Adding to linestart: "^"
 			Adding to lineend: "$"
 			Concatenate lines: "\n+"

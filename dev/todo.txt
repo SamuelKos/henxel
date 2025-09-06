@@ -8,20 +8,42 @@ Below this: not done ################################################
 
 
 if want ln update ln, done
-ch bg of self like in start of init
+ch bg of self like in start of init not done
+
+fixed move_many_lines(), done
+is faster, uses same as center_view
 
 
+* walk_scope absolutely next bind no work linux windows done
+	parenleft right
 
-* walk_scope absolutely next bind no work linux windows fixed
-parenleft right
 
+editor remember geometry in conf, done
+	update help
+	self.change_geometry()
 
 
 
 cursor is in multiline string does not always work
 because strings tag are not updated correctly
 check insert triples, then write in them couple lines
+check_line print scope
 
+
+
+
+list tree of deflines
+
+
+line is defline use defline tag
+
+
+walk_scope no absolut is broken
+
+
+if 'srings' in 
+--> get tag_prevrange and update pos in while loop
+continue
 
 
 
@@ -29,6 +51,10 @@ check insert triples, then write in them couple lines
 ################
 definition tag
 fix indent if async in update ins tokens
+use flag
+
+changed get_scope_start
+fix walk_scope etc
 
 count max ind depth in check indent
 if > then update maxind and update ind tags in all tabs
@@ -38,14 +64,8 @@ if > then update maxind and update ind tags in all tabs
 get scope path:
 
 	#this speeds up getting path, but need to get first defline 
-	get first defline using old method:
-		
-		#this speeds up when there is long scope at indent0(like class Editor)
-		count indent, if line has indent1:
-			get tagprevrange(indent0)
-		else:
-			continue getting first defline
-			
+	get first defline using old method
+					
 	get rest of path using new method:
 		get tagprevrange(indent?)
 
@@ -59,10 +79,11 @@ get scope path:
 get_tokens(self, tab, update=False):
 		''' Get syntax-tokens for insert_tokens()
 
-	fix this		Called from: walk_tabs
+	fix this	-->	Called from: walk_tabs
 			
 
-detect slow machine
+detect slow machine, no?
+self.set_flag_machine_is_slow(True)
 
 
 
