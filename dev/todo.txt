@@ -13,14 +13,24 @@ ch bg of self like in start of init not done
 fixed move_many_lines(), done
 is faster, uses same as center_view
 
+rename
+apply_config --> config_tabs, done
+
+(Shift)-Home/End --> goto/selectto linestart/end, done
+
+
 
 * walk_scope absolutely next bind no work linux windows done
 	parenleft right
 
+changed binds between rising and diving walk_scope, done
+help done
+reason: normally there is no deep nesting.
+--> 'easier' bind first
 
 editor remember geometry in conf, done
 	update help
-	self.change_geometry()
+	self.use_geometry()
 
 
 
@@ -29,6 +39,12 @@ because strings tag are not updated correctly
 check insert triples, then write in them couple lines
 check_line print scope
 
+
+
+when closing tab ctrl-d check if bookmarks
+--> ask confirmation with messabox
+--> prevent mistakenly closing tabs and loosing bookmarks
+in del_tab open_file
 
 
 
@@ -1034,6 +1050,14 @@ win10 left
 262144
 win11 left
 262152
+win11 Home/End
+262152
+
+guessing this not tested:
+win10 Home/End
+262144
+
+
 
 linux and macos
 plain a	==0

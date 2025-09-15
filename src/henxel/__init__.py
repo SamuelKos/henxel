@@ -45,6 +45,7 @@
 ############ Imports Begin
 
 # From standard library
+import tkinter.messagebox
 import tkinter.font
 import tkinter
 import pathlib
@@ -724,8 +725,21 @@ class Editor(tkinter.Toplevel):
 
 
 			#################
-			self.apply_config()
+			self.frame.config(bg=self.bgcolor)
 
+			# Configure Text-widgets of tabs and find active tab
+			self.config_tabs()
+
+			##############################
+			# self.contents gets defined #
+			##############################
+			for tab in self.tabs:
+				if tab.active: self.contents = tab.text_widget
+
+
+
+			msg_defaults = dict(parent=self.frame, type='okcancel')
+			self.msgbox = tkinter.messagebox.Message(**msg_defaults)
 
 			# Needed in leave() taglink in: Run file Related
 			self.name_of_cursor_in_text_widget = self.contents['cursor']
@@ -958,6 +972,7 @@ class Editor(tkinter.Toplevel):
 			############
 			self.set_bindings_other()
 			############
+
 
 
 			############
@@ -1794,12 +1809,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind( "<Control-Shift-Up>", self.move_many_lines)
 			w.bind( "<Control-Shift-Down>", self.move_many_lines)
 
-			w.bind( "<Control-8>", self.walk_scope)
-			w.bind( "<Control-Shift-parenleft>",
+			w.bind( "<Control-Shift-parenleft>", self.walk_scope)
+			w.bind( "<Control-8>",
 				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
-			w.bind( "<Control-9>",
-				lambda event: self.walk_scope(event, **{'down':True}) )
 			w.bind( "<Control-Shift-parenright>",
+				lambda event: self.walk_scope(event, **{'down':True}) )
+			w.bind( "<Control-9>",
 				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
 
 			w.bind( "<Alt-Shift-F>", self.select_scope)
@@ -1828,12 +1843,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# 8,9 as '(' and ')' without Shift, nordic key-layout
 			# 9,0 in us/uk ?
-			w.bind( "<Mod1-Key-8>", self.walk_scope)
-			w.bind( "<Mod1-Shift-(>",
+			w.bind( "<Mod1-Shift-(>", self.walk_scope)
+			w.bind( "<Mod1-Key-8>",
 				lambda event: self.walk_scope(event, **{'absolutely_next':True}) )
-			w.bind( "<Mod1-Key-9>",
-				lambda event: self.walk_scope(event, **{'down':True}) )
 			w.bind( "<Mod1-Shift-)>",
+				lambda event: self.walk_scope(event, **{'down':True}) )
+			w.bind( "<Mod1-Key-9>",
 				lambda event: self.walk_scope(event, **{'down':True, 'absolutely_next':True}) )
 
 			w.bind( "<Mod1-Shift-F>", self.select_scope)
@@ -1930,6 +1945,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.unbind_class('Text', '<<SelectLineEnd>>')
 		w.unbind_class('Text', '<<SelectLineStart>>')
 
+		# Binded after linestart/end unbinds, just in case
+		w.bind( "<Home>", self.goto_linestart)
+		w.bind( "<End>", self.goto_lineend)
+		w.bind( "<Shift-Key-Home>", self.goto_linestart)
+		w.bind( "<Shift-Key-End>", self.goto_lineend)
 
 		# Remove some unwanted key-sequences, which otherwise would
 		# mess with searching, from couple of virtual events.
@@ -2205,6 +2225,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.contents.delete('1.0', tkinter.END)
 			self.bell()
 			return 'break'
+
+
+		# Prevent loosing bookmarks when mistakenly pressed ctrl-d
+		# --> Ask confirmation if tab have bookmarks
+		tests = ( len(oldtab.bookmarks) > 0,
+				oldtab.type == 'normal' or hasattr(oldtab, 'inspected')
+				)
+		if all(tests):
+			msg_options = dict(message='Current tab has bookmarks',
+				detail='Will loose those bookmarks, close anyway?')
+			res = self.msgbox.show(**msg_options)
+			if res == 'cancel':
+				return 'break'
 
 
 		if oldtab.type == 'normal' and save:
@@ -2564,7 +2597,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				background=self.bgcolor, insertbackground=self.fgcolor)
 
 
-	def apply_config(self):
+	def config_tabs(self):
 
 		if self.tabindex == None:
 
@@ -2580,11 +2613,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.tabs[self.tabindex].active = True
 
 
-		self.frame.config(bg=self.bgcolor)
-
-		for tab in self.tabs:
-			self.set_textwidget(tab)
-			if tab.active: self.contents = tab.text_widget
+		for tab in self.tabs: self.set_textwidget(tab)
 
 
 ########## Configuration Related End
@@ -2996,7 +3025,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 									try:
 										self.tags[tagname].append((token.start, token.end))
 									except KeyError:
-										print(token.start, token.end)
+										print(tagname, linenum + token.start[0],
+										token.start[1], '-', token.end[1], '\n',
+										token.line)
 
 								flag_async = False
 
@@ -3236,7 +3267,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Syntax highlight End
 ########## Theme Related Begin
 
-	def change_geometry(self, geom_string):
+	def use_geometry(self, geom_string):
 		'''
 			To let window-manager handle positioning and size of the editor,
 			use one of: False, 0 or '' as geom_string
@@ -4456,6 +4487,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if event.state not in [ 5, 262157, 262149 ]:
 				e = '<<PrevLine>>'
 
+
 			for i in range(10):
 				# Add some delay to get visual feedback
 				if 'Select' in e:
@@ -5108,7 +5140,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Note: command-shift-a or e not binded.
 
 		# If want selection:
-		if event.state in [ 5, 105, 13 ]:
+		if event.state in [ 1, 5, 105, 13, 262145, 262153 ]:
 			want_selection = True
 			i = self.contents.index(tkinter.INSERT)
 
@@ -5184,23 +5216,26 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		have_selection = False
 		want_selection = False
 
-		# ctrl-(shift)?-a or e
-		# and cmd-a or e in macOS
+		# (shift)?-Home/End
+		# ctrl-(shift)?-a/e
+		# cmd-a/e
 
 		# If want selection:
 
 		# Pressed also shift, so adjust selection
 		# Linux, macOS state:
-		# ctrl-shift == 5
+		# shift == 1 (has and uses Home/End keys)
+		# ctrl-shift(a/e) == 5
 
-		# Windows state:
-		# ctrl-shift == 13
+		# Windows states:
+		# shift-Home/End == 262145(win10), 262153(win11)
+		# ctrl-shift(a/e) == 13
 
 		# Also in mac_OS:
 		# command-shift-arrowleft or right == 105
 		# Note: command-shift-a or e not binded.
 
-		if event.state in [ 5, 105, 13 ]:
+		if event.state in [ 1, 5, 105, 13, 262145, 262153 ]:
 			want_selection = True
 
 		# Ctrl/Cmd-a/e
@@ -7547,6 +7582,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.entry.insert(0, curtab.filepath)
 				self.entry.xview_moveto(1.0)
 
+		self.contents.focus_set()
 		return
 
 
@@ -7561,7 +7597,29 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		elif self.tabs[self.tabindex].type == 'normal':
+		curtab = self.tabs[self.tabindex]
+
+		# Prevent loosing bookmarks mistakenly
+		# --> Ask confirmation if tab have bookmarks
+		tests = ( len(curtab.bookmarks) > 0,
+				curtab.type == 'normal' or hasattr(curtab, 'inspected')
+				)
+		if all(tests):
+			msg_options = dict(message='Current tab has bookmarks',
+				detail='Will loose those bookmarks if choose to continue, continue anyway?')
+			res = self.msgbox.show(**msg_options)
+			if res == 'cancel':
+				self.entry.delete(0, tkinter.END)
+
+				if curtab.filepath != None:
+					self.entry.insert(0, curtab.filepath)
+					self.entry.xview_moveto(1.0)
+
+				self.contents.focus_set()
+				return 'break'
+
+
+		if curtab.type == 'normal':
 			if not self.save(activetab=True):
 				self.bell()
 				return 'break'

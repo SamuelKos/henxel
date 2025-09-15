@@ -88,14 +88,14 @@
 		
 		# Not often needed:
 		Ctrl-89
-			walk scopes (with rising tendency)
-			8 goto next(up) defline
-			9 goto next(down) defline
-
+			Walk definition lines
+		 	8 goto absolutely next(up) defline
+			9 goto absolutely next(down) defline
+		
 		Ctrl-Shift-()
-			walk scopes (with diving tendency)
-		 	( goto absolutely next(up) defline
-			) goto absolutely next(down) defline
+			Walk definition lines (jump over lower levels)
+			( goto next(up) defline
+			) goto next(down) defline
 
 		
 		Alt-Shift-E		toggle, elide scope, if cursor is on defline
@@ -246,30 +246,30 @@
 
 
 	How to: set editor size and position
-	  - help(e.change_geometry)
+	  - help(e.use_geometry)
 	  - Editor is normally using default size and positioned on top-right corner
 	  - One can choose to let window manager do everything with:
-		  e.change_geometry(False)
+		  e.use_geometry(False)
 	  - Restore default setting:
-		  e.change_geometry('default')
+		  e.use_geometry('default')
 		
 	  - Get current(and efective) setting
 		  e.geometry()
 		
 	  - Change position (to top-left corner)
-		(note using of geometry instead of change_geometry, this is for
+		(note using of geometry instead of use_geometry, this is for
 		some reasons. One can play with this, and once happy give full
 		geometry_string as in Usage Example below)
 		  e.geometry('+0+0')
 		
 	  - Change size
-		(note using of geometry instead of change_geometry, this is for
+		(note using of geometry instead of use_geometry, this is for
 		some reasons. One can play with this, and once happy give full
 		geometry_string as in Usage Example below)
 		  e.geometry('881x600')
 		
 	  - Change size and position
-		  e.change_geometry('881x600+0+50')
+		  e.use_geometry('881x600+0+50')
 		  This setting will then be used at next startup onwards.		
 	  
 	  Usage Example
@@ -278,7 +278,7 @@
 	  something like: '881x600+0+50'
 	  Copy this string, with for example: my_geom_string=e.geometry()
 	  And use it to change geometry at future startups with:
-	  e.change_geometry(my_geom_string)
+	  e.use_geometry(my_geom_string)
 
 		
 	How to: expand word
