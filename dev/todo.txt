@@ -13,6 +13,23 @@ ch bg of self like in start of init not done
 fixed move_many_lines(), done
 is faster, uses same as center_view
 
+not done:
+If still is slow, use (Shift)-PgUp/PgDown
+--> as fast as can get incremental moving/selecting
+(Shift)-Alt-arrow up/down fix for no PgUp/Down keys? ######
+how to know if keyboard has some key?
+update help
+
+
+conf is now saved in sys.prefix without checks, done
+--> enable saving conf when not in venv
+update help, readme done
+
+
+# enable getting branch when not using git
+self.set_version_control_cmd('some command as string') ####
+
+
 rename
 apply_config --> config_tabs, done
 
@@ -45,6 +62,40 @@ when closing tab ctrl-d check if bookmarks
 --> ask confirmation with messabox
 --> prevent mistakenly closing tabs and loosing bookmarks
 in del_tab open_file
+
+ctrl-shift-Q no ask
+
+
+#####
+decoration instead of linenumbers in ln_widget?
+user editable
+	o
+   o
+  o
+ o
+o
+ o
+  o
+   o
+    o
+#####
+
+
+
+
+Use this:
+e.tk.eval(f'{e.tcl_name_of_contents} dump -tag 2222.0 2228.0')
+--> 'tagon keywords 2222.2 tagoff keywords..' 
+
+r = dict()
+d = e.contents.dump('2222.0', '2228.0', tag=True)
+for t in d:
+	cur_val = r.setdefault(t[1], f'tag add {t[1]}')
+	r[t[1]]= cur_val + f' {t[2]}'
+
+[('tagon', 'keywords', '2222.2'), ('tagoff', 'keywords', '2222.4'),..
+
+
 
 
 

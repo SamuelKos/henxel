@@ -77,6 +77,9 @@
 		Cmd-up			Move 10 more line up
 		Cmd-down		Move 10 more line down
 		
+		If have PgUp/Down -keys, use them (with Shift)
+		to move/select faster
+		
 		Alt-left  		Move cursor one word left
 		Alt-right 		Move cursor one word right
 		Alt-shift-left 	Select one more word to left
@@ -169,8 +172,9 @@
 		in which python console was launched. So if you have say two
 		different envs in the same directory, they will have separate confs.
 		
-	  - Configuration is not saved if editor was not launched from
-		virtual environment.
+	  - If editor was not launched from virtual environment,
+		configuration is saved in home-directory. This means editor
+		can also be used in 'normal' python environment.
 		
 	  - If editor was launched inside a directory what is being
 		version-controlled with git, the current git-branch will be shown

@@ -456,10 +456,16 @@ class Editor(tkinter.Toplevel):
 			self.oldconf = None
 			self.tab_char = TAB_WIDTH_CHAR
 
+			################################
+			# editor.cnf is read from here #
+			################################
+			# if in venv, put conf in venv-dir
 			if sys.prefix != sys.base_prefix:
 				self.env = sys.prefix
+			# if not, in home-dir
 			else:
-				self.env = None
+				self.env = pathlib.Path().home()
+
 
 			self.tabs = list()
 			self.tabindex = None
@@ -605,9 +611,9 @@ class Editor(tkinter.Toplevel):
 
 			if self.flags and self.flags.get('test_skip_conf') == True: pass
 			else:
-				if self.env: p = pathlib.Path(self.env) / CONFPATH
+				p = pathlib.Path(self.env) / CONFPATH
 
-				if p and p.exists():
+				if p.exists():
 					try:
 						with open(p, 'r', encoding='utf-8') as f:
 							string_representation = f.read()
@@ -2229,7 +2235,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Prevent loosing bookmarks when mistakenly pressed ctrl-d
 		# --> Ask confirmation if tab have bookmarks
-		tests = ( len(oldtab.bookmarks) > 0,
+		tests = ( save == True and len(oldtab.bookmarks) > 0,
 				oldtab.type == 'normal' or hasattr(oldtab, 'inspected')
 				)
 		if all(tests):
@@ -2376,16 +2382,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if string_representation == self.oldconf:
 			return
 
-		if self.env:
-			p = pathlib.Path(self.env) / CONFPATH
-			try:
-				with open(p, 'w', encoding='utf-8') as f:
-					f.write(string_representation)
-			except EnvironmentError as e:
-				print(e.__str__())
-				print('\nCould not save configuration')
-		else:
-			print('\nNot saving configuration when not in venv.')
+		p = pathlib.Path(self.env) / CONFPATH
+		try:
+			with open(p, 'w', encoding='utf-8') as f:
+				f.write(string_representation)
+		except EnvironmentError as e:
+			print(e.__str__())
+			print('\nCould not save configuration')
 
 
 	def load_config(self, data):

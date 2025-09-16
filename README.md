@@ -38,7 +38,7 @@ If no error, it is installed. If it throws an error you have to install it from 
 ```
 
 # About virtual environment, optional but highly recommended
-Consider creating virtual environment for your python-projects and installing python packages like this editor to it. Editor will not save your configuration if it was not launched from virtual environment. In debian you have to first install this package: python3-venv:
+Consider creating virtual environment for your python-projects and installing python packages like this editor to it. In debian you may have to first install this package: python3-venv:
 
 ```console
 ~$ sudo apt install python3-venv
@@ -121,7 +121,7 @@ and then install henxel to it without anything else.
 (env) ~/myproject$ pip install henxel
 ```
 
-or to install system-wide, not recommended. You need first to install pip from OS-repository:
+To install system-wide, (You may need first to install pip from OS-repository):
 
 ```console
 ~/myproject$ pip install henxel
