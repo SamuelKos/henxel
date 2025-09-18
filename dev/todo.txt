@@ -4,7 +4,20 @@
 Below this: not done ################################################
 
 
-* help ctrl-q, chk cmd-q, done
+help ctrl-q, chk cmd-q, done
+
+fixed no can bookmark when goto_def, done
+
+
+check use_geometry in win11, macos, not done
+
+
+tab_has_syntax_error(), not done
+checks all open py-files with ast
+is setting
+off by default, to set:
+check_syntax_on_exit(setting=[False,True,'current'])
+use also when debug? (and remove package_has_syntax_error() )
 
 
 if want ln update ln, done
@@ -58,11 +71,10 @@ check_line print scope
 
 
 
-when closing tab ctrl-d check if bookmarks
+when closing tab ctrl-d check if bookmarks, done
 --> ask confirmation with messabox
 --> prevent mistakenly closing tabs and loosing bookmarks
 in del_tab open_file
-
 ctrl-shift-Q no ask
 
 
@@ -81,20 +93,51 @@ o
 #####
 
 
+gotodef
+no can bookmark, fixed
+tag line? flash with animate?
+
+kill line, put cursor at old idx linestart ###############
+yank, but delete selection
+ctrl-k
 
 
-Use this:
-e.tk.eval(f'{e.tcl_name_of_contents} dump -tag 2222.0 2228.0')
---> 'tagon keywords 2222.2 tagoff keywords..' 
+#######################################################
+#######################################################
+save tag-cache for all py files
+chk_sum: len(file), saved in conf
 
-r = dict()
-d = e.contents.dump('2222.0', '2228.0', tag=True)
-for t in d:
-	cur_val = r.setdefault(t[1], f'tag add {t[1]}')
-	r[t[1]]= cur_val + f' {t[2]}'
+# 700ms  rpi1 no compressing,	no file writing
+# 800ms  rpi1 no compressing,  yes file writing
+# 1400ms rpi1 with compressing, no file writing
+# 1400ms rpi1 with compressing and file writing
+# --> file writing takes almost no time
+# --> compressing takes some time when slow machine
+# --> choosing not to use compression
 
-[('tagon', 'keywords', '2222.2'), ('tagoff', 'keywords', '2222.4'),..
 
+tcl dictionary crash course
+e.tk.eval('set mydict {}')
+e.tk.eval('dict set mydict mykey "myvalue"')
+e.tk.eval('dict get $mydict mykey')
+
+{
+	{
+	fpath1  {
+			{tag1 {idx1 idx2..} {tag2 {idx1 idx2..}..
+			}
+	}
+	
+	{
+	fpath2  {
+			{tag1 {idx1 idx2..} {tag2 {idx1 idx2..}..
+			}
+	}
+	..
+}
+
+#######################################################
+#######################################################
 
 
 

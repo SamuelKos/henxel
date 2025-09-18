@@ -113,7 +113,7 @@
 			Ctrl-n  Next match
 			Ctrl-p  Prev match
 			-	Copying text to clipboard is possible with yank-line etc.
-			-	Add bookmark is possible so is goto_def. Ctrl-np -> back to matches
+			-	Add bookmark is possible so is Goto def. Ctrl-np -> back to matches
 			-	Changing the replacement string is possible while replacing.
 			-	1: Press Space to exit search to focus.
 				2: Double-click to exit to cursor.
@@ -239,10 +239,10 @@
 	  - Of function in current tab with Cmd/Alt-g
 		when cursor is at or in between: self.<INS>walk_scop<INS>e
 		(or if there is selection, uses it)
-		
 	  - Can be done also while searching,
 		just press Ctrl-np to get back to matches, because esc will exit search
-		
+	  - Bookmarks can be created
+	
 	
 	Selection
 	  - Long selection: if cursor is not visible,

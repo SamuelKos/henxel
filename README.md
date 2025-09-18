@@ -12,7 +12,7 @@ GUI-editor for Python development. Tested to work with Debian 12, Windows 10 and
 * Line numbering
 * Tabbed editing
 * Tab-completion
-* Inspect object
+* Inspect module
 * Show git-branch
 * Run current file
 * Search - Replace
@@ -22,6 +22,7 @@ GUI-editor for Python development. Tested to work with Debian 12, Windows 10 and
 * Click to open errors
 * Parenthesis checking
 * Persistent configuration
+* etc
 
 
 # Prerequisites in Linux

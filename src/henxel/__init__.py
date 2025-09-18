@@ -172,6 +172,7 @@ class Tab:
 			oldcontents,
 			position,
 			type		String
+			chk_sum		Integer
 			text_widget tkinter.Text
 			bookmarks	List
 		'''
@@ -182,6 +183,7 @@ class Tab:
 		self.oldcontents = ''
 		self.position = '1.0'
 		self.type = 'newtab'
+		self.chk_sum = 0
 		self.bookmarks = list()
 		self.text_widget = None
 		self.tcl_name_of_contents = ''
@@ -894,7 +896,6 @@ class Editor(tkinter.Toplevel):
 			self.init_syntags()
 
 
-
 			# Create tabs for help and error pages
 			newtab = Tab()
 			self.set_textwidget(newtab)
@@ -919,10 +920,9 @@ class Editor(tkinter.Toplevel):
 			self.err_tab.text_widget.see(newtab.position)
 			self.set_bindings(newtab)
 			self.err_tab.text_widget['yscrollcommand'] = lambda *args: self.sbset_override(*args)
-			###
 
 
-
+			tags_from_cache = list()
 			for tab in self.tabs:
 
 				self.set_syntags(tab)
@@ -946,11 +946,14 @@ class Editor(tkinter.Toplevel):
 					if self.can_do_syntax(tab):
 						self.update_lineinfo(tab)
 
-						a = self.get_tokens(tab)
-						t1 = int(self.root.tk.eval('clock seconds'))
-						self.insert_tokens(a, tab=tab) ##### this takes times
-						t2 = int(self.root.tk.eval('clock seconds'))
-						print(t2-t1, 's')
+						# if length of file has changed
+						# count tokens from scratch
+						if tab.chk_sum != len(tab.contents):
+							print(tab.filepath, tab.chk_sum, len(tab.contents))
+							a = self.get_tokens(tab)
+							self.insert_tokens(a, tab=tab)
+						else:
+							tags_from_cache.append(tab)
 
 
 				self.set_bindings(tab)
@@ -958,7 +961,14 @@ class Editor(tkinter.Toplevel):
 				tab.text_widget.edit_reset()
 				tab.text_widget.edit_modified(0)
 
-
+			######################
+			# Load tags from cache whenever possible
+			# --> init takes much less time
+			if len(tags_from_cache) > 0:
+				t1 = int(self.root.tk.eval('clock milliseconds'))
+				self.load_tags(tags_from_cache)
+				t2 = int(self.root.tk.eval('clock milliseconds'))
+				print(t2-t1, 'ms')
 
 			curtab = self.tabs[self.tabindex]
 
@@ -979,7 +989,7 @@ class Editor(tkinter.Toplevel):
 			self.set_bindings_other()
 			############
 
-
+			curtab.text_widget.bind( "<Alt-o>", self.test_bind)
 
 			############
 			# Get window positioning with geometry call to work below
@@ -1188,8 +1198,17 @@ Error messages Begin
 		return 'break'
 
 
-	def test_bind(self, event=None):
-		print('jou')
+	def test_bind(self, event=None, f=1):
+
+		def f1(self=self):
+			pass
+
+		def f2(self=self):
+			pass
+
+		return
+		#print('jou')
+		#return 'break'
 
 
 	def skip_bindlevel(self, event=None):
@@ -1373,6 +1392,26 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return success_all
 
 
+	def tab_has_syntax_error(self):
+		#flag_cancel = False
+
+		for tab in self.tabs:
+			if tab.filepath:
+				if '.py' in tab.filepath.suffix:
+
+					try:
+						ast.parse(tab.contents, filename=tab.filepath.resolve())
+
+					except Exception as e:
+						err = '\t' +  e.__str__() + '\n'
+						print( '\nIn: ', tab.filepath.resolve().__str__() )
+						print(err)
+						#flag_cancel = True
+						continue
+
+		#return flag_cancel
+
+
 	def package_has_syntax_error(self):
 		flag_cancel = False
 
@@ -1465,6 +1504,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		del self.expander
 		del self.popup
 		del self.frame
+		del self.msgbox
 
 
 	def quit_me(self, event=None, quit_debug=False, restart=False):
@@ -2466,7 +2506,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					'filepath',
 					'position',
 					'type',
-					'bookmarks'
+					'bookmarks',
+					'chk_sum'
 					)
 
 
@@ -7679,6 +7720,84 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
+	def load_tags(self, tab_list):
+		''' load tags from cache-file at startup
+			Called from __init__()
+		'''
+		# When have little over 10k lines(all lines counted, also empty)
+		# tagging syntax with rpi1 using
+		# A: normal insert_tokens() takes 22-24s
+		# B: cache with tcl load_tags() takes 1.5s
+		# --> use cache
+
+		# build tcl-dict: {key1 value1 key2 value2}
+		# {myfile.py .!editor.!frame.!text2..}
+		filedict = '{'
+		for tab in tab_list:
+			fpath = tab.filepath.resolve()
+			tk_wid = tab.tcl_name_of_contents
+			filedict += f'{fpath} {tk_wid} '
+		# remove trailing space just in case
+		filedict = filedict[:-1]
+		filedict += '}'
+
+		self.tk.eval('''
+		set cache_path [file normalize ~/editor.tag]
+		set ch [open $cache_path r]
+		set taginfo [read $ch]
+		close $ch
+		set filedict %s
+		foreach fpath [dict keys $filedict] {
+			set wid [dict get $filedict $fpath]
+			set tag_dict [dict get $taginfo $fpath]
+			foreach tag [dict keys $tag_dict] {
+				set tag_list [dict get $tag_dict $tag]
+				set taglen [llength $tag_list]
+				if {$taglen > 0} {eval "$wid tag add $tag $tag_list"}
+			}
+		}
+		''' % filedict )
+
+
+	def save_tags(self):
+		''' save tags to cache-file
+			Called from save_forced()
+		'''
+		# save tags at exit
+		###############
+		# build tcl-dict: {key1 value1 key2 value2}
+		# {myfile.py .!editor.!frame.!text2..}
+		filedict = '{'
+		for tab in self.tabs:
+			if tab.filepath:
+				if '.py' in tab.filepath.suffix:
+					tab.chk_sum = len(tab.contents)
+					fpath = tab.filepath.resolve()
+					tk_wid = tab.tcl_name_of_contents
+					filedict += f'{fpath} {tk_wid} '
+		# remove trailing space just in case
+		filedict = filedict[:-1]
+		filedict += '}'
+
+
+		#set myzip [zlib compress [encoding convertto utf-8 $taginfo]]
+		tags = ' '.join(self.tagnames)
+		self.tk.eval('''
+		set cache_path [file normalize ~/editor.tag]
+		set taginfo {}
+		set filedict %s
+		foreach fpath [dict keys $filedict] {
+			set wid [dict get $filedict $fpath]
+			set tag_dict {}
+			foreach tag {%s} {dict set tag_dict $tag [$wid tag ranges $tag]}
+			dict set taginfo $fpath $tag_dict
+			}
+		set ch [open $cache_path w]
+		puts $ch $taginfo
+		close $ch
+		''' % (filedict, tags) )
+
+
 	def save_forced(self):
 		''' Called from run() or quit_me()
 
@@ -7703,9 +7822,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			last_state = self.state
 
 
-
 		res = True
-
 		for tab in self.tabs:
 			if tab.type == 'normal':
 
@@ -7744,8 +7861,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tab.position = '1.0'
 
 
+		self.save_tags()
 		return res
-
 
 
 	def save(self, activetab=False):
@@ -8092,8 +8209,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
-		pos = tkinter.INSERT
-		if self.state != 'normal':
+		pos = 'insert'
+		if self.state in ('search', 'replace'):
 			# 'focus'
 			pos = self.search_focus[0]
 

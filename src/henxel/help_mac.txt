@@ -113,7 +113,7 @@
 			Ctrl-n  Next match
 			Ctrl-p  Prev match
 			-	Copying text to clipboard is possible with yank-line etc.
-			-	Add bookmark is possible so is goto_def. Ctrl-np -> back to matches
+			-	Add bookmark is possible so is Goto def. Ctrl-np -> back to matches
 			-	Changing the replacement string is possible while replacing.
 			-	1: Press Space to exit search to focus.
 				2: Double-click to exit to cursor.
@@ -235,15 +235,23 @@
 	  - Of function in current tab with Cmd/Alt-g
 		when cursor is at or in between: self.<INS>walk_scop<INS>e
 		(or if there is selection, uses it)
-		
 	  - Can be done also while searching,
-		just press Control-np to get back to matches, because esc will exit search
-		
+		just press Ctrl-np to get back to matches, because esc will exit search
+	  - Bookmarks can be created also when in Goto def
+	
 	
 	Selection
 	  - Long selection: if cursor is not visible,
 		to show wanted side of selection, toggle left/right -keys
 
+	
+	How to: set bookmark while searching/replacing/goto def:
+	  - While searching/replacing and want to bookmark current match-line,
+		just press Cmd/Alt-p
+		
+	  - When Goto def, or want to bookmark other than current match-line,
+		Click with mouse to line of interest and press Cmd/Alt-p
+	
 	
 	How to: set editor size and position
 	  - help(e.use_geometry)
