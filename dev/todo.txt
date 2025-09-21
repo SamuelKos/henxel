@@ -17,7 +17,9 @@ copy whole lines
 
 
 popup
-inspect -->  open mod
+inspect -->  open mod, done
+
+
 no selection like goto def
 ( cursor is at or in between:
 self.<INS>walk_scop<INS>e )

@@ -602,7 +602,7 @@ class Editor(tkinter.Toplevel):
 				self.popup.add_command(label="   uncomment", command=self.uncomment)
 
 			self.popup.add_command(label="  select all", command=self.select_all)
-			self.popup.add_command(label="     inspect", command=self.insert_inspected)
+			self.popup.add_command(label="    open mod", command=self.insert_inspected)
 			self.popup.add_command(label="      errors", command=self.show_errors)
 			self.popup.add_command(label="        help", command=self.help)
 
@@ -952,7 +952,7 @@ class Editor(tkinter.Toplevel):
 ##						self.insert_tokens(a, tab=tab)
 ##						t2 = int(self.root.tk.eval('clock seconds'))
 ##						print(t2-t1, 's')
-##						###
+						###
 
 
 						# if length of file has changed
@@ -7249,9 +7249,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def goto_def(self, event=None):
 		''' Get word under cursor or use selection and
 			go to function definition
+
+			Example: search definition of method: is_pyfile()
+			A: Using selection:
+			 self.is_pyfile
+			 lf.is_pyfile
+			 is_pyfile
+
+			B: Using shortcut without selection when (easiest way)
+			cursor is at or in between
+			self.i<INS>s_pyfile<INS>
+
+			Works also when searching/replacing, just press Alt-g
+			on match, or select function of interest
 		'''
 
-		if (not self.is_pyfile()) or (self.state not in ['normal', 'search']):
+		if (not self.is_pyfile()) or (self.state not in ['normal', 'search', 'replace']):
 			self.bell()
 			return 'break'
 
@@ -7259,12 +7272,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		have_selection = len(c.tag_ranges('sel')) > 0
 
 
+		p = 'insert'
+		if self.state in ('search', 'replace'):
+			# 'focus'
+			p = self.search_focus[1]
+
+
 		if have_selection:
 			word_at_cursor = c.selection_get()
 		else:
-			word_at_cursor = c.get('insert wordstart', 'insert wordend')
+			word_at_cursor = c.get(f'{p} -1c wordstart', f'{p} -1c wordend')
 
 		word_at_cursor = word_at_cursor.strip()
+		if '.' in word_at_cursor:
+			word_at_cursor = word_at_cursor.split('.')[1]
 
 		if word_at_cursor == '':
 			return 'break'
@@ -9919,6 +9940,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.entry.icursor(tkinter.END)
 
 
+		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		patt = 'Search: '
 		self.entry.insert(0, patt)
 		self.entry.config(validate='key', validatecommand=self.validate_search)
