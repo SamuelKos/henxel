@@ -51,6 +51,7 @@
 		Ctrl-v  Paste
 		Ctrl-x  Cut
 		Ctrl-y  Copy current line without newline, (yank line)
+		Ctrl-k  Delete from insert to line end, (does not copy)
 		Ctrl-z  Undo
 		Ctrl-Z  Redo
 		

@@ -51,6 +51,7 @@
 		Cmd-v  Paste
 		Cmd-x  Cut
 		Cmd-y  Copy current line without newline, (yank line)
+		Ctrl-k  Delete from insert to line end, (does not copy)
 		Cmd-z  Undo
 		Cmd-Z  Redo
 		

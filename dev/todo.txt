@@ -4,9 +4,41 @@
 Below this: not done ################################################
 
 
+kill line from insert to line-end, ctrl-k
+default text-class bind, just update help, done
+
+
+analyze tokens /dev/token_stats.py
+
+
+check copy paste overrides
+check with defaults?
+copy whole lines
+
+
+popup
+inspect -->  open mod
+no selection like goto def
+( cursor is at or in between:
+self.<INS>walk_scop<INS>e )
+-->
+( cursor is at or in between:
+self.<INS>walk_scope<INS> )
+or
+( cursor is at or in between:
+self.w<INS>alk_scope<INS> )
+
+
+
+last_token = self.LastToken()
+put last_token.end in LastToken
+
+
+
 help ctrl-q, chk cmd-q, done
 
 fixed no can bookmark when goto_def, done
+flash with flash_line(), done
 
 
 check use_geometry in win11, macos, not done
@@ -91,15 +123,6 @@ o
    o
     o
 #####
-
-
-gotodef
-no can bookmark, fixed
-tag line? flash with animate?
-
-kill line, put cursor at old idx linestart ###############
-yank, but delete selection
-ctrl-k
 
 
 #######################################################

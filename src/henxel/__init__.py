@@ -946,6 +946,15 @@ class Editor(tkinter.Toplevel):
 					if self.can_do_syntax(tab):
 						self.update_lineinfo(tab)
 
+						###
+##						a = self.get_tokens(tab)
+##						t1 = int(self.root.tk.eval('clock seconds'))
+##						self.insert_tokens(a, tab=tab)
+##						t2 = int(self.root.tk.eval('clock seconds'))
+##						print(t2-t1, 's')
+##						###
+
+
 						# if length of file has changed
 						# count tokens from scratch
 						if tab.chk_sum != len(tab.contents):
@@ -2827,39 +2836,30 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	class LastToken:
 		''' Dummy helper class, used in insert_tokens and update_tokens
-			to prevent error with line:
-
-				if last_token.type == tokenize.NAME:
+			to prevent error
 
 			when brace-opener (,[ or { is first character of py-file
 
 		'''
 		type = 999
+		end = (-1, -1)
 
 
 	def insert_tokens(self, tokens, tab=None):
 		''' Syntax-highlight text
 
-			syntax-tokens are from get_tokens()
+			Syntax-tokens are from get_tokens()
+			Percentages were counted using dev/token_stats.py
 
 			Called from: update_tokens, walk_tabs, etc
 		'''
-
-##		# If not viewchange(contents is not deleted)
-##		# Remove old tags:
-##		for tag in self.tagnames:
-##			self.contents.tag_remove( tag, '1.0', 'end')
-
 
 		if not tab:
 			tab = self.tabs[self.tabindex]
 
 		patt = f'{tab.tcl_name_of_contents} tag add '
-		flag_err = False
-		par_err = None
-		check_pars = False
 		flag_async = False
-		last_token = self.LastToken()
+		last_name = self.LastToken()
 
 
 		for tag in self.tagnames: self.tags[tag].clear()
@@ -2867,9 +2867,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		try:
 			for token in tokens:
 
-				if token.type == tokenize.NAME:
+				# Over 30% of all tokens
+				if token.type == tokenize.OP:
 
-					if self.keywords.get(token.string):
+					if token.exact_type != tokenize.LPAR: continue
+
+					# Calls
+					else:
+						# Need to know if absolutely last token was NAME:
+						if token.start == last_name.end:
+							self.tags['calls'].append((last_name.start, last_name.end))
+
+				# 30% of all tokens
+				elif token.type == tokenize.NAME:
+					last_name = token
+
+					if not self.keywords.get(token.string): continue
+					else:
 
 						if token.string == 'self':
 							self.tags['selfs'].append((token.start, token.end))
@@ -2893,6 +2907,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 							if token.string == 'async':
 								# line, col of tag start
 								# save line of async for check, in elif below
+								# (tokenizer starts at line number 1)
 								flag_async, ind_depth = token.start
 								tagname = f'defline{ind_depth}'
 								self.tags[tagname].append((token.start, token.end))
@@ -2906,16 +2921,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 								flag_async = False
 
 
-				# Calls
-				elif token.exact_type == tokenize.LPAR:
-					# Need to know if last char before '(' was not empty.
-					# token.line contains line as string which contains token.
-					# Previously used test was:
-					#prev_char_idx = token.start[1]-1
-					#if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
-					if last_token.type == tokenize.NAME:
-						self.tags['calls'].append((last_token.start, last_token.end))
-
+				# These three are only about 10% in total
 				elif token.type == tokenize.STRING:
 					self.tags['strings'].append((token.start, token.end))
 
@@ -2925,35 +2931,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				elif token.type == tokenize.NUMBER:
 					self.tags['numbers'].append((token.start, token.end))
 
-				last_token = token
+				else: continue
 
-				################## END ####################
-
-
-
-		except IndentationError as e:
-##			for attr in ['args', 'filename', 'lineno', 'msg', 'offset', 'text']:
-##				item = getattr( e, attr)
-##				print( attr,': ', item )
-##
-##			print( e.args[0], '\nIndentation errline: ',
-##			self.contents.index(tkinter.INSERT) )
-
-			flag_err = True
-			tab.check_scope = True
+				##############
 
 
-		except tokenize.TokenError as ee:
-
-			if 'EOF in multi-line statement' in ee.args[0]:
-				idx_start = str(last_token.start[0]) + '.0'
-				check_pars = idx_start
-
-
-			elif 'multi-line string' in ee.args[0]:
-				flag_err = True
-				tab.check_scope = True
-
+		except (IndentationError, tokenize.TokenError): pass
 
 
 		#t1 = int(self.root.tk.eval('clock milliseconds'))
@@ -2969,29 +2952,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		#t2 = int(self.root.tk.eval('clock milliseconds'))
 		#print(t2-t1, t1-t0, 'ms')
 
-
-
-		##### Check parentheses ####
-		if check_pars:
-			start_line = check_pars
-			par_err = self.checkpars(start_line, tab)
-
-		# From backspace_override:
-		elif tab.par_err:
-			start_line = False
-			par_err = self.checkpars(start_line, tab)
-
-		tab.par_err = par_err
-
-		if not par_err:
-			# Not always checking whole file for par mismatches, so clear
-			tab.text_widget.tag_remove('mismatch', '1.0', tkinter.END)
-
-			###### Check parentheses end ###########
-
-		if not flag_err:
-			#print('ok')
-			tab.check_scope = False
+		################## insert_tokens END ####################
 
 
 	def update_tokens(self, start=None, end=None, line=None, tab=None):
@@ -3025,15 +2986,31 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		check_pars = False
 		flag_async = False
 		last_token = self.LastToken()
+		last_name = self.LastToken()
 
 		for tag in self.tagnames: self.tags[tag].clear()
-
 		try:
 			for token in tokens:
 
-				if token.type == tokenize.NAME:
+				last_token = token
 
-					if self.keywords.get(token.string):
+				# Over 30% of all tokens
+				if token.type == tokenize.OP:
+
+					if token.exact_type != tokenize.LPAR: continue
+
+					# Calls
+					else:
+						# Need to know if absolutely last token was NAME:
+						if token.start == last_name.end:
+							self.tags['calls'].append((last_name.start, last_name.end))
+
+				# 30% of all tokens
+				elif token.type == tokenize.NAME:
+					last_name = token
+
+					if not self.keywords.get(token.string): continue
+					else:
 
 						if token.string == 'self':
 							self.tags['selfs'].append((token.start, token.end))
@@ -3053,10 +3030,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 							# These below are used only to tag deflines with indentation information,
 							# which is used to make finding scope limits faster for example in walk_scope.
 							# --> if thinking this is not usable, these can simply be removed from here and
-							# insert_tokens, and fixing places were it was actually used
+							# update_tokens, and fixing places were it was actually used
 							if token.string == 'async':
 								# line, col of tag start
 								# save line of async for check, in elif below
+								# (tokenizer starts at line number 1)
 								flag_async, ind_depth = token.start
 								tagname = f'defline{ind_depth}'
 								self.tags[tagname].append((token.start, token.end))
@@ -3072,20 +3050,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 										print(tagname, linenum + token.start[0],
 										token.start[1], '-', token.end[1], '\n',
 										token.line)
-
 								flag_async = False
 
 
-				# Calls
-				elif token.exact_type == tokenize.LPAR:
-					# Need to know if last char before '(' was not empty.
-					# token.line contains line as string which contains token.
-					# Previously used test was:
-					#prev_char_idx = token.start[1]-1
-					#if prev_char_idx > -1 and token.line[prev_char_idx].isalnum():
-					if last_token.type == tokenize.NAME:
-						self.tags['calls'].append((last_token.start, last_token.end))
-
+				# These three are only about 10% in total
 				elif token.type == tokenize.STRING:
 					self.tags['strings'].append((token.start, token.end))
 
@@ -3095,9 +3063,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				elif token.type == tokenize.NUMBER:
 					self.tags['numbers'].append((token.start, token.end))
 
-				last_token = token
+				else: continue
 
-				################## END ####################
+				##############
 
 
 
@@ -6707,6 +6675,36 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
+	def flash_line(self, pos='insert'):
+		'''	Flash line for 600ms
+			Called from goto_def()
+		'''
+
+		if self.state not in [
+					'normal', 'help', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
+			self.bell()
+			return 'break'
+
+		s = self.idx_linestart(pos)[0]
+		e = '%s lineend' % s
+
+		# Elided line check
+		idx = self.get_safe_index(s)
+		if r := self.line_is_elided(idx):
+			e = '%s lineend' % self.contents.index(r[1])
+
+		bg, fg = self.themes[self.curtheme]['sel'][:]
+		self.contents.tag_config('animate', background=bg, foreground=fg)
+		self.contents.tag_raise('animate')
+		self.contents.tag_remove('animate', '1.0', tkinter.END)
+		self.contents.tag_add('animate', s, e)
+
+		self.after(600, lambda args=['animate', '1.0', tkinter.END]:
+				self.contents.tag_remove(*args) )
+
+		return 'break'
+
+
 	def handle_search_entry(self, search_pos, index):
 		''' Handle entry when searching/replacing
 
@@ -7290,6 +7288,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
 
+			if have_selection:
+				self.contents.tag_remove( 'sel', '1.0', tkinter.END )
+
+			self.wait_for(150)
+			self.flash_line(pos)
+
 			if self.state == 'search': pass
 			else:
 				# Save cursor pos
@@ -7305,9 +7309,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.contents.config(state='disabled')
 				self.state = 'goto_def'
-
-			if have_selection:
-				self.contents.tag_remove( 'sel', '1.0', tkinter.END )
 
 		else:
 			self.bell()
