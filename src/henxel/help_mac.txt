@@ -6,7 +6,7 @@
 		Cmd-B	Goto prev bookmark
 
 		Cmd-g	Goto definition ( when cursor is at or in between:
-									self.<INS>walk_scop<INS>e )
+									self.w<INS>alk_scope<INS> )
 		
 		Cmd-l  Gotoline:	-1 and empty goes to file-end.
 							-20 goes to 20 lines before file-end etc.
@@ -33,7 +33,7 @@
 		
 		
 		Esc		Toggle fullscreen, clear search-tags, clear selection,
-				close help, close show errors, exit goto_def, exit gotoline,
+				close help, close show errors, exit goto def, exit gotoline,
 				exit search, exit replace etc.
 		
 		Shift-Return	Comment
@@ -234,11 +234,11 @@
 	
 	Goto definition
 	  - Of function in current tab with Cmd/Alt-g
-		when cursor is at or in between: self.<INS>walk_scop<INS>e
+		when cursor is at or in between: self.w<INS>alk_scope<INS>
 		(or if there is selection, uses it)
 	  - Can be done also while searching,
 		just press Ctrl-np to get back to matches, because esc will exit search
-	  - Bookmarks can be created also when in Goto def
+	  - Bookmarks can be created while doing goto def
 	
 	
 	Selection
@@ -290,6 +290,36 @@
 	  e.use_geometry(my_geom_string)
 
 
+	How to: set editor to check syntax at exit
+	  Should syntax of open py-files be checked at exit?
+	  e.check_syntax_on_exit()
+	
+	  - Without arguments, return current setting
+	  - 1: do check
+	  - 0: no check (default)
+	
+	  Note: Every time doing run,
+	  syntax of all py-files of project, open or not, is checked
+	  
+	  If just want to check syntax of open py-files, independent of setting:
+	  e.save_forced() --> True if no saving errors
+	  e.tab_has_syntax_error() --> False if no syntax errors
+
+	
+	How to: Set command to fetch current version control branch
+	  - By default if using git, nothing needs to be done	
+	  - Command must be given as list. Command is tried before
+		setting. You can split command string to list with split,
+		or use shlex-modules split.
+	
+		Example, default commands splitting:
+		  cmd_as_list = 'git branch --show-current'.split()
+		Then:
+		  e.set_version_control_cmd(cmd_as_list)
+		
+	  - On success, the new command is saved in configuration
+	
+	
 	How to: expand word
 	  - When starting to write object-name that has already been used
 		somewhere in contents like:
@@ -312,7 +342,7 @@
 	
 	Inspecting modules
 	  - Just write the name of the module, like tkinter.font in the editor,
-		select it and choose inspect from popup-menu. Then search.
+		select it and choose 'open mod' from popup-menu. Then search.
 				
 	
 	Elide

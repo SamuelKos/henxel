@@ -457,6 +457,8 @@ class Editor(tkinter.Toplevel):
 			self.syntax = True
 			self.oldconf = None
 			self.tab_char = TAB_WIDTH_CHAR
+			# Check syntax at exit
+			self.check_syntax = False
 
 			################################
 			# editor.cnf is read from here #
@@ -482,15 +484,8 @@ class Editor(tkinter.Toplevel):
 			self.menufont = self.__class__.menufont
 			self.boldfont = self.__class__.boldfont
 
-
-			if self.flags and self.flags.get('launch_test') == True: pass
-			else:
-				# Get current git-branch
-				try:
-					self.branch = subprocess.run('git branch --show-current'.split(),
-							check=True, capture_output=True).stdout.decode().strip()
-				except Exception as e:
-					pass
+			# Can be changed with set_version_control_cmd()
+			self.version_control_cmd = 'git branch --show-current'.split()
 
 
 			# Search related variables Begin
@@ -550,8 +545,6 @@ class Editor(tkinter.Toplevel):
 			####################################
 			self.btn_git = tkinter.Button(self, takefocus=0, relief='flat',
 										highlightthickness=0, padx=0, state='disabled')
-			self.restore_btn_git() # Show git-branch if on one
-
 			self.entry = tkinter.Entry(self, highlightthickness=0, takefocus=0)
 			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
 
@@ -630,6 +623,17 @@ class Editor(tkinter.Toplevel):
 				self.oldconf = string_representation
 				self.load_config(data)
 
+
+			# Get version control branch #######
+			if self.flags and self.flags.get('launch_test') == True: pass
+			else:
+				try:
+					self.branch = subprocess.run(self.version_control_cmd,
+							check=True, capture_output=True).stdout.decode().strip()
+				except Exception as e:
+					pass
+
+			self.restore_btn_git() # Show branch if on one
 
 
 			# Colors Begin #######################
@@ -1209,15 +1213,23 @@ Error messages Begin
 
 	def test_bind(self, event=None, f=1):
 
-		def f1(self=self):
+		def f1():
 			pass
 
-		def f2(self=self):
+		# One would think this: def f2(self=self) is necessary but
+		# 'functions are first class objects'
+		# --> have access to self without passing reference
+
+		def f2():
+			print(self.state)
 			pass
 
-		return
+		if f==1: f2()
+		else: f1()
+
+		#return
 		#print('jou')
-		#return 'break'
+		return 'break'
 
 
 	def skip_bindlevel(self, event=None):
@@ -1401,8 +1413,52 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return success_all
 
 
+	def set_version_control_cmd(self, cmd_as_list):
+		''' Set command to fetch current version control branch.
+			Command must be given as list. Command is tried before
+			setting. You can split command string to list with split,
+			or use shlex-modules split.
+
+			For example, default commands splitting:
+			  cmd_as_list = 'git branch --show-current'.split()
+			Then:
+			  e.set_version_control_cmd(cmd_as_list)
+		'''
+
+		if type(cmd_as_list) != list: return
+
+		p = subprocess.run(cmd_as_list, check=True, capture_output=True)
+
+		try:
+			p.check_returncode()
+			branch = p.stdout.decode().strip()
+			if len(branch) > 0:
+				print('Current branch:', branch)
+				self.branch = branch
+				self.version_control_cmd = cmd_as_list
+				self.restore_btn_git()
+
+		except subprocess.CalledProcessError:
+			print('\n' + p.stderr.decode().strip())
+
+
+	def check_syntax_on_exit(self, setting=3):
+		''' Should syntax of open py-files be checked at exit
+			Without arguments, return current setting
+			1: do check
+			0: no check (default)
+		'''
+
+		if type(setting) != int: return
+		elif setting == self.check_syntax: return
+		elif setting == 3: print(self.check_syntax)
+		elif setting == 0: self.check_syntax = False
+		elif setting == 1: self.check_syntax = True
+		else: return
+
+
 	def tab_has_syntax_error(self):
-		#flag_cancel = False
+		flag_cancel = False
 
 		for tab in self.tabs:
 			if tab.filepath:
@@ -1415,28 +1471,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						err = '\t' +  e.__str__() + '\n'
 						print( '\nIn: ', tab.filepath.resolve().__str__() )
 						print(err)
-						#flag_cancel = True
+						flag_cancel = True
 						continue
-
-		#return flag_cancel
-
-
-	def package_has_syntax_error(self):
-		flag_cancel = False
-
-		for item in self.__class__.pkg_contents.iterdir():
-			if item.is_file() and '.py' in item.suffix:
-
-				try:
-					file_contents = item.read_text()
-					ast.parse(file_contents, filename=item.resolve())
-
-				except Exception as e:
-					err = '\t' +  e.__str__() + '\n'
-					print( '\nIn: ', item.resolve().__str__() )
-					print(err)
-					flag_cancel = True
-					continue
 
 		return flag_cancel
 
@@ -1533,7 +1569,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		if self.debug:
-			if self.package_has_syntax_error():
+			if self.tab_has_syntax_error():
 				self.activate_terminal()
 				return delayed_break(33)
 			# Close-Button, quit_debug=True
@@ -1544,6 +1580,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return delayed_break(33)
 			else: return 'break'
 
+		elif self.check_syntax and self.tab_has_syntax_error():
+			self.activate_terminal()
+			return delayed_break(33)
 
 		# Below this line, 1: debug=False (normal mode) or 2: quit_debug or restart
 		# --> cleanup is reasonable
@@ -2496,6 +2535,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		d['scrollbar_width'] = self.scrollbar_width
 		d['elementborderwidth'] = self.elementborderwidth
+		d['version_control_cmd'] = self.version_control_cmd
+		d['check_syntax'] = self.check_syntax
 		d['want_ln'] = self.want_ln
 		d['syntax'] = self.syntax
 		d['geom'] = self.geom
@@ -2559,8 +2600,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.font.config(**d['font'])
 		self.menufont.config(**d['menufont'])
-		self.scrollbar_width 	= d['scrollbar_width']
+		self.scrollbar_width = d['scrollbar_width']
 		self.elementborderwidth	= d['elementborderwidth']
+		self.version_control_cmd = d['version_control_cmd']
+		self.check_syntax = d['check_syntax']
 		self.want_ln = d['want_ln']
 		self.syntax = d['syntax']
 		self.geom = d['geom']

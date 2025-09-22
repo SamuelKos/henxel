@@ -1,65 +1,108 @@
 # ^/\|-_+:,.;'"*%?=!@&()[]{}~<>
 ###############################
 
-Below this: not done ################################################
+Below this: done ################################################
 
 
 kill line from insert to line-end, ctrl-k
 default text-class bind, just update help, done
 
 
-analyze tokens /dev/token_stats.py
+count token percentages /dev/token_stats.py, done
 
 
-check copy paste overrides
-check with defaults?
-copy whole lines
+check if want_ln in update_line, sbset_override , done
 
 
 popup
 inspect -->  open mod, done
 
 
-no selection like goto def
+goto def:
+fixed no can bookmark when goto_def, done
+flash with flash_line(), done
+works with self.myfuncdef, with cursor at wordend,
+and with alt-g from search match
+see help(e.goto_def)
 ( cursor is at or in between:
 self.<INS>walk_scop<INS>e )
 -->
 ( cursor is at or in between:
-self.<INS>walk_scope<INS> )
-or
-( cursor is at or in between:
 self.w<INS>alk_scope<INS> )
+update help, done
 
 
+conf is now saved in sys.prefix without checks, done
+--> enable saving conf when not in venv
+update help, readme done
 
-last_token = self.LastToken()
-put last_token.end in LastToken
+renamed:
+apply_config --> config_tabs, done
 
 
+(Shift)-Home/End --> goto/selectto linestart/end, done
 
-help ctrl-q, chk cmd-q, done
 
-fixed no can bookmark when goto_def, done
-flash with flash_line(), done
+walk_scope absolutely next bind no work linux windows, done
+	parenleft right
+
+
+changed binds between rising and diving walk_scope, done
+help done
+reason: normally there is no deep nesting.
+--> 'easier' bind first
+
+
+editor remember geometry in conf, done
+self.use_geometry()
+update help, done
+
+
+when closing tab ctrl-d check if bookmarks, done
+--> ask confirmation with messabox
+--> prevent mistakenly closing tabs and loosing bookmarks
+used in: del_tab, open_file
+ctrl-shift-Q --> no ask
+
+
+tab_has_syntax_error(), done
+checks all open py-files with ast
+is setting
+off by default, to set:
+check_syntax_on_exit(setting=0,1)
+without arguments returns current setting
+used also when debug, removed package_has_syntax_error(), done
+update help, done
+
+
+# enable getting branch when not using git, done
+self.set_version_control_cmd(command as list)
+is setting
+info about shlex
+cmd_as_string='someprg -somearg1 3 --somearg2 moreargs'
+mcmd_as_list=shlex.split(my_cmd_as_string)
+update help, done
+
+
+Below this: not done:
+###############################################
+
+check copy paste overrides
+check with defaults?
+copy whole lines
+
 
 
 check use_geometry in win11, macos, not done
 
 
-tab_has_syntax_error(), not done
-checks all open py-files with ast
-is setting
-off by default, to set:
-check_syntax_on_exit(setting=[False,True,'current'])
-use also when debug? (and remove package_has_syntax_error() )
+
+Add Settings section in help?, not done ######
 
 
-if want ln update ln, done
-ch bg of self like in start of init not done
 
 fixed move_many_lines(), done
-is faster, uses same as center_view
-
+is faster, uses same stuff as in center_view
 not done:
 If still is slow, use (Shift)-PgUp/PgDown
 --> as fast as can get incremental moving/selecting
@@ -68,48 +111,16 @@ how to know if keyboard has some key?
 update help
 
 
-conf is now saved in sys.prefix without checks, done
---> enable saving conf when not in venv
-update help, readme done
 
-
-# enable getting branch when not using git
-self.set_version_control_cmd('some command as string') ####
-
-
-rename
-apply_config --> config_tabs, done
-
-(Shift)-Home/End --> goto/selectto linestart/end, done
-
-
-
-* walk_scope absolutely next bind no work linux windows done
-	parenleft right
-
-changed binds between rising and diving walk_scope, done
-help done
-reason: normally there is no deep nesting.
---> 'easier' bind first
-
-editor remember geometry in conf, done
-	update help
-	self.use_geometry()
-
-
-
-cursor is in multiline string does not always work
+cursor is in multiline string does not always work?
 because strings tag are not updated correctly
 check insert triples, then write in them couple lines
 check_line print scope
+maybe try:
+	return override if triple in oldline: check scope
 
 
 
-when closing tab ctrl-d check if bookmarks, done
---> ask confirmation with messabox
---> prevent mistakenly closing tabs and loosing bookmarks
-in del_tab open_file
-ctrl-shift-Q no ask
 
 
 #####
