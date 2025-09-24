@@ -123,8 +123,12 @@ Below this: not done:
 ###############################################
 
 
-check goto_def use of defline tag self.deflines
+paste inside multiline string no work
+check paste token update
 
+
+check use of 'defline'-tag, self.deflines in
+ search_next etc
 
 
 ###
@@ -240,17 +244,18 @@ continue
 
 
 
-################
+################################
 definition tag
-fix indent if async in update ins tokens
+for example: 'defline1'
+number is indentation level
+
+fix indent if async in update ins tokens, done
 use flag
 
+fix walk_scope, done
+
+
 changed get_scope_start
-fix walk_scope etc
-
-count max ind depth in check indent
-if > then update maxind and update ind tags in all tabs
-
 
 
 get scope path:
@@ -261,8 +266,7 @@ get scope path:
 	get rest of path using new method:
 		get tagprevrange(indent?)
 
-#################
-
+################################
 
 
 

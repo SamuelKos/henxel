@@ -2055,13 +2055,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		#
 		# Copying Tcl func from one bind to other, example:
 		# ( Next means PgDown, Prior means PgUp )
-		proc = w.bind_class('Text', '<Key-Next>').strip()
+		# proc = w.bind_class('Text', '<Key-Next>').strip()
+		# w.bind('<Control-Key-4>', proc)
+		#
+		# Using hardcoded binds to save time, though
+
+		proc = 'tk::TextSetCursor %W [tk::TextScrollPages %W 1]'
 		w.bind('<Control-Key-4>', proc)
-		proc = w.bind_class('Text', '<Key-Prior>').strip()
+		proc = 'tk::TextSetCursor %W [tk::TextScrollPages %W -1]'
 		w.bind('<Control-Key-3>', proc)
-		proc = w.bind_class('Text', '<Shift-Key-Next>').strip()
+		proc = 'tk::TextKeySelect %W [tk::TextScrollPages %W 1]'
 		w.bind('<Control-Key-2>', proc)
-		proc = w.bind_class('Text', '<Shift-Key-Prior>').strip()
+		proc = 'tk::TextKeySelect %W [tk::TextScrollPages %W -1]'
 		w.bind('<Control-Key-1>', proc)
 
 
@@ -2981,9 +2986,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 									ind_depth = token.start[1]
 									tagname = f'defline{ind_depth}'
 									try: self.tags[tagname].append((token.start, token.end))
-									# 100% Syntax error, just in middle of writing string etc.
-									# No need 10 level of nested func
-									# This error could be printed out to console..
+									# Syntax error, just in middle of writing string etc.
+									# (No need 10 level of nested func)
 									except KeyError: pass
 
 								flag_async = False
@@ -3113,8 +3117,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 									ind_depth = token.start[1]
 									tagname = f'defline{ind_depth}'
 									try: self.tags[tagname].append((token.start, token.end))
-									# 100% Syntax error, just in middle of writing string etc.
-									# No need 10 level of nested func
+									# Syntax error, just in middle of writing string etc.
+									# (No need 10 level of nested func)
 									except KeyError: pass
 
 								flag_async = False
@@ -4299,10 +4303,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		''' Get definition lines
 
 			Creates list, linenums,
-			which consist of tuples: (ind_lvl, idx)
-			Example, for 'defline1'-tag (indentation level 1) -->(1, 1234.1)
+			which consist of tuples: (ind_lvl, idx_as_float, defname)
+			Example, for 'defline1'-tag:
+			(indentation level 1) -->(1, 1234.1, 'some_func')
+
 			That would mean there is definition line in line 1234 and it has
-			indentation level 1.
+			indentation level 1, and name of the function is 'some_func'.
 
 			Called from: get_absolutely_next_defline
 		'''
@@ -4315,10 +4321,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# [::2] get first item then every other item
 			# --> get only range start -indexes
 			if r := tab.text_widget.tag_ranges(tag)[::2]:
-				# defline_nums are stored as tuples: (ind_lvl, idx),
-				# example: 'defline2'-tag (indentation level 2) -->(2, 1234.2)
-				defline_nums = [ ( int(tag.split('defline')[1]), float(str(idx)) ) for idx in r ]
-				linenums.extend(defline_nums)
+				# defline_info is stored as tuples: (ind_lvl, idx, func_name)
+				# example: 'defline2'-tag (indentation level 2)
+				# -->(2, 1234.2, 'some_func')
+				for idx in r:
+					idx_as_str = str(idx)
+					idx_as_float = float(idx_as_str)
+					ind_lvl = int(tag.split('defline')[1])
+
+					s, e = f'{idx_as_str} linestart', f'{idx_as_str} lineend'
+					defline_content = tab.text_widget.get(s, e)
+					defname = self.line_is_defline(defline_content)
+					if not defname: defname = '-1'
+
+					defline_info = (ind_lvl, idx_as_float, defname)
+					linenums.append(defline_info)
+
 			else: break
 
 		return linenums
@@ -4395,10 +4413,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if absolutely_next:
 			if t := self.get_absolutely_next_defline(down=down, update=update):
-				ind_lvl, next_deflinenum_as_float = t
-				line,col = str(next_deflinenum_as_float).split('.')
-				pos = line +'.'+ col
-				self.cur_defline = pos
+				ind_lvl, next_deflinenum_as_float, _ = t
+				self.cur_defline = pos = str(next_deflinenum_as_float)
 			else:
 				self.bell()
 				return 'break'
@@ -4414,10 +4430,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				else: break
 
 			if t := self.get_absolutely_next_defline(down=down, maxind=ind, update=update):
-				ind_lvl, next_deflinenum_as_float = t
-				line,col = str(next_deflinenum_as_float).split('.')
-				pos = line +'.'+ col
-				self.cur_defline = pos
+				ind_lvl, next_deflinenum_as_float, _ = t
+				self.cur_defline = pos = str(next_deflinenum_as_float)
 			else:
 				self.bell()
 				return 'break'
@@ -7388,23 +7402,35 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		word_at_cursor = word_at_cursor.strip()
 		if '.' in word_at_cursor:
-			word_at_cursor = word_at_cursor.split('.')[1]
+			word_at_cursor = word_at_cursor.split('.')[-1]
 
 		if word_at_cursor == '':
 			return 'break'
 
-
-		#print(word_at_cursor)
-		# https://www.tcl.tk/man/tcl9.0/TclCmd/re_syntax.html#M31
-		patt_indent = r'^#*[[:blank:]]*'
-		patt_keywords = r'(?:async[[:blank:]]+)?def[[:blank:]]+'
-		search_word = patt_indent + patt_keywords + word_at_cursor + r'\('
-
-		try:
-			pos = self.contents.search(search_word, '1.0', regexp=True)
-
-		except tkinter.TclError:
+		# Reduce greatly search time, compared to old re-aproach below
+		# update self.deflines
+		self.deflines = self.get_deflines(self.tabs[self.tabindex])
+		for item in self.deflines:
+			if item[2] == word_at_cursor:
+				pos = str(item[1])
+				break
+		else:
+			self.bell()
 			return 'break'
+
+
+		# Was:
+##		#print(word_at_cursor)
+##		# https://www.tcl.tk/man/tcl9.0/TclCmd/re_syntax.html#M31
+##		patt_indent = r'^#*[[:blank:]]*'
+##		patt_keywords = r'(?:async[[:blank:]]+)?def[[:blank:]]+'
+##		search_word = patt_indent + patt_keywords + word_at_cursor + r'\('
+##
+##		try:
+##			pos = self.contents.search(search_word, '1.0', regexp=True)
+##
+##		except tkinter.TclError:
+##			return 'break'
 
 		if pos:
 			#self.contents.mark_set('insert', pos)
@@ -7851,8 +7877,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		# When have little over 10k lines(all lines counted, also empty)
 		# tagging syntax with rpi1 using
-		# A: normal insert_tokens() takes 22-24s
-		# B: cache with tcl load_tags() takes 1.5s
+		# A: normal insert_tokens() takes 21-24s
+		# B: cache with tcl load_tags() takes 1.6s
 		# --> use cache
 
 		# build tcl-dict: {key1 value1 key2 value2}
