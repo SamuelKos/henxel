@@ -514,6 +514,9 @@ class Editor(tkinter.Toplevel):
 			# to set cursor position to that position clicked.
 			self.save_pos = None
 
+			# Used as flag to check if need to update self.deflines
+			self.cur_defline = '-1.-1'
+
 			# Used in load()
 			self.tracevar_filename = tkinter.StringVar()
 			self.tracefunc_name = None
@@ -1213,19 +1216,20 @@ Error messages Begin
 
 	def test_bind(self, event=None, f=1):
 
+		# When syntax is not updating use this:
 		def f1():
-			pass
-
-		# One would think this: def f2(self=self) is necessary but
-		# 'functions are first class objects'
-		# --> have access to self without passing reference
+			print('\nState:', self.state,
+			'\ntcl_name_self:', self.tcl_name_of_contents,
+			'\ntcl_name_tab:', self.tabs[self.tabindex].tcl_name_of_contents,
+			'\ncheck_scope:', self.tabs[self.tabindex].check_scope,
+			'\nline_can_update:', self.line_can_update)
 
 		def f2():
 			print(self.state)
 			pass
 
-		if f==1: f2()
-		else: f1()
+		if f==1: f1()
+		else: f2()
 
 		#return
 		#print('jou')
@@ -2044,6 +2048,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.bind( "<End>", self.goto_lineend)
 		w.bind( "<Shift-Key-Home>", self.goto_linestart)
 		w.bind( "<Shift-Key-End>", self.goto_lineend)
+
+
+		# Below, compensation for (possibly) missing PgUp/Down -keys,
+		# Control-1/2 (selecting), Control-3/4 just moving
+		#
+		# Copying Tcl func from one bind to other, example:
+		# ( Next means PgDown, Prior means PgUp )
+		proc = w.bind_class('Text', '<Key-Next>').strip()
+		w.bind('<Control-Key-4>', proc)
+		proc = w.bind_class('Text', '<Key-Prior>').strip()
+		w.bind('<Control-Key-3>', proc)
+		proc = w.bind_class('Text', '<Shift-Key-Next>').strip()
+		w.bind('<Control-Key-2>', proc)
+		proc = w.bind_class('Text', '<Shift-Key-Prior>').strip()
+		w.bind('<Control-Key-1>', proc)
+
 
 		# Remove some unwanted key-sequences, which otherwise would
 		# mess with searching, from couple of virtual events.
@@ -2960,7 +2980,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 								else:
 									ind_depth = token.start[1]
 									tagname = f'defline{ind_depth}'
-									self.tags[tagname].append((token.start, token.end))
+									try: self.tags[tagname].append((token.start, token.end))
+									# 100% Syntax error, just in middle of writing string etc.
+									# No need 10 level of nested func
+									# This error could be printed out to console..
+									except KeyError: pass
+
 								flag_async = False
 
 
@@ -3087,12 +3112,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 								else:
 									ind_depth = token.start[1]
 									tagname = f'defline{ind_depth}'
-									try:
-										self.tags[tagname].append((token.start, token.end))
-									except KeyError:
-										print(tagname, linenum + token.start[0],
-										token.start[1], '-', token.end[1], '\n',
-										token.line)
+									try: self.tags[tagname].append((token.start, token.end))
+									# 100% Syntax error, just in middle of writing string etc.
+									# No need 10 level of nested func
+									except KeyError: pass
+
 								flag_async = False
 
 
@@ -4272,50 +4296,67 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def get_deflines(self, tab):
-		''' get deflines
+		''' Get definition lines
+
+			Creates list, linenums,
+			which consist of tuples: (ind_lvl, idx)
+			Example, for 'defline1'-tag (indentation level 1) -->(1, 1234.1)
+			That would mean there is definition line in line 1234 and it has
+			indentation level 1.
+
+			Called from: get_absolutely_next_defline
 		'''
 
 		# Get non empty ranges
 		tagnames = [ tag for tag in self.tagnames if 'defline' in tag ]
 		tagnames.sort(key=lambda s: int(s.split('defline')[1]) )
-		self.linenums = list()
+		linenums = list()
 		for tag in tagnames:
 			# [::2] get first item then every other item
 			# --> get only range start -indexes
 			if r := tab.text_widget.tag_ranges(tag)[::2]:
-				# defline_nums are stored as tuples: (tagname, idx), like ('defline2', 1234.2)
-				defline_nums = [ ( tag, float(str(idx)) ) for idx in r ]
-				self.linenums.extend(defline_nums)
+				# defline_nums are stored as tuples: (ind_lvl, idx),
+				# example: 'defline2'-tag (indentation level 2) -->(2, 1234.2)
+				defline_nums = [ ( int(tag.split('defline')[1]), float(str(idx)) ) for idx in r ]
+				linenums.extend(defline_nums)
 			else: break
 
+		return linenums
 
-	def get_absolutely_next_defline(self, index='insert', down=False):
-		''' get absolutely next defline
+
+	def get_absolutely_next_defline(self, index='insert', down=False, maxind=9, update=True):
+		''' Get (possibly absolutely) next defline
+
+			maxind: search only deflines with indentation <= maxind
+			default:maxind=9 --> efectively: search absolutely next defline
+
+			if maxind is set to same indentation than current defline
+			--> search next defline (with rising tendency)
+
+			update: update self.deflines,
+			which holds deflinenums and indentation
 
 			Called from walk_scope
-
 		'''
 
+		if update:
+			self.deflines = self.get_deflines(self.tabs[self.tabindex])
 		curlinenum = float(self.contents.index(index))
-		linenums = self.linenums[:]
+		linenums = self.deflines[:]
 
 		if down:
 			linenums.sort(key=lambda t: t[1])
 			for i in range(len(linenums)):
-				if linenums[i][1] > curlinenum: break
-			else:
-				return False
-
-			return linenums[i]
+				if linenums[i][1] > curlinenum and linenums[i][0] <= maxind:
+					return linenums[i]
+			else: return False
 
 		else:
 			linenums.sort(reverse=True, key=lambda t: t[1])
 			for i in range(len(linenums)):
-				if linenums[i][1] < curlinenum: break
-			else:
-				return False
-
-			return linenums[i]
+				if linenums[i][1] < curlinenum and linenums[i][0] <= maxind:
+					return linenums[i]
+			else: return False
 
 
 	def walk_scope(self, event=None, down=False, absolutely_next=False):
@@ -4344,23 +4385,42 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
+		idx = self.get_safe_index()
+		line = self.contents.get('%s linestart' % idx, '%s lineend' % idx)
+
+		update = True
+		if idx == self.cur_defline: update = False
+		else: self.cur_defline = '-1.-1'
+
+
 		if absolutely_next:
-			if t := self.get_absolutely_next_defline(down=down):
-				defline_tagname, next_deflinenum_as_float = t
-				line = str(next_deflinenum_as_float).split('.')[0]
-				col = defline_tagname.split('defline')[1]
+			if t := self.get_absolutely_next_defline(down=down, update=update):
+				ind_lvl, next_deflinenum_as_float = t
+				line,col = str(next_deflinenum_as_float).split('.')
 				pos = line +'.'+ col
+				self.cur_defline = pos
 			else:
 				self.bell()
 				return 'break'
 
-##		# is cursor already at defline?
-##		idx = self.get_safe_index()
-##		line = self.contents.get('%s linestart' % idx, '%s lineend' % idx)
-##		if self.line_is_defline(line):
-##			use defline tag
-##		else:
-##			find scope start normally
+		# is cursor already at defline?
+		elif self.line_is_defline(line):
+
+			# use defline tag:
+			# find next defline that has same or smaller indentation
+			ind = 0
+			for char in line:
+				if char in ['\t']: ind += 1
+				else: break
+
+			if t := self.get_absolutely_next_defline(down=down, maxind=ind, update=update):
+				ind_lvl, next_deflinenum_as_float = t
+				line,col = str(next_deflinenum_as_float).split('.')
+				pos = line +'.'+ col
+				self.cur_defline = pos
+			else:
+				self.bell()
+				return 'break'
 
 		elif not down:
 			(scope_line, ind_defline,
@@ -8634,6 +8694,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return 'break'
 
 			else:
+				# tab_over_indent sets this to false
 				self.line_can_update = True
 				return
 
@@ -8800,7 +8861,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens(start=startpos, end=endpos)
-				self.line_can_update = True
 
 
 		# No selection, comment curline
@@ -8813,10 +8873,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens(start=startpos, end=endpos)
-				self.line_can_update = True
 
 
 		self.contents.edit_separator()
+		if self.can_do_syntax():
+			self.line_can_update = True
+
 		return 'break'
 
 
@@ -8854,7 +8916,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				if self.can_do_syntax():
 					self.update_lineinfo()
 					self.update_tokens(start=startpos, end=endpos)
-					self.line_can_update = False
 
 				self.contents.edit_separator()
 
@@ -8869,6 +8930,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					'%s linestart +2c' % idx_ins)
 
 				self.contents.edit_separator()
+
+
+		if self.can_do_syntax():
+			self.line_can_update = True
 
 		return 'break'
 

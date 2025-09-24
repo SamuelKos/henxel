@@ -26,7 +26,6 @@ def mycallback(event=None):
 
 
 
-
 textwid.bind('<Any-KeyPress>', mycallback)
 
 # Notice binding to release of button for some reasons.

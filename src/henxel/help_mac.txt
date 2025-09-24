@@ -23,8 +23,8 @@
 		Cmd-left   Walk tabs backwards
 		
 		
-		Cmd-e  Move cursor to lineend
-		Cmd-a  Move cursor to linestart
+		Cmd-e  Move cursor to lineend (or use End-key)
+		Cmd-a  Move cursor to linestart (or use Home-key)
 		
 		
 		Cmd-f  Search
@@ -65,8 +65,8 @@
 		Alt-t   Toggle color setting
 		
 		
-		Cmd-shift-right  Select from cursor to lineend
-		Cmd-shift-left   Select from cursor to linestart
+		Cmd-shift-right  Select from cursor to lineend (or Shift-End)
+		Cmd-shift-left   Select from cursor to linestart (or Shift-Home)
 		
 		Ctrl-j  Scroll down without moving cursor
 		Ctrl-u  Scroll up without moving cursor
@@ -80,7 +80,9 @@
 		
 		If have PgUp/Down -keys, use them (with Shift)
 		to move/select faster
-		
+		If not, use
+		Control-1/2 (selecting), Control-3/4 just moving
+
 		Alt-left  		Move cursor one word left
 		Alt-right 		Move cursor one word right
 		Alt-shift-left 	Select one more word to left

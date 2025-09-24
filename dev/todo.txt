@@ -84,12 +84,66 @@ mcmd_as_list=shlex.split(my_cmd_as_string)
 update help, done
 
 
+#######################################
+fixed move_many_lines(), done
+is faster, uses same stuff as in center_view
+If still is slow, use (Shift)-PgUp/PgDown
+--> as fast as can get incremental moving/selecting
+
+Below, compensation for (possibly) missing PgUp/Down -keys,
+Control-1/2 (selecting), Control-3/4 just moving
+
+Copying Tcl func from one bind to other, example:
+( Next means PgDown, Prior means PgUp )
+
+proc = w.bind_class('Text', '<Key-Next>').strip()
+w.bind('<Control-Key-4>', proc)
+proc = w.bind_class('Text', '<Key-Prior>').strip()
+w.bind('<Control-Key-3>', proc)
+proc = w.bind_class('Text', '<Shift-Key-Next>').strip()
+w.bind('<Control-Key-2>', proc)
+proc = w.bind_class('Text', '<Shift-Key-Prior>').strip()
+w.bind('<Control-Key-1>', proc)
+
+
+help done
+#######################################
+walk_scope fixed, uses defline tag, done
+get_absolutely_next_defline()
+get_deflines()
+self.deflines list
+# is update of self.deflines needed:
+self.cur_defline = '-1.-1'
+#######################################
+
+
+
+
 Below this: not done:
 ###############################################
+
+
+check goto_def use of defline tag self.deflines
+
+
+
+###
+indent, unindent, etc check line_can_update
+currently found one error:
+ uncomment had self.line_can_update = False
+ fixed
+
+if self.can_do_syntax():
+			self.line_can_update = True
+###
+
 
 check copy paste overrides
 check with defaults?
 copy whole lines
+
+
+split __init__.py to smaller files/modules
 
 
 
@@ -100,26 +154,12 @@ check use_geometry in win11, macos, not done
 Add Settings section in help?, not done ######
 
 
-
-fixed move_many_lines(), done
-is faster, uses same stuff as in center_view
-not done:
-If still is slow, use (Shift)-PgUp/PgDown
---> as fast as can get incremental moving/selecting
-(Shift)-Alt-arrow up/down fix for no PgUp/Down keys? ######
-how to know if keyboard has some key?
-update help
-
-
-
 cursor is in multiline string does not always work?
 because strings tag are not updated correctly
 check insert triples, then write in them couple lines
 check_line print scope
 maybe try:
 	return override if triple in oldline: check scope
-
-
 
 
 
@@ -177,14 +217,20 @@ e.tk.eval('dict get $mydict mykey')
 
 
 
+print('\nState:', self.state,
+'\ntcl_name:', self.tcl_name_of_contents,
+'\ncheck_scope:', self.tabs[e.tabindex].check_scope,
+'\nline_can_update:', self.line_can_update)
+
+
+Save-button behaviour should be changed to: always save curtab
+	and if holding down ctrl --> save_forced
+
 
 list tree of deflines
 
 
-line is defline use defline tag
-
-
-walk_scope no absolut is broken
+line is defline use defline tag?
 
 
 if 'srings' in 
@@ -271,10 +317,6 @@ ctrl-ae --> alt-ae
 
 
 self.pad
-
-
-Save-button behaviour should be changed to: always save curtab
-	and if holding down ctrl --> save_forced
 			
 
 stashing --> automatic, or at least importflag?

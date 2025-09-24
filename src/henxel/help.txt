@@ -23,8 +23,8 @@
 		Alt-q	Walk tabs backwards
 		
 		
-		Ctrl-e  Move cursor to lineend
-		Ctrl-a  Move cursor to linestart
+		Ctrl-e  Move cursor to lineend (or use End-key)
+		Ctrl-a  Move cursor to linestart (or use Home-key)
 		
 		
 		Ctrl-f  Search
@@ -65,12 +65,13 @@
 		Alt-t   Toggle color setting
 		
 		
-		Ctrl-shift-E	Select from cursor to lineend
-		Ctrl-shift-A	Select from cursor to linestart
+		Ctrl-shift-E	Select from cursor to lineend (or Shift-End)
+		Ctrl-shift-A	Select from cursor to linestart (or Shift-Home)
 		
 		Ctrl-j  Scroll down without moving cursor
 		Ctrl-u  Scroll up without moving cursor
 		
+
 		Shift-up		Select one more line up
 		Shift-down		Select one more line down
 		Ctrl-Shift-up	Select 10 more line up
@@ -80,9 +81,11 @@
 		
 		If have PgUp/Down -keys, use them (with Shift)
 		to move/select faster
-		
-		Alt-left  		Move cursor one word left
-		Alt-right 		Move cursor one word right
+		If not, use
+		Control-1/2 (selecting), Control-3/4 just moving
+
+		Ctrl-left  		Move cursor one word left
+		Ctrl-right 		Move cursor one word right
 		Ctrl-shift-left 	Select one more word to left
 		Ctrl-shift-right	Select one more word to right
 		
