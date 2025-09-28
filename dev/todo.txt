@@ -245,17 +245,116 @@ continue
 
 
 ################################
+################################
 definition tag
 for example: 'defline1'
 number is indentation level
 
 fix indent if async in update ins tokens, done
-use flag
+using flag
 
 fix walk_scope, done
+got_def, done
+
+get_scope_path not done
+
+defline when update?
+indent/dedent?
+tab_over_indent?
+
+ctrl-(shift)-,. --> instead of ctrl-1234?
 
 
-changed get_scope_start
+
+get_scope_start:
+1170 ms with old method
+
+
+################################
+
+
+###
+this below no work because can be 'wandering lines' between scopes
+with same indentation than ind_lvl_down
+--> could just use old re-aproach or
+--> 
+###
+
+
+get_scope_start:
+1:get_deflines()
+
+if no def_line down:
+- nearest def_line with indent0 up == parent0
+- if no def_line in file --> scope is __main__
+
+if nearest def_line down has indent0 or no def_line down:
+	search scope in loop0
+else:
+	ind_lvl_down > 0
+	search scope in loop1
+	
+	
+example (loop1):
+find nearest def_line down, (for example)has indent1 = ind_lvl_down
+
+- find nearest def_line, with ind_lvl_down-1 (now indent0), up
+--> parent(ind_lvl_down-1), now(parent0)
+
+--> this will be the scope if there is no deeper parent found later
+
+
+- then, get last def_line with ind_lvl_down (now indent1) between
+	parent(ind_lvl_down-1) (now parent0) and cur_line
+	--> parent(ind_lvl_down)
+	if no such def_line --> scope is parent0
+	else:--> this will be the scope if there is no deeper parent found later
+	
+
+maxind = 9
+real start:
+get nearest def_line (with maxind),
+	between parent(ind_lvl_down) (now parent1) and curline:
+1:	if none --> found scope, is parent(ind_lvl_down) (now parent1)
+	
+	###
+	execpt must search for 'wandering lines' between parent1 and curline:
+	This should be faster though than searching backwards (old method)
+	if there is line with ind_lvl_down: --> scope is not ind_lvl_down(parent1)
+	--> scope is with indentation <= ind_lvl_down
+	We know there is defline, up from curline, with ind_lvl_down-1 (parent0)
+	--> scope is parent0
+		Q: how we know this?
+		A: nearest def_line down had ind_lvl=1
+		--> it (and curline) has to belong to parent0 up
+	
+	finally if there is now 'wandering lines':
+	--> scope really was parent1
+	###
+	
+1: continuing here	
+	else: there is for example, def_line with (ind_lvl_down+2) (now indent3)
+		== ind_lvl_def_line_ref_up
+	
+	- find next line up with ind_lvl_def_line_ref_up (now indent3):
+		if that line is also def_line --> found scope
+		else:
+			if ind_lvl_def_line_ref_up = ind_lvl_down+1
+			--> found scope, is parent(ind_lvl_down) (now parent1)
+			
+			goto: real start, with maxind == ind_lvl_def_line_ref_up-1
+				get nearest def_line, between parent(ind_lvl_down) and
+				that def_line with ind_lvl_def_line_ref_up (indent3),
+				
+				if none --> scope is parent(ind_lvl_down) (now parent1)
+				
+				
+################################
+
+
+
+
+
 
 
 get scope path:
@@ -266,6 +365,7 @@ get scope path:
 	get rest of path using new method:
 		get tagprevrange(indent?)
 
+################################
 ################################
 
 

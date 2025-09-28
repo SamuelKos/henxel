@@ -1218,11 +1218,17 @@ Error messages Begin
 
 		# When syntax is not updating use this:
 		def f1():
-			print('\nState:', self.state,
-			'\ntcl_name_self:', self.tcl_name_of_contents,
-			'\ntcl_name_tab:', self.tabs[self.tabindex].tcl_name_of_contents,
-			'\ncheck_scope:', self.tabs[self.tabindex].check_scope,
-			'\nline_can_update:', self.line_can_update)
+
+			t1 = int(self.root.tk.eval('clock milliseconds'))
+			self.get_scope_start()
+			t2 = int(self.root.tk.eval('clock milliseconds'))
+			print(t2-t1, 'ms')
+
+##			print('\nState:', self.state,
+##			'\ntcl_name_self:', self.tcl_name_of_contents,
+##			'\ntcl_name_tab:', self.tabs[self.tabindex].tcl_name_of_contents,
+##			'\ncheck_scope:', self.tabs[self.tabindex].check_scope,
+##			'\nline_can_update:', self.line_can_update)
 
 		def f2():
 			print(self.state)
@@ -4274,27 +4280,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Called from: walk_scope, get_scope_start, get_scope_path
 		'''
 
-		tmp = line.strip()
+		tmp = line.split()
 		res = False
 
-		if len(tmp) < 8:
-			pass
+		try:
+			if tmp[0] in [ 'async', 'class', 'def']:
+				patt_end = ':'
+				if tmp[0] == 'async':
+					tmp = tmp[2]
+				else:
+					tmp = tmp[1]
 
-		elif tmp[:5] in [ 'async', 'class' ] or tmp[:3] == 'def':
-			patt_end = ':'
-			if '(' in tmp: patt_end = '('
-			if tmp[:5] == 'async':
-				tmp = tmp[5:].strip()
-			if tmp[:3] == 'def':
-				tmp = tmp[3:].strip()
-			if tmp[:5] == 'class':
-				tmp = tmp[5:].strip()
-			try:
-				e = tmp.index(patt_end)
-				res = tmp[:e]
+				if '(' in tmp: patt_end = '('
 
-			except ValueError:
-				pass
+				try:
+					e = tmp.index(patt_end)
+					res = tmp[:e]
+
+				except ValueError: pass
+		except IndexError: pass
 
 		return res
 
@@ -7110,7 +7114,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##		###
 
 
-
 		# Stage 1: Search backwards(up) from index for:
 		# pos = Uncommented line with 0 blank or more
 		blank_range = '{0,}'
@@ -7170,7 +7173,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Stage 2: Search backwards(up) from pos updating indentation level until:
 		# defline with ind_last_line-1 blanks or less
 		if ind_last_line == 1:
-			patt = p2 = r'[^[:blank:]#]'
+			# note the added '^' at start, this is important to anchor
+			# match to linestart. Without it this would match:
+			# not blank not comment, which makes A LOT of matches on every line
+			patt = p2 = r'^[^[:blank:]#]'
 
 		else:
 			# ind_last_line > 1
@@ -7180,6 +7186,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			p2 = r'[^[:blank:]#]'
 			patt = p1 + p2
 
+		print(ind_last_line, 'before while')
 
 		while pos:
 			try:
@@ -7194,7 +7201,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return '__main__()', 0, '1.0'
 
 			elif 'strings' in self.contents.tag_names(pos):
-				#print('strings4', pos)
+				print('strings4', pos)
+				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
 				continue
 
 			################
@@ -7213,6 +7221,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				idx = self.idx_linestart(pos)[0]
 
 				# SUCCESS
+				print(def_line_contents, ind_curline, idx)
 				return def_line_contents.strip(), ind_curline, idx
 			#####
 
@@ -7222,7 +7231,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				patt = r'^[[:blank:]]{0,%d}[^[:blank:]#]' % (ind_curline-1)
 
 			elif ind_curline == 1:
-				patt = r'[^[:blank:]#]'
+				patt = r'^[^[:blank:]#]'
 
 			else:
 				# ind_curline == 0
