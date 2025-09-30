@@ -1748,7 +1748,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			s = 'insert linestart'
 			e = 'insert lineend'
 
-
+		#print('check_line:',s,e)
 		# Remove old tags:
 		for tag in self.tagnames:
 			self.contents.tag_remove( tag, s, e)
@@ -4407,6 +4407,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
+		# lines of interest ends with: ### pos
+
 		idx = self.get_safe_index()
 		line = self.contents.get('%s linestart' % idx, '%s lineend' % idx)
 
@@ -4418,7 +4420,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if absolutely_next:
 			if t := self.get_absolutely_next_defline(down=down, update=update):
 				ind_lvl, next_deflinenum_as_float, _ = t
-				self.cur_defline = pos = str(next_deflinenum_as_float)
+				self.cur_defline = pos = str(next_deflinenum_as_float) ### pos
 			else:
 				self.bell()
 				return 'break'
@@ -4435,7 +4437,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if t := self.get_absolutely_next_defline(down=down, maxind=ind, update=update):
 				ind_lvl, next_deflinenum_as_float, _ = t
-				self.cur_defline = pos = str(next_deflinenum_as_float)
+				self.cur_defline = pos = str(next_deflinenum_as_float) ### pos
 			else:
 				self.bell()
 				return 'break'
@@ -4447,13 +4449,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.bell()
 				return 'break'
 
-			pos = idx_scope_start
+			pos = idx_scope_start ### pos
 
 		else:
-			# +1 lines: Because cursor could be at defline,
-			# start at next line(down) to catch that defline
-			pos = 'insert +1 lines'
-			#pos = 'insert'
+			pos = 'insert' ### pos
 
 			(scope_line, ind_defline,
 			idx_scope_start) = self.get_scope_start(index=pos)
@@ -4488,8 +4487,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if 'strings' in self.contents.tag_names(pos):
 					#print('strings3', pos)
-					# Don't want rematch curline
-					pos = '%s +1 lines' % pos
+					pos = self.contents.tag_prevrange('strings', pos)[1] + ' +1 lines linestart'
 					continue
 
 				lineend = '%s lineend' % pos
@@ -4539,8 +4537,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		# +1 lines: Enable matching defline at insert
-		pos = '%s +1 lines' % index
+		pos = index
+
 		(scope_line, ind_defline,
 		idx_scope_start) = self.get_scope_start(index=pos)
 
@@ -5135,9 +5133,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			else:
 				return
 
+
 			if not have_selection: return
+			##############################
 
 
+		# SEL_FIRST is always before SEL_LAST
 		s = wid.index(tkinter.SEL_FIRST)
 		e = wid.index(tkinter.SEL_LAST)
 		i = wid.index(tkinter.INSERT)
@@ -5154,6 +5155,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			elif event.keysym == 'Right':
 				if self.contents.dlineinfo(e):
 					self.contents.tag_remove('sel', '1.0', tkinter.END)
+				else:
+					# selection_started_from_top == False
+					self.contents.mark_set(self.anchorname, s)
 
 				self.contents.mark_set('insert', e)
 				self.ensure_idx_visibility(e)
@@ -5163,6 +5167,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if self.contents.dlineinfo(s):
 					self.contents.tag_remove('sel', '1.0', tkinter.END)
+				else:
+					# selection_started_from_top == True
+					self.contents.mark_set(self.anchorname, e)
 
 				self.contents.mark_set('insert', s)
 				self.ensure_idx_visibility(s)
@@ -6965,6 +6972,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if 'strings' in self.contents.tag_names(pos):
 					#print('strings1', pos)
+					pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
 					continue
 
 				break
@@ -7026,6 +7034,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			elif 'strings' in self.contents.tag_names(pos):
 				#print('strings2', pos)
+				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
 				continue
 
 			# -1: remove terminating char(not blank not #) from matched char count
@@ -7076,7 +7085,222 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return '__main__()'
 
 
-	def get_scope_start(self, index='insert', line=False):
+	def get_scope_start2(self, index='insert', line=False):
+		''' asd
+			asd
+		'''
+		pass
+
+
+
+#####
+##this below no work because can be 'wandering lines' between scopes
+##with same indentation than ind_lvl_down
+##--> could just use old re-aproach or
+##-->
+#####
+##
+##
+##get_scope_start:
+##1:get_deflines()
+##
+##if no def_line down:
+##- nearest def_line with indent0 up == parent0
+##- if no def_line in file --> scope is __main__
+##
+##if nearest def_line down has indent0 or no def_line down:
+##	search scope in loop0
+##else:
+##	ind_lvl_down > 0
+##	search scope in loop1
+##
+##
+##example (loop1):
+##find nearest def_line down, (for example)has indent1 = ind_lvl_down
+##
+##- find nearest def_line, with ind_lvl_down-1 (now indent0), up
+##--> parent(ind_lvl_down-1), now(parent0)
+##
+##--> this will be the scope if there is no deeper parent found later
+##
+##
+##- then, get last def_line with ind_lvl_down (now indent1) between
+##	parent(ind_lvl_down-1) (now parent0) and cur_line
+##	--> parent(ind_lvl_down)
+##	if no such def_line --> scope is parent0
+##	else:--> this will be the scope if there is no deeper parent found later
+##
+##
+##maxind = 9
+##real start:
+##get nearest def_line (with maxind),
+##	between parent(ind_lvl_down) (now parent1) and curline:
+##1:	if none --> found scope, is parent(ind_lvl_down) (now parent1)
+##
+##	###
+##	execpt must search for 'wandering lines' between parent1 and curline:
+##	This should be faster though than searching backwards (old method)
+##	if there is line with ind_lvl_down: --> scope is not ind_lvl_down(parent1)
+##	--> scope is with indentation <= ind_lvl_down
+##	We know there is defline, up from curline, with ind_lvl_down-1 (parent0)
+##	--> scope is parent0
+##		Q: how we know this?
+##		A: nearest def_line down had ind_lvl=1
+##		--> it (and curline) has to belong to parent0 up
+##
+##	finally if there is now 'wandering lines':
+##	--> scope really was parent1
+##	###
+##
+##1: continuing here
+##	else: there is for example, def_line with (ind_lvl_down+2) (now indent3)
+##		== ind_lvl_def_line_ref_up
+##
+##	- find next line up with ind_lvl_def_line_ref_up (now indent3):
+##		if that line is also def_line --> found scope
+##		else:
+##			if ind_lvl_def_line_ref_up = ind_lvl_down+1
+##			--> found scope, is parent(ind_lvl_down) (now parent1)
+##
+##			goto: real start, with maxind == ind_lvl_def_line_ref_up-1
+##				get nearest def_line, between parent(ind_lvl_down) and
+##				that def_line with ind_lvl_def_line_ref_up (indent3),
+##
+##				if none --> scope is parent(ind_lvl_down) (now parent1)
+
+
+
+##		# Stage 1: Search backwards(up) from index for:
+##		# pos = Uncommented line with 0 blank or more
+##		blank_range = '{0,}'
+##		p1 = r'^[[:blank:]]%s' % blank_range
+##		# Not blank, not comment
+##		p2 = r'[^[:blank:]#]'
+##
+##		patt = p1 + p2
+##
+##		# Skip possible first defline at index
+##		safe_index = self.get_safe_index(index)
+##		pos = '%s linestart' % safe_index
+##
+##		while pos:
+##			try:
+##				pos = self.contents.search(patt, pos, stopindex='1.0',
+##						regexp=True, backwards=True)
+##
+##			except tkinter.TclError as e:
+##				print(e)
+##				break
+##
+##			if not pos:
+##				return '__main__()', 0, '1.0'
+##
+##			if 'strings' in self.contents.tag_names(pos):
+##				#print('strings3', pos)
+##				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
+##				continue
+##
+##			break
+##			###################
+##
+##
+##		s, e = '%s linestart' % pos, '%s lineend' % pos
+##
+##		if r := self.line_is_elided(pos): e = r[0]
+##
+##		pos_line_contents = self.contents.get(s, e)
+##
+##
+##		ind_last_line = 0
+##		for char in pos_line_contents:
+##			if char in ['\t']: ind_last_line += 1
+##			else: break
+##
+##		# Check if defline already
+##		if res := self.line_is_defline(pos_line_contents):
+##			idx = self.idx_linestart(pos)[0]
+##			return pos_line_contents.strip(), ind_last_line, idx
+##
+##		elif ind_last_line == 0:
+##			return '__main__()', 0, '1.0'
+##
+##		### Stage 1 End ########
+##
+##
+##		# Stage 2: Search backwards(up) from pos updating indentation level until:
+##		# defline with ind_last_line-1 blanks or less
+##		if ind_last_line == 1:
+##			# note the added '^' at start, this is important to anchor
+##			# match to linestart. Without it this would match:
+##			# not blank not comment, which makes A LOT of matches on every line
+##			patt = p2 = r'^[^[:blank:]#]'
+##
+##		else:
+##			# ind_last_line > 1
+##			blank_range = '{0,%d}' % (ind_last_line - 1)
+##			p1 = r'^[[:blank:]]%s' % blank_range
+##			# Not blank, not comment
+##			p2 = r'[^[:blank:]#]'
+##			patt = p1 + p2
+##
+##		print(ind_last_line, 'before while')
+##
+##		while pos:
+##			try:
+##				pos = self.contents.search(patt, pos, stopindex='1.0',
+##						regexp=True, backwards=True, count=self.search_count_var)
+##
+##			except tkinter.TclError as e:
+##				print(e)
+##				break
+##
+##			if not pos:
+##				return '__main__()', 0, '1.0'
+##
+##			elif 'strings' in self.contents.tag_names(pos):
+##				print('strings4', pos)
+##				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
+##				continue
+##
+##			################
+##			# -1: remove terminating char(not blank not #) from matched char count
+##			# Check patt if interested.
+##			ind_curline = self.search_count_var.get() - 1
+##
+##			# Find previous line that:
+##			# Has one (or more) indentation level smaller indentation than ind_last_line
+##			# 	Then if it also is definition line --> success
+##			# 	update ind_last_line
+##			def_line_contents = self.contents.get( pos, '%s lineend' % pos )
+##
+##			#####
+##			if res := self.line_is_defline(def_line_contents):
+##				idx = self.idx_linestart(pos)[0]
+##
+##				# SUCCESS
+##				print(def_line_contents, ind_curline, idx)
+##				return def_line_contents.strip(), ind_curline, idx
+##			#####
+##
+##
+##			# Update search pattern and indentation of matched pos line
+##			elif ind_curline > 1:
+##				patt = r'^[[:blank:]]{0,%d}[^[:blank:]#]' % (ind_curline-1)
+##
+##			elif ind_curline == 1:
+##				patt = r'^[^[:blank:]#]'
+##
+##			else:
+##				# ind_curline == 0
+##				return '__main__()', 0, '1.0'
+##
+##			### Stage 2 End ###
+##
+##		# FAIL
+##		return '__main__()', 0, '1.0'
+
+
+	def get_scope_start(self, index='insert'):
 		''' Find next(up) function or class definition
 
 			On success returns:
@@ -7092,28 +7316,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 
 
-##		###
-##		# Check if defline already
-##		if line:
-##
-##			ind_last_line = 0
-##			for char in line:
-##				if char in ['\t']: ind_last_line += 1
-##				else: break
-##
-##			# Skip possible first defline at index
-##			safe_index = self.get_safe_index(index)
-##			pos = '%s linestart' % safe_index
-##
-##			if res := self.line_is_defline(line):
-##				idx = self.idx_linestart(pos)[0]
-##				return pos_line_contents.strip(), ind_last_line, idx
-##
-##			elif ind_last_line == 0:
-##				return '__main__()', 0, '1.0'
-##		###
-
-
 		# Stage 1: Search backwards(up) from index for:
 		# pos = Uncommented line with 0 blank or more
 		blank_range = '{0,}'
@@ -7124,6 +7326,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		patt = p1 + p2
 
 		# Skip possible first defline at index
+		# +1 lines: Because cursor could be at defline,
+		# start at next line(down) to catch that defline
+		# ( For example, select_scope, elide_scope )
+		index += ' +1 lines'
 		safe_index = self.get_safe_index(index)
 		pos = '%s linestart' % safe_index
 
@@ -7141,6 +7347,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if 'strings' in self.contents.tag_names(pos):
 				#print('strings3', pos)
+				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
 				continue
 
 			break
@@ -7162,6 +7369,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Check if defline already
 		if res := self.line_is_defline(pos_line_contents):
 			idx = self.idx_linestart(pos)[0]
+			print(pos_line_contents, ind_last_line, idx,'jou')
 			return pos_line_contents.strip(), ind_last_line, idx
 
 		elif ind_last_line == 0:
@@ -7201,7 +7409,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return '__main__()', 0, '1.0'
 
 			elif 'strings' in self.contents.tag_names(pos):
-				print('strings4', pos)
+				#print('strings4', pos)
 				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
 				continue
 
@@ -7281,7 +7489,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		patt = p1 + p2
 
 		# Skip possible defline at index
-		pos = '%s +1 chars' % index
+		pos = '%s lineend' % index
 
 
 		while pos:
@@ -7299,8 +7507,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if 'strings' in self.contents.tag_names(pos):
 				#print('strings5', pos)
-				# Dont want rematch curline
-				pos = '%s +1 lines' % pos
+				# This won't work in certain cases, if for example returning
+				# multiline string (or just writing docstring to new function)
+				pos = self.contents.tag_prevrange('strings', pos)[1] + ' +1 lines linestart'
 				continue
 
 			break
@@ -7314,6 +7523,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		p2 = r'[^[:blank:]]'
 		patt = p1 + p2
 
+		# Quick fix for those: returning multiline strings
+		scope_end_fallback = pos
 
 		#print(patt, pos)
 		while pos:
@@ -7332,11 +7543,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if 'strings' in self.contents.tag_names(pos):
 				#print('strings4', pos)
+				# This won't work if for example returning
+				# multiline string
+				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
 				continue
 
 			# ON SUCCESS
 			break
 			### Stage 2 End ###
+
+
+		# Quick fix for those: returning multiline string literals
+		if pos == 'end': pos = scope_end_fallback
 
 		pos = self.contents.index('%s lineend' % pos)
 		return pos
@@ -9040,9 +9258,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return 'break'
 
 			# Hide scope
-			#
-			# +1 lines: Enable matching defline at insert
-			pos = '%s lineend +1 chars' % index
+			pos = idx
 
 			(scope_line, ind_defline,
 			idx_scope_start) = self.get_scope_start(index=pos)

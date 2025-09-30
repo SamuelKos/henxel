@@ -14,6 +14,11 @@ count token percentages /dev/token_stats.py, done
 check if want_ln in update_line, sbset_override , done
 
 
+check_sel
+change sel.start end etc also
+--> enable sel editing at both ends, done
+
+
 popup
 inspect -->  open mod, done
 
@@ -266,8 +271,30 @@ ctrl-(shift)-,. --> instead of ctrl-1234?
 
 
 
+move many lines back to old no jump
+
+
+
+check
+get_scope_start: on fail return __main__()
+			NOTE: One needs to check that after get_scope_start-call:
+				if scope_path == '__main__()':
+					do not call get_scope_end()
+
+
+if __main__ :
+scope_end --> next line with indent0 down
+
+
+Check lines with '@'
+
+
+
+
 get_scope_start:
 1170 ms with old method
+
+
 
 
 ################################
