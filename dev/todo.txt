@@ -4,6 +4,10 @@
 Below this: done ################################################
 
 
+move_many_lines back to old no jump, done
+using tcl
+
+
 kill line from insert to line-end, ctrl-k
 default text-class bind, just update help, done
 
@@ -271,8 +275,20 @@ ctrl-(shift)-,. --> instead of ctrl-1234?
 
 
 
-move many lines back to old no jump
+space --> exit goto_def
 
+
+
+
+
+####
+from this: if 'strings' in self.contents.tag_names(pos):
+to this:
+tags = self.contents.tag_names(pos)
+if 'strings' in tags:
+elif 'comments' in tags:
+(and remove '#' from patts?)
+####
 
 
 check
@@ -282,12 +298,27 @@ get_scope_start: on fail return __main__()
 					do not call get_scope_end()
 
 
-if __main__ :
-scope_end --> next line with indent0 down
+
+
+
+
+
+fix for multiline strings at __main__:
+check_line:
+if check_scope:
+if __main__ : scope_start/end = get absolutely next deflines up down
+no up --> 1.0 no down --> end
+seems to work
 
 
 Check lines with '@'
 
+
+
+defline no number
+
+
+tab_over_indent no py file
 
 
 

@@ -1737,18 +1737,45 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		s,e = '',''
 
 		if tab.check_scope:
-			( scope_line, ind_defline, idx_scope_start) = self.get_scope_start()
+			# fix for multiline strings at __main__()
+			###
+			if r := self.contents.tag_prevrange('deflin', 'insert'):
+				s = r[0] + ' linestart'
+			else:
+				s = '1.0'
 
-			idx_scope_end = self.get_scope_end(ind_defline, idx_scope_start)
+			if r := self.contents.tag_nextrange('deflin', 'insert'):
+				e = r[0] + ' -1 lines linestart'
+			else:
+				e = 'end'
 
-			s = '%s linestart' % idx_scope_start
-			e = idx_scope_end
+##			if t := self.get_absolutely_next_defline(down=False, update=True):
+##				_, next_deflinenum_as_float, _ = t
+##				s = str(next_deflinenum_as_float) + ' linestart'
+##			else:
+##				s = '1.0'
+##
+##			if t := self.get_absolutely_next_defline(down=True, update=False):
+##				_, next_deflinenum_as_float, _ = t
+##				e = str(next_deflinenum_as_float) + ' -1 lines linestart'
+##			else:
+##				e = 'end'
+
+			###
+
+##			# Was:
+##			( scope_line, ind_defline, idx_scope_start) = self.get_scope_start()
+##
+##			idx_scope_end = self.get_scope_end(ind_defline, idx_scope_start)
+##
+##			s = '%s linestart' % idx_scope_start
+##			e = idx_scope_end
 
 		else:
 			s = 'insert linestart'
 			e = 'insert lineend'
 
-		#print('check_line:',s,e)
+		print('check_line:', s, e)
 		# Remove old tags:
 		for tag in self.tagnames:
 			self.contents.tag_remove( tag, s, e)
@@ -2799,6 +2826,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				'selfs'
 				]
 		self.tagnames.extend(deflines)
+		# not 'defline' for reason
+		self.tagnames.append('deflin')
 		self.tagnames = set(self.tagnames)
 
 
@@ -2985,13 +3014,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 								flag_async, ind_depth = token.start
 								tagname = f'defline{ind_depth}'
 								self.tags[tagname].append((token.start, token.end))
+								self.tags['deflin'].append((token.start, token.end))
 
 							elif token.string in ('def', 'class'):
 								if flag_async and flag_async == token.start[0]: pass
 								else:
 									ind_depth = token.start[1]
 									tagname = f'defline{ind_depth}'
-									try: self.tags[tagname].append((token.start, token.end))
+									try:
+										self.tags[tagname].append((token.start, token.end))
+										self.tags['deflin'].append((token.start, token.end))
 									# Syntax error, just in middle of writing string etc.
 									# (No need 10 level of nested func)
 									except KeyError: pass
@@ -3116,13 +3148,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 								flag_async, ind_depth = token.start
 								tagname = f'defline{ind_depth}'
 								self.tags[tagname].append((token.start, token.end))
+								self.tags['deflin'].append((token.start, token.end))
 
 							elif token.string in ('def', 'class'):
 								if flag_async and flag_async == token.start[0]: pass
 								else:
 									ind_depth = token.start[1]
 									tagname = f'defline{ind_depth}'
-									try: self.tags[tagname].append((token.start, token.end))
+									try:
+										self.tags[tagname].append((token.start, token.end))
+										self.tags['deflin'].append((token.start, token.end))
 									# Syntax error, just in middle of writing string etc.
 									# (No need 10 level of nested func)
 									except KeyError: pass
@@ -4587,6 +4622,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if event.state not in [ 262156, 262148, 262157, 262149 ]: return
 
 
+		# Pressed Control + Shift + arrow up or down.
+		# Want: select 10 lines from cursor.
+
+		# Pressed Control + arrow up or down.
+		# Want: move 10 lines from cursor.
+
+
 		# Taken from center_view:
 		num_lines = self.text_widget_height // self.bbox_height
 		# Lastline of visible window
@@ -4595,38 +4637,60 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Lastline of file would be:
 		#last = int(float(self.contents.index('end'))) - 1
 		curline = int(float(self.contents.index('insert')))
+		# This seems not to work:
+		#curline = self.tabs[self.tabindex].oldlinenum
 		to_up = curline - firstline_screen
 		to_down = lastline_screen - curline
 
 
-		# Pressed Control + Shift + arrow up or down.
-		# Want: select 10 lines from cursor.
 
-		# Pressed Control + arrow up or down.
-		# Want: move 10 lines from cursor.
+		# Using Tcl-script here doesn't seem to improve speed
+		# But left as example
+		cmd = '''
+		set n 0
+		set near %s
+		while {$n < 10} {
+			if {$near > 0} {
+						after %s {
+						%s yview scroll %s units
+						event generate %s %s
+						}
+			} else {
+				after %s {event generate %s %s}
+				}
+			incr n 1
+		}
+		'''
+		### %s are:
+		### near, wait_time, tcl_name_of_contents, scroll_direction,
+		### tcl_name_of_contents, event_name/e
+		### wait_time, tcl_name_of_contents, scroll_direction,
+
+		w = self.tcl_name_of_contents
 
 		if event.keysym == 'Up':
 			e = '<<SelectPrevLine>>'
 
-			# Near screen end
-			# Without this, selecting would became much slower
-			# (But even with this, selecting will, soon again, be slow, after selection grows larger)
-			# This adds 'jumping' (previously, selecting small regions was very smooth), but that is ok price for what is gained.
-			if to_up < 10:
-				self.contents.yview_scroll(-1*to_down, 'units')
-
 			if event.state not in [ 5, 262157, 262149 ]:
 				e = '<<PrevLine>>'
 
+			# Add some delay to get visual feedback
+			near = '0'
+			if to_up < 10: near = '1'
+			wait_time = '7'
+			scroll_direction = '-1'
+			if 'Select' in e: wait_time = '5'
+			self.tk.eval( cmd % ( near, wait_time, w, scroll_direction, w, e,
+					wait_time, w, e ) )
 
-			for i in range(10):
-				# Add some delay to get visual feedback
-				if 'Select' in e:
-					self.after(i*5, lambda args=[e]:
-						self.contents.event_generate(*args) )
-				else:
-					self.after(i*7, lambda args=[e]:
-						self.contents.event_generate(*args) )
+			# That Tcl-script in Python (no yview scrolling)
+##			for i in range(10):
+##				if 'Select' in e:
+##					self.after(i*5, lambda args=[e]:
+##						self.contents.event_generate(*args) )
+##				else:
+##					self.after(i*7, lambda args=[e]:
+##						self.contents.event_generate(*args) )
 
 			return 'break'
 
@@ -4634,21 +4698,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		elif event.keysym == 'Down':
 			e = '<<SelectNextLine>>'
 
-			# Near screen end
-			if to_down < 10:
-				self.contents.yview_scroll(to_up, 'units')
-
 			if event.state not in [ 5, 262157, 262149 ]:
 				e = '<<NextLine>>'
 
-			for i in range(10):
-				# Add some delay to get visual feedback
-				if 'Select' in e:
-					self.after(i*5, lambda args=[e]:
-						self.contents.event_generate(*args) )
-				else:
-					self.after(i*7, lambda args=[e]:
-						self.contents.event_generate(*args) )
+			near = '0'
+			if to_down < 10: near = '1'
+			wait_time = '7'
+			scroll_direction = '+1'
+			if 'Select' in e: wait_time = '5'
+			self.tk.eval( cmd % ( near, wait_time, w, scroll_direction, w, e,
+					wait_time, w, e ) )
 
 			return 'break'
 
@@ -7092,7 +7151,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		pass
 
 
-
 #####
 ##this below no work because can be 'wandering lines' between scopes
 ##with same indentation than ind_lvl_down
@@ -7342,12 +7400,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				print(e)
 				break
 
+			# Empty or just comments
 			if not pos:
 				return '__main__()', 0, '1.0'
 
 			if 'strings' in self.contents.tag_names(pos):
 				#print('strings3', pos)
-				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
+				pos = self.contents.tag_prevrange('strings', pos)[0]
 				continue
 
 			break
@@ -7369,11 +7428,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Check if defline already
 		if res := self.line_is_defline(pos_line_contents):
 			idx = self.idx_linestart(pos)[0]
-			print(pos_line_contents, ind_last_line, idx,'jou')
+			print(pos_line_contents, ind_last_line, idx, 'jou')
 			return pos_line_contents.strip(), ind_last_line, idx
 
 		elif ind_last_line == 0:
-			return '__main__()', 0, '1.0'
+			return '__main__()', 0, pos
 
 		### Stage 1 End ########
 
@@ -7410,7 +7469,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			elif 'strings' in self.contents.tag_names(pos):
 				#print('strings4', pos)
-				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
+				pos = self.contents.tag_prevrange('strings', pos)[0]
 				continue
 
 			################
@@ -7443,7 +7502,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			else:
 				# ind_curline == 0
-				return '__main__()', 0, '1.0'
+				return '__main__()', 0, pos
 
 			### Stage 2 End ###
 
@@ -7490,7 +7549,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Skip possible defline at index
 		pos = '%s lineend' % index
-
+		flag_at_file_end = False
 
 		while pos:
 			try:
@@ -7507,24 +7566,36 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if 'strings' in self.contents.tag_names(pos):
 				#print('strings5', pos)
-				# This won't work in certain cases, if for example returning
-				# multiline string (or just writing docstring to new function)
 				pos = self.contents.tag_prevrange('strings', pos)[1] + ' +1 lines linestart'
 				continue
 
 			break
 			### Stage 1 End ###
 
+
+		# Some fixes
+		scope_end_fallback = pos + ' -1 lines lineend'
+		if pos == 'end':
+			scope_end_fallback = index + ' lineend'
+			flag_at_file_end = True
+
+
 		# Stage 2: Search backwards(up) from pos up to index for:
 		# Line with ind_def_line+1 blanks or more
 		blank_range = '{%d,}' % (ind_def_line + 1)
+
+		# Get line with any indentation
+		if flag_at_file_end: blank_range = '{0,}'
+
 		p1 = r'^[[:blank:]]%s' % blank_range
 		# Not blank
 		p2 = r'[^[:blank:]]'
+
+		# Not blank not comment
+		if flag_at_file_end: p2 = r'[^[:blank:]#]'
+
 		patt = p1 + p2
 
-		# Quick fix for those: returning multiline strings
-		scope_end_fallback = pos
 
 		#print(patt, pos)
 		while pos:
@@ -7545,7 +7616,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				#print('strings4', pos)
 				# This won't work if for example returning
 				# multiline string
-				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
+				pos = self.contents.tag_prevrange('strings', pos)[0]
 				continue
 
 			# ON SUCCESS
@@ -7553,7 +7624,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			### Stage 2 End ###
 
 
-		# Quick fix for those: returning multiline string literals
+		# Quick fix for: returning multiline string
 		if pos == 'end': pos = scope_end_fallback
 
 		pos = self.contents.index('%s lineend' % pos)
