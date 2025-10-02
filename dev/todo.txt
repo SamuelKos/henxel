@@ -230,25 +230,83 @@ e.tk.eval('dict get $mydict mykey')
 
 
 
-print('\nState:', self.state,
-'\ntcl_name:', self.tcl_name_of_contents,
-'\ncheck_scope:', self.tabs[e.tabindex].check_scope,
-'\nline_can_update:', self.line_can_update)
+
+
+####
+check_line:
+cursor is in multiline string, do that after triple checks
+and par check after them
+then if no check scope and is in multiline: return
+also for comments? use tags instead? like if 'strings' in..
+####
 
 
 Save-button behaviour should be changed to: always save curtab
 	and if holding down ctrl --> save_forced
 
 
+
+split help files, help_general, shortcut_mac
+
+
+###
+note, runtime error can occur before __init__, like so:
+e=henxel.Editor()
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/home/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py", line 420, in __new__
+    cls.helptxt = keystext + helptxt
+NameError: name 'helptxt' is not defined
+###
+
+
+
+
+grid after set textwidgets?
+
+
 list tree of deflines
 
 
-line is defline use defline tag?
+ctrl-(shift)-,. --> instead of ctrl-1234?
 
 
-if 'srings' in 
---> get tag_prevrange and update pos in while loop
-continue
+space --> exit goto_def
+
+
+Control-(Shift)-Home/End no work
+goto/selectto filestart/end 
+
+
+####
+from this: if 'strings' in self.contents.tag_names(pos):
+to this:
+tags = self.contents.tag_names(pos)
+if 'strings' in tags:
+elif 'comments' in tags:
+(and remove '#' from patts?)
+####
+
+
+##########
+needs check
+get_scope_start: on fail return __main__()
+			NOTE: One needs to check that after get_scope_start-call:
+				if scope_path == '__main__()':
+					do not call get_scope_end()
+
+
+fix for multiline strings at __main__:
+check_line:
+if check_scope:
+if __main__ : scope_start/end = get absolutely next deflines up down
+no up --> 1.0 no down --> end
+seems to work
+
+
+Check lines with '@'
+check lint marks
+#############
 
 
 
@@ -271,62 +329,22 @@ defline when update?
 indent/dedent?
 tab_over_indent?
 
-ctrl-(shift)-,. --> instead of ctrl-1234?
 
-
-
-space --> exit goto_def
-
-
-
-
-
-####
-from this: if 'strings' in self.contents.tag_names(pos):
-to this:
-tags = self.contents.tag_names(pos)
-if 'strings' in tags:
-elif 'comments' in tags:
-(and remove '#' from patts?)
-####
-
-
-check
-get_scope_start: on fail return __main__()
-			NOTE: One needs to check that after get_scope_start-call:
-				if scope_path == '__main__()':
-					do not call get_scope_end()
-
-
-
-
-
-
-
-fix for multiline strings at __main__:
-check_line:
-if check_scope:
-if __main__ : scope_start/end = get absolutely next deflines up down
-no up --> 1.0 no down --> end
-seems to work
-
-
-Check lines with '@'
-
-
-
-defline no number
+only 'defline' -tag without number?
 
 
 tab_over_indent no py file
 
 
+line_is_defline use 'defline' -tag?
+no, is parser, does not use index
+rename: line_is_defline --> parse_defline(line)
+make new func: line_is_defline(index), which uses 'defline' -tag
+
+
 
 get_scope_start:
 1170 ms with old method
-
-
-
 
 ################################
 

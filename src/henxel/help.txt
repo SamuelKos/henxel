@@ -1,150 +1,14 @@
-		Keyboard shortcuts:
-		
-		
-		Alt-p	Toggle bookmark
-		Alt-b	Goto next bookmark
-		Alt-B	Goto prev bookmark
-
-		Alt-g	Goto definition ( when cursor is at or in between:
-									self.w<INS>alk_scope<INS> )
-		
-		Ctrl-l  Gotoline:	-1 and empty goes to file-end.
-							-20 goes to 20 lines before file-end etc.
-		
-		
-		Alt-n		Open new tab
-		Alt-Return	Open file to current tab
-		
-		Ctrl-d  Close current tab and save it
-		Ctrl-Q  Close current tab without saving it
-		Ctrl-q  Close editor and save files and configuration.
-		
-		Alt-w	Walk tabs forward
-		Alt-q	Walk tabs backwards
-		
-		
-		Ctrl-e  Move cursor to lineend (or use End-key)
-		Ctrl-a  Move cursor to linestart (or use Home-key)
-		
-		
-		Ctrl-f  Search
-		Ctrl-r  Replace
-		Ctrl-R  Replace all
-		
-		
-		Esc		Toggle fullscreen, clear search-tags, clear selection,
-				close help, close show errors, exit goto def, exit gotoline,
-				exit search, exit replace etc.
-		
-		Shift-Return	Comment
-		Shift-BackSpace	Uncomment
-		
-		
-		Shift-Tab  Unindent
-		Tab        Indent or walk complete-word expansions
-		Ctrl-Tab   Insert Tab
-		
-		Alt-BackSpace	Delete backwards from cursor until dot
-
-		
-		Ctrl-c  Copy
-		Ctrl-v  Paste
-		Ctrl-x  Cut
-		Ctrl-y  Copy current line without newline, (yank line)
-		Ctrl-k  Delete from insert to line end, (does not copy)
-		Ctrl-z  Undo
-		Ctrl-Z  Redo
-		
-		
-		Alt-l   Toggle linenumbers
-		Alt-x   Toggle syntax highlight
-		
-		
-		Alt-f   Font setting
-		Alt-s   Color setting
-		Alt-t   Toggle color setting
-		
-		
-		Ctrl-shift-E	Select from cursor to lineend (or Shift-End)
-		Ctrl-shift-A	Select from cursor to linestart (or Shift-Home)
-		
-		Ctrl-j  Scroll down without moving cursor
-		Ctrl-u  Scroll up without moving cursor
-		
-
-		Shift-up		Select one more line up
-		Shift-down		Select one more line down
-		Ctrl-Shift-up	Select 10 more line up
-		Ctrl-Shift-down	Select 10 more line down
-		Ctrl-up			Move 10 more line up
-		Ctrl-down		Move 10 more line down
-		
-		If have PgUp/Down -keys, use them (with Shift)
-		to move/select faster
-		If not, use
-		Control-1/2 (selecting), Control-3/4 just moving
-
-		Ctrl-left  		Move cursor one word left
-		Ctrl-right 		Move cursor one word right
-		Ctrl-shift-left 	Select one more word to left
-		Ctrl-shift-right	Select one more word to right
-		
-		left/right		If cursor is not visible, goto cursor
-						If have selection, clear selection
-		
-		
-		# Not often needed:
-		Ctrl-89
-			Walk definition lines
-		 	8 goto absolutely next(up) defline
-			9 goto absolutely next(down) defline
-		
-		Ctrl-Shift-()
-			Walk definition lines (jump over lower levels)
-			( goto next(up) defline
-			) goto next(down) defline
-
-		
-		Alt-Shift-E		toggle, elide scope, if cursor is on defline
-		Alt-Shift-F		select scope, where cursor is in
-		
-		Ctrl-t	Change indentation of selected lines to current setting
-		
-		------------------------------------------------------
-		
-		
-		While searching:
-			Ctrl-n  Next match
-			Ctrl-p  Prev match
-			-	Copying text to clipboard is possible with yank-line etc.
-			-	Add bookmark is possible so is Goto def. Ctrl-np -> back to matches
-			-	Changing the replacement string is possible while replacing.
-			-	1: Press Space to exit search to focus.
-				2: Double-click to exit to cursor.
-				3: Press Esc to exit to cursor position at the start of the search.
-				Press arrow-key to refresh view back to cursor, if necessary.
-		
-		Also, after searching, show and select next/prev occurence of last search
-		(if no selection, else uses selection)
-			Ctrl-n  Next match
-			Ctrl-p  Prev match
-
-		While replacing:
-			Return does what is expected.
-		
-		Default bindings: https://tcl.tk/man/tcl9.0/TkCmd/text.html#M192
-	
-	
-	------------------------------------------------------
-	
-	Below this, it is expected one started editor with:
-	
-		import henxel
-		e=henxel.Editor()
-		
-	This is then referenced like:
-		e.print_bookmarks()	
-	------------------------------------------------------
+				
+					
+	.----------------------------------------------------.
+	|Below this, it is expected one started editor with: |
+	|													 |
+	|	import henxel 									 |
+	|	e=henxel.Editor()								 |
+	|													 |
+	|This is then referenced like:						 |
+	|	e.print_bookmarks()								 |
+	*----------------------------------------------------*
 	
 	
 	When is my file Saved to Disk?
@@ -244,8 +108,11 @@
 		when cursor is at or in between: self.w<INS>alk_scope<INS>
 		(or if there is selection, uses it)
 	  - Can be done also while searching,
-		just press Ctrl-np to get back to matches, because esc will exit search
+		just press arrow-key or Ctrl-np to get back to matches,
+		because esc will exit search
 	  - Bookmarks can be created while doing goto def
+	  - Esc: exit to cursor position at the start of search/gotodef
+	  - Space: exit to definition line
 	
 	
 	Selection

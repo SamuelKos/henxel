@@ -220,10 +220,11 @@ class Tab:
 CONFPATH = 'editor.cnf'
 ICONPATH = 'editor.png'
 HELPPATH = 'help.txt'
-HELP_MAC = 'help_mac.txt'
+KEYS_HLP = 'shortcuts.txt'
+KEYS_MAC = 'shortcuts_mac.txt'
 START_MAC = 'restart_editor.scpt'
 START_WIN = 'restart_editor_todo.bat'
-START_LINUX = 'restart_editor_todo.sh'
+START_NIX = 'restart_editor_todo.sh'
 
 
 VERSION = importlib.metadata.version(__name__)
@@ -371,7 +372,7 @@ class Editor(tkinter.Toplevel):
 				startfile = False
 				if cls.os_type == 'mac_os': startfile = START_MAC
 				elif cls.os_type == 'windows': startfile = START_WIN
-				else: startfile = START_LINUX
+				else: startfile = START_NIX
 
 				if not startfile: pass
 				else:
@@ -393,18 +394,31 @@ class Editor(tkinter.Toplevel):
 							print(e)
 
 			if not cls.helptxt:
+				keystext = False
+				helptext = False
+				helpfile = HELPPATH
+				keysfile = KEYS_HLP
+				if cls.os_type == 'mac_os': keysfile = KEYS_MAC
+
 				for item in cls.pkg_contents.iterdir():
 
-					helpfile = HELPPATH
-					if cls.os_type == 'mac_os': helpfile = HELP_MAC
-
-					if item.name == helpfile:
+					if item.name == keysfile:
 						try:
-							cls.helptxt = item.read_text()
-							break
+							keystext = item.read_text()
 
 						except Exception as e:
 							print(e.__str__())
+
+					elif item.name == helpfile:
+						try:
+							helptext = item.read_text()
+
+						except Exception as e:
+							print(e.__str__())
+
+					if keystext and helptext:
+						cls.helptxt = keystext + helptext
+						break
 
 
 		if cls.no_icon: print('Could not load icon-file.')
@@ -513,6 +527,9 @@ class Editor(tkinter.Toplevel):
 			# When clicked with mouse button 1 while searching
 			# to set cursor position to that position clicked.
 			self.save_pos = None
+
+			# Help enabling: "exit to goto_def func with space" while searching
+			self.goto_def_pos = False
 
 			# Used as flag to check if need to update self.deflines
 			self.cur_defline = '-1.-1'
@@ -2811,8 +2828,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		deflines = list()
 		for i in range(10):
 			deflines.append('defline%i' % i)
-		self.deflines = dict()
-		[self.deflines.setdefault(key, 1) for key in deflines]
+		self.defline_tags = dict()
+		[self.defline_tags.setdefault(key, 1) for key in deflines]
 
 
 		self.tagnames = [
@@ -2855,7 +2872,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.tag_config('animate')
 
 		# Used in insert_tokens()
-		for key in self.deflines.keys():
+		for key in self.defline_tags.keys():
 			w.tag_config(key)
 
 		w.tag_config('highlight_line')
@@ -4637,7 +4654,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Lastline of file would be:
 		#last = int(float(self.contents.index('end'))) - 1
 		curline = int(float(self.contents.index('insert')))
-		# This seems not to work:
+		# This seems not to work (not in view/sync):
 		#curline = self.tabs[self.tabindex].oldlinenum
 		to_up = curline - firstline_screen
 		to_down = lastline_screen - curline
@@ -6228,11 +6245,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return
 
 
-		if self.state not in [ 'search', 'replace', 'replace_all' ]:
+		if self.state not in ['search', 'replace', 'replace_all']:
 			return
 
 		# self.search_focus marks range of focus-tag:
 		self.save_pos = self.search_focus[1]
+
+		# Help enabling: "exit to goto_def func with space" while searching
+		if self.goto_def_pos:
+			self.save_pos = self.goto_def_pos
+
 		self.stop_search()
 
 		return 'break'
@@ -7639,6 +7661,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.contents.unbind( "<Double-Button-1>", funcid=self.bid )
 		self.contents.config(state='normal')
 		self.state = 'normal'
+		# Space is on hold for extra 200ms, released below
+		self.contents.unbind( "<space>", funcid=self.bid4 )
+		bid_tmp = self.contents.bind( "<space>", self.do_nothing_without_bell)
+
+		# Stopping by space while goto_def started from 'normal' -state
+		if event:
+			if event.keysym == "space" and self.goto_def_pos:
+				self.save_pos = self.goto_def_pos
+
+		self.goto_def_pos = False
 
 		# Set cursor pos
 		curtab = self.tabs[self.tabindex]
@@ -7657,6 +7689,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		except tkinter.TclError:
 			curtab.position = self.contents.index(tkinter.INSERT)
+
+		# Release space
+		self.wait_for(200)
+		self.contents.unbind( "<space>", funcid=bid_tmp )
+		curtab.bid_space = self.contents.bind( "<space>", self.space_override)
+
 
 		return 'break'
 
@@ -7692,7 +7730,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# 'focus'
 			p = self.search_focus[1]
 
-
 		if have_selection:
 			word_at_cursor = c.selection_get()
 		else:
@@ -7704,6 +7741,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if word_at_cursor == '':
 			return 'break'
+
 
 		# Reduce greatly search time, compared to old re-aproach below
 		# update self.deflines
@@ -7731,7 +7769,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##			return 'break'
 
 		if pos:
-			#self.contents.mark_set('insert', pos)
+			# Help enabling: "exit to goto_def func with space" while searching
+			self.goto_def_pos = pos
 			self.contents.focus_set()
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
@@ -7742,9 +7781,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.wait_for(150)
 			self.flash_line(pos)
 
-			if self.state == 'search': pass
-			else:
-				# Save cursor pos
+
+			# NOTE: If searching, this gets passed
+			if self.state == 'normal':
+				# Save cursor position to self.save_pos to be restored
+				# when pressing Esc to quit goto_def
 				tab = self.tabs[self.tabindex]
 				try: tab.position = self.contents.index(tkinter.INSERT)
 				except tkinter.TclError: pass
@@ -7755,8 +7796,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					func=lambda event: self.update_curpos(event, **{'on_stop':self.stop_goto_def}),
 						add=True )
 
+
+				self.contents.unbind( "<space>", funcid=self.tabs[self.tabindex].bid_space )
+				self.bid4 = self.contents.bind( "<space>", self.stop_goto_def )
+
+
 				self.contents.config(state='disabled')
 				self.state = 'goto_def'
+
+			else: pass
 
 		else:
 			self.bell()
@@ -10251,6 +10299,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		except tkinter.TclError:
 			curtab.position = self.contents.index(tkinter.INSERT)
 
+
+		# Help enabling: "exit to goto_def func with space" while searching
+		# This has to be after: Set cursor pos
+		self.goto_def_pos = False
 
 		self.new_word = ''
 		self.search_matches = 0
