@@ -113,7 +113,11 @@
 	  - Bookmarks can be created while doing goto def
 	  - Esc: exit to cursor position at the start of search/gotodef
 	  - Space: exit to definition line
-	
+	  - One can also select function of interest while searching,
+		other than on match, and press Alt-g to get there.
+		Or just click the function name, then press Alt-g
+		(note: cursor is invisible while searching)
+		
 	
 	Selection
 	  - Long selection: if cursor is not visible,

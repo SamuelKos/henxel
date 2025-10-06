@@ -3,7 +3,7 @@
 		
 		Cmd-p	Toggle bookmark
 		Cmd-b	Goto next bookmark
-		Cmd-B	Goto prev bookmark
+		Cmd-B	previous bookmark
 
 		Cmd-g	Goto definition ( when cursor is at or in between:
 									self.w<INS>alk_scope<INS> )
@@ -12,19 +12,19 @@
 							-20 goes to 20 lines before file-end etc.
 		
 		
-		Cmd-n			Open new tab
-		Cmd-Return		Open file to current tab
+		Cmd-n		Open new tab
+		Cmd-Return	Open file to current tab
 		
 		Ctrl-d  Close current tab and save it
 		Ctrl-Q  Close current tab without saving it
 		Cmd-q   Close editor and save files and configuration.
 		
-		Cmd-right  Walk tabs forward
-		Cmd-left   Walk tabs backwards
+		Cmd-right  Open next tab
+		Cmd-left   previous
 		
 		
 		Cmd-e  Move cursor to lineend (or use End-key)
-		Cmd-a  Move cursor to linestart (or use Home-key)
+		Cmd-a  to linestart (or use Home-key)
 		
 		
 		Cmd-f  Search
@@ -66,42 +66,39 @@
 		
 		
 		Cmd-shift-right  Select from cursor to lineend (or Shift-End)
-		Cmd-shift-left   Select from cursor to linestart (or Shift-Home)
+		Cmd-shift-left   to linestart (or Shift-Home)
 		
-		Ctrl-j  Scroll down without moving cursor
-		Ctrl-u  Scroll up without moving cursor
+
+		Ctrl-j/u	Scroll down/up 1/3 screens without moving cursor
+		+Shift		only one line
+
 		
-		Shift-up		Select one more line up
-		Shift-down		Select one more line down
-		Cmd-Shift-up	Select 10 more line up
-		Cmd-Shift-down	Select 10 more line down
-		Cmd-up			Move 10 more line up
-		Cmd-down		Move 10 more line down
+		Shift-up/down	Select lines one at time
+		+Cmd			Select lines 10 at time
 		
-		If have PgUp/Down -keys, use them (with Shift)
-		to move/select faster
+		Cmd-up/down		Move cursor 10 lines up/down
+		
+		If have PgUp/Down -keys, use them (with Shift) to move/select faster
 		If not, use
 		Control-1/2 (selecting), Control-3/4 just moving
 
-		Alt-left  		Move cursor one word left
-		Alt-right 		Move cursor one word right
-		Alt-shift-left 	Select one more word to left
-		Alt-shift-right	Select one more word to right
+		Alt-left/right	Move cursor one word left/right
+		+shift			Select words
+		
 		
 		left/right		If cursor is not visible, goto cursor
 						If have selection, clear selection
 		
 		
-		# Not often needed:
 		Cmd-89
 			Walk definition lines
 		 	8 goto absolutely next(up) defline
-			9 goto absolutely next(down) defline
+			9 down
 
 		Cmd-Shift-()
-			Walk definition lines (jump over lower levels)
+			Walk definition lines (follow tree to root)
 			( goto next(up) defline
-			) goto next(down) defline
+			) down
 
 
 		Cmd-Shift-E		toggle, elide scope, if cursor is on defline

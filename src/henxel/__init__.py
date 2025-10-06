@@ -451,10 +451,6 @@ class Editor(tkinter.Toplevel):
 				lambda kwargs={'quit_debug':True}: self.quit_me(**kwargs))
 
 
-			# Get original background, which is returned at end of init
-			# after editor gets mapped
-			self.orig_bg_color = self.cget('bg')
-			self.config(bg='black')
 			# Dont map too early to prevent empty windows at startup
 			# when init is taking long
 			self.withdraw()
@@ -547,7 +543,8 @@ class Editor(tkinter.Toplevel):
 
 			self.waitvar = tkinter.IntVar()
 			self.fullscreen = False
-			self.state = 'normal'
+			# Just in case, set to normal at end of init
+			self.state = 'init'
 
 
 			self.helptxt = 'Could not load help-file. Press ESC to return.'
@@ -581,8 +578,7 @@ class Editor(tkinter.Toplevel):
 											tabstyle='wordprocessor', highlightthickness=0,
 											relief='flat')
 			#############
-			self.frame = tkinter.Frame(self, bd=0, padx=0, pady=0, highlightthickness=0,
-									bg='black')
+			self.frame = tkinter.Frame(self, bd=0, padx=0, pady=0, highlightthickness=0)
 
 			self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL,
 											highlightthickness=0, bd=0, takefocus=0)
@@ -1027,6 +1023,7 @@ class Editor(tkinter.Toplevel):
 			############
 			# Get window positioning with geometry call to work below
 			self.update_idletasks()
+
 			# Sticky top right corner by default,
 			# --> get some space for console on left
 			# This geometry call has to be before deiconify
@@ -1038,9 +1035,9 @@ class Editor(tkinter.Toplevel):
 				else:
 					self.geometry(self.geom)
 
+
 			############
-			# map Editor, restore original background, which was set to black
-			# during init to prevent flashing when init takes long
+			# map Editor
 			if self.flags and not self.flags.get('test_is_visible'): pass
 			else: self.deiconify()
 
@@ -1051,9 +1048,8 @@ class Editor(tkinter.Toplevel):
 				self.contents.focus_set()
 
 
-			self.config(bg=self.orig_bg_color)
-
 			self.__class__.alive = True
+			self.state = 'normal'
 			self.update_title()
 
 ##			# Widget visibility-check
@@ -1617,7 +1613,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		for tab in self.tabs: self.save_bookmarks(tab)
 		self.save_config()
 
-		self.config(bg='black') # Prevent flashing if slow machine
+		self.config(bg=self.bgcolor) # Prevent flashing if slow machine
 		self.cleanup()
 
 
@@ -1792,7 +1788,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			s = 'insert linestart'
 			e = 'insert lineend'
 
-		print('check_line:', s, e)
+		#print('check_line:', s, e)
 		# Remove old tags:
 		for tag in self.tagnames:
 			self.contents.tag_remove( tag, s, e)
@@ -2049,9 +2045,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.bind( "<Control-A>", self.goto_linestart)
 		w.bind( "<Control-E>", self.goto_lineend)
 
+
+
+
 		w.bind( "<Control-j>", self.center_view)
 		w.bind( "<Control-u>",
 			lambda event: self.center_view(event, **{'up':True}) )
+		w.bind( "<Control-Shift-J>", self.center_view)
+		w.bind( "<Control-Shift-U>",
+			lambda event: self.center_view(event, **{'up':True}) )
+
 
 		w.bind( "<Control-d>", self.del_tab)
 		w.bind( "<Control-Q>",
@@ -2244,18 +2247,26 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ############## Linenumbers Begin
 
 	def toggle_ln(self, event=None):
+		# To prevent flashing, one must use full geometry-string
+		# when starting editor
 
-		# if dont want linenumbers:
+		self.wait_for(200)
+
+		# if don't want linenumbers:
 		if self.want_ln:
-			# remove remembers grid-options
-			self.ln_widget.grid_remove()
-			self.frame.grid_configure(column=0, columnspan=4)
+			# Removing widget remembers grid-options. Next time
+			# it is gridded one can just: self.ln_widget.grid()
 			self.want_ln = False
+			self.frame.grid_configure(column=0, columnspan=4)
+			self.ln_widget.grid_remove()
+
 		else:
+			self.want_ln = True
 			self.frame.grid_configure(column=1, columnspan=3)
 			self.ln_widget.grid()
 
-			self.want_ln = True
+
+		self.update_idletasks()
 
 		return 'break'
 
@@ -4739,6 +4750,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
+		# If pressed Control-Shift-j/u, move one line at time
+		if event.state in [5, 262157, 262149]:
+			n=1
+			if up: n=-1
+			self.contents.yview_scroll(n, 'units')
+			return 'break'
+
 
 		num_lines = self.text_widget_height // self.bbox_height
 		num_scroll = num_lines // 3
@@ -4750,7 +4768,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Lastline
 		last = int(float(self.contents.index('end'))) - 1
 		curline = int(float(self.contents.index('insert'))) - 1
-
 
 		if up: num_scroll *= -1
 
@@ -7475,7 +7492,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			p2 = r'[^[:blank:]#]'
 			patt = p1 + p2
 
-		print(ind_last_line, 'before while')
+		#print(ind_last_line, 'before while')
 
 		while pos:
 			try:
@@ -7714,7 +7731,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.i<INS>s_pyfile<INS>
 
 			Works also when searching/replacing, just press Alt-g
-			on match, or select function of interest
+			on match.
+
+			One can also select other function of interest while searching
+			or just click the function name (note: cursor is invisible while searching)
+			and press Alt-g
+
+			Arrow key or Control-np --> back to search matches
 		'''
 
 		if (not self.is_pyfile()) or (self.state not in ['normal', 'search', 'replace']):
@@ -7726,9 +7749,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		p = 'insert'
-		if self.state in ('search', 'replace'):
-			# 'focus'
-			p = self.search_focus[1]
 
 		if have_selection:
 			word_at_cursor = c.selection_get()
@@ -7743,8 +7763,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
-		# Reduce greatly search time, compared to old re-aproach below
-		# update self.deflines
+		# Reduce greatly search time, compared to re-aproach
 		self.deflines = self.get_deflines(self.tabs[self.tabindex])
 		for item in self.deflines:
 			if item[2] == word_at_cursor:
@@ -7754,19 +7773,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-
-		# Was:
-##		#print(word_at_cursor)
-##		# https://www.tcl.tk/man/tcl9.0/TclCmd/re_syntax.html#M31
-##		patt_indent = r'^#*[[:blank:]]*'
-##		patt_keywords = r'(?:async[[:blank:]]+)?def[[:blank:]]+'
-##		search_word = patt_indent + patt_keywords + word_at_cursor + r'\('
-##
-##		try:
-##			pos = self.contents.search(search_word, '1.0', regexp=True)
-##
-##		except tkinter.TclError:
-##			return 'break'
 
 		if pos:
 			# Help enabling: "exit to goto_def func with space" while searching
@@ -7793,8 +7799,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.bind("<Escape>", self.stop_goto_def)
 				self.bid = self.contents.bind("<Double-Button-1>",
-					func=lambda event: self.update_curpos(event, **{'on_stop':self.stop_goto_def}),
-						add=True )
+					func=lambda event: self.update_curpos(event, **{'on_stop':self.stop_goto_def}), add=True )
 
 
 				self.contents.unbind( "<space>", funcid=self.tabs[self.tabindex].bid_space )
@@ -9633,7 +9638,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.ensure_idx_visibility(start)
 
 
-		self.contents.mark_set('insert', start)
+		# Until next line of code explanation for
+		# Intention: use goto_def while searching/replacing
+
+		# This need to be 'end', so that in goto_def(), one could use 'insert'
+		# as base-index 'p' to get word_at_cursor.
+		# Now when that is possible, it enables the following:
+		#
+		# While searching, one can click a function name, other than on match,
+		# (clicking sets new 'insert' -position to that position clicked)
+		# and press Alt-g to get there.
+		#
+		# Or just press Alt-g while on match to get that function definition
+		# if searching for function.
+		# (this works because 'insert' is set here correctly)
+		# Before, this was done in goto_def by checking if state was 'search'
+		# and then using self.search_focus[1] as base-index 'p'
+		self.contents.mark_set('insert', end)
 
 
 		if self.entry.flag_start:
@@ -9734,7 +9755,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.wait_for(100)
 
 		self.ensure_idx_visibility(start)
-		self.contents.mark_set('insert', start)
+
+
+		# Until next line of code explanation for
+		# Intention: use goto_def while searching/replacing
+
+		# This need to be 'end', so that in goto_def(), one could use 'insert'
+		# as base-index 'p' to get word_at_cursor.
+		# Now when that is possible, it enables the following:
+		#
+		# While searching, one can click a function name, other than on match,
+		# (clicking sets new 'insert' -position to that position clicked)
+		# and press Alt-g to get there.
+		#
+		# Or just press Alt-g while on match to get that function definition
+		# if searching for function.
+		# (this works because 'insert' is set here correctly)
+		# Before, this was done in goto_def by checking if state was 'search'
+		# and then using self.search_focus[1] as base-index 'p'
+		self.contents.mark_set('insert', end)
 
 		if self.entry.flag_start:
 			if self.state == 'search':

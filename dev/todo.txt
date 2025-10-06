@@ -4,6 +4,17 @@
 Below this: done ################################################
 
 
+
+Control-Shift-ju --> move only one line at time, done
+
+
+toggle_ln, fix flashing if slow machine, done
+
+
+split help files, help_general == help.txt done
+shortcuts == shortcuts.txt, shortcuts_mac.txt
+
+
 move_many_lines back to old no jump, done
 using tcl
 
@@ -132,6 +143,28 @@ Below this: not done:
 ###############################################
 
 
+
+count and keep cache of all py files, even if closed?
+
+
+run file even without filename
+
+
+always save real geomstring at exit?
+# To prevent flashing, one must use full geometry-string
+# when starting editor --> always saving geometry?
+
+
+
+check why:
+home/end/gotolineend does see() or ensure_idx()
+
+
+
+check breakpoint usage
+
+
+
 paste inside multiline string no work
 check paste token update
 
@@ -165,6 +198,9 @@ check use_geometry in win11, macos, not done
 
 
 Add Settings section in help?, not done ######
+
+
+Add Settings widget
 
 
 cursor is in multiline string does not always work?
@@ -246,9 +282,6 @@ Save-button behaviour should be changed to: always save curtab
 
 
 
-split help files, help_general, shortcut_mac
-
-
 ###
 note, runtime error can occur before __init__, like so:
 e=henxel.Editor()
@@ -260,6 +293,8 @@ NameError: name 'helptxt' is not defined
 ###
 
 
+
+print_bookmarks show scope
 
 
 grid after set textwidgets?
