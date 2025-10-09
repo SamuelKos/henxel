@@ -455,6 +455,13 @@ class Editor(tkinter.Toplevel):
 			# when init is taking long
 			self.withdraw()
 
+			# Prevent flashing 1/3
+			# Get original background, which is returned at end of init
+			# after editor gets mapped
+			self.orig_bg_color = self.cget('bg')
+			# This would set background to transparent: self.config(bg='')
+			# but setting it to: self.bgcolor later works better
+
 
 			# Other widgets
 			self.to_be_closed = list()
@@ -791,7 +798,6 @@ class Editor(tkinter.Toplevel):
 
 
 
-
 			# In apply_conf now
 
 ##			# Get anchor-name of selection-start.
@@ -834,14 +840,15 @@ class Editor(tkinter.Toplevel):
 				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
 
 
+			# Widgets are now initiated (except error and help-tabs)
+			###########################
 
 
-			# Widgets are initiated, now more configuration
-			################################################
-			# Needed in update_linenums(), there is more info.
-			self.update_idletasks()
+			# Some more configuration
+			###############################
+			self.update_idletasks() # Check is this needed?
 
-			# if self.y_extra_offset > 0, it needs attention
+			# if self.y_extra_offset > 0, it needs attention in update_linenums
 			self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
 			# Needed in update_linenums() and sbset_override()
 			self.bbox_height = self.contents.bbox('@0,0')[3]
@@ -855,21 +862,6 @@ class Editor(tkinter.Toplevel):
 
 			self.helptxt = f'{self.helptxt}\n\nHenxel v. {self.version}'
 
-			# Widgets are configured
-			###############################
-
-
-##			# Widget visibility-check
-##			if self.flags and self.flags.get('launch_test'):
-##				a = self.contents.winfo_ismapped()
-##				b = self.contents.winfo_viewable()# checks also if ancestors are mapped
-##				print(a,b) # 0 0
-##
-##			# Note also this
-##			if self.flags and self.flags.get('launch_test'):
-##				print(self.bbox_height,  self.text_widget_height)
-##				# self.bbox_height == 1,  self.text_widget_height == 1
-##				# --> self.contents is not yet 'packed' by (grid) geometry-manager
 
 
 			# Layout Begin
@@ -877,21 +869,19 @@ class Editor(tkinter.Toplevel):
 			self.rowconfigure(1, weight=1)
 			self.columnconfigure(1, weight=1)
 
-			# It seems that widget is shown on screen when doing grid_configure
+			# Normally, widget is shown on screen when doing grid_configure
+			# But not if root-window is withdrawn earlier(it is)
 			self.btn_git.grid_configure(row=0, column = 0, sticky='nsew')
 			self.entry.grid_configure(row=0, column = 1, sticky='nsew')
 			self.btn_open.grid_configure(row=0, column = 2, sticky='nsew')
 			self.btn_save.grid_configure(row=0, column = 3, columnspan=2,
 										sticky='nsew')
 
-
-
 			self.ln_widget.grid_configure(row=1, column = 0, sticky='nsew')
 
 			self.frame.rowconfigure(0, weight=1)
 			self.frame.columnconfigure(0, weight=1)
 			self.contents.grid_configure(row=0, column=0, sticky='nsew')
-
 
 
 			# If want linenumbers:
@@ -1020,6 +1010,9 @@ class Editor(tkinter.Toplevel):
 
 			curtab.text_widget.bind( "<Alt-o>", self.test_bind)
 
+			# Prevent flashing 2/3
+			self.config(bg=self.bgcolor)
+
 			############
 			# Get window positioning with geometry call to work below
 			self.update_idletasks()
@@ -1029,8 +1022,11 @@ class Editor(tkinter.Toplevel):
 			# This geometry call has to be before deiconify
 			diff = self.winfo_screenwidth() - self.winfo_width()
 			tests = (self.os_type != 'windows', self.geom == '+%d+0', diff > 0)
+			# Setting of geometry can be left to window manager with:
+			# self.use_geometry(0) --> self.geom == False
 			if self.geom:
 				if all(tests):
+					# Not Windows and first launch
 					self.geometry('+%d+0' % diff )
 				else:
 					self.geometry(self.geom)
@@ -1046,6 +1042,18 @@ class Editor(tkinter.Toplevel):
 				self.contents.focus_force()
 			else:
 				self.contents.focus_set()
+
+			# Prevent flashing 3/3
+			while not self.contents.winfo_viewable():
+				self.wait_for(200)
+			self.config(bg=self.orig_bg_color)
+
+
+			# no conf, or geometry reset to 'default'
+			if self.geom in ['+%d+0', '-0+0']:
+				self.flag_check_geom_at_exit = True
+				self.after(200,
+				lambda args=['current']: self.use_geometry(*args))
 
 
 			self.__class__.alive = True
@@ -1607,13 +1615,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.activate_terminal()
 			return delayed_break(33)
 
-		# Below this line, 1: debug=False (normal mode) or 2: quit_debug or restart
-		# --> cleanup is reasonable
+		# Continue below if 1: debug=False (normal mode) or
+		# 2: quit_debug or restart
 
 		for tab in self.tabs: self.save_bookmarks(tab)
+
+		# Closing after: first launch, no conf or geometry reset to 'default'
+		# Assuming if user changed geometry, it was not satisfactory
+		# --> use current geometry
+		if self.flag_check_geom_at_exit:
+			geom_current = self.geometry()
+			if self.geom != geom_current: self.geom = geom_current
+
 		self.save_config()
 
-		self.config(bg=self.bgcolor) # Prevent flashing if slow machine
+		self.config(bg='') # Prevent flashing if slow machine
+		self.update_idletasks()
 		self.cleanup()
 
 
@@ -2318,6 +2335,29 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.ln_string != ln:
 			self.ln_string = ln
 
+			#########################
+			# About bbox and indexes
+			#
+			# There are two very different class of indexes in tk text widget
+			#
+			# Most often used are 'normal' indexes like 'insert +2lines'
+			# or '12.1'. They refer to lines and characters of Text-widget.
+			# This kind of index can be offscreen, not currently visible.
+			# And if that index is not currently visible, then calling
+			#
+			#	bbox(idx_not_visible) returns: None
+			#
+			#
+			# There is also index notation like '@0,0' which refer to
+			# coordinates(inner == relative == not absolute) of widget window.
+			#
+			# These indexes are always visible by definition and calling
+			#
+			#	bbox(@X,Y) should never return None
+			#
+			###################################
+
+
 			# 1 - 3 : adjust linenumber-lines with text-lines
 
 			# 1:
@@ -2327,15 +2367,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# 2: bbox returns this kind of tuple: (3, -9, 19, 38)
 			# (bbox is cell that holds a character)
 			# (x-offset, y-offset, width, height) in pixels
-			# Want y-offset of first visible line, and reverse it:
+			# Want y-offset of first visible line, and reverse it
 
-			# NOTE ABOUT BBOX
-			# if used normal index like bbox('insert +2lines') or bbox('12.1')
-			# THen, if that index is not currently visible on screen,
-			# bbox returns: None
-
-			# index like '@0,0' are different by definition, they do not refer
-			# to content of Text-widget, but structure of widget window.
 
 			y_offset = self.contents.bbox('@0,0')[1]
 
@@ -2350,7 +2383,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tt.insert('1.0', self.ln_string)
 			tt.tag_add('justright', '1.0', tkinter.END)
 
-			# 3: Then scroll lineswidget same amount to fix offset
+			# 3: Then scroll ln_widget same amount to fix offset
 			# compared to text-widget:
 			tt.yview_scroll(y_offset, 'pixels')
 
@@ -3427,6 +3460,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			To reset to default handling, (no size changing, only put editor
 			to top-right corner), use 'default' as geom_string
 
+			To save current geometry, use 'current' as geom_string
+
 
 			A geometry string is a standard way of describing the size and location of a top-level window
 			on a desktop. A geometry string has this general form:
@@ -3461,6 +3496,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if all(tests): self.geometry('+%d+0' % diff )
 			else: self.geometry(self.geom)
 			print('Possible size change is reset to default at next restart')
+			return
+
+		# Used at first launch
+		elif geom_string == 'current':
+			self.geom = self.geometry()
 			return
 
 		# Actually wanting to set some size and position to be used at startup
@@ -4671,28 +4711,31 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		to_down = lastline_screen - curline
 
 
-
-		# Using Tcl-script here doesn't seem to improve speed
-		# But left as example
+		# Using Tcl-script here doesn't seem to improve speed much
 		cmd = '''
-		set n 0
+		set ww %s
+		set ee %s
+		set sd %s
 		set near %s
-		while {$n < 10} {
+		set n 1
+
+		while {$n < 11} {
 			if {$near > 0} {
 						after %s {
-						%s yview scroll %s units
-						event generate %s %s
+						$ww yview scroll $sd units
+						event generate $ww $ee
 						}
 			} else {
-				after %s {event generate %s %s}
+				after %s {event generate $ww $ee}
 				}
+
 			incr n 1
+
 		}
 		'''
 		### %s are:
-		### near, wait_time, tcl_name_of_contents, scroll_direction,
-		### tcl_name_of_contents, event_name/e
-		### wait_time, tcl_name_of_contents, scroll_direction,
+		### tcl_name_of_contents, event_name/e, scroll_direction
+		### near, wait_time, wait_time
 
 		w = self.tcl_name_of_contents
 
@@ -4705,20 +4748,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Add some delay to get visual feedback
 			near = '0'
 			if to_up < 10: near = '1'
-			wait_time = '7'
+			# Slow down when only moving, to see cursor movement 'animation'
+			wait_time = '[expr 17*$n]'
 			scroll_direction = '-1'
+			update_idle = '$ww update idletasks'
 			if 'Select' in e: wait_time = '5'
-			self.tk.eval( cmd % ( near, wait_time, w, scroll_direction, w, e,
-					wait_time, w, e ) )
-
-			# That Tcl-script in Python (no yview scrolling)
-##			for i in range(10):
-##				if 'Select' in e:
-##					self.after(i*5, lambda args=[e]:
-##						self.contents.event_generate(*args) )
-##				else:
-##					self.after(i*7, lambda args=[e]:
-##						self.contents.event_generate(*args) )
+			self.tk.eval( cmd % ( w, e, scroll_direction, near, wait_time, wait_time ) )
 
 			return 'break'
 
@@ -4731,11 +4766,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			near = '0'
 			if to_down < 10: near = '1'
-			wait_time = '7'
+			wait_time = '[expr 17*$n]'
 			scroll_direction = '+1'
 			if 'Select' in e: wait_time = '5'
-			self.tk.eval( cmd % ( near, wait_time, w, scroll_direction, w, e,
-					wait_time, w, e ) )
+			self.tk.eval( cmd % ( w, e, scroll_direction, near, wait_time, wait_time ) )
 
 			return 'break'
 
@@ -4746,12 +4780,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def center_view(self, event=None, up=False):
 		''' Raise insertion-line
 		'''
-		if self.state != 'normal':
+		if self.state not in ['normal', 'help', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
 			self.bell()
 			return 'break'
 
 		# If pressed Control-Shift-j/u, move one line at time
-		if event.state in [5, 262157, 262149]:
+		if event.state in [5, 13]:
 			n=1
 			if up: n=-1
 			self.contents.yview_scroll(n, 'units')
@@ -5365,7 +5399,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Linux, macOS state:
 		# ctrl-shift == 5
 
-		# Windows state:
+		# Windows state: (with a or e, plain a is 8 in windows, so 8+5=13,
+		# long numbers are with arrowkeys, (or PgUp, Home and such))
 		# ctrl-shift == 13
 
 		# Also in mac_OS:
@@ -7527,7 +7562,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				idx = self.idx_linestart(pos)[0]
 
 				# SUCCESS
-				print(def_line_contents, ind_curline, idx)
+				#print(def_line_contents, ind_curline, idx)
 				return def_line_contents.strip(), ind_curline, idx
 			#####
 
@@ -8230,7 +8265,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# tagging syntax with rpi1 using
 		# A: normal insert_tokens() takes 21-24s
 		# B: cache with tcl load_tags() takes 1.6s
-		# --> use cache
+		# --> use cache, Benefit is over 1:10
+
+		# On faster/normal machine
+		# A: normal insert_tokens() takes about 250ms
+		# B: cache with tcl load_tags() takes about 70ms
+		# --> Benefit is not as great but still about 1:3
+
 
 		# build tcl-dict: {key1 value1 key2 value2}
 		# {myfile.py .!editor.!frame.!text2..}

@@ -129,8 +129,12 @@
 	  - Editor is normally using default size and positioned on top-right corner
 	  - One can choose to let window manager do everything with:
 		  e.use_geometry(False)
+		
 	  - Restore default setting:
 		  e.use_geometry('default')
+		
+	  - Save current geometry:
+		  e.use_geometry('current')
 		
 	  - Get current(and efective) setting
 		  e.geometry()
@@ -142,9 +146,9 @@
 		  e.geometry('+0+0')
 		
 	  - Change size
-		(note using of geometry instead of use_geometry, this is for
-		some reasons. One can play with this, and once happy give full
-		geometry_string as in Usage Example below)
+		(note using of geometry instead of use_geometry.
+		One can play with this, and once happy, give full geometry_string
+		as shown below in: Change size and position)
 		  e.geometry('881x600')
 		
 	  - Change size and position
@@ -153,11 +157,7 @@
 	  
 	  Usage Example
 	  Drag editor-window to place one likes. Resize it to size one wants.
-	  Then call: e.geometry() to get that geometry string,
-	  something like: '881x600+0+50'
-	  Copy this string, with for example: my_geom_string=e.geometry()
-	  And use it to change geometry at future startups with:
-	  e.use_geometry(my_geom_string)
+	  Then call: e.use_geometry('current')
 
 		
 	How to: set editor to check syntax at exit

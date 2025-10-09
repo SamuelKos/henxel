@@ -5,6 +5,15 @@ Below this: done ################################################
 
 
 
+import/export bookmarks
+
+
+searching etc with slow tagging(wait_fors) --> can goto_def and esc too fast
+
+
+move_many_lines check win11
+
+
 Control-Shift-ju --> move only one line at time, done
 
 
@@ -144,25 +153,32 @@ Below this: not done:
 
 
 
+
+
+
+
 count and keep cache of all py files, even if closed?
 
 
 run file even without filename
 
 
+####
 always save real geomstring at exit?
-# To prevent flashing, one must use full geometry-string
-# when starting editor --> always saving geometry?
+To prevent flashing, one must use full geometry-string
+No conf: always saving geometry
+	after start or end?
+####
 
+
+cache file path #####
 
 
 check why:
 home/end/gotolineend does see() or ensure_idx()
 
 
-
 check breakpoint usage
-
 
 
 paste inside multiline string no work
@@ -184,6 +200,9 @@ if self.can_do_syntax():
 ###
 
 
+
+
+copy/paste two lines sometimes no work
 check copy paste overrides
 check with defaults?
 copy whole lines
@@ -192,14 +211,10 @@ copy whole lines
 split __init__.py to smaller files/modules
 
 
-
-check use_geometry in win11, macos, not done
-
+check does use_geometry work in macos, not done
 
 
 Add Settings section in help?, not done ######
-
-
 Add Settings widget
 
 
@@ -232,13 +247,7 @@ o
 save tag-cache for all py files
 chk_sum: len(file), saved in conf
 
-# 700ms  rpi1 no compressing,	no file writing
 # 800ms  rpi1 no compressing,  yes file writing
-# 1400ms rpi1 with compressing, no file writing
-# 1400ms rpi1 with compressing and file writing
-# --> file writing takes almost no time
-# --> compressing takes some time when slow machine
-# --> choosing not to use compression
 
 
 tcl dictionary crash course
