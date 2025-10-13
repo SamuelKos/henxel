@@ -99,7 +99,8 @@
 	  - Can also be created while searching
 	  - Are saved in configuration
 	  - There is no shortcut for:
-		e.remove_bookmarks(all_tabs=True) note: all_tabs is True by default
+		e.remove_bookmarks() --> from current tab
+		e.remove_bookmarks(all_tabs=True) --> from all tabs
 		e.print_bookmarks() of current tab
 
 	

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Create a new virtual environment for python.
 # Usage: mkvenv [name_of_myvenv]
 # If no argument is given this  defaults to creating virtual environment

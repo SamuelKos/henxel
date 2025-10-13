@@ -233,13 +233,10 @@ VERSION = importlib.metadata.version(__name__)
 TAB_WIDTH = 4
 TAB_WIDTH_CHAR = 'A'
 
-SLIDER_MINSIZE = 66
-
 
 GOODFONTS = [
 			'Andale Mono',
 			'FreeMono',
-			'Bitstream Vera Sans Mono',
 			'DejaVu Sans Mono',
 			'Liberation Mono',
 			'Inconsolata',
@@ -552,6 +549,17 @@ class Editor(tkinter.Toplevel):
 			self.fullscreen = False
 			# Just in case, set to normal at end of init
 			self.state = 'init'
+
+
+			# quick fix for macos 12 printing issue
+			# Don't know the case in newer versions
+			if self.os_type == 'mac_os':
+				import re
+				self._magic_re = re.compile(r'([\\{}])')
+				self._space_re = re.compile(r'([\s])', re.ASCII)
+				global print
+				def print(*args, **kwargs):
+					self.my_print(*args,**kwargs)
 
 
 			self.helptxt = 'Could not load help-file. Press ESC to return.'
@@ -1050,6 +1058,7 @@ class Editor(tkinter.Toplevel):
 
 
 			# no conf, or geometry reset to 'default'
+			self.flag_check_geom_at_exit = False
 			if self.geom in ['+%d+0', '-0+0']:
 				self.flag_check_geom_at_exit = True
 				self.after(200,
@@ -6513,35 +6522,59 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def sbset_override(self, *args):
-		'''	Can be used for: config slider min-size
+		'''	update_linenums whenever position of scrollbar knob changes
 		'''
 		self.scrollbar.set(*args)
-
-##		h = self.text_widget_height
-##
-##		# Relative position (tuple on two floats) of
-##		# slider-top (a[0]) and -bottom (a[1]) in scale 0-1, a[0] is smaller:
-##		a = self.scrollbar.get()
-##
-##		# current slider size:
-##		# (a[1]-a[0])*h
-##
-##		# want to set slider size to at least p (SLIDER_MINSIZE) pixels,
-##		# by adding relative amount(0-1) of d to slider, that is: d/2 to both ends:
-##		# ( a[1]+d/2 - (a[0]-d/2) )*h = p
-##		# a[1] - a[0] + d = p/h
-##		# d = p/h - a[1] + a[0]
-##
-##
-##		d = SLIDER_MINSIZE/h - a[1] + a[0]
-##
-##		if h*(a[1] - a[0]) < SLIDER_MINSIZE:
-##			self.scrollbar.set(a[0], a[1]+d)
 
 		if self.want_ln: self.update_linenums()
 
 ########## Overrides End
 ########## Utilities Begin
+
+
+	def _join(self, value):
+		''' used in  mac_print
+		'''
+		return ' '.join(map(self._stringify, value))
+
+
+	def _stringify(self, value):
+		''' used in mac_print
+		'''
+		if isinstance(value, (list, tuple)):
+			if len(value) == 1:
+				value = self._stringify(value[0])
+				if self._magic_re.search(value):
+					value = '%s' % value
+			else:
+				value = '%s' % self._join(value)
+		else:
+			if isinstance(value, bytes):
+				value = str(value, 'latin1')
+			else:
+				value = str(value)
+			if not value:
+				value = '{}'
+			elif self._magic_re.search(value):
+				# add '\' before special characters and spaces
+				value = self._magic_re.sub(r'\\\1', value)
+				value = value.replace('\n', r'\n')
+				value = self._space_re.sub(r'\\\1', value)
+				if value[0] == '"':
+					value = '\\' + value
+			elif value[0] == '"' or self._space_re.search(value):
+				value = '%s' % value
+		return value
+
+
+	def mac_print(self, *args, **kwargs):
+		''' Quick fix for macos12 printing issue (taken from tkinter-module)
+			Uses Tcl to print
+		'''
+
+		tmp = 'puts {%s}' % self._join(args)
+		self.tk.eval(tmp)
+
 
 	def insert_inspected(self):
 		''' Tries to inspect selection. On success: opens new tab and pastes lines there.
@@ -8306,6 +8339,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		''' save tags to cache-file
 			Called from save_forced()
 		'''
+		have_py_files = False
+
 		# save tags at exit
 		###############
 		# build tcl-dict: {key1 value1 key2 value2}
@@ -8314,6 +8349,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		for tab in self.tabs:
 			if tab.filepath:
 				if '.py' in tab.filepath.suffix:
+					have_py_files = True
 					tab.chk_sum = len(tab.contents)
 					fpath = tab.filepath.resolve()
 					tk_wid = tab.tcl_name_of_contents
@@ -8322,8 +8358,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		filedict = filedict[:-1]
 		filedict += '}'
 
+		if not have_py_files: return
 
-		#set myzip [zlib compress [encoding convertto utf-8 $taginfo]]
 		tags = ' '.join(self.tagnames)
 		self.tk.eval('''
 		set cache_path [file normalize ~/editor.tag]
@@ -8699,7 +8735,70 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tab.bookmarks.append(mark)
 
 
-	def remove_bookmarks(self, all_tabs=True):
+	###
+	def import_bookmarks(self):
+		''' Using fdialog
+		'''
+
+		if self.state != 'normal':
+			self.bell()
+			return 'break'
+
+		self.state = 'filedialog'
+
+		for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
+			widget.config(state='disabled')
+
+		self.tracevar_filename.set('empty')
+		p = pathlib.Path().cwd()
+		if self.lastdir: p = p / self.lastdir
+
+		filetop = tkinter.Toplevel()
+		filetop.title('Select File')
+		self.to_be_closed.append(filetop)
+
+		fd = fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.font, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
+
+		# Editor remains responsive while doing wait_variable()
+		# but widgets have been disabled
+		self.wait_variable(self.tracevar_filename)
+
+		# Canceled
+		if self.tracevar_filename.get() == '': pass
+		else:
+			filename = pathlib.Path().cwd() / self.tracevar_filename.get()
+			print(filename)
+			#self.loadfile(filename)
+
+
+		self.state = 'normal'
+		for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
+			widget.config(state='normal')
+		###
+
+
+	def export_bookmarks(self):
+		''' Use asksavefilename?
+		'''
+		import tkinter.filedialog
+		fname_as_string = tkinter.filedialog.asksaveasfilename()
+		print(fname_as_string)
+
+
+	def stash_bookmark(self):
+		''' Move mark to some other collection so
+			it is not browsable until later un-stashed
+
+			Help with too many bookmarks situtation
+		'''
+##		if self.line_is_bookmarked():
+##			stash it
+		pass
+
+	###
+
+
+	def remove_bookmarks(self, all_tabs=False):
 		''' Removes bookmarks from current tab/all tabs
 		'''
 
@@ -8713,9 +8812,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def remove_single_bookmark(self):
-		pos_cursor = self.contents.index(tkinter.INSERT)
 
-		if mark_name := self.line_is_bookmarked(pos_cursor):
+		if mark_name := self.line_is_bookmarked('insert'):
 
 			self.contents.mark_unset(mark_name)
 			tab = self.tabs[self.tabindex]

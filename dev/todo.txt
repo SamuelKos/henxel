@@ -1,17 +1,17 @@
 # ^/\|-_+:,.;'"*%?=!@&()[]{}~<>
 ###############################
-
+git diff -w == no space diffs
 Below this: done ################################################
 
 
-
-import/export bookmarks
-
-
-searching etc with slow tagging(wait_fors) --> can goto_def and esc too fast
+fix for printing issue with macos12, mac_print
 
 
-move_many_lines check win11
+save real geomstring at exit (if want use geom), done
+To prevent flashing, one must use full geometry-string
+
+
+space --> exit goto_def, done
 
 
 Control-Shift-ju --> move only one line at time, done
@@ -154,7 +154,17 @@ Below this: not done:
 
 
 
+set git diff tabsize 4
 
+
+import/export bookmarks
+stash_bookmark
+
+
+searching etc with slow tagging(wait_fors) --> can goto_def and esc too fast
+
+
+move_many_lines check win11, done?
 
 
 count and keep cache of all py files, even if closed?
@@ -163,15 +173,7 @@ count and keep cache of all py files, even if closed?
 run file even without filename
 
 
-####
-always save real geomstring at exit?
-To prevent flashing, one must use full geometry-string
-No conf: always saving geometry
-	after start or end?
-####
-
-
-cache file path #####
+better cache file path #####
 
 
 check why:
@@ -210,8 +212,6 @@ copy whole lines
 
 split __init__.py to smaller files/modules
 
-
-check does use_geometry work in macos, not done
 
 
 Add Settings section in help?, not done ######
@@ -315,20 +315,18 @@ list tree of deflines
 ctrl-(shift)-,. --> instead of ctrl-1234?
 
 
-space --> exit goto_def
-
-
 Control-(Shift)-Home/End no work
 goto/selectto filestart/end 
 
 
 ####
 from this: if 'strings' in self.contents.tag_names(pos):
-to this:
+to this:?
 tags = self.contents.tag_names(pos)
 if 'strings' in tags:
 elif 'comments' in tags:
 (and remove '#' from patts?)
+
 ####
 
 

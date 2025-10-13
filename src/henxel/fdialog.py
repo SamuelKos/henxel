@@ -23,7 +23,7 @@ class FDialog:
 			stringvar.trace_add('write', my_tracefunc)
 
 		or you can just wait for it to change with
-			tkinter.wait_variable(stringvar)
+			some_tkinter_widget.wait_variable(stringvar)
 
 	'''
 
@@ -68,7 +68,7 @@ class FDialog:
 
 		self.filesbar = tkinter.Scrollbar(self.top, takefocus=0)
 
-		# choosed activestyle:underline because dotbox was almost invisible.
+		# Choosed activestyle:underline because dotbox was almost invisible
 		self.files = tkinter.Listbox(self.top, exportselection=0, activestyle='underline',
 									setgrid=1)
 		self.files['yscrollcommand'] = self.filesbar.set
