@@ -1,5 +1,9 @@
 # ^/\|-_+:,.;'"*%?=!@&()[]{}~<>
 ###############################
+git config --global user.name
+git config --global user.email
+to set git diff tabsize to 4:
+git config --global core.pager 'less -x1,5'
 git diff -w == no space diffs
 Below this: done ################################################
 
@@ -153,8 +157,16 @@ Below this: not done:
 
 
 
+#######
+macos, this could be 3 in future?
+## popup
+self.right_mousebutton_num = 3
 
-set git diff tabsize 4
+if self.os_type == 'mac_os':
+	self.right_mousebutton_num = 2
+	
+also macos, font-scaling in future?
+######
 
 
 import/export bookmarks

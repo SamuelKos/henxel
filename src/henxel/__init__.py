@@ -559,7 +559,7 @@ class Editor(tkinter.Toplevel):
 				self._space_re = re.compile(r'([\s])', re.ASCII)
 				global print
 				def print(*args, **kwargs):
-					self.my_print(*args,**kwargs)
+					self.mac_print(*args,**kwargs)
 
 
 			self.helptxt = 'Could not load help-file. Press ESC to return.'
@@ -575,7 +575,7 @@ class Editor(tkinter.Toplevel):
 
 			# Initiate widgets
 			####################################
-			self.btn_git = tkinter.Button(self, takefocus=0, relief='flat',
+			self.btn_git = tkinter.Button(self, width=3, takefocus=0, relief='flat',
 										highlightthickness=0, padx=0, state='disabled')
 			self.entry = tkinter.Entry(self, highlightthickness=0, takefocus=0)
 			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
@@ -742,7 +742,8 @@ class Editor(tkinter.Toplevel):
 
 				size0, size1 = 12, 10
 				# There is no font-scaling in macOS?
-				if self.os_type == 'mac_os': size0, size1 = 22, 16
+##				if self.os_type == 'mac_os': size0, size1 = 22, 16
+				if self.os_type == 'mac_os': size0, size1 = 16, 14
 
 				self.font.config(family=fontname, size=size0)
 				self.menufont.config(family=fontname, size=size1)
