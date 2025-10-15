@@ -12,6 +12,11 @@ fix for printing issue with macos12, mac_print
 partly done, not error raising
 
 
+save/load tags tclerror check, done
+check there is tag file
+better tagfile-path
+
+
 font change by one, done
 geom after font change
 flag put to update_fonts, done
@@ -161,9 +166,6 @@ Below this: not done:
 ###############################################
 
 
-save/load tags tclerror check
-check there is tag file?
-better tagfile-path
 
 
 #######
@@ -176,6 +178,13 @@ if self.os_type == 'mac_os':
 	
 also macos, font-scaling in future?
 ######
+
+
+set btn_git width >= 3, is conf, also fullscreen 
+scroll horizontally
+e.tk.eval('.!editor.!frame.!text2 xview scroll -10 units')
+e.tk.eval('.!editor.!frame.!text2 xview scroll -1 pages')
+
 
 
 import/export bookmarks

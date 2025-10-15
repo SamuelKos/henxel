@@ -217,6 +217,7 @@ class Tab:
 ###############################################################################
 
 ############ Constants Begin
+CACHEPATH = 'editor.tag'
 CONFPATH = 'editor.cnf'
 ICONPATH = 'editor.png'
 HELPPATH = 'help.txt'
@@ -942,6 +943,8 @@ class Editor(tkinter.Toplevel):
 
 
 			tags_from_cache = list()
+			p = pathlib.Path(self.env) / CACHEPATH
+
 			for tab in self.tabs:
 
 				self.set_syntags(tab)
@@ -976,12 +979,14 @@ class Editor(tkinter.Toplevel):
 
 						# if length of file has changed
 						# count tokens from scratch
-						if tab.chk_sum != len(tab.contents):
+						if p.exists() and tab.chk_sum == len(tab.contents):
+							tags_from_cache.append(tab)
+						else:
+							if not p.exists(): print('Missing cache-file')
+							else: print('Content changed:')
 							print(tab.filepath, tab.chk_sum, len(tab.contents))
 							a = self.get_tokens(tab)
 							self.insert_tokens(a, tab=tab)
-						else:
-							tags_from_cache.append(tab)
 
 
 				self.set_bindings(tab)
@@ -994,9 +999,16 @@ class Editor(tkinter.Toplevel):
 			# --> init takes much less time
 			if len(tags_from_cache) > 0:
 				t1 = int(self.root.tk.eval('clock milliseconds'))
-				self.load_tags(tags_from_cache)
+				success = self.load_tags(tags_from_cache)
 				t2 = int(self.root.tk.eval('clock milliseconds'))
 				print(t2-t1, 'ms')
+
+				if not success:
+					print('Could not load tags from cache-file:\n %s' % p)
+					for tab in tags_from_cache:
+						a = self.get_tokens(tab)
+						self.insert_tokens(a, tab=tab)
+
 
 			curtab = self.tabs[self.tabindex]
 
@@ -8308,6 +8320,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# B: cache with tcl load_tags() takes about 70ms
 		# --> Benefit is not as great but still about 1:3
 
+		p = pathlib.Path(self.env) / CACHEPATH
 
 		# build tcl-dict: {key1 value1 key2 value2}
 		# {myfile.py .!editor.!frame.!text2..}
@@ -8319,23 +8332,31 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# remove trailing space just in case
 		filedict = filedict[:-1]
 		filedict += '}'
+		res = True
 
-		self.tk.eval('''
-		set cache_path [file normalize ~/editor.tag]
-		set ch [open $cache_path r]
-		set taginfo [read $ch]
-		close $ch
-		set filedict %s
-		foreach fpath [dict keys $filedict] {
-			set wid [dict get $filedict $fpath]
-			set tag_dict [dict get $taginfo $fpath]
-			foreach tag [dict keys $tag_dict] {
-				set tag_list [dict get $tag_dict $tag]
-				set taglen [llength $tag_list]
-				if {$taglen > 0} {eval "$wid tag add $tag $tag_list"}
+		try:
+			self.tk.eval('''
+			set cache_path %s
+			set ch [open $cache_path r]
+			set taginfo [read $ch]
+			close $ch
+			set filedict %s
+			foreach fpath [dict keys $filedict] {
+				set wid [dict get $filedict $fpath]
+				set tag_dict [dict get $taginfo $fpath]
+				foreach tag [dict keys $tag_dict] {
+					set tag_list [dict get $tag_dict $tag]
+					set taglen [llength $tag_list]
+					if {$taglen > 0} {eval "$wid tag add $tag $tag_list"}
+				}
 			}
-		}
-		''' % filedict )
+			''' % (p, filedict) )
+
+		except tkinter.TclError as e:
+			res = False
+			print(e)
+
+		return res
 
 
 	def save_tags(self):
@@ -8343,6 +8364,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Called from save_forced()
 		'''
 		have_py_files = False
+		p = pathlib.Path(self.env) / CACHEPATH
 
 		# save tags at exit
 		###############
@@ -8364,20 +8386,24 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not have_py_files: return
 
 		tags = ' '.join(self.tagnames)
-		self.tk.eval('''
-		set cache_path [file normalize ~/editor.tag]
-		set taginfo {}
-		set filedict %s
-		foreach fpath [dict keys $filedict] {
-			set wid [dict get $filedict $fpath]
-			set tag_dict {}
-			foreach tag {%s} {dict set tag_dict $tag [$wid tag ranges $tag]}
-			dict set taginfo $fpath $tag_dict
-			}
-		set ch [open $cache_path w]
-		puts $ch $taginfo
-		close $ch
-		''' % (filedict, tags) )
+		try:
+			self.tk.eval('''
+			set cache_path %s
+			set taginfo {}
+			set filedict %s
+			foreach fpath [dict keys $filedict] {
+				set wid [dict get $filedict $fpath]
+				set tag_dict {}
+				foreach tag {%s} {dict set tag_dict $tag [$wid tag ranges $tag]}
+				dict set taginfo $fpath $tag_dict
+				}
+			set ch [open $cache_path w]
+			puts $ch $taginfo
+			close $ch
+			''' % (p, filedict, tags) )
+
+		except tkinter.TclError as e:
+			print(e)
 
 
 	def save_forced(self):
