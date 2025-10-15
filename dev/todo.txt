@@ -9,7 +9,12 @@ Below this: done ################################################
 
 
 fix for printing issue with macos12, mac_print
+partly done, not error raising
 
+
+font change by one, done
+geom after font change
+flag put to update_fonts, done
 
 save real geomstring at exit (if want use geom), done
 To prevent flashing, one must use full geometry-string
@@ -155,6 +160,10 @@ self.cur_defline = '-1.-1'
 Below this: not done:
 ###############################################
 
+
+save/load tags tclerror check
+check there is tag file?
+better tagfile-path
 
 
 #######

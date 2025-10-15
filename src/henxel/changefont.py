@@ -77,7 +77,7 @@ class FontChooser:
 
 		# With spinbox we set font size:
 		self.sb = tkinter.Spinbox(self.topframe, font=('TkDefaultFont', 10), from_=self.min,
-								to=self.max, increment=2, width=3, command=self.change_font)
+								to=self.max, increment=1, width=3, command=self.change_font)
 		self.sb.pack(pady=10, anchor='w')
 
 		# Make checkboxes for other font configurations

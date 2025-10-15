@@ -1017,7 +1017,7 @@ class Editor(tkinter.Toplevel):
 			self.set_bindings_other()
 			############
 
-			curtab.text_widget.bind( "<Alt-o>", self.test_bind)
+			curtab.text_widget.bind( "<Control-O>", self.test_bind)
 
 			# Prevent flashing 2/3
 			self.config(bg=self.bgcolor)
@@ -3623,6 +3623,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def update_fonts(self):
+		# There could be a geometry change, so:
+		self.flag_check_geom_at_exit = True
 		self.boldfont.config(**self.font.config())
 		self.boldfont.config(weight='bold')
 
