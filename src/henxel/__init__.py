@@ -168,13 +168,18 @@ class Tab:
 		''' active		Bool
 			filepath	pathlib.Path
 
+			tcl_name_of_contents,
 			contents,
 			oldcontents,
 			position,
 			type		String
+
 			chk_sum		Integer
 			text_widget tkinter.Text
+
+			bookmarks_stash,
 			bookmarks	List
+
 		'''
 
 		self.active = False
@@ -185,6 +190,7 @@ class Tab:
 		self.type = 'newtab'
 		self.chk_sum = 0
 		self.bookmarks = list()
+		self.bookmarks_stash = list()
 		self.text_widget = None
 		self.tcl_name_of_contents = ''
 
@@ -647,8 +653,7 @@ class Editor(tkinter.Toplevel):
 							data = json.loads(string_representation)
 
 					except EnvironmentError as e:
-						print(e.__str__())	# __str__() is for user (print to screen)
-						#print(e.__repr__())	# __repr__() is for developer (log to file)
+						print(e.__str__())
 						print(f'\n Could not load existing configuration file: {p}')
 
 			if data:
@@ -1966,6 +1971,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind( "<Control-l>", self.gotoline)
 			w.bind( "<Alt-g>", self.goto_def)
 			w.bind( "<Alt-p>", self.toggle_bookmark)
+			w.bind( "<Alt-u>", self.stash_bookmark)
 
 			w.bind( "<Alt-s>", self.color_choose)
 			w.bind( "<Alt-t>", self.toggle_color)
@@ -2054,6 +2060,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				lambda event: self.goto_bookmark(event, **{'back':True}) )
 
 			w.bind( "<Mod1-Key-p>", self.toggle_bookmark)
+			w.bind( "<Mod1-Key-u>", self.stash_bookmark)
 			w.bind( "<Mod1-Key-g>", self.goto_def)
 			w.bind( "<Mod1-Key-l>", self.gotoline)
 			w.bind( "<Mod1-Key-a>", self.goto_linestart)
@@ -2690,6 +2697,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tab.filepath = tab.filepath.__str__()
 			else:
 				tab.bookmarks.clear()
+				tab.bookmarks_stash.clear()
 
 
 		whitelist = (
@@ -2698,6 +2706,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					'position',
 					'type',
 					'bookmarks',
+					'bookmarks_stash',
 					'chk_sum'
 					)
 
@@ -8285,7 +8294,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.to_be_closed.append(filetop)
 
 
-			fd = fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.font, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
+			fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.font, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
 
 			return 'break'
 
@@ -8683,7 +8692,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 ##	Note: goto_bookmark() is in Gotoline etc -section
 
-	def print_bookmarks(self):
+	def print_bookmarks(self, show_stashed=False):
 
 		self.wait_for(100)
 
@@ -8692,29 +8701,38 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		for (mark, pos) in l:
 			print(mark, pos)
 
-		tab = self.tabs[self.tabindex]
-		print(tab.bookmarks)
+
+		if show_stashed:
+			print('\nStashed bookmarks:')
+			tab = self.tabs[self.tabindex]
+			l = sorted([idx for idx in tab.bookmarks_stash], key=lambda x:float(x[1]) )
+
+			for i, pos in enumerate(l):
+				print('stashed%i' % i, pos)
 
 
-	def line_is_bookmarked(self, index):
+	def line_is_bookmarked(self, index, tab=None):
 		''' index:	tkinter.Text -index
 		'''
+		curtab = tab
+		if not tab:
+			curtab = self.tabs[self.tabindex]
 
 		# Find first mark in line
-		s = self.contents.index('%s display linestart' % index)
-		mark_name = self.contents.mark_next(s)
+		s = curtab.text_widget.index('%s display linestart' % index)
+		mark_name = curtab.text_widget.mark_next(s)
 
 		# Find first bookmark at or after s
 		while mark_name:
 			if 'bookmark' not in mark_name:
-				mark_name = self.contents.mark_next(mark_name)
+				mark_name = curtab.text_widget.mark_next(mark_name)
 			else:
 				break
 
 		if mark_name:
 			if 'bookmark' in mark_name:
-				mark_line,_ = self.get_line_col_as_int(index=mark_name)
-				pos_line,_ = self.get_line_col_as_int(index=s)
+				mark_line,_ = self.get_line_col_as_int(tab=curtab, index=mark_name)
+				pos_line,_ = self.get_line_col_as_int(tab=curtab, index=s)
 
 			if mark_line == pos_line:
 				return mark_name
@@ -8734,24 +8752,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def save_bookmarks(self, tab):
 		''' tab: Tab
-
-			Info is in restore_bookmarks
 		'''
 		tab.bookmarks = list({ tab.text_widget.index(mark) for mark in tab.bookmarks })
 		tab.bookmarks.sort()
+		tab.bookmarks_stash.sort()
 
 
 	def restore_bookmarks(self, tab):
 		''' tab: Tab
 
-			When view changes, like in walk_tab(),
-			before contents of oldtab gets deleted, its bookmarks
-			are saved, but only their index position, not names, about like this:
+			When bookmarks are saved, only their index position, not names, are saved.
 
-			oldtab.bookmarks = [ self.contents.index(mark) for mark in oldtab.bookmarks ]
-
-			And after tab has its contents again,
-			bookmarks are restored here and tab.bookmarks holds again the names of bookmarks.
+			Bookmarks are restored here and tab.bookmarks holds again the names of bookmarks.
 		'''
 
 		for i, pos in enumerate(tab.bookmarks):
@@ -8764,9 +8776,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tab.bookmarks.append(mark)
 
 
-	###
 	def import_bookmarks(self):
-		''' Using fdialog
+		''' Using fdialog.py
 		'''
 
 		if self.state != 'normal':
@@ -8786,45 +8797,119 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		filetop.title('Select File')
 		self.to_be_closed.append(filetop)
 
-		fd = fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.font, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
+		fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.font, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
 
 		# Editor remains responsive while doing wait_variable()
 		# but widgets have been disabled
 		self.wait_variable(self.tracevar_filename)
+		data, p = False, False
 
 		# Canceled
 		if self.tracevar_filename.get() == '': pass
 		else:
-			filename = pathlib.Path().cwd() / self.tracevar_filename.get()
-			print(filename)
-			#self.loadfile(filename)
+			p = pathlib.Path().cwd() / self.tracevar_filename.get()
+			if p.exists():
+				try:
+					with open(p, 'r', encoding='utf-8') as f:
+						string_representation = f.read()
+						data = json.loads(string_representation)
+
+				except EnvironmentError as e:
+					print(e.__str__())
+					print(f'\n Could not load existing configuration file: {p}')
+
+		if data:
+			total = 0
+			for fpath in data.keys():
+				for tab in self.tabs:
+					if tab.filepath.__str__() == fpath and tab.type == 'normal':
+						bookmarks = data[fpath]
+						for idx in bookmarks:
+							if not self.line_is_bookmarked(idx, tab=tab):
+								pos = tab.text_widget.index('%s display linestart' % idx)
+								new_mark = 'bookmark' + str(len(tab.bookmarks))
+								tab.text_widget.mark_set( new_mark, pos )
+								tab.bookmarks.append(new_mark)
+								total += 1
+
+			print('\nImported total of %i new bookmarks from:\n%s' % (total, p))
 
 
 		self.state = 'normal'
 		for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
 			widget.config(state='normal')
-		###
 
 
 	def export_bookmarks(self):
-		''' Use asksavefilename?
+		''' Currently using tkinter.filedialog
 		'''
 		import tkinter.filedialog
-		fname_as_string = tkinter.filedialog.asksaveasfilename()
-		print(fname_as_string)
+		fname_as_string = p = tkinter.filedialog.asksaveasfilename()
+
+		data = dict()
+
+		for tab in self.tabs:
+			if tab.filepath:
+				filepath = tab.filepath.__str__()
+				bookmark_index_list = list({ tab.text_widget.index(mark) for mark in tab.bookmarks })
+				data[filepath] = bookmark_index_list
 
 
-	def stash_bookmark(self):
-		''' Move mark to some other collection so
+		string_representation = json.dumps(data)
+
+		try:
+			with open(p, 'w', encoding='utf-8') as f:
+				f.write(string_representation)
+				print('\nExported bookmarks to:\n%s' % p)
+
+		except EnvironmentError as e:
+			print(e.__str__())
+			print('\nCould not export bookmarks')
+
+
+	def unstash_bookmarks(self, all_tabs=False):
+		if self.state != 'normal': return
+		tabs = [self.tabs[self.tabindex]]
+		if all_tabs: tabs = self.tabs
+
+		for tab in tabs:
+			if tab.type != 'normal': continue
+			total = 0
+
+			for idx in tab.bookmarks_stash:
+				if not self.line_is_bookmarked(idx, tab=tab):
+					pos = tab.text_widget.index('%s display linestart' % idx)
+					new_mark = 'bookmark' + str(len(tab.bookmarks))
+					tab.text_widget.mark_set( new_mark, pos )
+					tab.bookmarks.append(new_mark)
+					total += 1
+
+			if total > 0:
+				print('\nUnstashed total of %i new bookmarks from:\n%s' % (total, tab.filepath))
+
+			tab.bookmarks_stash.clear()
+
+
+	def stash_bookmark(self, event=None):
+		''' Move mark to other collection so
 			it is not browsable until later un-stashed
 
-			Help with too many bookmarks situtation
+			Use when have too many bookmarks
 		'''
-##		if self.line_is_bookmarked():
-##			stash it
-		pass
+		if self.state != 'normal':
+			self.bell()
+			return 'break'
 
-	###
+		if old_idx := self.remove_single_bookmark():
+			indent0 = self.contents.index('%s display linestart' % old_idx)
+
+			curtab = self.tabs[self.tabindex]
+			if not curtab.bookmarks_stash.count(old_idx):
+				curtab.bookmarks_stash.append(old_idx)
+
+			self.bookmark_animate(indent0, remove=True)
+
+		return 'break'
 
 
 	def remove_bookmarks(self, all_tabs=False):
@@ -8844,6 +8929,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if mark_name := self.line_is_bookmarked('insert'):
 
+			old_idx = self.contents.index(mark_name)
 			self.contents.mark_unset(mark_name)
 			tab = self.tabs[self.tabindex]
 			tab.bookmarks.remove(mark_name)
@@ -8857,13 +8943,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.clear_bookmarks()
 			self.restore_bookmarks(tab)
 
-			return True
+			return old_idx
 
 		else:
 			return False
 
 
-	def toggle_bookmark(self, event=None):
+	def toggle_bookmark(self, event=None, index='insert'):
 		''' Add/Remove bookmark at cursor position
 
 			Bookmark is string, name of tk text mark like: 'bookmark11'
@@ -8879,7 +8965,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
-		pos = 'insert'
+		pos = index
 		if self.state in ('search', 'replace'):
 			# 'focus'
 			pos = self.search_focus[0]

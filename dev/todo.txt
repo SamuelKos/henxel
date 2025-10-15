@@ -12,6 +12,17 @@ fix for printing issue with macos12, mac_print
 partly done, not error raising
 
 
+done:
+import_bookmarks
+export_bookmarks
+stash_bookmark
+unstash_bookmarks
+stash_bookmark has bind:
+cmd-u
+alt-u
+update help, docstring not done
+
+
 save/load tags tclerror check, done
 check there is tag file
 better tagfile-path
@@ -184,11 +195,6 @@ set btn_git width >= 3, is conf, also fullscreen
 scroll horizontally
 e.tk.eval('.!editor.!frame.!text2 xview scroll -10 units')
 e.tk.eval('.!editor.!frame.!text2 xview scroll -1 pages')
-
-
-
-import/export bookmarks
-stash_bookmark
 
 
 searching etc with slow tagging(wait_fors) --> can goto_def and esc too fast
