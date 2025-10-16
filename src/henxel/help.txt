@@ -93,17 +93,46 @@
 
 	
 	Bookmarks
-	  - Are very useful, more than for example, syntax-highlighting
+	  - Are very useful
 	  - Create/remove bookmark with Cmd/Alt-p
+	  - Hide bookmarks with Cmd/Alt-u (if have too many, so it is easier
+		to navigate. They can be restored later)
+		
+		To remove single hided bookmark, first check linenumber with:
+		1: e.print_bookmarks(True) --> Show also hided bookmarks
+		2: Goto that line with stashed bookmark
+		3: bookmark: Cmd/Alt-p on that line, this removes hided bookmark
+		4: and if not want leave this new bookmark, again: Cmd/Alt-p
+		
 	  - Walk bookmarks with Cmd/Alt-bB
-	  - Can also be created while searching
-	  - Are saved in configuration
-	  - There is no shortcut for:
+	  - Can also be created while searching:
+		Easy: Press Cmd/Alt-p to bookmark match with focus
+		Or You can scroll, Goto def etc, and when find something interesting
+		Click there and Press Cmd/Alt-p to bookmark that position
+		(note: cursor is invisible while searching)
+		
+	  - Are saved in configuration. Note: currently only open files can have
+		bookmarks. When tab is closed its bookmarks are gone, but editor will
+		ask for confirmation before you close tab with bookmarks
+		
+	  - There is no shortcuts for:
 		e.remove_bookmarks() --> from current tab
 		e.remove_bookmarks(all_tabs=True) --> from all tabs
 		e.print_bookmarks() of current tab
+		e.print_bookmarks(show_stashed=True) --> Show also hided bookmarks
+		
+		With this one can save bookmarks if need for example; close tab
+		but want to keep record of its bookmarks, just note that
+		overwriting to same file multiple times will delete old bookmarks
+		in that file. This will save also stashed bookmarks
+		e.export_bookmarks()
 
-	
+		e.import_bookmarks() --> update (add not already existing),
+			update opened tabs bookmarks from file
+		e.unstash_bookmarks() --> restore hided bookmarks to tab
+		e.unstash_bookmarks(all_tabs=True) --> to all tabs
+
+
 	Goto definition
 	  - Of function in current tab with Cmd/Alt-g
 		when cursor is at or in between: self.w<INS>alk_scope<INS>

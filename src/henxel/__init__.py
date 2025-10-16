@@ -956,7 +956,7 @@ class Editor(tkinter.Toplevel):
 
 				if tab.type == 'normal':
 					tab.text_widget.insert('1.0', tab.contents)
-					self.restore_bookmarks(tab)
+					self.restore_bookmarks(tab, also_stashed=True)
 
 					# Set cursor pos
 					try:
@@ -1645,7 +1645,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Continue below if 1: debug=False (normal mode) or
 		# 2: quit_debug or restart
 
-		for tab in self.tabs: self.save_bookmarks(tab)
+		for tab in self.tabs: self.save_bookmarks(tab, also_stashed=True)
 
 		# Closing after: first launch, no conf or geometry reset to 'default'
 		# Assuming if user changed geometry, it was not satisfactory
@@ -2945,6 +2945,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.tag_config('focus', underline=True)
 		w.tag_config('elIdel', elide=True)
 		w.tag_config('animate')
+		w.tag_config('animate_stash', background='yellow')
 
 		# Used in insert_tokens()
 		for key in self.defline_tags.keys():
@@ -7559,7 +7560,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Check if defline already
 		if res := self.line_is_defline(pos_line_contents):
 			idx = self.idx_linestart(pos)[0]
-			print(pos_line_contents, ind_last_line, idx, 'jou')
 			return pos_line_contents.strip(), ind_last_line, idx
 
 		elif ind_last_line == 0:
@@ -8698,22 +8698,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		l = sorted([ (mark, self.contents.index(mark)) for mark in self.contents.mark_names() if 'bookmark' in mark], key=lambda x:float(x[1]) )
 
-		for (mark, pos) in l:
-			print(mark, pos)
+		for (mark, pos) in l: print(mark, pos)
 
 
 		if show_stashed:
 			print('\nStashed bookmarks:')
-			tab = self.tabs[self.tabindex]
-			l = sorted([idx for idx in tab.bookmarks_stash], key=lambda x:float(x[1]) )
 
-			for i, pos in enumerate(l):
-				print('stashed%i' % i, pos)
+			l = sorted([ (mark, self.contents.index(mark)) for mark in self.contents.mark_names() if 'stashed' in mark], key=lambda x:float(x[1]) )
+
+			for (mark, pos) in l: print(mark, pos)
 
 
-	def line_is_bookmarked(self, index, tab=None):
+	def line_is_bookmarked(self, index, tab=None, mark_patt='bookmark'):
 		''' index:	tkinter.Text -index
+
+			mark_patt can also be 'stashed'
+
+			On success, returns: markname
 		'''
+
 		curtab = tab
 		if not tab:
 			curtab = self.tabs[self.tabindex]
@@ -8724,13 +8727,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Find first bookmark at or after s
 		while mark_name:
-			if 'bookmark' not in mark_name:
+			if mark_patt not in mark_name:
 				mark_name = curtab.text_widget.mark_next(mark_name)
 			else:
 				break
 
 		if mark_name:
-			if 'bookmark' in mark_name:
+			if mark_patt in mark_name:
 				mark_line,_ = self.get_line_col_as_int(tab=curtab, index=mark_name)
 				pos_line,_ = self.get_line_col_as_int(tab=curtab, index=s)
 
@@ -8750,15 +8753,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.contents.mark_unset(mark)
 
 
-	def save_bookmarks(self, tab):
+	def save_bookmarks(self, tab, also_stashed=False):
 		''' tab: Tab
 		'''
 		tab.bookmarks = list({ tab.text_widget.index(mark) for mark in tab.bookmarks })
 		tab.bookmarks.sort()
-		tab.bookmarks_stash.sort()
+
+		if also_stashed:
+			tab.bookmarks_stash = list({ tab.text_widget.index(mark) for mark in tab.bookmarks_stash })
+			tab.bookmarks_stash.sort()
 
 
-	def restore_bookmarks(self, tab):
+	def restore_bookmarks(self, tab, also_stashed=False):
 		''' tab: Tab
 
 			When bookmarks are saved, only their index position, not names, are saved.
@@ -8771,13 +8777,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		tab.bookmarks.clear()
 
-		for mark in tab.text_widget.mark_names():
-			if 'bookmark' in mark:
-				tab.bookmarks.append(mark)
+		[ tab.bookmarks.append(mark) for mark in tab.text_widget.mark_names() if 'bookmark' in mark ]
+
+
+		if also_stashed:
+			for i, pos in enumerate(tab.bookmarks_stash):
+				tab.text_widget.mark_set('stashed%d' % i, pos)
+
+			tab.bookmarks_stash.clear()
+
+			[ tab.bookmarks_stash.append(mark) for mark in tab.text_widget.mark_names() if 'stashed' in mark ]
 
 
 	def import_bookmarks(self):
 		''' Using fdialog.py
+
+			update (add not already existing),
+			update opened tabs bookmarks from file
+
+			Also stashed bookmarks
 		'''
 
 		if self.state != 'normal':
@@ -8819,20 +8837,30 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					print(f'\n Could not load existing configuration file: {p}')
 
 		if data:
-			total = 0
+			total_books = 0
+			total_stash = 0
+
 			for fpath in data.keys():
 				for tab in self.tabs:
 					if tab.filepath.__str__() == fpath and tab.type == 'normal':
-						bookmarks = data[fpath]
+
+						bookmarks, bookmarks_stashed = data[fpath]
+
 						for idx in bookmarks:
 							if not self.line_is_bookmarked(idx, tab=tab):
-								pos = tab.text_widget.index('%s display linestart' % idx)
 								new_mark = 'bookmark' + str(len(tab.bookmarks))
-								tab.text_widget.mark_set( new_mark, pos )
+								tab.text_widget.mark_set( new_mark, idx )
 								tab.bookmarks.append(new_mark)
-								total += 1
+								total_books += 1
 
-			print('\nImported total of %i new bookmarks from:\n%s' % (total, p))
+						for idx in bookmarks_stashed:
+							if not self.line_is_bookmarked(idx, tab=tab, mark_patt='stashed'):
+								new_mark = 'stashed' + str(len(tab.bookmarks_stash))
+								tab.text_widget.mark_set( new_mark, idx )
+								tab.bookmarks_stash.append(new_mark)
+								total_stash += 1
+
+			print('\nImported total of %i new bookmarks and %i new stashed bookmarks from:\n%s' % (total_books, total_stash, p))
 
 
 		self.state = 'normal'
@@ -8842,6 +8870,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def export_bookmarks(self):
 		''' Currently using tkinter.filedialog
+
+			Also stashed bookmarks are saved
 		'''
 		import tkinter.filedialog
 		fname_as_string = p = tkinter.filedialog.asksaveasfilename()
@@ -8852,7 +8882,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if tab.filepath:
 				filepath = tab.filepath.__str__()
 				bookmark_index_list = list({ tab.text_widget.index(mark) for mark in tab.bookmarks })
-				data[filepath] = bookmark_index_list
+				bookmark_stash_list = list({ tab.text_widget.index(mark) for mark in tab.bookmarks_stash })
+				data[filepath] = bookmark_index_list, bookmark_stash_list
 
 
 		string_representation = json.dumps(data)
@@ -8868,6 +8899,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def unstash_bookmarks(self, all_tabs=False):
+		''' Restore hided bookmarks
+		'''
 		if self.state != 'normal': return
 		tabs = [self.tabs[self.tabindex]]
 		if all_tabs: tabs = self.tabs
@@ -8876,13 +8909,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if tab.type != 'normal': continue
 			total = 0
 
-			for idx in tab.bookmarks_stash:
-				if not self.line_is_bookmarked(idx, tab=tab):
-					pos = tab.text_widget.index('%s display linestart' % idx)
-					new_mark = 'bookmark' + str(len(tab.bookmarks))
-					tab.text_widget.mark_set( new_mark, pos )
-					tab.bookmarks.append(new_mark)
-					total += 1
+			for mark in tab.text_widget.mark_names():
+				if 'stashed' in mark:
+					pos = tab.text_widget.index(mark)
+					tab.text_widget.mark_unset(mark)
+
+					if not self.line_is_bookmarked(pos, tab=tab):
+						new_mark = 'bookmark' + str(len(tab.bookmarks))
+						tab.text_widget.mark_set( new_mark, pos )
+						tab.bookmarks.append(new_mark)
+						total += 1
 
 			if total > 0:
 				print('\nUnstashed total of %i new bookmarks from:\n%s' % (total, tab.filepath))
@@ -8901,13 +8937,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 		if old_idx := self.remove_single_bookmark():
-			indent0 = self.contents.index('%s display linestart' % old_idx)
-
 			curtab = self.tabs[self.tabindex]
-			if not curtab.bookmarks_stash.count(old_idx):
-				curtab.bookmarks_stash.append(old_idx)
+			new_mark = 'stashed' + str(len(curtab.bookmarks_stash))
+			self.contents.mark_set( new_mark, old_idx )
+			curtab.bookmarks_stash.append(new_mark)
 
-			self.bookmark_animate(indent0, remove=True)
+			self.bookmark_animate(old_idx, remove=True, tagname='animate_stash')
 
 		return 'break'
 
@@ -8954,6 +8989,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			Bookmark is string, name of tk text mark like: 'bookmark11'
 			It is appended to tab.bookmarks
+
+			Adding bookmark to line which has stashed bookmark will
+			remove stashed mark from list of stashed bookmarks
+
 		'''
 		tests = (
 				self.state not in [ 'normal', 'search', 'replace', 'goto_def' ],
@@ -8964,37 +9003,38 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-
 		pos = index
-		if self.state in ('search', 'replace'):
-			# 'focus'
-			pos = self.search_focus[0]
+		tab = self.tabs[self.tabindex]
 
+		# Remove possible stashed bookmark,
+		# if this is unwanted behaviour, this block should be removed
+		if mark := self.line_is_bookmarked(pos, tab=tab, mark_patt='stashed'):
+			pos = tab.text_widget.index(mark)
+			tab.text_widget.mark_unset(mark)
+			tab.bookmarks_stash.remove(mark)
 
-		s = self.contents.index('%s display linestart' % pos)
 
 		# If there is bookmark, remove it
 		if self.remove_single_bookmark():
-			self.bookmark_animate(s, remove=True)
+			self.bookmark_animate(pos, remove=True)
 			return 'break'
 
 
-		curtab = self.tabs[self.tabindex]
-		new_mark = 'bookmark' + str(len(curtab.bookmarks))
-		self.contents.mark_set( new_mark, s )
-		curtab.bookmarks.append(new_mark)
+		new_mark = 'bookmark' + str(len(tab.bookmarks))
+		self.contents.mark_set( new_mark, pos )
+		tab.bookmarks.append(new_mark)
 
-		self.bookmark_animate(s)
+		self.bookmark_animate(pos)
 		return 'break'
 
 
-	def bookmark_animate(self, idx_linestart, remove=False):
+	def bookmark_animate(self, index, remove=False, tagname='animate'):
 		''' Animate on Add/Remove bookmark
 
-			Called from: toggle_bookmark()
+			Called from: toggle_bookmark, stash_bookmark
 		'''
 
-		s = idx_linestart
+		s = self.contents.index( '%s display linestart' % index)
 
 		self.contents.edit_separator()
 
@@ -9065,9 +9105,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			e = self.idx_lineend()
 
 			bg, fg = self.themes[self.curtheme]['sel'][:]
-			self.contents.tag_config('animate', background=bg, foreground=fg)
-			self.contents.tag_raise('animate')
-			self.contents.tag_remove('animate', '1.0', tkinter.END)
+			if tagname == 'animate':
+				self.contents.tag_config(tagname, background=bg, foreground=fg)
+			self.contents.tag_raise(tagname)
+			self.contents.tag_remove(tagname, '1.0', tkinter.END)
 
 
 			# Animate removing bookmark
@@ -9080,7 +9121,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					p0 = '%s +%d chars' % (s, wanted_num_chars - i-1 )
 					p1 = '%s +%d chars' % (s, wanted_num_chars - i )
 
-					self.after( (i+1)*step, lambda args=['animate', p0, p1]:
+					self.after( (i+1)*step, lambda args=[tagname, p0, p1]:
 							self.contents.tag_add(*args) )
 
 				# 2: Same story as when adding, just note some time has passed
@@ -9088,7 +9129,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					p0 = '%s +%d chars' % (s, wanted_num_chars - i-1 )
 					p1 = '%s +%d chars' % (s, wanted_num_chars - i )
 
-					self.after( ( time_wanted + (i+1)*step ), lambda args=['animate', p0, p1]:
+					self.after( ( time_wanted + (i+1)*step ), lambda args=[tagname, p0, p1]:
 							self.contents.tag_remove(*args) )
 
 
@@ -9109,11 +9150,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					p0 = '%s +%d chars' % (s, i)
 					p1 = '%s +%d chars' % (s, i+1)
 
-					self.after( (i+1)*step, lambda args=['animate', p0, p1]:
+					self.after( (i+1)*step, lambda args=[tagname, p0, p1]:
 							self.contents.tag_add(*args) )
 
 
-				self.after( (time_wanted + 300), lambda args=['animate', '1.0', tkinter.END]:
+				self.after( (time_wanted + 300), lambda args=[tagname, '1.0', tkinter.END]:
 						self.contents.tag_remove(*args) )
 
 

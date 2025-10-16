@@ -12,15 +12,35 @@ fix for printing issue with macos12, mac_print
 partly done, not error raising
 
 
+####################################
 done:
-import_bookmarks
-export_bookmarks
-stash_bookmark
-unstash_bookmarks
+import_bookmarks, export_bookmarks, stash_bookmark, unstash_bookmarks
 stash_bookmark has bind:
 cmd-u
 alt-u
-update help, docstring not done
+u is bit far from b but cmd-h is quite binded in mac
+maybe alt-h ?
+
+update help, docstring, done
+
+toggle_bookmark: removed:
+pos = self.search_focus[0]
+--> can bookmark anything where clicked
+also removed setting bookmark index to: display linestart
+--> bookmark is now always insert, not indent0, but not sure about this
+
+toggle_bookmark:
+Adding bookmark to line which has stashed bookmark will
+remove that stashed mark from list of stashed bookmarks
+			
+add animate_stash tag to distinquish from removing a bookmark
+bookmark_animate(old_idx, remove=True, tagname='animate')
+'animate_stash' color yellow
+####################################
+
+
+
+
 
 
 save/load tags tclerror check, done
@@ -175,6 +195,10 @@ self.cur_defline = '-1.-1'
 
 Below this: not done:
 ###############################################
+
+
+
+linescpacing increase?
 
 
 

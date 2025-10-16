@@ -2,8 +2,9 @@
 		
 		
 		Alt-p	Toggle bookmark
+		Alt-u	Hide bookmark
 		Alt-b	Goto next bookmark
-		Alt-B	previous bookmark
+		Alt-B	previous
 
 		Alt-g	Goto definition ( when cursor is at or in between:
 									self.w<INS>alk_scope<INS> )
@@ -127,8 +128,12 @@
 			Ctrl-p  Prev match
 
 		While replacing:
-			Return does what is expected.
+			Press Return once to replace, press again to move to next match,
+			(pressing again does not yet replace that next match)
+			
+			Matches can be skipped with Ctrl-np
 		
+	
 		
 		Default bindings: https://tcl.tk/man/tcl9.0/TkCmd/text.html#M192
 	
