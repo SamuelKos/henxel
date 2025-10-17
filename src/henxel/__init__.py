@@ -8702,7 +8702,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		if show_stashed:
-			print('\nStashed bookmarks:')
+			print('\nHided bookmarks:')
 
 			l = sorted([ (mark, self.contents.index(mark)) for mark in self.contents.mark_names() if 'stashed' in mark], key=lambda x:float(x[1]) )
 
@@ -8790,9 +8790,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def import_bookmarks(self):
-		''' Using fdialog.py
-
-			update (add not already existing),
+		''' update (add not already existing bookmarks),
 			update opened tabs bookmarks from file
 
 			Also stashed bookmarks
@@ -8860,7 +8858,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 								tab.bookmarks_stash.append(new_mark)
 								total_stash += 1
 
-			print('\nImported total of %i new bookmarks and %i new stashed bookmarks from:\n%s' % (total_books, total_stash, p))
+			print('\nImported total of %i new bookmarks and %i new hided bookmarks from:\n%s' % (total_books, total_stash, p))
 
 
 		self.state = 'normal'
@@ -8869,9 +8867,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def export_bookmarks(self):
-		''' Currently using tkinter.filedialog
-
-			Also stashed bookmarks are saved
+		''' Also stashed bookmarks are saved
 		'''
 		import tkinter.filedialog
 		fname_as_string = p = tkinter.filedialog.asksaveasfilename()
@@ -8921,7 +8917,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						total += 1
 
 			if total > 0:
-				print('\nUnstashed total of %i new bookmarks from:\n%s' % (total, tab.filepath))
+				print('\nRestored from stash total of %i new bookmarks to:\n%s' % (total, tab.filepath))
 
 			tab.bookmarks_stash.clear()
 
@@ -8939,10 +8935,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if old_idx := self.remove_single_bookmark():
 			curtab = self.tabs[self.tabindex]
 			new_mark = 'stashed' + str(len(curtab.bookmarks_stash))
-			self.contents.mark_set( new_mark, old_idx )
+			pos = self.contents.index('%s display linestart' % old_idx)
+			self.contents.mark_set( new_mark, pos )
 			curtab.bookmarks_stash.append(new_mark)
 
-			self.bookmark_animate(old_idx, remove=True, tagname='animate_stash')
+			self.bookmark_animate(pos, remove=True, tagname='animate_stash')
 
 		return 'break'
 
@@ -8991,7 +8988,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			It is appended to tab.bookmarks
 
 			Adding bookmark to line which has stashed bookmark will
-			remove stashed mark from list of stashed bookmarks
+			remove that stashed mark
 
 		'''
 		tests = (
@@ -9003,7 +9000,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		pos = index
+		pos = self.contents.index('%s display linestart' % index)
 		tab = self.tabs[self.tabindex]
 
 		# Remove possible stashed bookmark,

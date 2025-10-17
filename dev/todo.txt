@@ -26,8 +26,8 @@ update help, docstring, done
 toggle_bookmark: removed:
 pos = self.search_focus[0]
 --> can bookmark anything where clicked
-also removed setting bookmark index to: display linestart
---> bookmark is now always insert, not indent0, but not sure about this
+
+bookmarks are again set to indent0
 
 toggle_bookmark:
 Adding bookmark to line which has stashed bookmark will
@@ -37,10 +37,6 @@ add animate_stash tag to distinquish from removing a bookmark
 bookmark_animate(old_idx, remove=True, tagname='animate')
 'animate_stash' color yellow
 ####################################
-
-
-
-
 
 
 save/load tags tclerror check, done
@@ -201,6 +197,13 @@ Below this: not done:
 linescpacing increase?
 
 
+delete move_by_words select_by_words
+instead, at first bind: animate char by char until:
+1: second bind
+or 2: idx_linestart/end
+
+
+test reduce?
 
 
 #######
