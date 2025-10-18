@@ -160,52 +160,99 @@ def stash_pop():
 ############ Module Utilities End
 ############ Class Tab Begin
 
+############
+from dataclasses import dataclass, field
+from typing import Any, List
+
+# must know all attributes
+
+@dataclass
 class Tab:
-	'''	Represents a tab-page of an Editor-instance
-	'''
+	# This must be first because it has no default value
+	# same thing as with function arguments
+	text_widget: tkinter.Text
 
-	def __init__(self, **entries):
-		''' active		Bool
-			filepath	pathlib.Path
+	# dataclass does not want mutable default values
+	bookmarks: List[str] = field(default_factory=list)
+	bookmarks_stash: List[str] = field(default_factory=list)
 
-			tcl_name_of_contents,
-			contents,
-			oldcontents,
-			position,
-			type		String
-
-			chk_sum		Integer
-			text_widget tkinter.Text
-
-			bookmarks_stash,
-			bookmarks	List
-
-		'''
-
-		self.active = False
-		self.filepath = None
-		self.contents = ''
-		self.oldcontents = ''
-		self.position = '1.0'
-		self.type = 'newtab'
-		self.chk_sum = 0
-		self.bookmarks = list()
-		self.bookmarks_stash = list()
-		self.text_widget = None
-		self.tcl_name_of_contents = ''
-
-		self.__dict__.update(entries)
+	# filepath should be pathlib.Path
+	# But it is used in condition checking like: if filepath
+	# To Fix: replace if tab.filepath with:
+	# filepath = False
+	# do something that should get: filepath = somePath
+	# Then: if filepath: tab.filepath = filepath
+	#if tab.type == 'normal'
 
 
-	def __str__(self):
+	filepath: Any = False
 
-		return	'\nfilepath: %s\nactive: %s\ntype: %s\nposition: %s' % (
-				str(self.filepath),
-				str(self.active),
-				self.type,
-				self.position
-				)
+	chk_sum: int = 0
+	oldlinenum: int = 0
 
+	tcl_name_of_contents: str = ''
+	position: str = '1.0'
+	type: str = 'newtab'
+	contents: str = ''
+	oldcontents: str = ''
+	anchorname: str = ''
+	oldline: str = ''
+	bid_space: str = ''
+
+	active: bool = False
+	inspected: bool = False
+	par_err: bool = False
+	check_scope: bool = False
+
+########
+
+
+##class Tab:
+##	'''	Represents a tab-page of an Editor-instance
+##	'''
+##
+##	def __init__(self, **entries):
+##		''' active		Bool
+##			filepath	pathlib.Path
+##
+##			tcl_name_of_contents,
+##			contents,
+##			oldcontents,
+##			position,
+##			type		String
+##
+##			chk_sum		Integer
+##			text_widget tkinter.Text
+##
+##			bookmarks_stash,
+##			bookmarks	List
+##
+##		'''
+##
+##		self.active = False
+##		self.filepath = None
+##		self.contents = ''
+##		self.oldcontents = ''
+##		self.position = '1.0'
+##		self.type = 'newtab'
+##		self.chk_sum = 0
+##		self.bookmarks = list()
+##		self.bookmarks_stash = list()
+##		self.text_widget = None
+##		self.tcl_name_of_contents = ''
+##
+##		self.__dict__.update(entries)
+##
+##
+##	def __str__(self):
+##
+##		return	'\nfilepath: %s\nactive: %s\ntype: %s\nposition: %s' % (
+##				str(self.filepath),
+##				str(self.active),
+##				self.type,
+##				self.position
+##				)
+##
 
 ############ Class Tab End
 ############ Class Editor Begin
@@ -533,7 +580,7 @@ class Editor(tkinter.Toplevel):
 
 			# When clicked with mouse button 1 while searching
 			# to set cursor position to that position clicked.
-			self.save_pos = None
+			self.save_pos = ''
 
 			# Help enabling: "exit to goto_def func with space" while searching
 			self.goto_def_pos = False
@@ -780,11 +827,11 @@ class Editor(tkinter.Toplevel):
 			# Configure Text-widgets of tabs and find active tab
 			self.config_tabs()
 
-			##############################
-			# self.contents gets defined #
-			##############################
+			#################################
+			# self.text_widget gets defined #
+			#################################
 			for tab in self.tabs:
-				if tab.active: self.contents = tab.text_widget
+				if tab.active: self.text_widget = tab.text_widget
 
 
 
@@ -792,9 +839,9 @@ class Editor(tkinter.Toplevel):
 			self.msgbox = tkinter.messagebox.Message(**msg_defaults)
 
 			# Needed in leave() taglink in: Run file Related
-			self.name_of_cursor_in_text_widget = self.contents['cursor']
+			self.name_of_cursor_in_text_widget = self.text_widget['cursor']
 
-			self.scrollbar.config(command=self.contents.yview,
+			self.scrollbar.config(command=self.text_widget.yview,
 								width=self.scrollbar_width,
 								elementborderwidth=self.elementborderwidth)
 
@@ -817,25 +864,25 @@ class Editor(tkinter.Toplevel):
 
 ##			# Get anchor-name of selection-start.
 ##			# Used in for example select_by_words():
-##			self.contents.insert(1.0, 'asd')
+##			self.text_widget.insert(1.0, 'asd')
 ##			# This is needed to get some tcl-objects created,
 ##			# ::tcl::WordBreakRE and self.anchorname
-##			self.contents.event_generate('<<SelectNextWord>>')
+##			self.text_widget.event_generate('<<SelectNextWord>>')
 ##			# This is needed to clear selection
 ##			# otherwise left at the end of file:
-##			self.contents.event_generate('<<PrevLine>>')
+##			self.text_widget.event_generate('<<PrevLine>>')
 ##
 ##			# Now also this array is created which is needed
 ##			# in RE-fixing ctrl-leftright behaviour in Windows below.
 ##			# self.tk.eval('parray ::tcl::WordBreakRE')
 ##
 ##			self.anchorname = None
-##			for item in self.contents.mark_names():
+##			for item in self.text_widget.mark_names():
 ##				if 'tk::' in item:
 ##					self.anchorname = item
 ##					break
 ##
-##			self.contents.delete('1.0', '1.3')
+##			self.text_widget.delete('1.0', '1.3')
 
 
 			# In Win11 event: <<NextWord>> does not work (as supposed) but does so in Linux and macOS
@@ -864,9 +911,9 @@ class Editor(tkinter.Toplevel):
 			self.update_idletasks() # Check is this needed?
 
 			# if self.y_extra_offset > 0, it needs attention in update_linenums
-			self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
+			self.y_extra_offset = self.text_widget['highlightthickness'] + self.text_widget['bd'] + self.text_widget['pady']
 			# Needed in update_linenums() and sbset_override()
-			self.bbox_height = self.contents.bbox('@0,0')[3]
+			self.bbox_height = self.text_widget.bbox('@0,0')[3]
 			self.text_widget_height = self.scrollbar.winfo_height()
 
 
@@ -896,7 +943,7 @@ class Editor(tkinter.Toplevel):
 
 			self.frame.rowconfigure(0, weight=1)
 			self.frame.columnconfigure(0, weight=1)
-			self.contents.grid_configure(row=0, column=0, sticky='nsew')
+			self.text_widget.grid_configure(row=0, column=0, sticky='nsew')
 
 
 			# If want linenumbers:
@@ -922,12 +969,11 @@ class Editor(tkinter.Toplevel):
 
 
 			# Create tabs for help and error pages
-			newtab = Tab()
+			newtab = Tab(self.create_textwidget())
 			self.set_textwidget(newtab)
 			self.set_syntags(newtab)
 			self.help_tab = newtab
 			self.help_tab.type = 'help'
-			self.help_tab.position = '1.0'
 			self.help_tab.text_widget.insert('insert', self.helptxt)
 			self.help_tab.text_widget.mark_set('insert', newtab.position)
 			self.help_tab.text_widget.see(newtab.position)
@@ -935,12 +981,11 @@ class Editor(tkinter.Toplevel):
 			self.help_tab.text_widget['yscrollcommand'] = lambda *args: self.sbset_override(*args)
 
 
-			newtab = Tab()
+			newtab = Tab(self.create_textwidget())
 			self.set_textwidget(newtab)
 			self.set_syntags(newtab)
 			self.err_tab = newtab
 			self.err_tab.type = 'error'
-			self.err_tab.position = '1.0'
 			self.err_tab.text_widget.mark_set('insert', newtab.position)
 			self.err_tab.text_widget.see(newtab.position)
 			self.set_bindings(newtab)
@@ -1017,7 +1062,7 @@ class Editor(tkinter.Toplevel):
 
 			curtab = self.tabs[self.tabindex]
 
-			self.scrollbar.set(*self.contents.yview())
+			self.scrollbar.set(*self.text_widget.yview())
 			self.anchorname = curtab.anchorname
 			self.tcl_name_of_contents = curtab.tcl_name_of_contents
 			self.line_can_update = True
@@ -1065,12 +1110,12 @@ class Editor(tkinter.Toplevel):
 
 			# Focus has to be after deiconify if on Windows
 			if self.os_type == 'windows':
-				self.contents.focus_force()
+				self.text_widget.focus_force()
 			else:
-				self.contents.focus_set()
+				self.text_widget.focus_set()
 
 			# Prevent flashing 3/3
-			while not self.contents.winfo_viewable():
+			while not self.text_widget.winfo_viewable():
 				self.wait_for(200)
 			self.config(bg=self.orig_bg_color)
 
@@ -1089,15 +1134,15 @@ class Editor(tkinter.Toplevel):
 
 ##			# Widget visibility-check
 ##			if self.flags and self.flags.get('launch_test'):
-##				a = self.contents.winfo_ismapped()
-##				b = self.contents.winfo_viewable()#check also if ancestors ar mapped
+##				a = self.text_widget.winfo_ismapped()
+##				b = self.text_widget.winfo_viewable()#check also if ancestors ar mapped
 ##				print(a,b)
 ##
 ##			# Note also this
 ##			if self.flags and self.flags.get('launch_test'):
 ##				print(self.bbox_height,  self.text_widget_height)
 ##				# self.bbox_height == 25,  self.text_widget_height == 616
-##				# --> self.contents is now 'packed' by (grid) geometry-manager
+##				# --> self.text_widget is now 'packed' by (grid) geometry-manager
 
 		except Exception as init_err:
 
@@ -1171,12 +1216,12 @@ Error messages Begin
 ##		#       self.text_widget_height = self.scrollbar.winfo_height(),
 ##		# but with this magic number 65535, one possible winfo_height()-call
 ##		# is avoided. But Still, if dont want magics:
-##		# self.contents.count('@0,0', '@0,%s' % self.text_widget_height, 'displaylines')[0]
+##		# self.text_widget.count('@0,0', '@0,%s' % self.text_widget_height, 'displaylines')[0]
 ##		#       or if in doubt is that up-to-date(it is, see above):
-##		# self.contents.count('@0,0', '@0,%s' % self.scrollbar.winfo_height(), 'displaylines')[0]
+##		# self.text_widget.count('@0,0', '@0,%s' % self.scrollbar.winfo_height(), 'displaylines')[0]
 ##
 ##		# Note that result is None if widget is not yet fully started, below is solution to that.
-##		if tmp := self.contents.count('@0,0', '@0,65535', 'displaylines')[0]:
+##		if tmp := self.text_widget.count('@0,0', '@0,65535', 'displaylines')[0]:
 ##			# Here one can do things like find the maximum number of screen lines etc
 ##			# if tmp > self.max_screen_lines: self.max_screen_lines = tmp
 ##			self.screen_lines = tmp
@@ -1185,7 +1230,7 @@ Error messages Begin
 ##			# Geometry manager hasn't run yet, most likely doing still init
 ##			# Note that this is not realistic value, but a future value if everything wents ok.
 ##			# Correct value would be 0
-##			self.screen_lines = int(self.contents['height'])
+##			self.screen_lines = int(self.text_widget['height'])
 
 		#self.update_linenums()
 
@@ -1317,9 +1362,9 @@ Error messages Begin
 
 		# Note, see takes times
 		if not lineno_start + b < lineno_ins:
-			self.contents.see( '%s - %i lines' % (index, b) )
+			self.text_widget.see( '%s - %i lines' % (index, b) )
 		elif not lineno_ins + 4 < lineno_end:
-			self.contents.see( '%s + 4 lines' % index )
+			self.text_widget.see( '%s + 4 lines' % index )
 
 
 	def build_launch_test(self, mode):
@@ -1602,7 +1647,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		del self.btn_open
 		del self.btn_save
 		del self.ln_widget
-		del self.contents
+		del self.text_widget
 		del self.scrollbar
 		del self.expander
 		del self.popup
@@ -1689,7 +1734,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		''' Called from check_line
 		'''
 		# Note:
-		# 'strings' in self.contents.tag_names('insert')
+		# 'strings' in self.text_widget.tag_names('insert')
 		# will return True when cursor is at marked places or between them:
 
 		# <INSERT>''' multiline string
@@ -1713,7 +1758,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def check_line(self, oldline=None, newline=None, on_oldline=True, tab=None):
 		''' oldline, newline:	string
-			on_oldline:			bool	(self.oldlinenum == linenum curline)
+			on_oldline:			bool	(tab.oldlinenum == linenum curline)
 		'''
 
 		ins_col = col = self.get_line_col_as_int(tab=tab)[1]
@@ -1796,12 +1841,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if tab.check_scope:
 			# fix for multiline strings at __main__()
 			###
-			if r := self.contents.tag_prevrange('deflin', 'insert'):
+			if r := self.text_widget.tag_prevrange('deflin', 'insert'):
 				s = r[0] + ' linestart'
 			else:
 				s = '1.0'
 
-			if r := self.contents.tag_nextrange('deflin', 'insert'):
+			if r := self.text_widget.tag_nextrange('deflin', 'insert'):
 				e = r[0] + ' -1 lines linestart'
 			else:
 				e = 'end'
@@ -1835,7 +1880,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		#print('check_line:', s, e)
 		# Remove old tags:
 		for tag in self.tagnames:
-			self.contents.tag_remove( tag, s, e)
+			self.text_widget.tag_remove( tag, s, e)
 
 
 		if tab.check_scope:
@@ -2338,7 +2383,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		for i in range(0, self.text_widget_height, step):
 
-			ll, cc = self.contents.index( indexMask % i).split('.')
+			ll, cc = self.text_widget.index( indexMask % i).split('.')
 
 			if line == ll:
 				# line is wrapping
@@ -2399,7 +2444,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Want y-offset of first visible line, and reverse it
 
 
-			y_offset = self.contents.bbox('@0,0')[1]
+			y_offset = self.text_widget.bbox('@0,0')[1]
 
 			y_offset *= -1
 
@@ -2429,13 +2474,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
-		newtab = Tab()
+		newtab = Tab(self.create_textwidget())
 
 		self.set_textwidget(newtab)
 		self.set_syntags(newtab)
 		self.set_bindings(newtab)
 		newtab.text_widget['yscrollcommand'] = lambda *args: self.sbset_override(*args)
-		newtab.position = '1.0'
 		newtab.text_widget.mark_set('insert', '1.0')
 
 
@@ -2464,7 +2508,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if len(self.tabs) == 1 and oldtab.type == 'newtab':
 			self.clear_bookmarks()
 			oldtab.bookmarks.clear()
-			self.contents.delete('1.0', tkinter.END)
+			self.text_widget.delete('1.0', tkinter.END)
 			self.bell()
 			return 'break'
 
@@ -2490,13 +2534,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		if len(self.tabs) == 1:
-			newtab = Tab()
+			newtab = Tab(self.create_textwidget())
 
 			self.set_textwidget(newtab)
 			self.set_syntags(newtab)
 			self.set_bindings(newtab)
 			newtab.text_widget['yscrollcommand'] = lambda *args: self.sbset_override(*args)
-			newtab.position = '1.0'
 			newtab.text_widget.mark_set('insert', '1.0')
 
 			self.tabs.append(newtab)
@@ -2548,12 +2591,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.entry.insert(0, tab.filepath)
 			self.entry.xview_moveto(1.0)
 
-		self.contents = tab.text_widget
-		self.scrollbar.config(command=self.contents.yview)
-		self.scrollbar.set(*self.contents.yview())
+		self.text_widget = tab.text_widget
+		self.scrollbar.config(command=self.text_widget.yview)
+		self.scrollbar.set(*self.text_widget.yview())
 		if self.want_ln: self.update_linenums()
-		self.contents.grid_configure(row=0, column=0, sticky='nswe')
-		self.contents.focus_set()
+		self.text_widget.grid_configure(row=0, column=0, sticky='nswe')
+		self.text_widget.focus_set()
 
 		# This is needed for some reason to prevent flashing
 		# when using fast machine
@@ -2573,10 +2616,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.entry.delete(0, tkinter.END)
 		self.scrollbar.config(command='')
-		self.contents.grid_forget()
+		self.text_widget.grid_forget()
 
-		if len(self.contents.tag_ranges('sel')) > 0:
-			self.contents.tag_remove('sel', '1.0', 'end')
+		if len(self.text_widget.tag_ranges('sel')) > 0:
+			self.text_widget.tag_remove('sel', '1.0', 'end')
 
 
 	def walk_tabs(self, event=None, back=False):
@@ -2778,7 +2821,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if not self.lastdir.exists():
 				self.lastdir = None
 
-		self.tabs = [ Tab(**item) for item in d['tabs'] ]
+		self.tabs = [ Tab(self.create_textwidget(), **items) for items in d['tabs'] ]
 
 		# To avoid for-loop breaking, while removing items from the container being iterated,
 		# one can iterate over container[:], that is: self.tabs[:],
@@ -2814,15 +2857,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				break
 
 
+	def create_textwidget(self):
+		return tkinter.Text(self.frame, **self.text_widget_basic_config)
+
+
 	def set_textwidget(self, tab):
 
-		w = tab.text_widget = tkinter.Text(self.frame, **self.text_widget_basic_config)
+		w = tab.text_widget
 
 		w.insert(1.0, 'asd')
 		w.event_generate('<<SelectNextWord>>')
 		w.event_generate('<<PrevLine>>')
 
-		tab.anchorname = None
+		tab.anchorname = ''
 		for item in w.mark_names():
 			if 'tk::' in item:
 				tab.anchorname = item
@@ -2848,7 +2895,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.tabindex == None:
 
 			if len(self.tabs) == 0:
-				newtab = Tab()
+				newtab = Tab(self.create_textwidget())
 				newtab.active = True
 				self.tabindex = 0
 				self.tabs.insert(self.tabindex, newtab)
@@ -3165,7 +3212,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		start_idx = start
 		end_idx = end
 		linecontents = line
-		if not linecontents: linecontents = self.contents.get( start_idx, end_idx )
+		if not linecontents: linecontents = self.text_widget.get( start_idx, end_idx )
 
 		linenum,_ = self.get_line_col_as_int(index=start_idx)
 
@@ -3280,7 +3327,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##				print( attr,': ', item )
 ##
 ##			print( e.args[0], '\nIndentation errline: ',
-##			self.contents.index(tkinter.INSERT) )
+##			self.text_widget.index(tkinter.INSERT) )
 
 			flag_err = True
 			tab.check_scope = True
@@ -3323,7 +3370,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if not par_err:
 			# Not always checking whole file for par mismatches, so clear
-			self.contents.tag_remove('mismatch', '1.0', tkinter.END)
+			self.text_widget.tag_remove('mismatch', '1.0', tkinter.END)
 
 			###### Check parentheses end ###########
 
@@ -3555,7 +3602,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.ind_depth = width
 		self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
-		self.contents.config(tabs=(self.tab_width, ))
+		self.text_widget.config(tabs=(self.tab_width, ))
 
 
 
@@ -3599,10 +3646,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		else:
 			e = '%s display lineend -1 display char' % safe_idx
 
-		self.contents.tag_remove('highlight_line', '1.0', 'end')
+		self.text_widget.tag_remove('highlight_line', '1.0', 'end')
 
-		self.contents.tag_config('highlight_line', background=color)
-		self.contents.tag_add('highlight_line', s, e)
+		self.text_widget.tag_config('highlight_line', background=color)
+		self.text_widget.tag_add('highlight_line', s, e)
 
 
 	def set_text_widget_colors(self, tab):
@@ -3646,7 +3693,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def update_fonts(self):
 		# There could be a geometry change, so:
-		self.flag_check_geom_at_exit = True
+		if self.geom: self.flag_check_geom_at_exit = True
 		self.boldfont.config(**self.font.config())
 		self.boldfont.config(weight='bold')
 
@@ -3672,8 +3719,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.ln_widget.config(padx=self.pad, pady=self.pad)
-		self.y_extra_offset = self.contents['highlightthickness'] + self.contents['bd'] + self.contents['pady']
-		#self.bbox_height = self.contents.bbox('@0,0')[3]
+		self.y_extra_offset = self.text_widget['highlightthickness'] + self.text_widget['bd'] + self.text_widget['pady']
+		#self.bbox_height = self.text_widget.bbox('@0,0')[3]
 
 
 
@@ -3694,12 +3741,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
-				self.contents.bind( shortcut, self.font_choose)) )
+				self.text_widget.bind( shortcut, self.font_choose)) )
 
 		changefont.FontChooser( fonttop, [self.font, self.menufont], big,
 			sb_widths=(self.scrollbar_width, self.elementborderwidth),
 			on_fontchange=self.update_fonts )
-		self.contents.bind( shortcut, self.do_nothing)
+		self.text_widget.bind( shortcut, self.do_nothing)
 		self.to_be_closed.append(fonttop)
 
 		return 'break'
@@ -3789,11 +3836,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tagname = 'sel'
 
 			if wid.frontback_mode == 'foreground':
-				initcolor = self.contents.tag_cget(tagname, 'foreground')
+				initcolor = self.text_widget.tag_cget(tagname, 'foreground')
 				patt = 'Choose fgcolor for: %s' % tagname
 
 			else:
-				initcolor = self.contents.tag_cget(tagname, 'background')
+				initcolor = self.text_widget.tag_cget(tagname, 'background')
 				patt = 'Choose bgcolor for: %s' % tagname
 
 			res = self.tk.call('tk_chooseColor', '-initialcolor', initcolor, '-title', patt)
@@ -3963,11 +4010,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		c.protocol("WM_DELETE_WINDOW", lambda: ( c.destroy(),
-				self.contents.bind( shortcut_color, self.color_choose),
-				self.contents.bind( shortcut_toggl, self.toggle_color)) )
+				self.text_widget.bind( shortcut_color, self.color_choose),
+				self.text_widget.bind( shortcut_toggl, self.toggle_color)) )
 
-		self.contents.bind( shortcut_color, self.do_nothing)
-		self.contents.bind( shortcut_toggl, self.do_nothing)
+		self.text_widget.bind( shortcut_color, self.do_nothing)
+		self.text_widget.bind( shortcut_toggl, self.do_nothing)
 
 		#c.textfont = tkinter.font.Font(family='TkDefaulFont', size=10)
 
@@ -4124,15 +4171,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def enter(self, tagname, event=None):
 		''' Used in error-page, when mousecursor enters hyperlink tagname.
 		'''
-		self.contents.config(cursor="hand2")
-		self.contents.tag_config(tagname, underline=1)
+		self.text_widget.config(cursor="hand2")
+		self.text_widget.tag_config(tagname, underline=1)
 
 
 	def leave(self, tagname, event=None):
 		''' Used in error-page, when mousecursor leaves hyperlink tagname.
 		'''
-		self.contents.config(cursor=self.name_of_cursor_in_text_widget)
-		self.contents.tag_config(tagname, underline=0)
+		self.text_widget.config(cursor=self.name_of_cursor_in_text_widget)
+		self.text_widget.tag_config(tagname, underline=0)
 
 
 	def lclick(self, tagname, event=None):
@@ -4179,7 +4226,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					tmp = f.read()
 
 
-					newtab = Tab()
+					newtab = Tab(self.create_textwidget())
 
 					self.set_textwidget(newtab)
 					self.set_syntags(newtab)
@@ -4312,34 +4359,34 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.line_can_update = False
 
-		for tag in self.contents.tag_names():
+		for tag in self.text_widget.tag_names():
 			if 'hyper' in tag:
-				self.contents.tag_delete(tag)
+				self.text_widget.tag_delete(tag)
 
 
 		for line in self.err:
 			tmp = line
 
 			tagname = "hyper-%s" % len(self.errlines)
-			self.contents.tag_config(tagname)
+			self.text_widget.tag_config(tagname)
 
 			# Why ButtonRelease instead of just Button-1:
 			# https://stackoverflow.com/questions/24113946/unable-to-move-text-insert-index-with-mark-set-widget-function-python-tkint
 
-			self.contents.tag_bind(tagname, "<ButtonRelease-1>",
+			self.text_widget.tag_bind(tagname, "<ButtonRelease-1>",
 				lambda event, arg=tagname: self.lclick(arg, event))
 
-			self.contents.tag_bind(tagname, "<Enter>",
+			self.text_widget.tag_bind(tagname, "<Enter>",
 				lambda event, arg=tagname: self.enter(arg, event))
 
-			self.contents.tag_bind(tagname, "<Leave>",
+			self.text_widget.tag_bind(tagname, "<Leave>",
 				lambda event, arg=tagname: self.leave(arg, event))
 
 			self.taglinks[tagname] = self.tag_link
 
 			# Parse filepath and linenums from errors
 			if 'File ' in line and 'line ' in line:
-				self.contents.insert(tkinter.INSERT, '\n')
+				self.text_widget.insert(tkinter.INSERT, '\n')
 
 				data = line.split(',')[:2]
 				linenum = data[1][6:]
@@ -4349,27 +4396,27 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.errlines.append((filepath, linenum))
 
-				self.contents.insert(tkinter.INSERT, tmp)
+				self.text_widget.insert(tkinter.INSERT, tmp)
 				s0 = tmp.index(path) - 1
-				s = self.contents.index('insert linestart +%sc' % s0 )
-				e = self.contents.index('%s +%sc' % (s, pathlen) )
+				s = self.text_widget.index('insert linestart +%sc' % s0 )
+				e = self.text_widget.index('%s +%sc' % (s, pathlen) )
 
-				self.contents.tag_add(tagname, s, e)
+				self.text_widget.tag_add(tagname, s, e)
 
 				if filepath in openfiles:
-					self.contents.tag_config(tagname, foreground='brown1')
-					self.contents.tag_raise(tagname)
+					self.text_widget.tag_config(tagname, foreground='brown1')
+					self.text_widget.tag_raise(tagname)
 
-				self.contents.insert(tkinter.INSERT, '\n')
+				self.text_widget.insert(tkinter.INSERT, '\n')
 
 			else:
-				self.contents.insert(tkinter.INSERT, tmp +"\n")
+				self.text_widget.insert(tkinter.INSERT, tmp +"\n")
 
 				# Make it look bit nicer
 				if self.syntax:
 					# -1 lines because linebreak has been added already
-					start = self.contents.index('insert -1 lines linestart')
-					end = self.contents.index('insert -1 lines lineend')
+					start = self.text_widget.index('insert -1 lines linestart')
+					end = self.text_widget.index('insert -1 lines lineend')
 
 					self.update_lineinfo(self.err_tab)
 					self.update_tokens(start=start, end=end, line=line,
@@ -4380,8 +4427,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.err_tab.text_widget.see(self.err_tab.position)
 
 		self.err_tab.text_widget.focus_set()
-		self.contents.edit_reset()
-		self.contents.edit_modified(0)
+		self.text_widget.edit_reset()
+		self.text_widget.edit_modified(0)
 
 		if self.syntax:
 			self.line_can_update = True
@@ -4500,7 +4547,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if update:
 			self.deflines = self.get_deflines(self.tabs[self.tabindex])
-		curlinenum = float(self.contents.index(index))
+		curlinenum = float(self.text_widget.index(index))
 		linenums = self.deflines[:]
 
 		if down:
@@ -4547,7 +4594,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# lines of interest ends with: ### pos
 
 		idx = self.get_safe_index()
-		line = self.contents.get('%s linestart' % idx, '%s lineend' % idx)
+		line = self.text_widget.get('%s linestart' % idx, '%s lineend' % idx)
 
 		update = True
 		if idx == self.cur_defline: update = False
@@ -4611,7 +4658,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			while pos:
 				try:
-					pos = self.contents.search(patt, pos, stopindex='end', regexp=True)
+					pos = self.text_widget.search(patt, pos, stopindex='end', regexp=True)
 
 				except tkinter.TclError as e:
 					print(e)
@@ -4622,14 +4669,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.bell()
 					return 'break'
 
-				if 'strings' in self.contents.tag_names(pos):
+				if 'strings' in self.text_widget.tag_names(pos):
 					#print('strings3', pos)
-					pos = self.contents.tag_prevrange('strings', pos)[1] + ' +1 lines linestart'
+					pos = self.text_widget.tag_prevrange('strings', pos)[1] + ' +1 lines linestart'
 					continue
 
 				lineend = '%s lineend' % pos
 				linestart = '%s linestart' % pos
-				line = self.contents.get( linestart, lineend )
+				line = self.text_widget.get( linestart, lineend )
 				if res := self.line_is_defline(line):
 					pos = self.idx_linestart(pos)[0]
 					break
@@ -4639,7 +4686,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Put cursor on defline
 		try:
-			self.contents.mark_set('insert', pos)
+			self.text_widget.mark_set('insert', pos)
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
 
@@ -4685,19 +4732,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		self.contents.tag_remove('sel', '1.0', tkinter.END )
+		self.text_widget.tag_remove('sel', '1.0', tkinter.END )
 		self.wait_for(20)
 
 		# Is start of selection not viewable?
-		if not self.contents.bbox(idx_scope_start):
+		if not self.text_widget.bbox(idx_scope_start):
 			self.wait_for(121)
 			self.ensure_idx_visibility(idx_scope_start, back=4)
 			self.wait_for(100)
 		else:
-			self.contents.mark_set('insert', idx_scope_start)
+			self.text_widget.mark_set('insert', idx_scope_start)
 
-		self.contents.mark_set(self.anchorname, idx_scope_end)
-		self.contents.tag_add('sel', idx_scope_start, idx_scope_end )
+		self.text_widget.mark_set(self.anchorname, idx_scope_end)
+		self.text_widget.tag_add('sel', idx_scope_start, idx_scope_end )
 
 		return 'break'
 
@@ -4712,7 +4759,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		if event.widget != self.contents:
+		if event.widget != self.text_widget:
 			return
 
 
@@ -4734,11 +4781,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Taken from center_view:
 		num_lines = self.text_widget_height // self.bbox_height
 		# Lastline of visible window
-		lastline_screen = int(float(self.contents.index('@0,65535')))
+		lastline_screen = int(float(self.text_widget.index('@0,65535')))
 		firstline_screen = lastline_screen - num_lines
 		# Lastline of file would be:
-		#last = int(float(self.contents.index('end'))) - 1
-		curline = int(float(self.contents.index('insert')))
+		#last = int(float(self.text_widget.index('end'))) - 1
+		curline = int(float(self.text_widget.index('insert')))
 		# This seems not to work (not in view/sync):
 		#curline = self.tabs[self.tabindex].oldlinenum
 		to_up = curline - firstline_screen
@@ -4822,32 +4869,32 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if event.state in [5, 13]:
 			n=1
 			if up: n=-1
-			self.contents.yview_scroll(n, 'units')
+			self.text_widget.yview_scroll(n, 'units')
 			return 'break'
 
 
 		num_lines = self.text_widget_height // self.bbox_height
 		num_scroll = num_lines // 3
-		pos = self.contents.index('insert')
-		#posint = int(float(self.contents.index('insert')))
+		pos = self.text_widget.index('insert')
+		#posint = int(float(self.text_widget.index('insert')))
 		# Lastline of visible window
-		lastline_screen = int(float(self.contents.index('@0,65535')))
+		lastline_screen = int(float(self.text_widget.index('@0,65535')))
 
 		# Lastline
-		last = int(float(self.contents.index('end'))) - 1
-		curline = int(float(self.contents.index('insert'))) - 1
+		last = int(float(self.text_widget.index('end'))) - 1
+		curline = int(float(self.text_widget.index('insert'))) - 1
 
 		if up: num_scroll *= -1
 
 		# Near fileend
 		elif curline + 2*num_scroll + 2 > last:
-			self.contents.insert(tkinter.END, num_scroll*'\n')
-			self.contents.mark_set('insert', pos)
+			self.text_widget.insert(tkinter.END, num_scroll*'\n')
+			self.text_widget.mark_set('insert', pos)
 
 
 		# Near screen end
 		#elif curline + 2*num_scroll + 2 > lastline_screen:
-		self.contents.yview_scroll(num_scroll, 'units')
+		self.text_widget.yview_scroll(num_scroll, 'units')
 
 
 		# No ensure_view, enable return to cursor by arrow keys
@@ -4855,7 +4902,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def idx_lineend(self, index='insert'):
-		return  self.contents.index( '%s display lineend' % index )
+		return  self.text_widget.index( '%s display lineend' % index )
 
 
 	def line_is_empty(self, index='insert'):
@@ -4867,7 +4914,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		patt = r'%s get -displaychars {%s} {%s}' % (self.tcl_name_of_contents, s, e )
 
-		line = self.contents.tk.eval(patt)
+		line = self.text_widget.tk.eval(patt)
 
 		return line.strip() == ''
 
@@ -4897,13 +4944,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		safe_index = self.get_safe_index(index)
 
-		pos = self.contents.index( '%s linestart' % safe_index)
+		pos = self.text_widget.index( '%s linestart' % safe_index)
 		s1 = '%s display linestart' % safe_index
 		s2 = '%s linestart' % safe_index
-		line_starts_from_curline = self.contents.compare( s1,'==',s2 )
+		line_starts_from_curline = self.text_widget.compare( s1,'==',s2 )
 
 		if not line_starts_from_curline:
-			pos = self.contents.index( '%s display linestart' % safe_index)
+			pos = self.text_widget.index( '%s display linestart' % safe_index)
 
 
 		elif not self.line_is_empty(safe_index):
@@ -4912,20 +4959,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			patt = r'%s get -displaychars {%s} {%s}' % (self.tcl_name_of_contents, s, e )
 
-			line_contents = self.contents.tk.eval(patt)
+			line_contents = self.text_widget.tk.eval(patt)
 
 			stop = '%s lineend' % safe_index
 			if r := self.line_is_elided(safe_index): stop = r[0]
 
 			patt = r'^[[:blank:]]*[^[:blank:]]'
 
-			pos = self.contents.search(patt, s, stopindex=stop, regexp=True,
+			pos = self.text_widget.search(patt, s, stopindex=stop, regexp=True,
 					count=self.search_count_var)
 
 			# self.search_count_var.get() == indentation level +1
 			# because pattern matches: not blank at end of patt
 			ind = '%s +%d chars' % (pos, self.search_count_var.get()-1)
-			pos = self.contents.index(ind)
+			pos = self.text_widget.index(ind)
 
 
 		return pos, line_starts_from_curline
@@ -4938,7 +4985,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Called from: select_by_words(), goto_linestart()
 		'''
 		###########################################
-		# Get marknames: self.contents.mark_names()
+		# Get marknames: self.text_widget.mark_names()
 		# It gives something like this if there has been or is a selection:
 		# 'insert', 'current', 'tk::anchor1'.
 		# This: 'tk::anchor1' is name of the selection-start-mark
@@ -4950,62 +4997,62 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if direction == 'down':
 			if have_selection:
-				self.contents.tag_remove('sel', '1.0', tkinter.END)
+				self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 				if selection_started_from_top:
-					self.contents.mark_set(self.anchorname, sel_start)
-					self.contents.tag_add('sel', sel_start, ins_new)
+					self.text_widget.mark_set(self.anchorname, sel_start)
+					self.text_widget.tag_add('sel', sel_start, ins_new)
 				else:
 					# Check if selection is about to be closed
 					# (selecting towards selection-start)
 					# to avoid one char selection -leftovers.
-					if self.contents.compare( '%s +1 chars' % ins_new, '>=' , sel_end ):
-						self.contents.mark_set('insert', sel_end)
-						self.contents.mark_set(self.anchorname, sel_end)
+					if self.text_widget.compare( '%s +1 chars' % ins_new, '>=' , sel_end ):
+						self.text_widget.mark_set('insert', sel_end)
+						self.text_widget.mark_set(self.anchorname, sel_end)
 						return
 
-					self.contents.mark_set(self.anchorname, sel_end)
-					self.contents.tag_add('sel', ins_new, sel_end)
+					self.text_widget.mark_set(self.anchorname, sel_end)
+					self.text_widget.tag_add('sel', ins_new, sel_end)
 
 			# No selection,
 			# no need to check direction of selection:
 			else:
-				self.contents.mark_set(self.anchorname, ins_old)
-				self.contents.tag_add('sel', ins_old, ins_new)
+				self.text_widget.mark_set(self.anchorname, ins_old)
+				self.text_widget.tag_add('sel', ins_old, ins_new)
 
 
 		elif direction == 'up':
 			if have_selection:
-				self.contents.tag_remove('sel', '1.0', tkinter.END)
+				self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 				if selection_started_from_top:
 					# Check if selection is about to be closed
 					# (selecting towards selection-start)
 					# to avoid one char selection -leftovers.
-					if self.contents.compare( '%s -1 chars' % ins_new, '<=' , sel_start ):
-						self.contents.mark_set('insert', sel_start)
-						self.contents.mark_set(self.anchorname, sel_start)
+					if self.text_widget.compare( '%s -1 chars' % ins_new, '<=' , sel_start ):
+						self.text_widget.mark_set('insert', sel_start)
+						self.text_widget.mark_set(self.anchorname, sel_start)
 						return
 
-					self.contents.mark_set(self.anchorname, sel_start)
-					self.contents.tag_add('sel', sel_start, ins_new)
+					self.text_widget.mark_set(self.anchorname, sel_start)
+					self.text_widget.tag_add('sel', sel_start, ins_new)
 
 				else:
-					self.contents.mark_set(self.anchorname, sel_end)
-					self.contents.tag_add('sel', ins_new, sel_end)
+					self.text_widget.mark_set(self.anchorname, sel_end)
+					self.text_widget.tag_add('sel', ins_new, sel_end)
 
 			# No selection,
 			# no need to check direction of selection:
 			else:
-				self.contents.mark_set(self.anchorname, ins_old)
-				self.contents.tag_add('sel', ins_new, ins_old)
+				self.text_widget.mark_set(self.anchorname, ins_old)
+				self.text_widget.tag_add('sel', ins_new, ins_old)
 
 
 	def get_sel_info(self):
 		''' Called from select_by_words, goto_linestart
 		'''
-		have_selection = len(self.contents.tag_ranges('sel')) > 0
-		ins_old = self.contents.index('insert')
+		have_selection = len(self.text_widget.tag_ranges('sel')) > 0
+		ins_old = self.text_widget.index('insert')
 		selection_started_from_top = False
 		sel_start = False
 		sel_end = False
@@ -5014,8 +5061,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# tkinter.SEL_FIRST is always before tkinter.SEL_LAST
 		# no matter if selection started from top or bottom:
 		if have_selection:
-			sel_start = self.contents.index(tkinter.SEL_FIRST)
-			sel_end = self.contents.index(tkinter.SEL_LAST)
+			sel_start = self.text_widget.index(tkinter.SEL_FIRST)
+			sel_end = self.text_widget.index(tkinter.SEL_LAST)
 			if ins_old == sel_end:
 				selection_started_from_top = True
 
@@ -5066,29 +5113,29 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 
 		idx_linestart, line_started_from_curline = self.idx_linestart()
-		i_orig = self.contents.index('insert')
+		i_orig = self.text_widget.index('insert')
 
 		if self.line_is_empty():
 			# Go over empty space first
-			self.contents.event_generate('<<PrevWord>>')
+			self.text_widget.event_generate('<<PrevWord>>')
 
 			# And put cursor to line end
 			i_new = self.idx_lineend()
-			self.contents.mark_set('insert', i_new)
+			self.text_widget.mark_set('insert', i_new)
 
 
 		elif not line_started_from_curline:
 
 			# At indent0, put cursor to line end of previous line
-			if self.contents.compare('insert', '==', idx_linestart):
-				self.contents.event_generate('<<PrevWord>>')
-				self.contents.mark_set('insert', 'insert display lineend')
+			if self.text_widget.compare('insert', '==', idx_linestart):
+				self.text_widget.event_generate('<<PrevWord>>')
+				self.text_widget.mark_set('insert', 'insert display lineend')
 
 			# Not at indent0, just check cursor not go over indent0
 			else:
-				self.contents.event_generate('<<PrevWord>>')
-				if self.contents.compare('insert', '<', idx_linestart):
-					self.contents.mark_set('insert', idx_linestart)
+				self.text_widget.event_generate('<<PrevWord>>')
+				if self.text_widget.compare('insert', '<', idx_linestart):
+					self.text_widget.mark_set('insert', idx_linestart)
 
 
 		# Below this line is non empty and not wrapped
@@ -5096,13 +5143,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Most common scenario:
 		# Is cursor after idx_linestart?
 		# i_orig > idx_linestart
-		elif self.contents.compare( i_orig, '>', idx_linestart ):
-			self.contents.event_generate('<<PrevWord>>')
+		elif self.text_widget.compare( i_orig, '>', idx_linestart ):
+			self.text_widget.event_generate('<<PrevWord>>')
 
 			# Check that cursor did not go over idx_linestart
-			i_new = self.contents.index(tkinter.INSERT)
-			if self.contents.compare( i_new, '<', idx_linestart):
-				self.contents.mark_set('insert', idx_linestart)
+			i_new = self.text_widget.index(tkinter.INSERT)
+			if self.text_widget.compare( i_new, '<', idx_linestart):
+				self.text_widget.mark_set('insert', idx_linestart)
 
 
 		## Below this i_orig <= idx_linestart
@@ -5113,22 +5160,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# No indentation?
 			if self.get_line_col_as_int(index=idx_linestart)[1] == 0:
 				# At filestart?
-				if self.contents.compare( i_orig, '==', '1.0'):
+				if self.text_widget.compare( i_orig, '==', '1.0'):
 					pos = i_orig
 					return pos
 
 				# Go over empty space first
-				self.contents.event_generate('<<PrevWord>>')
+				self.text_widget.event_generate('<<PrevWord>>')
 
 				# And put cursor to line end
 				i_new = self.idx_lineend()
-				self.contents.mark_set('insert', i_new)
+				self.text_widget.mark_set('insert', i_new)
 
 			# Cursor is at idx_linestart (end of indentation)
 			# of line that has indentation.
 			else:
 				# Put cursor at indent0 (start of indentation)
-				self.contents.mark_set('insert', 'insert linestart')
+				self.text_widget.mark_set('insert', 'insert linestart')
 
 
 		# Below this only lines that has indentation
@@ -5143,26 +5190,26 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# At indent0 of line that has indentation
 		elif self.get_line_col_as_int(index=i_orig)[1] == 0:
 			# At filestart?
-			if self.contents.compare( i_orig, '==', '1.0'):
+			if self.text_widget.compare( i_orig, '==', '1.0'):
 				pos = i_orig
 				return pos
 
 			# Go over empty space first
-			self.contents.event_generate('<<PrevWord>>')
+			self.text_widget.event_generate('<<PrevWord>>')
 
 			# And put cursor to line end
 			i_new = self.idx_lineend()
-			self.contents.mark_set('insert', i_new)
+			self.text_widget.mark_set('insert', i_new)
 
 
 		# Cursor is somewhere between (exclusively) indent0 and idx_linestart
 		# on line that has indentation.
 		else:
 			# Put cursor at indent0
-			self.contents.mark_set('insert', 'insert linestart')
+			self.text_widget.mark_set('insert', 'insert linestart')
 
 
-		pos = self.contents.index('insert')
+		pos = self.text_widget.index('insert')
 		return pos
 
 
@@ -5173,20 +5220,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Get some basic indexes first
 		idx_linestart, line_started_from_curline = self.idx_linestart()
-		i_orig = self.contents.index('insert')
+		i_orig = self.text_widget.index('insert')
 		e = self.idx_lineend()
 
 
 		if self.line_is_empty():
 			# Go over empty space first
-			self.contents.event_generate('<<NextWord>>')
+			self.text_widget.event_generate('<<NextWord>>')
 
 			# And put cursor to idx_linestart
 			i_new = self.idx_linestart()[0]
 
 			# Check not at fileend, if not then proceed
 			if i_new:
-				self.contents.mark_set('insert', i_new)
+				self.text_widget.mark_set('insert', i_new)
 
 
 		# Below this line is not empty
@@ -5195,13 +5242,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		elif i_orig == e:
 
 			# Check if at fileend
-			if self.contents.compare('%s +1 chars' % i_orig, '==', tkinter.END):
+			if self.text_widget.compare('%s +1 chars' % i_orig, '==', tkinter.END):
 				pos = i_orig
 				return pos
 
-			self.contents.event_generate('<<NextWord>>')
+			self.text_widget.event_generate('<<NextWord>>')
 			idx_linestart = self.idx_linestart()[0]
-			self.contents.mark_set('insert', idx_linestart)
+			self.text_widget.mark_set('insert', idx_linestart)
 
 
 		# Below this line cursor is before line end
@@ -5209,13 +5256,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Most common scenario
 		# Cursor is at or after idx_linestart
 		# idx_lineend > i_orig >= idx_linestart
-		elif self.contents.compare(i_orig, '>=', idx_linestart):
+		elif self.text_widget.compare(i_orig, '>=', idx_linestart):
 
-			self.contents.event_generate('<<NextWord>>')
+			self.text_widget.event_generate('<<NextWord>>')
 
 			# Check not over lineend
-			if self.contents.compare('insert', '>', e):
-				self.contents.mark_set('insert', e)
+			if self.text_widget.compare('insert', '>', e):
+				self.text_widget.mark_set('insert', e)
 
 
 		############
@@ -5226,10 +5273,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# --> put cursor to idx_linestart
 		############
 		else:
-			self.contents.mark_set('insert', idx_linestart)
+			self.text_widget.mark_set('insert', idx_linestart)
 
 
-		pos = self.contents.index('insert')
+		pos = self.text_widget.index('insert')
 		return pos
 
 
@@ -5273,7 +5320,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
-		# self.contents or self.entry
+		# self.text_widget or self.entry
 		wid = event.widget
 
 		# Check if have shift etc. pressed. If is, return to default bindings.
@@ -5288,8 +5335,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if wid == self.entry:
 				have_selection = self.entry.selection_present()
 
-			elif wid == self.contents:
-				have_selection = len(self.contents.tag_ranges('sel')) > 0
+			elif wid == self.text_widget:
+				have_selection = len(self.text_widget.tag_ranges('sel')) > 0
 
 			else:
 				return
@@ -5304,35 +5351,35 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		e = wid.index(tkinter.SEL_LAST)
 		i = wid.index(tkinter.INSERT)
 
-		if wid == self.contents:
+		if wid == self.text_widget:
 
 			# Leave cursor where it is if have selected all
-			if s == self.contents.index('1.0') and e == self.contents.index(tkinter.END):
-				self.contents.tag_remove('sel', '1.0', tkinter.END)
+			if s == self.text_widget.index('1.0') and e == self.text_widget.index(tkinter.END):
+				self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 
 			# When long selection == index not visible:
 			# at first keypress, show wanted end of selection
 			elif event.keysym == 'Right':
-				if self.contents.dlineinfo(e):
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
+				if self.text_widget.dlineinfo(e):
+					self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 				else:
 					# selection_started_from_top == False
-					self.contents.mark_set(self.anchorname, s)
+					self.text_widget.mark_set(self.anchorname, s)
 
-				self.contents.mark_set('insert', e)
+				self.text_widget.mark_set('insert', e)
 				self.ensure_idx_visibility(e)
 
 
 			elif event.keysym == 'Left':
 
-				if self.contents.dlineinfo(s):
-					self.contents.tag_remove('sel', '1.0', tkinter.END)
+				if self.text_widget.dlineinfo(s):
+					self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 				else:
 					# selection_started_from_top == True
-					self.contents.mark_set(self.anchorname, e)
+					self.text_widget.mark_set(self.anchorname, e)
 
-				self.contents.mark_set('insert', s)
+				self.text_widget.mark_set('insert', s)
 				self.ensure_idx_visibility(s)
 
 			else:
@@ -5382,25 +5429,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Elided line check
 			idx = self.get_safe_index(s)
 			if r := self.line_is_elided(idx):
-				e = '%s lineend' % self.contents.index(r[1])
+				e = '%s lineend' % self.text_widget.index(r[1])
 
 
-			tmp = self.contents.get(s,e)
-			self.contents.clipboard_clear()
+			tmp = self.text_widget.get(s,e)
+			self.text_widget.clipboard_clear()
 
 			bg, fg = self.themes[self.curtheme]['sel'][:]
-			self.contents.tag_config('animate', background=bg, foreground=fg)
-			self.contents.tag_raise('animate')
-			self.contents.tag_remove('animate', '1.0', tkinter.END)
-			self.contents.tag_add('animate', s, e)
+			self.text_widget.tag_config('animate', background=bg, foreground=fg)
+			self.text_widget.tag_raise('animate')
+			self.text_widget.tag_remove('animate', '1.0', tkinter.END)
+			self.text_widget.tag_add('animate', s, e)
 
 			if self.os_type != 'windows':
-				self.contents.clipboard_append(tmp)
+				self.text_widget.clipboard_append(tmp)
 			else:
 				self.copy_windows(selection=tmp)
 
 			self.after(600, lambda args=['animate', '1.0', tkinter.END]:
-					self.contents.tag_remove(*args) )
+					self.text_widget.tag_remove(*args) )
 
 
 		return 'break'
@@ -5444,19 +5491,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# If want selection:
 		if event.state in [ 1, 5, 105, 13, 262145, 262153 ]:
 			want_selection = True
-			i = self.contents.index(tkinter.INSERT)
+			i = self.text_widget.index(tkinter.INSERT)
 
-			if len( self.contents.tag_ranges('sel') ) > 0:
+			if len( self.text_widget.tag_ranges('sel') ) > 0:
 				# Need to know if selection started from top or bottom.
 
 
 				have_selection = True
-				s = self.contents.index(tkinter.SEL_FIRST)
-				e = self.contents.index(tkinter.SEL_LAST)
+				s = self.text_widget.index(tkinter.SEL_FIRST)
+				e = self.text_widget.index(tkinter.SEL_LAST)
 
 				# Selection started from top
 				from_top = False
-				if self.contents.compare(s,'<',i):
+				if self.text_widget.compare(s,'<',i):
 					from_top = True
 
 				# From bottom
@@ -5465,33 +5512,33 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Dont want selection, ctrl/cmd-a/e:
 		else:
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 
 		self.ensure_idx_visibility('insert')
 
 		pos = self.idx_lineend()
 
-		self.contents.see(pos)
-		self.contents.mark_set('insert', pos)
+		self.text_widget.see(pos)
+		self.text_widget.mark_set('insert', pos)
 
 
 		if want_selection:
 			if have_selection:
-				self.contents.tag_remove('sel', '1.0', tkinter.END)
+				self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 				if from_top:
-					self.contents.mark_set(self.anchorname, s)
-					self.contents.tag_add('sel', s, 'insert')
+					self.text_widget.mark_set(self.anchorname, s)
+					self.text_widget.tag_add('sel', s, 'insert')
 
 				# From bottom:
 				else:
-					self.contents.mark_set(self.anchorname, e)
-					self.contents.tag_add('sel', 'insert', e)
+					self.text_widget.mark_set(self.anchorname, e)
+					self.text_widget.tag_add('sel', 'insert', e)
 
 			else:
-				self.contents.mark_set(self.anchorname, i)
-				self.contents.tag_add('sel', i, 'insert')
+				self.text_widget.mark_set(self.anchorname, i)
+				self.text_widget.tag_add('sel', i, 'insert')
 
 
 		return 'break'
@@ -5542,7 +5589,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Ctrl/Cmd-a/e
 		else:
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 
 		[ ins_old, have_selection, from_top, s, e ] = args = self.get_sel_info()
@@ -5552,12 +5599,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		if self.line_is_empty():
-			ins_new = self.contents.index( 'insert display linestart' )
+			ins_new = self.text_widget.index( 'insert display linestart' )
 		else:
 			ins_new = self.idx_linestart()[0]
 
-		self.contents.see(ins_new)
-		self.contents.mark_set('insert', ins_new)
+		self.text_widget.see(ins_new)
+		self.text_widget.mark_set('insert', ins_new)
 
 
 		if want_selection:
@@ -5584,7 +5631,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Want: select 10 lines from cursor.
 		if event.state == 105:
 
-			# self.contents or self.entry
+			# self.text_widget or self.entry
 			wid = event.widget
 
 			# Enable select from in entry
@@ -5592,7 +5639,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return
 
 			# Enable select from in contents
-			elif wid == self.contents:
+			elif wid == self.text_widget:
 
 				if event.keysym == 'Right':
 					self.goto_lineend(event=event)
@@ -5607,15 +5654,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					# At idx_linestart of line that has indentation?
 					idx = self.idx_linestart()[0]
 					tests = [not self.line_is_empty(),
-							self.contents.compare(idx, '==', 'insert' ),
+							self.text_widget.compare(idx, '==', 'insert' ),
 							self.get_line_col_as_int(index=idx)[1] != 0,
-							not len(self.contents.tag_ranges('sel')) > 0
+							not len(self.text_widget.tag_ranges('sel')) > 0
 							]
 
 					if all(tests):
-						pos = self.contents.index('%s linestart' % idx )
-						self.contents.mark_set(self.anchorname, 'insert')
-						self.contents.tag_add('sel', pos, 'insert')
+						pos = self.text_widget.index('%s linestart' % idx )
+						self.text_widget.mark_set(self.anchorname, 'insert')
+						self.text_widget.tag_add('sel', pos, 'insert')
 
 					else:
 						self.goto_linestart(event=event)
@@ -5626,12 +5673,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					# Add some delay to get visual feedback
 					for i in range(10):
 						self.after(i*5, lambda args=['<<SelectPrevLine>>']:
-							self.contents.event_generate(*args) )
+							self.text_widget.event_generate(*args) )
 
 				elif event.keysym == 'Down':
 					for i in range(10):
 						self.after(i*5, lambda args=['<<SelectNextLine>>']:
-							self.contents.event_generate(*args) )
+							self.text_widget.event_generate(*args) )
 
 				else:
 					return
@@ -5657,12 +5704,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				# Add some delay to get visual feedback
 				for i in range(10):
 					self.after(i*7, lambda args=['<<PrevLine>>']:
-						self.contents.event_generate(*args) )
+						self.text_widget.event_generate(*args) )
 
 			elif event.keysym == 'Down':
 				for i in range(10):
 					self.after(i*7, lambda args=['<<NextLine>>']:
-						self.contents.event_generate(*args) )
+						self.text_widget.event_generate(*args) )
 
 			else:
 				return
@@ -5675,7 +5722,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if event.keysym in ['Up', 'Down']: return
 
-			# self.contents or self.entry
+			# self.text_widget or self.entry
 			wid = event.widget
 
 			if wid == self.entry:
@@ -5701,7 +5748,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if event.keysym in ['Up', 'Down']: return
 
-			# self.contents or self.entry
+			# self.text_widget or self.entry
 			wid = event.widget
 
 			if wid == self.entry:
@@ -5733,15 +5780,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if event.keysym in ['Up', 'Down']: return
 
-			# self.contents or self.entry
+			# self.text_widget or self.entry
 			wid = event.widget
 			have_selection = False
 
 			if wid == self.entry:
 				have_selection = self.entry.selection_present()
 
-			elif wid == self.contents:
-				have_selection = len(self.contents.tag_ranges('sel')) > 0
+			elif wid == self.text_widget:
+				have_selection = len(self.text_widget.tag_ranges('sel')) > 0
 
 			else:
 				return
@@ -5786,10 +5833,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 		# Disable popup when not clicked inside Text-widget
-		root_y = self.contents.winfo_rooty()
-		root_x = self.contents.winfo_rootx()
-		max_y = self.contents.winfo_rooty() + self.text_widget_height
-		max_x = self.contents.winfo_rootx() + self.contents.winfo_width()
+		root_y = self.text_widget.winfo_rooty()
+		root_x = self.text_widget.winfo_rootx()
+		max_y = self.text_widget.winfo_rooty() + self.text_widget_height
+		max_x = self.text_widget.winfo_rootx() + self.text_widget.winfo_width()
 
 		tests = (root_x <= event.x_root <= max_x,
 				root_y <= event.y_root <= max_y)
@@ -5815,7 +5862,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		else:
 			try:
 				self.clipboard_clear()
-				self.clipboard_append(self.contents.get('sel.first', 'sel.last'))
+				self.clipboard_append(self.text_widget.get('sel.first', 'sel.last'))
 
 			except tkinter.TclError:
 				# is empty
@@ -5823,7 +5870,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		if flag_cut:
-			self.contents.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
+			self.text_widget.delete(tkinter.SEL_FIRST, tkinter.SEL_LAST)
 
 		return 'break'
 
@@ -5850,18 +5897,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# Check if have_selection
-		have_selection = len(self.contents.tag_ranges('sel')) > 0
+		have_selection = len(self.text_widget.tag_ranges('sel')) > 0
 		if not have_selection:
 			#print('copy fail 1, no selection')
 			return 'break'
 
-		# self.contents.selection_get() would not get elided text
-		t_orig = self.contents.get('sel.first', 'sel.last')
+		# self.text_widget.selection_get() would not get elided text
+		t_orig = self.text_widget.get('sel.first', 'sel.last')
 
 
 		# Check if num selection lines > 1
-		startline, startcol = map(int, self.contents.index(tkinter.SEL_FIRST).split(sep='.'))
-		endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
+		startline, startcol = map(int, self.text_widget.index(tkinter.SEL_FIRST).split(sep='.'))
+		endline = int(self.text_widget.index(tkinter.SEL_LAST).split(sep='.')[0])
 		numlines = endline - startline
 		if not numlines > 1:
 			#print('copy fail 2, numlines not > 1')
@@ -5875,7 +5922,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# Check if selstart line not empty
-		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
+		tmp = self.text_widget.get('%s.0' % str(line),'%s.0 lineend' % str(line))
 		if len(tmp.strip()) == 0:
 			#print('copy fail 4, startline empty')
 			return self.copy_fallback(selection=t_orig, flag_cut=flag_cut)
@@ -5977,7 +6024,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 
 		try:
-			t = self.contents.clipboard_get()
+			t = self.text_widget.clipboard_get()
 			if len(t) == 0:
 				return 'break'
 
@@ -5987,7 +6034,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if not self.flag_fix_indent or t != self.checksum_fix_indent:
 			self.paste_fallback(event=event)
-			self.contents.edit_separator()
+			self.text_widget.edit_separator()
 			#print('paste norm')
 			return 'break'
 
@@ -6046,12 +6093,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Do paste string
 		# Put mark, so one can get end index of new string
 		self.line_can_update = False
-		self.contents.mark_set('paste', ins_old)
-		self.contents.insert(ins_old, s)
+		self.text_widget.mark_set('paste', ins_old)
+		self.text_widget.insert(ins_old, s)
 
 
-		start = self.contents.index( '%s linestart' % ins_old)
-		end = self.contents.index( 'paste lineend')
+		start = self.text_widget.index( '%s linestart' % ins_old)
+		end = self.text_widget.index( 'paste lineend')
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
@@ -6062,8 +6109,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not have_selection:
 			self.ensure_idx_visibility(ins_old)
 			self.wait_for(100)
-			self.contents.tag_add('sel', ins_old, 'paste')
-			self.contents.mark_set(self.anchorname, 'paste')
+			self.text_widget.tag_add('sel', ins_old, 'paste')
+			self.text_widget.mark_set(self.anchorname, 'paste')
 
 		elif selection_started_from_top:
 				self.ensure_idx_visibility(ins_old)
@@ -6071,7 +6118,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.ensure_idx_visibility('insert')
 
 
-		self.contents.edit_separator()
+		self.text_widget.edit_separator()
 
 		return 'break'
 
@@ -6092,25 +6139,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.line_can_update = False
 		have_selection = False
 
-		if len( self.contents.tag_ranges('sel') ) > 0:
-			selstart = self.contents.index( '%s' % tkinter.SEL_FIRST)
-			selend = self.contents.index( '%s' % tkinter.SEL_LAST)
+		if len( self.text_widget.tag_ranges('sel') ) > 0:
+			selstart = self.text_widget.index( '%s' % tkinter.SEL_FIRST)
+			selend = self.text_widget.index( '%s' % tkinter.SEL_LAST)
 
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 			have_selection = True
 
 
-		idx_ins = self.contents.index(tkinter.INSERT)
-		self.contents.event_generate('<<Paste>>')
+		idx_ins = self.text_widget.index(tkinter.INSERT)
+		self.text_widget.event_generate('<<Paste>>')
 
 
 		# Selected many lines or
 		# one line and cursor is not at the start of next line:
 		if len(tmp) > 1:
 
-			s = self.contents.index( '%s linestart' % idx_ins)
-			e = self.contents.index( 'insert lineend')
-			t = self.contents.get( s, e )
+			s = self.text_widget.index( '%s linestart' % idx_ins)
+			e = self.text_widget.index( 'insert lineend')
+			t = self.text_widget.get( s, e )
 
 
 			if self.can_do_syntax():
@@ -6120,12 +6167,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 			if have_selection:
-				self.contents.tag_add('sel', selstart, selend)
+				self.text_widget.tag_add('sel', selstart, selend)
 
 			else:
-				self.contents.tag_add('sel', idx_ins, tkinter.INSERT)
+				self.text_widget.tag_add('sel', idx_ins, tkinter.INSERT)
 
-			self.contents.mark_set('insert', idx_ins)
+			self.text_widget.mark_set('insert', idx_ins)
 
 
 			self.wait_for(100)
@@ -6134,9 +6181,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Selected one line and cursor is at the start of next line:
 		elif len(tmp) == 1 and tmp[-1][-1] == '\n':
-			s = self.contents.index( '%s linestart' % idx_ins)
-			e = self.contents.index( '%s lineend' % idx_ins)
-			t = self.contents.get( s, e )
+			s = self.text_widget.index( '%s linestart' % idx_ins)
+			e = self.text_widget.index( '%s lineend' % idx_ins)
+			t = self.text_widget.get( s, e )
 
 
 			if self.can_do_syntax():
@@ -6146,18 +6193,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 			if have_selection:
-				self.contents.tag_add('sel', selstart, selend)
+				self.text_widget.tag_add('sel', selstart, selend)
 
 			else:
-				self.contents.tag_add('sel', idx_ins, tkinter.INSERT)
+				self.text_widget.tag_add('sel', idx_ins, tkinter.INSERT)
 
-			self.contents.mark_set('insert', idx_ins)
+			self.text_widget.mark_set('insert', idx_ins)
 
 
 		else:
-			s = self.contents.index( '%s linestart' % idx_ins)
-			e = self.contents.index( 'insert lineend')
-			t = self.contents.get( s, e )
+			s = self.text_widget.index( '%s linestart' % idx_ins)
+			e = self.text_widget.index( 'insert lineend')
+			t = self.text_widget.get( s, e )
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
@@ -6165,8 +6212,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.line_can_update = True
 
 			if have_selection:
-				self.contents.tag_add('sel', selstart, selend)
-				self.contents.mark_set('insert', idx_ins)
+				self.text_widget.tag_add('sel', selstart, selend)
+				self.text_widget.mark_set('insert', idx_ins)
 
 
 		return 'break'
@@ -6228,7 +6275,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		try:
 
-			ins_orig = self.contents.index('insert')
+			ins_orig = self.text_widget.index('insert')
 			# Linenumbers of top and bottom lines currently displayed on screen
 			top_line,_ = self.get_line_col_as_int(index='@0,0')
 			bot_line,_ = self.get_line_col_as_int(index='@0,65535')
@@ -6248,7 +6295,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 				# Check for long actions, like indent. Info is above
-				ins_after_func2 = self.contents.index('insert')
+				ins_after_func2 = self.text_widget.index('insert')
 				if ins_after_func2 == ins_orig:
 
 					func1()
@@ -6256,13 +6303,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					# This seems to fix 'screen jumping'
 					bot_line_after,_ = self.get_line_col_as_int(index='@0,65535')
 					diff = bot_line_after - bot_line_after_func2
-					if diff != 0: self.contents.yview_scroll(-diff, 'units')
+					if diff != 0: self.text_widget.yview_scroll(-diff, 'units')
 
 			else:
 				# This seems to fix 'screen jumping'
 				bot_line_after,_ = self.get_line_col_as_int(index='@0,65535')
 				diff = bot_line_after - bot_line
-				if diff != 0: self.contents.yview_scroll(-diff, 'units')
+				if diff != 0: self.text_widget.yview_scroll(-diff, 'units')
 
 
 
@@ -6284,16 +6331,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def undo_override(self, event=None):
-		return self.undos(self.contents.edit_undo, self.contents.edit_redo)
+		return self.undos(self.text_widget.edit_undo, self.text_widget.edit_redo)
 
 
 	def redo_override(self, event=None):
-		return self.undos(self.contents.edit_redo, self.contents.edit_undo)
+		return self.undos(self.text_widget.edit_redo, self.text_widget.edit_undo)
 
 
 	def select_all(self, event=None):
-		self.contents.tag_remove('sel', '1.0', tkinter.END)
-		self.contents.tag_add('sel', 1.0, tkinter.END)
+		self.text_widget.tag_remove('sel', '1.0', tkinter.END)
+		self.text_widget.tag_add('sel', 1.0, tkinter.END)
 		return 'break'
 
 
@@ -6302,8 +6349,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		# Safe escing, if mistakenly pressed during search_next
 		if self.state in ['normal']:
-			if len(self.contents.tag_ranges('sel')) > 0:
-				self.contents.tag_remove('sel', '1.0', tkinter.END)
+			if len(self.text_widget.tag_ranges('sel')) > 0:
+				self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 				return 'break'
 
 
@@ -6324,8 +6371,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		# Safe spacing, if mistakenly pressed during search_next
 		if self.state in ['normal', 'error', 'help']:
-			if len(self.contents.tag_ranges('sel')) > 0:
-				self.contents.tag_remove('sel', '1.0', tkinter.END)
+			if len(self.text_widget.tag_ranges('sel')) > 0:
+				self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 				return 'break'
 			else:
 				return
@@ -6353,7 +6400,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.state in [ 'search', 'replace', 'replace_all', 'goto_def' ]:
 			return 'break'
 
-		self.contents.insert(tkinter.INSERT, '\t')
+		self.text_widget.insert(tkinter.INSERT, '\t')
 
 		return 'break'
 
@@ -6373,7 +6420,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Cursor is not at indent0
 		if col_ins != 0: return False
 
-		res = self.contents.count(
+		res = self.text_widget.count(
 				'insert linestart', 'insert +1 lines', 'displaylines')
 
 		# Line is wrapped
@@ -6381,14 +6428,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		empty = self.line_is_empty()
 		tests = [not empty,
-				self.contents.get('insert', 'insert +1c').isspace()
+				self.text_widget.get('insert', 'insert +1c').isspace()
 				]
 
 		# Line already has indentation
 		if all(tests): return False
 
 		if empty:
-			self.contents.delete('insert linestart', 'insert lineend')
+			self.text_widget.delete('insert linestart', 'insert lineend')
 
 
 		patt = r'^[[:blank:]]+[^[:blank:]]'
@@ -6399,7 +6446,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# Indentation of previous
-		pos_prev = self.contents.search(patt, ins, stopindex='1.0',
+		pos_prev = self.text_widget.search(patt, ins, stopindex='1.0',
 			regexp=True, backwards=True, count=self.search_count_var)
 
 		# self.search_count_var.get() == indentation level +1
@@ -6411,7 +6458,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# Indentation of next
-		pos_next = self.contents.search(patt, ins, stopindex='end',
+		pos_next = self.text_widget.search(patt, ins, stopindex='end',
 			regexp=True, count=self.search_count_var)
 
 		if pos_next:
@@ -6439,10 +6486,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		# No need to check event.state?
 		if self.state != 'normal': return
-		if len( self.contents.tag_ranges('sel') ) > 0:
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
+		if len( self.text_widget.tag_ranges('sel') ) > 0:
+			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
-		self.contents.delete('%s -1c wordstart' % 'insert', 'insert')
+		self.text_widget.delete('%s -1c wordstart' % 'insert', 'insert')
 		return 'break'
 
 
@@ -6459,8 +6506,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		triples = ["'''", '"""']
 
 		# Is there a selection?
-		if len(self.contents.tag_ranges('sel')) > 0:
-			tmp = self.contents.selection_get()
+		if len(self.text_widget.tag_ranges('sel')) > 0:
+			tmp = self.text_widget.selection_get()
 
 			if not tab.check_scope:
 				for triple in triples:
@@ -6476,7 +6523,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					tab.par_err = True
 					break
 
-			self.contents.delete( tkinter.SEL_FIRST, tkinter.SEL_LAST )
+			self.text_widget.delete( tkinter.SEL_FIRST, tkinter.SEL_LAST )
 			return 'break'
 
 
@@ -6484,7 +6531,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Deleting one letter
 
 			# Multiline string check
-			line = self.contents.get( 'insert linestart', 'insert lineend')
+			line = self.text_widget.get( 'insert linestart', 'insert lineend')
 			ins_col = self.get_line_col_as_int()[1]
 			prev_char = line[ins_col-1:ins_col]
 
@@ -6512,37 +6559,37 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# First an easy case:
 		if col == 0:
-			self.contents.insert(tkinter.INSERT, '\n')
-			self.contents.see(f'{line+1}.0')
-			self.contents.edit_separator()
+			self.text_widget.insert(tkinter.INSERT, '\n')
+			self.text_widget.see(f'{line+1}.0')
+			self.text_widget.edit_separator()
 			return 'break'
 
 
-		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
+		tmp = self.text_widget.get('%s.0' % str(line),'%s.0 lineend' % str(line))
 
 		# Then one special case: check if cursor is inside indentation,
 		# and line is not empty.
 		if tmp[:col].isspace() and not tmp[col:].isspace():
-			self.contents.insert(tkinter.INSERT, '\n')
-			self.contents.insert('%s.0' % str(line+1), tmp[:col])
-			self.contents.see(f'{line+1}.0')
-			self.contents.edit_separator()
+			self.text_widget.insert(tkinter.INSERT, '\n')
+			self.text_widget.insert('%s.0' % str(line+1), tmp[:col])
+			self.text_widget.see(f'{line+1}.0')
+			self.text_widget.edit_separator()
 			return 'break'
 
 		else:
 			# rstrip space to prevent indentation sailing.
 			if tmp[col:].isspace():
-				self.contents.delete(tkinter.INSERT, 'insert lineend')
+				self.text_widget.delete(tkinter.INSERT, 'insert lineend')
 
 			for i in range(len(tmp[:col]) + 1):
 				if tmp[i] != '\t':
 					break
 
 			# Manual newline because return is overrided.
-			self.contents.insert(tkinter.INSERT, '\n')
-			self.contents.insert(tkinter.INSERT, i*'\t')
-			self.contents.see(f'{line+1}.0')
-			self.contents.edit_separator()
+			self.text_widget.insert(tkinter.INSERT, '\n')
+			self.text_widget.insert(tkinter.INSERT, i*'\t')
+			self.text_widget.see(f'{line+1}.0')
+			self.text_widget.edit_separator()
 			return 'break'
 
 
@@ -6609,7 +6656,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		'''
 		try:
-			target = self.contents.selection_get()
+			target = self.text_widget.selection_get()
 		except tkinter.TclError:
 			self.bell()
 			return 'break'
@@ -6672,8 +6719,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						self.line_can_update = True
 
 					curtab.text_widget.focus_set()
-					self.contents.edit_reset()
-					self.contents.edit_modified(0)
+					self.text_widget.edit_reset()
+					self.text_widget.edit_modified(0)
 
 					return 'break'
 
@@ -6734,8 +6781,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.line_can_update = True
 
 				curtab.text_widget.focus_set()
-				self.contents.edit_reset()
-				self.contents.edit_modified(0)
+				self.text_widget.edit_reset()
+				self.text_widget.edit_modified(0)
 
 				return 'break'
 
@@ -6757,12 +6804,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		tab = self.tabs[self.tabindex]
 
 		try:
-			startline = self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0]
-			endline = self.contents.index(tkinter.SEL_LAST).split(sep='.')[0]
+			startline = self.text_widget.index(tkinter.SEL_FIRST).split(sep='.')[0]
+			endline = self.text_widget.index(tkinter.SEL_LAST).split(sep='.')[0]
 
 			start = '%s.0' % startline
 			end = '%s.0 lineend' % endline
-			tmp = self.contents.get(start, end)
+			tmp = self.text_widget.get(start, end)
 
 			indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
 
@@ -6779,15 +6826,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 			self.line_can_update = False
-			self.contents.delete(start, end)
-			self.contents.insert(start, tmp)
+			self.text_widget.delete(start, end)
+			self.text_widget.insert(start, tmp)
 
 			if self.can_do_syntax(tab):
 				self.update_lineinfo(tab)
 				self.update_tokens(start=start, end=end, tab=tab)
 				self.line_can_update = True
 
-			self.contents.edit_separator()
+			self.text_widget.edit_separator()
 
 
 		except tkinter.TclError as e:
@@ -6907,8 +6954,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 			###
-			l3 = lambda kwargs={'bg':fg, 'fg':bg}: self.contents.config(**kwargs)
-			l4 = lambda kwargs={'bg':bg, 'fg':fg}: self.contents.config(**kwargs)
+			l3 = lambda kwargs={'bg':fg, 'fg':bg}: self.text_widget.config(**kwargs)
+			l4 = lambda kwargs={'bg':bg, 'fg':fg}: self.text_widget.config(**kwargs)
 
 			c3 = self.after(t1, l3)
 			c4 = self.after(t2, l4)
@@ -6958,7 +7005,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				# Put Git-branch name back if on one
 				self.restore_btn_git()
 				bg, fg = self.themes[self.curtheme]['normal_text'][:]
-				self.contents.config(bg=bg, fg=fg)
+				self.text_widget.config(bg=bg, fg=fg)
 
 		# event.keysym == Caps_Lock
 		# Check if CapsLock -state changes when focus is in editor
@@ -6982,7 +7029,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				# Put Git-branch name back if on one
 				self.restore_btn_git()
 				bg, fg = self.themes[self.curtheme]['normal_text'][:]
-				self.contents.config(bg=bg, fg=fg)
+				self.text_widget.config(bg=bg, fg=fg)
 
 
 			# CapsLock is being turned on
@@ -7010,16 +7057,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Elided line check
 		idx = self.get_safe_index(s)
 		if r := self.line_is_elided(idx):
-			e = '%s lineend' % self.contents.index(r[1])
+			e = '%s lineend' % self.text_widget.index(r[1])
 
 		bg, fg = self.themes[self.curtheme]['sel'][:]
-		self.contents.tag_config('animate', background=bg, foreground=fg)
-		self.contents.tag_raise('animate')
-		self.contents.tag_remove('animate', '1.0', tkinter.END)
-		self.contents.tag_add('animate', s, e)
+		self.text_widget.tag_config('animate', background=bg, foreground=fg)
+		self.text_widget.tag_raise('animate')
+		self.text_widget.tag_remove('animate', '1.0', tkinter.END)
+		self.text_widget.tag_add('animate', s, e)
 
 		self.after(600, lambda args=['animate', '1.0', tkinter.END]:
-				self.contents.tag_remove(*args) )
+				self.text_widget.tag_remove(*args) )
 
 		return 'break'
 
@@ -7085,12 +7132,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		while ind+1:
 
-			r = self.contents.tag_prevrange(f'defline{ind}', pos)
+			r = self.text_widget.tag_prevrange(f'defline{ind}', pos)
 			if r:
 
 				pos = r[0]
 
-				tmp = self.contents.get( pos, '%s lineend' % pos)
+				tmp = self.text_widget.get( pos, '%s lineend' % pos)
 				if scope_name := self.line_is_defline(tmp):
 					if scope_path != '':
 						scope_path = scope_name +'.'+ scope_path
@@ -7130,7 +7177,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		pos = index
 		scope_path = ''
 		ind_last_line = 0
-		index_line_contents = self.contents.get( '%s linestart' % pos,
+		index_line_contents = self.text_widget.get( '%s linestart' % pos,
 			'%s lineend' % pos )
 
 
@@ -7139,7 +7186,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		#############################################
 		if index_line_contents.isspace() or index_line_contents == '' \
 			or index_line_contents.strip().startswith('#') \
-			or 'strings' in self.contents.tag_names(pos):
+			or 'strings' in self.text_widget.tag_names(pos):
 
 			blank_range = '{0,}'
 			p1 = r'^[[:blank:]]%s' % blank_range
@@ -7151,7 +7198,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			while pos:
 				try:
-					pos = self.contents.search(p, pos, stopindex='1.0',
+					pos = self.text_widget.search(p, pos, stopindex='1.0',
 							backwards=True, regexp=True)
 
 				except tkinter.TclError as e:
@@ -7161,9 +7208,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if not pos: break
 
-				if 'strings' in self.contents.tag_names(pos):
+				if 'strings' in self.text_widget.tag_names(pos):
 					#print('strings1', pos)
-					pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
+					pos = self.text_widget.tag_prevrange('strings', pos)[0] + ' linestart'
 					continue
 
 				break
@@ -7173,7 +7220,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				scope_path = '__main__()'
 				return scope_path
 
-			index_line_contents = self.contents.get( '%s linestart' % pos,
+			index_line_contents = self.text_widget.get( '%s linestart' % pos,
 				'%s lineend' % pos )
 			#########################
 
@@ -7214,7 +7261,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			try:
 				# Count is tkinter.IntVar which is used to
 				# count indentation level of matched line.
-				pos = self.contents.search(patt, pos, stopindex='1.0',
+				pos = self.text_widget.search(patt, pos, stopindex='1.0',
 					backwards=True, regexp=True, count=self.search_count_var)
 
 			except tkinter.TclError as e:
@@ -7223,9 +7270,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if not pos: break
 
-			elif 'strings' in self.contents.tag_names(pos):
+			elif 'strings' in self.text_widget.tag_names(pos):
 				#print('strings2', pos)
-				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
+				pos = self.text_widget.tag_prevrange('strings', pos)[0] + ' linestart'
 				continue
 
 			# -1: remove terminating char(not blank not #) from matched char count
@@ -7237,7 +7284,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Has one (or more) indentation level smaller indentation than ind_last_line
 			# 	Then if it also is definition line --> add to scopepath
 			# 	update ind_last_line
-			def_line_contents = tmp = self.contents.get( pos, '%s lineend' % pos )
+			def_line_contents = tmp = self.text_widget.get( pos, '%s lineend' % pos )
 
 
 			########
@@ -7375,7 +7422,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##
 ##		while pos:
 ##			try:
-##				pos = self.contents.search(patt, pos, stopindex='1.0',
+##				pos = self.text_widget.search(patt, pos, stopindex='1.0',
 ##						regexp=True, backwards=True)
 ##
 ##			except tkinter.TclError as e:
@@ -7385,9 +7432,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##			if not pos:
 ##				return '__main__()', 0, '1.0'
 ##
-##			if 'strings' in self.contents.tag_names(pos):
+##			if 'strings' in self.text_widget.tag_names(pos):
 ##				#print('strings3', pos)
-##				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
+##				pos = self.text_widget.tag_prevrange('strings', pos)[0] + ' linestart'
 ##				continue
 ##
 ##			break
@@ -7398,7 +7445,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##
 ##		if r := self.line_is_elided(pos): e = r[0]
 ##
-##		pos_line_contents = self.contents.get(s, e)
+##		pos_line_contents = self.text_widget.get(s, e)
 ##
 ##
 ##		ind_last_line = 0
@@ -7437,7 +7484,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##
 ##		while pos:
 ##			try:
-##				pos = self.contents.search(patt, pos, stopindex='1.0',
+##				pos = self.text_widget.search(patt, pos, stopindex='1.0',
 ##						regexp=True, backwards=True, count=self.search_count_var)
 ##
 ##			except tkinter.TclError as e:
@@ -7447,9 +7494,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##			if not pos:
 ##				return '__main__()', 0, '1.0'
 ##
-##			elif 'strings' in self.contents.tag_names(pos):
+##			elif 'strings' in self.text_widget.tag_names(pos):
 ##				print('strings4', pos)
-##				pos = self.contents.tag_prevrange('strings', pos)[0] + ' linestart'
+##				pos = self.text_widget.tag_prevrange('strings', pos)[0] + ' linestart'
 ##				continue
 ##
 ##			################
@@ -7461,7 +7508,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##			# Has one (or more) indentation level smaller indentation than ind_last_line
 ##			# 	Then if it also is definition line --> success
 ##			# 	update ind_last_line
-##			def_line_contents = self.contents.get( pos, '%s lineend' % pos )
+##			def_line_contents = self.text_widget.get( pos, '%s lineend' % pos )
 ##
 ##			#####
 ##			if res := self.line_is_defline(def_line_contents):
@@ -7525,7 +7572,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		while pos:
 			try:
-				pos = self.contents.search(patt, pos, stopindex='1.0',
+				pos = self.text_widget.search(patt, pos, stopindex='1.0',
 						regexp=True, backwards=True)
 
 			except tkinter.TclError as e:
@@ -7536,9 +7583,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if not pos:
 				return '__main__()', 0, '1.0'
 
-			if 'strings' in self.contents.tag_names(pos):
+			if 'strings' in self.text_widget.tag_names(pos):
 				#print('strings3', pos)
-				pos = self.contents.tag_prevrange('strings', pos)[0]
+				pos = self.text_widget.tag_prevrange('strings', pos)[0]
 				continue
 
 			break
@@ -7549,7 +7596,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if r := self.line_is_elided(pos): e = r[0]
 
-		pos_line_contents = self.contents.get(s, e)
+		pos_line_contents = self.text_widget.get(s, e)
 
 
 		ind_last_line = 0
@@ -7588,7 +7635,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		while pos:
 			try:
-				pos = self.contents.search(patt, pos, stopindex='1.0',
+				pos = self.text_widget.search(patt, pos, stopindex='1.0',
 						regexp=True, backwards=True, count=self.search_count_var)
 
 			except tkinter.TclError as e:
@@ -7598,9 +7645,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if not pos:
 				return '__main__()', 0, '1.0'
 
-			elif 'strings' in self.contents.tag_names(pos):
+			elif 'strings' in self.text_widget.tag_names(pos):
 				#print('strings4', pos)
-				pos = self.contents.tag_prevrange('strings', pos)[0]
+				pos = self.text_widget.tag_prevrange('strings', pos)[0]
 				continue
 
 			################
@@ -7612,7 +7659,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Has one (or more) indentation level smaller indentation than ind_last_line
 			# 	Then if it also is definition line --> success
 			# 	update ind_last_line
-			def_line_contents = self.contents.get( pos, '%s lineend' % pos )
+			def_line_contents = self.text_widget.get( pos, '%s lineend' % pos )
 
 			#####
 			if res := self.line_is_defline(def_line_contents):
@@ -7666,7 +7713,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Scope is elided
 		idx = self.get_safe_index(index)
 		if r := self.line_is_elided(idx):
-			return self.contents.index(r[1])
+			return self.text_widget.index(r[1])
 
 
 		# Stage 1: Search forwards(down) from index for:
@@ -7684,7 +7731,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		while pos:
 			try:
-				pos = self.contents.search(patt, pos, stopindex='end', regexp=True)
+				pos = self.text_widget.search(patt, pos, stopindex='end', regexp=True)
 
 			except tkinter.TclError as e:
 				print(e)
@@ -7695,9 +7742,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				pos = 'end'
 				break
 
-			if 'strings' in self.contents.tag_names(pos):
+			if 'strings' in self.text_widget.tag_names(pos):
 				#print('strings5', pos)
-				pos = self.contents.tag_prevrange('strings', pos)[1] + ' +1 lines linestart'
+				pos = self.text_widget.tag_prevrange('strings', pos)[1] + ' +1 lines linestart'
 				continue
 
 			break
@@ -7731,7 +7778,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		#print(patt, pos)
 		while pos:
 			try:
-				pos = self.contents.search(patt, pos, stopindex=index,
+				pos = self.text_widget.search(patt, pos, stopindex=index,
 						regexp=True, backwards=True)
 
 			except tkinter.TclError as e:
@@ -7743,11 +7790,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				pos = 'end'
 				break
 
-			if 'strings' in self.contents.tag_names(pos):
+			if 'strings' in self.text_widget.tag_names(pos):
 				#print('strings4', pos)
 				# This won't work if for example returning
 				# multiline string
-				pos = self.contents.tag_prevrange('strings', pos)[0]
+				pos = self.text_widget.tag_prevrange('strings', pos)[0]
 				continue
 
 			# ON SUCCESS
@@ -7758,7 +7805,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Quick fix for: returning multiline string
 		if pos == 'end': pos = scope_end_fallback
 
-		pos = self.contents.index('%s lineend' % pos)
+		pos = self.text_widget.index('%s lineend' % pos)
 		return pos
 
 
@@ -7767,12 +7814,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def stop_goto_def(self, event=None):
 		self.bind("<Escape>", self.esc_override)
-		self.contents.unbind( "<Double-Button-1>", funcid=self.bid )
-		self.contents.config(state='normal')
+		self.text_widget.unbind( "<Double-Button-1>", funcid=self.bid )
+		self.text_widget.config(state='normal')
 		self.state = 'normal'
 		# Space is on hold for extra 200ms, released below
-		self.contents.unbind( "<space>", funcid=self.bid4 )
-		bid_tmp = self.contents.bind( "<space>", self.do_nothing_without_bell)
+		self.text_widget.unbind( "<space>", funcid=self.bid4 )
+		bid_tmp = self.text_widget.bind( "<space>", self.do_nothing_without_bell)
 
 		# Stopping by space while goto_def started from 'normal' -state
 		if event:
@@ -7787,22 +7834,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if self.save_pos:
 				line = self.save_pos
 				curtab.position = line
-				self.save_pos = None
+				self.save_pos = ''
 			else:
 				line = curtab.position
 
-			self.contents.focus_set()
-			self.contents.mark_set('insert', line)
+			self.text_widget.focus_set()
+			self.text_widget.mark_set('insert', line)
 			self.wait_for(100)
 			self.ensure_idx_visibility(line)
 
 		except tkinter.TclError:
-			curtab.position = self.contents.index(tkinter.INSERT)
+			curtab.position = self.text_widget.index(tkinter.INSERT)
 
 		# Release space
 		self.wait_for(200)
-		self.contents.unbind( "<space>", funcid=bid_tmp )
-		curtab.bid_space = self.contents.bind( "<space>", self.space_override)
+		self.text_widget.unbind( "<space>", funcid=bid_tmp )
+		curtab.bid_space = self.text_widget.bind( "<space>", self.space_override)
 
 
 		return 'break'
@@ -7836,7 +7883,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		c = self.contents
+		c = self.text_widget
 		have_selection = len(c.tag_ranges('sel')) > 0
 
 
@@ -7869,12 +7916,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if pos:
 			# Help enabling: "exit to goto_def func with space" while searching
 			self.goto_def_pos = pos
-			self.contents.focus_set()
+			self.text_widget.focus_set()
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
 
 			if have_selection:
-				self.contents.tag_remove( 'sel', '1.0', tkinter.END )
+				self.text_widget.tag_remove( 'sel', '1.0', tkinter.END )
 
 			self.wait_for(150)
 			self.flash_line(pos)
@@ -7885,20 +7932,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				# Save cursor position to self.save_pos to be restored
 				# when pressing Esc to quit goto_def
 				tab = self.tabs[self.tabindex]
-				try: tab.position = self.contents.index(tkinter.INSERT)
+				try: tab.position = self.text_widget.index(tkinter.INSERT)
 				except tkinter.TclError: pass
-				self.save_pos = None
+				self.save_pos = ''
 
 				self.bind("<Escape>", self.stop_goto_def)
-				self.bid = self.contents.bind("<Double-Button-1>",
+				self.bid = self.text_widget.bind("<Double-Button-1>",
 					func=lambda event: self.update_curpos(event, **{'on_stop':self.stop_goto_def}), add=True )
 
 
-				self.contents.unbind( "<space>", funcid=self.tabs[self.tabindex].bid_space )
-				self.bid4 = self.contents.bind( "<space>", self.stop_goto_def )
+				self.text_widget.unbind( "<space>", funcid=self.tabs[self.tabindex].bid_space )
+				self.bid4 = self.text_widget.bind( "<space>", self.stop_goto_def )
 
 
-				self.contents.config(state='disabled')
+				self.text_widget.config(state='disabled')
 				self.state = 'goto_def'
 
 			else: pass
@@ -7924,8 +7971,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			while mark_name:
 				if 'bookmark' in mark_name:
-					pos_mark = self.contents.index(mark_name)
-					if self.contents.compare(pos_mark, '!=', 'insert' ):
+					pos_mark = self.text_widget.index(mark_name)
+					if self.text_widget.compare(pos_mark, '!=', 'insert' ):
 						pos = pos_mark
 						break
 
@@ -7934,10 +7981,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return pos
 
 		# Start
-		mark_func = self.contents.mark_next
+		mark_func = self.text_widget.mark_next
 
 		if back:
-			mark_func = self.contents.mark_previous
+			mark_func = self.text_widget.mark_previous
 
 		pos = get_mark('insert', mark_func)
 
@@ -7955,7 +8002,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		try:
-			self.contents.mark_set('insert', pos)
+			self.text_widget.mark_set('insert', pos)
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
 
@@ -8026,12 +8073,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Set cursor pos
 		try:
 			line = curtab.position
-			self.contents.focus_set()
-			self.contents.mark_set('insert', line)
+			self.text_widget.focus_set()
+			self.text_widget.mark_set('insert', line)
 			self.wait_for(100)
 			self.ensure_idx_visibility(line)
 
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 
 		except tkinter.TclError:
@@ -8048,7 +8095,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.state = 'gotoline'
 
 		try:
-			pos = self.contents.index(tkinter.INSERT)
+			pos = self.text_widget.index(tkinter.INSERT)
 		except tkinter.TclError:
 			pos = '1.0'
 
@@ -8121,14 +8168,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tracefunc_name = None
 
 		if self.os_type == 'mac_os':
-			self.contents.bind( "<Mod1-Key-Return>", self.load)
+			self.text_widget.bind( "<Mod1-Key-Return>", self.load)
 		else:
-			self.contents.bind( "<Alt-Return>", self.load)
+			self.text_widget.bind( "<Alt-Return>", self.load)
 
 		self.state = 'normal'
 
 
-		for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
+		for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
 			widget.config(state='normal')
 
 		return 'break'
@@ -8145,7 +8192,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		openfiles = [tab.filepath for tab in self.tabs]
 		curtab = self.tabs[self.tabindex]
 
-		for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
+		for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
 			widget.config(state='normal')
 
 
@@ -8195,10 +8242,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.entry.insert(0, curtab.filepath)
 					self.entry.xview_moveto(1.0)
 
-				self.contents.delete('1.0', tkinter.END)
-				self.contents.insert(tkinter.INSERT, curtab.contents)
-				self.contents.mark_set('insert', '1.0')
-				self.contents.see('1.0')
+				self.text_widget.delete('1.0', tkinter.END)
+				self.text_widget.insert(tkinter.INSERT, curtab.contents)
+				self.text_widget.mark_set('insert', '1.0')
+				self.text_widget.see('1.0')
 
 				self.line_can_update = True
 
@@ -8207,8 +8254,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.insert_tokens(self.get_tokens(curtab), tab=curtab)
 					self.line_can_update = True
 
-				self.contents.edit_reset()
-				self.contents.edit_modified(0)
+				self.text_widget.edit_reset()
+				self.text_widget.edit_modified(0)
 				######
 
 		except (EnvironmentError, UnicodeDecodeError) as e:
@@ -8220,7 +8267,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.entry.insert(0, curtab.filepath)
 				self.entry.xview_moveto(1.0)
 
-		self.contents.focus_set()
+		self.text_widget.focus_set()
 		return
 
 
@@ -8253,7 +8300,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.entry.insert(0, curtab.filepath)
 					self.entry.xview_moveto(1.0)
 
-				self.contents.focus_set()
+				self.text_widget.focus_set()
 				return 'break'
 
 
@@ -8263,8 +8310,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return 'break'
 
 
-		if len(self.contents.tag_ranges('sel')) > 0:
-			self.contents.tag_remove('sel', '1.0', 'end')
+		if len(self.text_widget.tag_ranges('sel')) > 0:
+			self.text_widget.tag_remove('sel', '1.0', 'end')
 
 
 		# Called by: Open-button(event==None) or shortcut
@@ -8276,9 +8323,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if self.os_type != 'mac_os':
 				shortcut = "<Alt-Return>"
 
-			self.contents.bind( shortcut, self.do_nothing_without_bell)
+			self.text_widget.bind( shortcut, self.do_nothing_without_bell)
 
-			for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
+			for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
 				widget.config(state='disabled')
 
 			self.tracevar_filename.set('empty')
@@ -8427,7 +8474,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		last_state = self.state
 
 		while self.state != 'normal':
-			self.contents.event_generate('<Escape>')
+			self.text_widget.event_generate('<Escape>')
 
 			# Is state actually changing, or is it stuck == there is a bug
 			# --> cancel
@@ -8505,8 +8552,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		def set_cursor_pos():
 			try:
 				line = self.tabs[self.tabindex].position
-				self.contents.focus_set()
-				self.contents.mark_set('insert', line)
+				self.text_widget.focus_set()
+				self.text_widget.mark_set('insert', line)
 				self.ensure_idx_visibility(line)
 
 			except tkinter.TclError:
@@ -8529,7 +8576,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		##############
 
 		try:
-			pos = self.contents.index(tkinter.INSERT)
+			pos = self.text_widget.index(tkinter.INSERT)
 		except tkinter.TclError:
 			pos = '1.0'
 
@@ -8539,7 +8586,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Update oldtabs contents
 		# [:-1]: text widget adds dummy newline at end of file when editing
-		cur_contents = oldtab.contents = self.contents.get('1.0', tkinter.END)[:-1]
+		cur_contents = oldtab.contents = self.text_widget.get('1.0', tkinter.END)[:-1]
 		##############################
 
 
@@ -8696,7 +8743,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.wait_for(100)
 
-		l = sorted([ (mark, self.contents.index(mark)) for mark in self.contents.mark_names() if 'bookmark' in mark], key=lambda x:float(x[1]) )
+		l = sorted([ (mark, self.text_widget.index(mark)) for mark in self.text_widget.mark_names() if 'bookmark' in mark], key=lambda x:float(x[1]) )
 
 		for (mark, pos) in l: print(mark, pos)
 
@@ -8704,7 +8751,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if show_stashed:
 			print('\nHided bookmarks:')
 
-			l = sorted([ (mark, self.contents.index(mark)) for mark in self.contents.mark_names() if 'stashed' in mark], key=lambda x:float(x[1]) )
+			l = sorted([ (mark, self.text_widget.index(mark)) for mark in self.text_widget.mark_names() if 'stashed' in mark], key=lambda x:float(x[1]) )
 
 			for (mark, pos) in l: print(mark, pos)
 
@@ -8748,9 +8795,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			Does NOT do: tab.bookmarks.clear()
 		'''
-		for mark in self.contents.mark_names():
+		for mark in self.text_widget.mark_names():
 			if 'bookmark' in mark:
-				self.contents.mark_unset(mark)
+				self.text_widget.mark_unset(mark)
 
 
 	def save_bookmarks(self, tab, also_stashed=False):
@@ -8802,7 +8849,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.state = 'filedialog'
 
-		for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
+		for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
 			widget.config(state='disabled')
 
 		self.tracevar_filename.set('empty')
@@ -8862,7 +8909,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.state = 'normal'
-		for widget in [self.entry, self.btn_open, self.btn_save, self.contents]:
+		for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
 			widget.config(state='normal')
 
 
@@ -8935,8 +8982,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if old_idx := self.remove_single_bookmark():
 			curtab = self.tabs[self.tabindex]
 			new_mark = 'stashed' + str(len(curtab.bookmarks_stash))
-			pos = self.contents.index('%s display linestart' % old_idx)
-			self.contents.mark_set( new_mark, pos )
+			pos = self.text_widget.index('%s display linestart' % old_idx)
+			self.text_widget.mark_set( new_mark, pos )
 			curtab.bookmarks_stash.append(new_mark)
 
 			self.bookmark_animate(pos, remove=True, tagname='animate_stash')
@@ -8961,8 +9008,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if mark_name := self.line_is_bookmarked('insert'):
 
-			old_idx = self.contents.index(mark_name)
-			self.contents.mark_unset(mark_name)
+			old_idx = self.text_widget.index(mark_name)
+			self.text_widget.mark_unset(mark_name)
 			tab = self.tabs[self.tabindex]
 			tab.bookmarks.remove(mark_name)
 
@@ -8993,14 +9040,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		tests = (
 				self.state not in [ 'normal', 'search', 'replace', 'goto_def' ],
-				not self.contents.bbox('insert')
+				not self.text_widget.bbox('insert')
 				)
 
 		if any(tests):
 			self.bell()
 			return 'break'
 
-		pos = self.contents.index('%s display linestart' % index)
+		pos = self.text_widget.index('%s display linestart' % index)
 		tab = self.tabs[self.tabindex]
 
 		# Remove possible stashed bookmark,
@@ -9018,7 +9065,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		new_mark = 'bookmark' + str(len(tab.bookmarks))
-		self.contents.mark_set( new_mark, pos )
+		self.text_widget.mark_set( new_mark, pos )
 		tab.bookmarks.append(new_mark)
 
 		self.bookmark_animate(pos)
@@ -9031,9 +9078,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Called from: toggle_bookmark, stash_bookmark
 		'''
 
-		s = self.contents.index( '%s display linestart' % index)
+		s = self.text_widget.index( '%s display linestart' % index)
 
-		self.contents.edit_separator()
+		self.text_widget.edit_separator()
 
 		try:
 			e0 = self.idx_lineend()
@@ -9055,7 +9102,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# Check not over screen width 1
 			width_char = self.font.measure('A')
-			width_scr = self.contents.winfo_width()
+			width_scr = self.text_widget.winfo_width()
 			num_chars = width_scr // width_char
 
 			if wanted_num_chars > num_chars:
@@ -9071,25 +9118,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if (diff := want - col) > 0:
 
 				# Check not over screen width 2
-				if (self.contents.bbox(e0)[0] + diff * width_char) < (width_scr - width_char):
+				if (self.text_widget.bbox(e0)[0] + diff * width_char) < (width_scr - width_char):
 
 					# Add some space so we can tag more estate from line. It is later removed.
 					flag_added_space = True
 
 					# Searching, Replacing
-					if self.contents.cget('state') == 'disabled':
+					if self.text_widget.cget('state') == 'disabled':
 
-						self.contents.config(state='normal')
+						self.text_widget.config(state='normal')
 						flag_changed_contents_state = True
 
-					self.contents.insert(e0, diff * ' ')
+					self.text_widget.insert(e0, diff * ' ')
 
 
 				# Some deep indentation and small screen size combo
 				# --> Line has enough characters, just update step
 				else:
 					wanted_num_chars = 0
-					t = self.contents.get(s, e0)
+					t = self.text_widget.get(s, e0)
 					for char in t:
 						wanted_num_chars += 1
 
@@ -9103,23 +9150,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			bg, fg = self.themes[self.curtheme]['sel'][:]
 			if tagname == 'animate':
-				self.contents.tag_config(tagname, background=bg, foreground=fg)
-			self.contents.tag_raise(tagname)
-			self.contents.tag_remove(tagname, '1.0', tkinter.END)
+				self.text_widget.tag_config(tagname, background=bg, foreground=fg)
+			self.text_widget.tag_raise(tagname)
+			self.text_widget.tag_remove(tagname, '1.0', tkinter.END)
 
 
 			# Animate removing bookmark
 			if remove:
 				# 1: Tag wanted_num_chars from start. In effect this, but in loop
 				# to enable use of after(), to get animating effect.
-				# self.contents.tag_add('sel', s, '%s +%d chars' % (s, wanted_num_chars) )
+				# self.text_widget.tag_add('sel', s, '%s +%d chars' % (s, wanted_num_chars) )
 
 				for i in range(wanted_num_chars):
 					p0 = '%s +%d chars' % (s, wanted_num_chars - i-1 )
 					p1 = '%s +%d chars' % (s, wanted_num_chars - i )
 
 					self.after( (i+1)*step, lambda args=[tagname, p0, p1]:
-							self.contents.tag_add(*args) )
+							self.text_widget.tag_add(*args) )
 
 				# 2: Same story as when adding, just note some time has passed
 				for i in range(wanted_num_chars):
@@ -9127,16 +9174,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					p1 = '%s +%d chars' % (s, wanted_num_chars - i )
 
 					self.after( ( time_wanted + (i+1)*step ), lambda args=[tagname, p0, p1]:
-							self.contents.tag_remove(*args) )
+							self.text_widget.tag_remove(*args) )
 
 
 				if flag_added_space:
 					self.after( (2*time_wanted + 30), lambda args=[e0, '%s display lineend' % e0]:
-							self.contents.delete(*args) )
+							self.text_widget.delete(*args) )
 
 					if flag_changed_contents_state:
 						self.after( (2*time_wanted + 40), lambda kwargs={'state':'disabled'}:
-								self.contents.config(**kwargs) )
+								self.text_widget.config(**kwargs) )
 
 
 
@@ -9148,20 +9195,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					p1 = '%s +%d chars' % (s, i+1)
 
 					self.after( (i+1)*step, lambda args=[tagname, p0, p1]:
-							self.contents.tag_add(*args) )
+							self.text_widget.tag_add(*args) )
 
 
 				self.after( (time_wanted + 300), lambda args=[tagname, '1.0', tkinter.END]:
-						self.contents.tag_remove(*args) )
+						self.text_widget.tag_remove(*args) )
 
 
 				if flag_added_space:
 					self.after( (time_wanted + 330), lambda args=[e0, '%s display lineend' % e0]:
-							self.contents.delete(*args) )
+							self.text_widget.delete(*args) )
 
 					if flag_changed_contents_state:
 						self.after( (time_wanted + 340), lambda kwargs={'state':'disabled'}:
-								self.contents.config(**kwargs) )
+								self.text_widget.config(**kwargs) )
 
 
 
@@ -9169,7 +9216,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			print(ee)
 
 
-		self.contents.edit_separator()
+		self.text_widget.edit_separator()
 
 		######## bookmark_animate End #######
 
@@ -9178,7 +9225,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.state = 'normal'
 
 		self.entry.config(state='normal')
-		self.contents.config(state='normal')
+		self.text_widget.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 
@@ -9215,7 +9262,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.entry.config(state='disabled')
-		self.contents.config(state='disabled')
+		self.text_widget.config(state='disabled')
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 
@@ -9316,11 +9363,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# There should not be selection, checked before call in caller.
 
 		# Check previous char
-		idx = self.contents.index(ins)
+		idx = self.text_widget.index(ins)
 		col = int(idx.split(sep='.')[1])
 
 		if col > 0:
-			prev_char = self.contents.get( ('%s -1 char') % ins, '%s' % ins )
+			prev_char = self.text_widget.get( ('%s -1 char') % ins, '%s' % ins )
 
 			if prev_char in self.expander.wordchars:
 				return True
@@ -9332,7 +9379,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.state in [ 'search', 'replace', 'replace_all', 'goto_def' ]:
 			return 'break'
 
-		if len(self.contents.tag_ranges('sel')) == 0:
+		if len(self.text_widget.tag_ranges('sel')) == 0:
 
 			if self.can_expand_word():
 				self.expander.expand_word(event=event)
@@ -9358,7 +9405,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# If at start of line: move line to match indent of previous line.
 			elif indentation_level := self.tab_over_indent():
-				self.contents.insert(tkinter.INSERT, indentation_level * '\t')
+				self.text_widget.insert(tkinter.INSERT, indentation_level * '\t')
 				self.line_can_update = True
 				return 'break'
 
@@ -9369,15 +9416,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		try:
 			self.line_can_update = False
-			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
-			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
-			i = self.contents.index(tkinter.INSERT)
+			startline = int(self.text_widget.index(tkinter.SEL_FIRST).split(sep='.')[0])
+			endline = int(self.text_widget.index(tkinter.SEL_LAST).split(sep='.')[0])
+			i = self.text_widget.index(tkinter.INSERT)
 
 
-			if len(self.contents.tag_ranges('sel')) != 0:
+			if len(self.text_widget.tag_ranges('sel')) != 0:
 
 				# Is start of selection not viewable?
-				if not self.contents.bbox(tkinter.SEL_FIRST):
+				if not self.text_widget.bbox(tkinter.SEL_FIRST):
 
 					self.wait_for(150)
 					self.ensure_idx_visibility(tkinter.SEL_FIRST, back=4)
@@ -9385,18 +9432,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 			for linenum in range(startline, endline+1):
-				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
-				self.contents.insert(tkinter.INSERT, '\t')
+				self.text_widget.mark_set(tkinter.INSERT, '%s.0' % linenum)
+				self.text_widget.insert(tkinter.INSERT, '\t')
 
 
 			if startline == endline:
-				self.contents.mark_set(tkinter.INSERT, '%s +1c' %i)
+				self.text_widget.mark_set(tkinter.INSERT, '%s +1c' %i)
 
-			elif self.contents.compare(tkinter.SEL_FIRST, '<', tkinter.INSERT):
-				self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
+			elif self.text_widget.compare(tkinter.SEL_FIRST, '<', tkinter.INSERT):
+				self.text_widget.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
 
 			self.ensure_idx_visibility('insert', back=4)
-			self.contents.edit_separator()
+			self.text_widget.edit_separator()
 
 		except tkinter.TclError:
 			pass
@@ -9411,7 +9458,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
-		if len(self.contents.tag_ranges('sel')) == 0:
+		if len(self.text_widget.tag_ranges('sel')) == 0:
 
 			if self.can_expand_word():
 				self.expander.expand_word(event=event)
@@ -9439,21 +9486,21 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.line_can_update = False
 
 			# Unindenting curline only:
-			if len(self.contents.tag_ranges('sel')) == 0:
-				startline = int(self.contents.index(tkinter.INSERT).split(sep='.')[0])
+			if len(self.text_widget.tag_ranges('sel')) == 0:
+				startline = int(self.text_widget.index(tkinter.INSERT).split(sep='.')[0])
 				endline = startline
 
 			else:
-				startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
-				endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
+				startline = int(self.text_widget.index(tkinter.SEL_FIRST).split(sep='.')[0])
+				endline = int(self.text_widget.index(tkinter.SEL_LAST).split(sep='.')[0])
 
-			i = self.contents.index(tkinter.INSERT)
+			i = self.text_widget.index(tkinter.INSERT)
 
 			# Check there is enough space in every line:
 			flag_continue = True
 
 			for linenum in range(startline, endline+1):
-				tmp = self.contents.get('%s.0' % linenum, '%s.0 lineend' % linenum)
+				tmp = self.text_widget.get('%s.0' % linenum, '%s.0 lineend' % linenum)
 
 				# Check that every *non empty* line has tab-char at beginning of line
 				if len(tmp) != 0 and tmp[0] != '\t':
@@ -9462,10 +9509,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if flag_continue:
 
-				if len(self.contents.tag_ranges('sel')) != 0:
+				if len(self.text_widget.tag_ranges('sel')) != 0:
 
 					# Is start of selection not viewable?
-					if not self.contents.bbox(tkinter.SEL_FIRST):
+					if not self.text_widget.bbox(tkinter.SEL_FIRST):
 
 						self.wait_for(150)
 						self.ensure_idx_visibility('insert', back=4)
@@ -9473,31 +9520,31 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 				for linenum in range(startline, endline+1):
-					tmp = self.contents.get('%s.0' % linenum, '%s.0 lineend' % linenum)
+					tmp = self.text_widget.get('%s.0' % linenum, '%s.0 lineend' % linenum)
 
 					if len(tmp) != 0:
-						if len(self.contents.tag_ranges('sel')) != 0:
-							self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
-							self.contents.delete(tkinter.INSERT, '%s+%dc' % (tkinter.INSERT, 1))
+						if len(self.text_widget.tag_ranges('sel')) != 0:
+							self.text_widget.mark_set(tkinter.INSERT, '%s.0' % linenum)
+							self.text_widget.delete(tkinter.INSERT, '%s+%dc' % (tkinter.INSERT, 1))
 
 						else:
-							self.contents.delete( '%s.0' % linenum, '%s.0 +1c' % linenum)
+							self.text_widget.delete( '%s.0' % linenum, '%s.0 +1c' % linenum)
 
 
 				# Is selection made from down to top or from right to left?
-				if len(self.contents.tag_ranges('sel')) != 0:
+				if len(self.text_widget.tag_ranges('sel')) != 0:
 
 					if startline == endline:
-						self.contents.mark_set(tkinter.INSERT, '%s -1c' %i)
+						self.text_widget.mark_set(tkinter.INSERT, '%s -1c' %i)
 
-					elif self.contents.compare(tkinter.SEL_FIRST, '<', tkinter.INSERT):
-						self.contents.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
+					elif self.text_widget.compare(tkinter.SEL_FIRST, '<', tkinter.INSERT):
+						self.text_widget.mark_set(tkinter.INSERT, tkinter.SEL_FIRST)
 
 					# Is start of selection not viewable?
-					if not self.contents.bbox(tkinter.SEL_FIRST):
+					if not self.text_widget.bbox(tkinter.SEL_FIRST):
 						self.ensure_idx_visibility('insert', back=4)
 
-				self.contents.edit_separator()
+				self.text_widget.edit_separator()
 
 		except tkinter.TclError:
 			pass
@@ -9513,19 +9560,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 		try:
-			s = self.contents.index(tkinter.SEL_FIRST)
-			e = self.contents.index(tkinter.SEL_LAST)
+			s = self.text_widget.index(tkinter.SEL_FIRST)
+			e = self.text_widget.index(tkinter.SEL_LAST)
 
 			startline,_ = self.get_line_col_as_int(index=s)
-			startpos = self.contents.index( '%s -1l linestart' % s )
+			startpos = self.text_widget.index( '%s -1l linestart' % s )
 
 			endline,_ = self.get_line_col_as_int(index=e)
-			endpos = self.contents.index( '%s +1l lineend' % e )
+			endpos = self.text_widget.index( '%s +1l lineend' % e )
 
 			self.line_can_update = False
 
 			for linenum in range(startline, endline+1):
-				self.contents.insert('%d.0' % linenum, '##')
+				self.text_widget.insert('%d.0' % linenum, '##')
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
@@ -9534,17 +9581,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# No selection, comment curline
 		except tkinter.TclError as e:
-			startpos = self.contents.index( 'insert -1l linestart' )
-			endpos = self.contents.index( 'insert +1l lineend' )
+			startpos = self.text_widget.index( 'insert -1l linestart' )
+			endpos = self.text_widget.index( 'insert +1l lineend' )
 			self.line_can_update = False
-			self.contents.insert('%s linestart' % tkinter.INSERT, '##')
+			self.text_widget.insert('%s linestart' % tkinter.INSERT, '##')
 
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens(start=startpos, end=endpos)
 
 
-		self.contents.edit_separator()
+		self.text_widget.edit_separator()
 		if self.can_do_syntax():
 			self.line_can_update = True
 
@@ -9557,25 +9604,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		idx_ins = self.contents.index(tkinter.INSERT)
+		idx_ins = self.text_widget.index(tkinter.INSERT)
 
 		try:
-			s = self.contents.index(tkinter.SEL_FIRST)
-			e = self.contents.index(tkinter.SEL_LAST)
+			s = self.text_widget.index(tkinter.SEL_FIRST)
+			e = self.text_widget.index(tkinter.SEL_LAST)
 
 			startline,_ = self.get_line_col_as_int(index=s)
 			endline,_ = self.get_line_col_as_int(index=e)
-			startpos = self.contents.index('%s -1l linestart' % s)
-			endpos = self.contents.index('%s +1l lineend' % e)
+			startpos = self.text_widget.index('%s -1l linestart' % s)
+			endpos = self.text_widget.index('%s +1l lineend' % e)
 			changed = False
 
 			self.line_can_update = False
 
 			for linenum in range(startline, endline+1):
-				tmp = self.contents.get('%d.0' % linenum,'%d.0 lineend' % linenum)
+				tmp = self.text_widget.get('%d.0' % linenum,'%d.0 lineend' % linenum)
 
 				if tmp.lstrip()[:2] == '##':
-					self.contents.delete('%d.0' % linenum,
+					self.text_widget.delete('%d.0' % linenum,
 						'%d.0 +2c' % linenum)
 
 					changed = True
@@ -9586,19 +9633,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.update_lineinfo()
 					self.update_tokens(start=startpos, end=endpos)
 
-				self.contents.edit_separator()
+				self.text_widget.edit_separator()
 
 
 		# No selection, uncomment curline
 		except tkinter.TclError as e:
-			tmp = self.contents.get('%s linestart' % idx_ins,
+			tmp = self.text_widget.get('%s linestart' % idx_ins,
 				'%s lineend' % idx_ins)
 
 			if tmp.lstrip()[:2] == '##':
-				self.contents.delete('%s linestart' % idx_ins,
+				self.text_widget.delete('%s linestart' % idx_ins,
 					'%s linestart +2c' % idx_ins)
 
-				self.contents.edit_separator()
+				self.text_widget.edit_separator()
 
 
 		if self.can_do_syntax():
@@ -9621,19 +9668,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Index is after(right) display linestart
 		# Index is not before(left) from display lineend
-		tests = [self.contents.compare( '%s display linestart' % index, '<', index),
-				not self.contents.compare('%s display lineend' % index, '>', index)
+		tests = [self.text_widget.compare( '%s display linestart' % index, '<', index),
+				not self.text_widget.compare('%s display lineend' % index, '>', index)
 				]
 
 
 		if all(tests): res = left
 
-		return self.contents.index(res)
+		return self.text_widget.index(res)
 
 
 	def line_is_elided(self, index='insert'):
 
-		r = self.contents.tag_nextrange('elIdel', index)
+		r = self.text_widget.tag_nextrange('elIdel', index)
 
 		if len(r) > 0:
 			# Is cursor at elided defline?
@@ -9651,25 +9698,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		ref = self.contents.index(index)
+		ref = self.text_widget.index(index)
 		idx = self.get_safe_index(index)
 
 
 		# Show scope
 		if r := self.line_is_elided(idx):
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 			self.wait_for(50)
 
 			# Protect cursor from being pushed down
-			self.contents.mark_set('insert', idx)
+			self.text_widget.mark_set('insert', idx)
 
-			self.contents.tag_remove('elIdel', r[0], r[1])
+			self.text_widget.tag_remove('elIdel', r[0], r[1])
 
 		else:
 			patt = r'%s get {%s linestart} {%s lineend}' \
 					% (self.tcl_name_of_contents, idx, idx)
 
-			line = self.contents.tk.eval(patt)
+			line = self.text_widget.tk.eval(patt)
 			if not self.line_is_defline(line):
 				return 'break'
 
@@ -9685,22 +9732,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			s = '%s lineend' % idx_scope_start
 			e = idx_scope_end
 
-			self.contents.tag_remove('sel', '1.0', tkinter.END)
+			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 			self.wait_for(50)
 
 			# Protect cursor from being elided
-			self.contents.mark_set('insert', idx)
+			self.text_widget.mark_set('insert', idx)
 
-			self.contents.tag_add('elIdel', s, e)
+			self.text_widget.tag_add('elIdel', s, e)
 
 
 		# If cursor was at defline lineend, it was moved one char left,
 		# put it back to lineend
-		if self.contents.compare(idx, '!=', ref):
+		if self.text_widget.compare(idx, '!=', ref):
 			# 	Q: Why not '%s lineend' % idx ?
 			#
 			# 	A:	s = '%s lineend' % idx_scope_start
-			#		self.contents.tag_add('elIdel', s, e)
+			#		self.text_widget.tag_add('elIdel', s, e)
 			#
 			# That says, the first index inside elided text is:
 			# 	'lineend' of definition line
@@ -9717,7 +9764,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			#	s = '%s lineend' % idx_scope_start
 			#	e = idx_scope_end
 			#
-			#	self.contents.tag_add('elIdel', s, e)
+			#	self.text_widget.tag_add('elIdel', s, e)
 			#
 			# One has to think what is the first display index after elided
 			# text. That is first index after 'e' and since one knows that
@@ -9731,7 +9778,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Then if doing 'display lineend', cursor would just go to end of that line.
 
 
-			self.contents.mark_set('insert', '%s display lineend' % idx)
+			self.text_widget.mark_set('insert', '%s display lineend' % idx)
 
 		return 'break'
 
@@ -9759,7 +9806,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 		# No selection
-		elif len(self.contents.tag_ranges('sel')) == 0:
+		elif len(self.text_widget.tag_ranges('sel')) == 0:
 			if self.old_word: search_word = self.old_word
 			else:
 				self.bell()
@@ -9807,10 +9854,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# This is mainly for the possible future use,
 		# showing info same way when doing real search.
 		if using_selection:
-			start = self.contents.index(tkinter.SEL_FIRST)
+			start = self.text_widget.index(tkinter.SEL_FIRST)
 
 		else:
-			start = self.contents.search(search_word, 'insert')
+			start = self.text_widget.search(search_word, 'insert')
 
 
 		idx = m.index(start)
@@ -9843,14 +9890,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		word_end = "%s + %dc" % (pos, wordlen)
 
 		self.wait_for(33)
-		self.contents.tag_remove('sel', '1.0', tkinter.END)
-		self.contents.mark_set(self.anchorname, pos)
+		self.text_widget.tag_remove('sel', '1.0', tkinter.END)
+		self.text_widget.mark_set(self.anchorname, pos)
 		self.wait_for(12)
-		self.contents.tag_add('sel', pos, word_end)
-		self.contents.mark_set('insert', word_end)
+		self.text_widget.tag_add('sel', pos, word_end)
+		self.text_widget.mark_set('insert', word_end)
 
 		# Is it not viewable?
-		if not self.contents.bbox(pos):
+		if not self.text_widget.bbox(pos):
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
 
@@ -9859,7 +9906,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def show_next(self, event=None):
 		''' Note: side-effect, alters insert-mark
-				self.contents.mark_set('insert')
+				self.text_widget.mark_set('insert')
 		'''
 
 		if self.state not in [ 'search', 'replace', 'replace_all' ]:
@@ -9900,14 +9947,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		mark_name = 'match%d' % self.search_index
 
-		self.contents.tag_remove('focus', '1.0', tkinter.END)
+		self.text_widget.tag_remove('focus', '1.0', tkinter.END)
 
 		# match-mark marks start of the match
 		start = mark_name
 
 
 		# Make zero lenght matches visible
-		if 'match_zero_lenght' in self.contents.tag_names(start):
+		if 'match_zero_lenght' in self.text_widget.tag_names(start):
 			end = '%s +1c' % mark_name
 
 		else:
@@ -9924,7 +9971,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		#print(t1-t0, 'ms')
 
 		# Is it not viewable?
-		if not self.contents.bbox(start):
+		if not self.text_widget.bbox(start):
 			self.wait_for(100)
 
 		self.ensure_idx_visibility(start)
@@ -9946,14 +9993,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# (this works because 'insert' is set here correctly)
 		# Before, this was done in goto_def by checking if state was 'search'
 		# and then using self.search_focus[1] as base-index 'p'
-		self.contents.mark_set('insert', end)
+		self.text_widget.mark_set('insert', end)
 
 
 		if self.entry.flag_start:
 			if self.state == 'search':
 				self.wait_for(100)
 				bg, fg = self.themes[self.curtheme]['match'][:]
-				self.contents.tag_config('match', background=bg, foreground=fg)
+				self.text_widget.tag_config('match', background=bg, foreground=fg)
 			self.wait_for(200)
 			self.entry.flag_start = False
 
@@ -9961,7 +10008,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Change color
 		# self.search_focus is range of focus-tag.
-		self.contents.tag_add('focus', self.search_focus[0], self.search_focus[1])
+		self.text_widget.tag_add('focus', self.search_focus[0], self.search_focus[1])
 
 
 
@@ -9979,7 +10026,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def show_prev(self, event=None):
 		''' Note: side-effect, alters insert-mark
-				self.contents.mark_set('insert')
+				self.text_widget.mark_set('insert')
 		'''
 
 
@@ -10021,14 +10068,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		mark_name = 'match%d' % self.search_index
 
-		self.contents.tag_remove('focus', '1.0', tkinter.END)
+		self.text_widget.tag_remove('focus', '1.0', tkinter.END)
 
 		# match-mark marks start of the match
 		start = mark_name
 
 
 		# Make zero lenght matches visible
-		if 'match_zero_lenght' in self.contents.tag_names(start):
+		if 'match_zero_lenght' in self.text_widget.tag_names(start):
 			end = '%s +1c' % mark_name
 
 		else:
@@ -10043,7 +10090,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.handle_search_entry(idx, start)
 
 		# Is it not viewable?
-		if not self.contents.bbox(start):
+		if not self.text_widget.bbox(start):
 			self.wait_for(100)
 
 		self.ensure_idx_visibility(start)
@@ -10065,20 +10112,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# (this works because 'insert' is set here correctly)
 		# Before, this was done in goto_def by checking if state was 'search'
 		# and then using self.search_focus[1] as base-index 'p'
-		self.contents.mark_set('insert', end)
+		self.text_widget.mark_set('insert', end)
 
 		if self.entry.flag_start:
 			if self.state == 'search':
 				self.wait_for(100)
 				bg, fg = self.themes[self.curtheme]['match'][:]
-				self.contents.tag_config('match', background=bg, foreground=fg)
+				self.text_widget.tag_config('match', background=bg, foreground=fg)
 			self.wait_for(200)
 			self.entry.flag_start = False
 
 
 		# Change color
 		# self.search_focus is range of focus-tag.
-		self.contents.tag_add('focus', self.search_focus[0], self.search_focus[1])
+		self.text_widget.tag_add('focus', self.search_focus[0], self.search_focus[1])
 
 		self.entry.config(validate='key')
 
@@ -10326,11 +10373,11 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# See Tcl/Tk -literature for more info about this
 		s.insert(0, self.tcl_name_of_contents)
 		s.append( '--' )
-		tmp = self.contents.get('1.0', '1.1')
+		tmp = self.text_widget.get('1.0', '1.1')
 
 		flag = False
 		if not tmp:
-			self.contents.insert('1.0', 'A')
+			self.text_widget.insert('1.0', 'A')
 			tmp = 'A'
 			flag = True
 
@@ -10366,7 +10413,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			print(e)
 
 
-		if flag: self.contents.delete('1.0', '1.1')
+		if flag: self.text_widget.delete('1.0', '1.1')
 
 		#### edit_search_setting End ##############
 
@@ -10390,15 +10437,15 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			'''
 
 			if self.search_starts_at == 'insert':
-				have_selection = len(self.contents.tag_ranges('sel')) > 0
+				have_selection = len(self.text_widget.tag_ranges('sel')) > 0
 				if have_selection:
 					tmp = self.selection_get()
 					if tmp == search_word:
 						if '-backwards' not in self.search_settings:
-							idx_sel_start = self.contents.index(tkinter.SEL_FIRST)
+							idx_sel_start = self.text_widget.index(tkinter.SEL_FIRST)
 							return idx_sel_start
 						else:
-							idx_sel_end = self.contents.index(tkinter.SEL_LAST)
+							idx_sel_end = self.text_widget.index(tkinter.SEL_LAST)
 							return idx_sel_end
 			# else:
 			return self.search_starts_at
@@ -10437,9 +10484,9 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 
-		for mark in self.contents.mark_names():
+		for mark in self.text_widget.mark_names():
 			if 'match' in mark:
-				self.contents.mark_unset(mark)
+				self.text_widget.mark_unset(mark)
 
 		match_ranges = list()
 		match_zero_ranges = list()
@@ -10450,13 +10497,13 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 			mark_name = 'match%d' % i
 			start_idx = start_indexes[i]
-			self.contents.mark_set(mark_name, start_idx)
+			self.text_widget.mark_set(mark_name, start_idx)
 			self.mark_indexes.append(i)
 
 			match_lenght = s[i]
 
 			# Used in making zero lenght matches visible
-			if match_lenght == 0 and 'elIdel' not in self.contents.tag_names(start_idx):
+			if match_lenght == 0 and 'elIdel' not in self.text_widget.tag_names(start_idx):
 				end_idx = '%s +1c' % start_idx
 				match_zero_ranges.append(mark_name)
 				match_zero_ranges.append(end_idx)
@@ -10469,9 +10516,9 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			match_ranges.append(end_idx)
 
 
-		self.contents.tag_add('match', *match_ranges)
+		self.text_widget.tag_add('match', *match_ranges)
 		if len(match_zero_ranges) > 0:
-			self.contents.tag_add('match_zero_lenght', *match_zero_ranges)
+			self.text_widget.tag_add('match_zero_lenght', *match_zero_ranges)
 
 		return num_matches
 
@@ -10491,9 +10538,9 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		search_word = tmp
 
 
-		self.contents.tag_remove('match', '1.0', tkinter.END)
-		self.contents.tag_remove('focus', '1.0', tkinter.END)
-		self.contents.tag_config('match', background='', foreground='')
+		self.text_widget.tag_remove('match', '1.0', tkinter.END)
+		self.text_widget.tag_remove('focus', '1.0', tkinter.END)
+		self.text_widget.tag_config('match', background='', foreground='')
 
 		self.search_matches = self.do_search(search_word)
 		# 'match' is tagged in do_search()
@@ -10514,7 +10561,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
 				self.entry.flag_start = True
 
-				self.contents.focus_set()
+				self.text_widget.focus_set()
 				self.wait_for(100)
 
 				self.show_next()
@@ -10533,7 +10580,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 				bg, fg = self.themes[self.curtheme]['match'][:]
-				self.contents.tag_config('match', background=bg, foreground=fg)
+				self.text_widget.tag_config('match', background=bg, foreground=fg)
 
 
 				self.entry.bind("<Return>", self.start_replace)
@@ -10543,7 +10590,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		else:
 			self.bell()
 			bg, fg = self.themes[self.curtheme]['match'][:]
-			self.contents.tag_config('match', background=bg, foreground=fg)
+			self.text_widget.tag_config('match', background=bg, foreground=fg)
 			self.bind("<Control-n>", self.do_nothing)
 			self.bind("<Control-p>", self.do_nothing)
 
@@ -10556,7 +10603,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		''' on_stop: function to be executed on doubleclick
 		'''
 
-		self.save_pos = self.contents.index(tkinter.INSERT)
+		self.save_pos = self.text_widget.index(tkinter.INSERT)
 
 		on_stop()
 
@@ -10567,7 +10614,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		if self.state != 'normal':
 			return 'break'
 
-		self.contents.tag_remove('replaced', '1.0', tkinter.END)
+		self.text_widget.tag_remove('replaced', '1.0', tkinter.END)
 		self.bind("<Escape>", self.esc_override)
 
 
@@ -10575,7 +10622,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		if self.state == 'waiting':
 			return 'break'
 
-		self.contents.config(state='normal')
+		self.text_widget.config(state='normal')
 		self.entry.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
@@ -10583,13 +10630,13 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			lambda event: self.raise_popup(event))
 
 		#self.wait_for(200)
-		self.contents.tag_remove('focus', '1.0', tkinter.END)
-		self.contents.tag_remove('match', '1.0', tkinter.END)
-		self.contents.tag_remove('match_zero_lenght', '1.0', tkinter.END)
-		self.contents.tag_remove('sel', '1.0', tkinter.END)
+		self.text_widget.tag_remove('focus', '1.0', tkinter.END)
+		self.text_widget.tag_remove('match', '1.0', tkinter.END)
+		self.text_widget.tag_remove('match_zero_lenght', '1.0', tkinter.END)
+		self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 		# Leave marks on replaced areas, Esc clears.
-		if len(self.contents.tag_ranges('replaced')) > 0:
+		if len(self.text_widget.tag_ranges('replaced')) > 0:
 			self.bind("<Escape>", self.clear_search_tags)
 		else:
 			self.bind("<Escape>", self.esc_override)
@@ -10614,21 +10661,21 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 				# Unfinished replace_all call
 				if self.state == 'replace_all' and len(self.mark_indexes) != 0:
-					self.save_pos = None
+					self.save_pos = ''
 					# This will pass until focus_set
 					pass
 
 				line = self.save_pos
 				curtab.position = line
-				self.save_pos = None
+				self.save_pos = ''
 			else:
 				line = curtab.position
 
-			self.contents.focus_set()
-			self.contents.mark_set('insert', line)
+			self.text_widget.focus_set()
+			self.text_widget.mark_set('insert', line)
 
 		except tkinter.TclError:
-			curtab.position = self.contents.index(tkinter.INSERT)
+			curtab.position = self.text_widget.index(tkinter.INSERT)
 
 
 		# Help enabling: "exit to goto_def func with space" while searching
@@ -10658,20 +10705,20 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.bid_show_next = None
 			self.bid_show_prev = None
 
-		self.contents.unbind( "<Control-n>", funcid=self.bid1 )
-		self.contents.unbind( "<Control-p>", funcid=self.bid2 )
-		self.contents.unbind( "<Double-Button-1>", funcid=self.bid3 )
+		self.text_widget.unbind( "<Control-n>", funcid=self.bid1 )
+		self.text_widget.unbind( "<Control-p>", funcid=self.bid2 )
+		self.text_widget.unbind( "<Double-Button-1>", funcid=self.bid3 )
 
 		# Space is on hold for extra 200ms, released below
-		self.contents.unbind( "<space>", funcid=self.bid4 )
-		bid_tmp = self.contents.bind( "<space>", self.do_nothing_without_bell)
+		self.text_widget.unbind( "<space>", funcid=self.bid4 )
+		bid_tmp = self.text_widget.bind( "<space>", self.do_nothing_without_bell)
 
 
-		self.contents.bind( "<Control-n>", self.search_next)
-		self.contents.bind( "<Control-p>",
+		self.text_widget.bind( "<Control-n>", self.search_next)
+		self.text_widget.bind( "<Control-p>",
 				lambda event: self.search_next(event, **{'back':True}) )
 
-		self.contents.bind("<Return>", self.return_override)
+		self.text_widget.bind("<Return>", self.return_override)
 		self.entry.bind("<Control-n>", self.do_nothing_without_bell)
 		self.entry.bind("<Control-p>", self.do_nothing_without_bell)
 		self.bind( "<Return>", self.do_nothing_without_bell)
@@ -10681,8 +10728,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		# Release space
 		self.wait_for(200)
-		self.contents.unbind( "<space>", funcid=bid_tmp )
-		curtab.bid_space = self.contents.bind( "<space>", self.space_override)
+		self.text_widget.unbind( "<space>", funcid=bid_tmp )
+		curtab.bid_space = self.text_widget.bind( "<space>", self.space_override)
 		return 'break'
 
 
@@ -10699,7 +10746,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		# Save cursor pos
 		try:
-			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
+			self.tabs[self.tabindex].position = self.text_widget.index(tkinter.INSERT)
 
 		except tkinter.TclError:
 			pass
@@ -10712,19 +10759,19 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.entry.bind("<Return>", self.start_search)
 		self.bind("<Escape>", self.stop_search)
 
-		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
-		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
+		self.bid1 = self.text_widget.bind("<Control-n>", func=self.skip_bindlevel )
+		self.bid2 = self.text_widget.bind("<Control-p>", func=self.skip_bindlevel )
 		self.entry.bind("<Control-n>", self.skip_bindlevel)
 		self.entry.bind("<Control-p>", self.skip_bindlevel)
 		self.bid_show_next = None
 		self.bid_show_prev = None
 
-		self.bid3 = self.contents.bind("<Double-Button-1>",
+		self.bid3 = self.text_widget.bind("<Double-Button-1>",
 			func=lambda event: self.update_curpos(event, **{'on_stop':self.stop_search}),
 				add=True )
 
-		self.contents.unbind( "<space>", funcid=self.tabs[self.tabindex].bid_space )
-		self.bid4 = self.contents.bind( "<space>", self.space_override )
+		self.text_widget.unbind( "<space>", funcid=self.tabs[self.tabindex].bid_space )
+		self.bid4 = self.text_widget.bind( "<space>", self.space_override )
 
 		self.entry.delete(0, tkinter.END)
 
@@ -10753,12 +10800,12 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.entry.icursor(tkinter.END)
 
 
-		self.contents.tag_remove('sel', '1.0', tkinter.END)
+		self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 		patt = 'Search: '
 		self.entry.insert(0, patt)
 		self.entry.config(validate='key', validatecommand=self.validate_search)
 
-		self.contents.config(state='disabled')
+		self.text_widget.config(state='disabled')
 		self.entry.focus_set()
 
 		return 'break'
@@ -10805,9 +10852,9 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		# Save cursor pos
 		try:
-			self.tabs[self.tabindex].position = self.contents.index(tkinter.INSERT)
+			self.tabs[self.tabindex].position = self.text_widget.index(tkinter.INSERT)
 			if state == 'replace_all':
-				self.save_pos = self.contents.index(tkinter.INSERT)
+				self.save_pos = self.text_widget.index(tkinter.INSERT)
 
 		except tkinter.TclError:
 			pass
@@ -10818,20 +10865,20 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.entry.unbind("<Return>", funcid=self.entry.bid_ret)
 		self.entry.bind("<Return>", self.start_search)
 		self.bind("<Escape>", self.stop_search)
-		self.bid1 = self.contents.bind("<Control-n>", func=self.skip_bindlevel )
-		self.bid2 = self.contents.bind("<Control-p>", func=self.skip_bindlevel )
+		self.bid1 = self.text_widget.bind("<Control-n>", func=self.skip_bindlevel )
+		self.bid2 = self.text_widget.bind("<Control-p>", func=self.skip_bindlevel )
 		self.entry.bind("<Control-n>", self.skip_bindlevel)
 		self.entry.bind("<Control-p>", self.skip_bindlevel)
 		self.bid_show_next = None
 		self.bid_show_prev = None
 
 
-		self.bid3 = self.contents.bind("<Double-Button-1>",
+		self.bid3 = self.text_widget.bind("<Double-Button-1>",
 			func=lambda event: self.update_curpos(event, **{'on_stop':self.stop_search}),
 				add=True )
 
-		self.contents.unbind( "<space>", funcid=self.tabs[self.tabindex].bid_space )
-		self.bid4 = self.contents.bind("<space>", func=self.space_override )
+		self.text_widget.unbind( "<space>", funcid=self.tabs[self.tabindex].bid_space )
+		self.bid4 = self.text_widget.bind("<space>", func=self.space_override )
 
 
 		self.entry.delete(0, tkinter.END)
@@ -10864,9 +10911,9 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.entry.config(validate='key', validatecommand=self.validate_search)
 
 		self.wait_for(400)
-		self.contents.tag_remove('replaced', '1.0', tkinter.END)
+		self.text_widget.tag_remove('replaced', '1.0', tkinter.END)
 
-		self.contents.config(state='disabled')
+		self.text_widget.config(state='disabled')
 		self.entry.focus_set()
 		return 'break'
 
@@ -10928,7 +10975,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# If last replace was done by pressing Return, there is currently no focus-tag.
 		# Check this and get focus-tag with show_next() if this is the case, and break.
 		# This means that the actual replacing happens only when have focus-tag.
-		c = self.contents.tag_nextrange('focus', 1.0)
+		c = self.text_widget.tag_nextrange('focus', 1.0)
 
 		if not len(c) > 0:
 			self.show_next()
@@ -10937,7 +10984,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		# Start of actual replacing
-		self.contents.config(state='normal')
+		self.text_widget.config(state='normal')
 
 		wordlen_new = len(self.new_word)
 
@@ -10945,7 +10992,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		####
 		mark_name = 'match%d' % self.search_index
 
-		start = self.contents.index(mark_name)
+		start = self.text_widget.index(mark_name)
 		end_old = '%s +%dc' % ( start, self.match_lenghts[self.search_index] )
 		end_new = "%s +%dc" % ( start, wordlen_new )
 
@@ -10957,7 +11004,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			search_re = self.old_word
 			substit = r'{%s}' % self.new_word
 			patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit)
-			new_word = self.contents.tk.eval(patt)
+			new_word = self.text_widget.tk.eval(patt)
 			len_new_word = len(new_word)
 			end_new = "%s +%dc" % ( start, len_new_word )
 
@@ -10965,25 +11012,25 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		else: new_word = self.new_word
 
 
-		self.contents.replace(start, end_old, new_word)
+		self.text_widget.replace(start, end_old, new_word)
 
 		if self.can_do_syntax():
 			self.update_tokens(start='%s linestart' % start, end='%s lineend' % end_new)
 
 
-		self.contents.tag_add('replaced', start, end_new)
-		self.contents.tag_remove('focus', '1.0', tkinter.END)
+		self.text_widget.tag_add('replaced', start, end_new)
+		self.text_widget.tag_remove('focus', '1.0', tkinter.END)
 
 		# Fix for use of non existing mark in self.save_pos
 		self.search_focus = (start, end_new)
 		# Mark gets here deleted
 
-		self.contents.mark_unset(mark_name)
+		self.text_widget.mark_unset(mark_name)
 		self.mark_indexes.remove(self.search_index)
 		####
 
 
-		self.contents.config(state='disabled')
+		self.text_widget.config(state='disabled')
 
 		self.search_matches -= 1
 
@@ -10995,21 +11042,21 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 	def do_replace_all(self, event=None):
 
 		# Start of actual replacing
-		self.contents.tag_config('match', background='', foreground='')
-		self.contents.tag_remove('focus', '1.0', tkinter.END)
-		self.contents.config(state='normal')
+		self.text_widget.tag_config('match', background='', foreground='')
+		self.text_widget.tag_remove('focus', '1.0', tkinter.END)
+		self.text_widget.config(state='normal')
 		wordlen_new = len(self.new_word)
 
 
 		####
 		i = self.mark_indexes[-1]
 		last_mark = 'match%d' % i
-		idx_last_mark = self.contents.index(last_mark)
+		idx_last_mark = self.text_widget.index(last_mark)
 
 		for index in self.mark_indexes[::-1]:
 
 			mark_name = 'match%d' % index
-			start = self.contents.index(mark_name)
+			start = self.text_widget.index(mark_name)
 			end_old = '%s +%dc' % ( start, self.match_lenghts[index] )
 			end_new = "%s +%dc" % ( start, wordlen_new )
 
@@ -11021,7 +11068,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				search_re = self.old_word
 				substit = r'{%s}' % self.new_word
 				patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit)
-				new_word = self.contents.tk.eval(patt)
+				new_word = self.text_widget.tk.eval(patt)
 				len_new_word = len(new_word)
 				end_new = "%s +%dc" % ( start, len_new_word )
 
@@ -11030,17 +11077,17 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			else: new_word = self.new_word
 
 
-			self.contents.replace(start, end_old, new_word)
+			self.text_widget.replace(start, end_old, new_word)
 
 
-			self.contents.tag_add('replaced', start, end_new)
-			self.contents.mark_unset(mark_name)
+			self.text_widget.tag_add('replaced', start, end_new)
+			self.text_widget.mark_unset(mark_name)
 			self.mark_indexes.pop(-1)
 		####
 
 
 		# Is it not viewable?
-		if not self.contents.bbox(idx_last_mark):
+		if not self.text_widget.bbox(idx_last_mark):
 			self.wait_for(300)
 
 		# Show last match that got replaced
@@ -11048,7 +11095,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.wait_for(200)
 
 		bg, fg = self.themes[self.curtheme]['replaced'][:]
-		self.contents.tag_config('replaced', background=bg, foreground=fg)
+		self.text_widget.tag_config('replaced', background=bg, foreground=fg)
 
 		self.stop_search()
 		###################
@@ -11094,8 +11141,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
 
 		self.entry.bind("<Return>", self.skip_bindlevel)
-		self.contents.bind("<Return>", self.skip_bindlevel)
-		self.contents.focus_set()
+		self.text_widget.bind("<Return>", self.skip_bindlevel)
+		self.text_widget.focus_set()
 
 		if self.state == 'replace':
 			self.bind( "<Return>", self.do_single_replace)
