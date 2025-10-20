@@ -519,6 +519,7 @@ class Editor(tkinter.Toplevel):
 			# Used in check_caps
 			self.to_be_cancelled = list()
 
+			self.color_linenums = '#c0c0c0'
 			self.ln_string = ''
 			self.want_ln = 2
 			self.syntax = True
@@ -746,6 +747,7 @@ class Editor(tkinter.Toplevel):
 			d['normal_text'] = [white, black]
 			n['normal_text'] = [black, white]
 
+
 			d['keywords'] = ['', orange]
 			n['keywords'] = ['', 'deep sky blue']
 			d['numbers'] = ['', red]
@@ -861,7 +863,7 @@ class Editor(tkinter.Toplevel):
 			self.btn_git.config(font=self.menufont)
 
 			# Hide selection in linenumbers
-			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled', padx=self.pad, pady=self.pad, width=self.margin)
+			self.ln_widget.config(font=self.font, foreground=self.color_linenums, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.color_linenums, inactiveselectbackground=self.bgcolor, state='disabled', padx=self.pad, pady=self.pad, width=self.margin)
 
 
 
@@ -2696,6 +2698,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['elementborderwidth'] = self.elementborderwidth
 		d['version_control_cmd'] = self.version_control_cmd
 		d['margin_fullscreen'] = self.margin_fullscreen
+		d['color_linenums'] = self.color_linenums
 		d['margin'] = self.margin
 		d['check_syntax'] = self.check_syntax
 		d['want_ln'] = self.want_ln
@@ -2733,6 +2736,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def set_config(self, dictionary, font, menufont):
+		''' NOTE: if setting here anything like
+
+			self.margin = d['margin']
+
+			That works only if self.margin has been initialized in __init__
+			*before* calling this set_config
+		'''
+
 		d = dictionary
 		# Set Font Begin ##############################
 
@@ -2767,6 +2778,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.elementborderwidth	= d['elementborderwidth']
 		self.version_control_cmd = d['version_control_cmd']
 		self.margin_fullscreen = d['margin_fullscreen']
+		self.color_linenums = d['color_linenums']
 		self.margin = d['margin']
 		self.check_syntax = d['check_syntax']
 		self.want_ln = d['want_ln']
@@ -3676,15 +3688,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def set_text_widget_colors(self, tab):
+
 		tab.text_widget.config(foreground=self.fgcolor,
 							background=self.bgcolor,
 							insertbackground=self.fgcolor)
 
 
 	def set_ln_widget_colors(self):
-		self.ln_widget.config(foreground=self.fgcolor, background=self.bgcolor,
+
+		self.ln_widget.config(foreground=self.color_linenums, background=self.bgcolor,
 							selectbackground=self.bgcolor,
-							selectforeground=self.fgcolor,
+							selectforeground=self.color_linenums,
 							inactiveselectbackground=self.bgcolor )
 
 
@@ -3812,6 +3826,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		syntags = [
 		'normal_text',
+		'linenumbers',
 		'keywords',
 		'numbers',
 		'bools',
@@ -3842,6 +3857,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		]
 
 		onlyfore = [
+		'linenumbers',
 		'keywords',
 		'numbers',
 		'bools',
@@ -3858,7 +3874,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if tagname == 'selected':
 				tagname = 'sel'
 
-			if wid.frontback_mode == 'foreground':
+			if tagname == 'linenumbers':
+				initcolor = self.color_linenums
+				patt = 'Choose fgcolor for: %s' % tagname
+
+			elif wid.frontback_mode == 'foreground':
 				initcolor = self.text_widget.tag_cget(tagname, 'foreground')
 				patt = 'Choose fgcolor for: %s' % tagname
 
@@ -3871,6 +3891,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tmpcolor = str(res)
 
 			if tmpcolor in [None, '']:
+				wid.focus_set()
+				return 'break'
+
+
+			if tagname == 'linenumbers':
+				try:
+					self.color_linenums = tmpcolor
+					self.set_ln_widget_colors()
+
+				except (tkinter.TclError, AttributeError) as e:
+					pass
+
 				wid.focus_set()
 				return 'break'
 
@@ -4067,6 +4099,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'Text',
 		'Background',
 		'normal_text',
+		'linenumbers',
 		'keywords',
 		'numbers',
 		'bools',
@@ -4143,6 +4176,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		t.insert(i, '\nSelect tag you want to modify\n', 'title')
 		t.insert(i, 'normal text\n', 'normal_text')
+		t.insert(i, 'linenumbers\n', 'linenumbers')
 
 
 		t.insert(i, '\nSyntax highlight tags\n', 'title')

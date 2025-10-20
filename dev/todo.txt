@@ -17,6 +17,9 @@ self.contents --> self.text_widget
 change_indentation_width --> change_tabsize, help done
 
 
+change color of linenumbers, done
+
+
 walk_tabs added delay, done
 
 
@@ -386,6 +389,10 @@ setting line wrapping on off?
 
 
 help no can search ##########################
+
+
+color of linenumbers
+gray?
 
 
 searching etc with slow tagging(wait_fors) --> can goto_def and esc too fast
