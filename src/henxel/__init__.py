@@ -183,9 +183,8 @@ class Tab:
 	# do something that should get: filepath = somePath
 	# Then: if filepath: tab.filepath = filepath
 	#if tab.type == 'normal'
-
-
 	filepath: Any = False
+
 
 	chk_sum: int = 0
 	oldlinenum: int = 0
@@ -521,7 +520,7 @@ class Editor(tkinter.Toplevel):
 			self.to_be_cancelled = list()
 
 			self.ln_string = ''
-			self.want_ln = True
+			self.want_ln = 2
 			self.syntax = True
 			self.oldconf = None
 			self.tab_char = TAB_WIDTH_CHAR
@@ -600,7 +599,12 @@ class Editor(tkinter.Toplevel):
 			self.checksum_fix_indent = False
 
 			self.waitvar = tkinter.IntVar()
-			self.fullscreen = False
+
+			# distance from left screen edge to text
+			# can be set with: set_left_margin(width_normal, width_fullscreen)
+			self.margin = 3
+			self.margin_fullscreen = 3
+
 			# Just in case, set to normal at end of init
 			self.state = 'init'
 
@@ -629,6 +633,8 @@ class Editor(tkinter.Toplevel):
 
 			# Initiate widgets
 			####################################
+			# width of btn_git must be 3 to make tight fit for
+			# 4 digit linenumbers in ln_widget
 			self.btn_git = tkinter.Button(self, width=3, takefocus=0, relief='flat',
 										highlightthickness=0, padx=0, state='disabled')
 			self.entry = tkinter.Entry(self, highlightthickness=0, takefocus=0)
@@ -639,7 +645,7 @@ class Editor(tkinter.Toplevel):
 			self.btn_save = tkinter.Button(self, takefocus=0, text='Save',
 										highlightthickness=0, command=self.save)
 
-			self.ln_widget = tkinter.Text(self, width=4, highlightthickness=0, relief='flat')
+			self.ln_widget = tkinter.Text(self, width=self.margin, highlightthickness=0, relief='flat')
 			self.ln_widget.tag_config('justright', justify=tkinter.RIGHT)
 
 
@@ -855,8 +861,7 @@ class Editor(tkinter.Toplevel):
 			self.btn_git.config(font=self.menufont)
 
 			# Hide selection in linenumbers
-			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled', padx=self.pad, pady=self.pad)
-
+			self.ln_widget.config(font=self.font, foreground=self.fgcolor, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.fgcolor, inactiveselectbackground=self.bgcolor, state='disabled', padx=self.pad, pady=self.pad, width=self.margin)
 
 
 
@@ -931,6 +936,8 @@ class Editor(tkinter.Toplevel):
 			self.rowconfigure(1, weight=1)
 			self.columnconfigure(1, weight=1)
 
+			# First row, widgets are in root:
+			# btn_git / entry / btn_open / btn_save
 			# Normally, widget is shown on screen when doing grid_configure
 			# But not if root-window is withdrawn earlier(it is)
 			self.btn_git.grid_configure(row=0, column = 0, sticky='nsew')
@@ -939,22 +946,19 @@ class Editor(tkinter.Toplevel):
 			self.btn_save.grid_configure(row=0, column = 3, columnspan=2,
 										sticky='nsew')
 
+
+			# Second and final row, also in root:
+			# ln_widget / frame(text_widget) / scrollbar
 			self.ln_widget.grid_configure(row=1, column = 0, sticky='nsew')
 
 			self.frame.rowconfigure(0, weight=1)
 			self.frame.columnconfigure(0, weight=1)
+
+			# text_widget is only one in frame
 			self.text_widget.grid_configure(row=0, column=0, sticky='nsew')
 
-
-			# If want linenumbers:
-			if self.want_ln:
-				self.frame.grid_configure(row=1, column=1, columnspan=3,
+			self.frame.grid_configure(row=1, column=1, columnspan=3,
 										sticky='nswe')
-
-			else:
-				self.frame.grid_configure(row=1, column=0, columnspan=4,
-										sticky='nswe')
-				self.ln_widget.grid_remove()
 
 			self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 			#################
@@ -1187,52 +1191,13 @@ Error messages Begin
 
 	def handle_window_resize(self, event=None):
 		'''	In case of size change, like maximize etc. viewsync-event is not
-			generated in such situation so need to bind to <Configure>-event.
+			generated, so need to bind to <Configure>-event.
 
-			Just update self.fullscreen here, not actually setting fullscreen,
-			which is done in esc_override
+			note: setting fullscreen is done in esc_override
 		'''
-		# Handle fullscreen toggles
 		self.update_idletasks()
-
-		# Check if setting attribute '-fullscreen' is supported
-		# type(self.wm_attributes()) == tuple
-		# Not used because this interferes with esc_override when
-		# using slow machine.
-##		if self.wm_attributes().count('-fullscreen') != 0:
-##			if self.wm_attributes('-fullscreen') == 1:
-##				if self.fullscreen == False:
-##					self.fullscreen = True
-##			else:
-##				if self.fullscreen == True:
-##					self.fullscreen = False
-
-
+		# Needed in update_linenums() and sbset_override()
 		self.text_widget_height = self.scrollbar.winfo_height()
-##		# Not used, left as example on how to always know the current number of screenlines.
-##		# Count number of screen-lines,
-##		# from text-widgets (internal) x,y-position x=0 and y=0-65535.
-##		# End y-position could be something more realistic, like:
-##		#       self.text_widget_height = self.scrollbar.winfo_height(),
-##		# but with this magic number 65535, one possible winfo_height()-call
-##		# is avoided. But Still, if dont want magics:
-##		# self.text_widget.count('@0,0', '@0,%s' % self.text_widget_height, 'displaylines')[0]
-##		#       or if in doubt is that up-to-date(it is, see above):
-##		# self.text_widget.count('@0,0', '@0,%s' % self.scrollbar.winfo_height(), 'displaylines')[0]
-##
-##		# Note that result is None if widget is not yet fully started, below is solution to that.
-##		if tmp := self.text_widget.count('@0,0', '@0,65535', 'displaylines')[0]:
-##			# Here one can do things like find the maximum number of screen lines etc
-##			# if tmp > self.max_screen_lines: self.max_screen_lines = tmp
-##			self.screen_lines = tmp
-##
-##		else:
-##			# Geometry manager hasn't run yet, most likely doing still init
-##			# Note that this is not realistic value, but a future value if everything wents ok.
-##			# Correct value would be 0
-##			self.screen_lines = int(self.text_widget['height'])
-
-		#self.update_linenums()
 
 
 	def copy_windows(self, event=None, selection=None, flag_cut=False):
@@ -1923,7 +1888,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# More info in update_linenums()
 		self.bbox_height = tab.text_widget.bbox('@0,0')[3]
 		self.text_widget_height = self.scrollbar.winfo_height()
-		if self.want_ln: self.update_linenums()
+		if self.want_ln == 2: self.update_linenums()
 
 
 		if self.can_do_syntax(tab) and self.line_can_update:
@@ -2333,31 +2298,34 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.ln_widget.bind(shortcut, self.do_nothing_without_bell)
 
 
-
 ############## Bindings End
 ############## Linenumbers Begin
 
 	def toggle_ln(self, event=None):
-		# To prevent flashing, one must use full geometry-string
-		# when starting editor
 
-		self.wait_for(200)
+		self.wait_for(100)
 
-		# if don't want linenumbers:
-		if self.want_ln:
-			# Removing widget remembers grid-options. Next time
-			# it is gridded one can just: self.ln_widget.grid()
-			self.want_ln = False
-			self.frame.grid_configure(column=0, columnspan=4)
+		# 2 1 0
+		self.want_ln -= 1
+		if self.want_ln < 0: self.want_ln = 2
+
+
+		if self.want_ln == 1:
+			self.ln_widget.config(state='normal')
+			self.ln_widget.delete('1.0', 'end')
+			self.ln_widget.config(state='disabled')
+
+		elif self.want_ln == 0:
 			self.ln_widget.grid_remove()
-
+			self.frame.grid_configure(row=1, column=0, columnspan=4,
+										sticky='nswe')
 		else:
-			self.want_ln = True
-			self.frame.grid_configure(column=1, columnspan=3)
-			self.ln_widget.grid()
+			self.ln_widget.grid_configure(row=1, column = 0, sticky='nsew')
+			self.frame.grid_configure(row=1, column=1, columnspan=3,
+										sticky='nswe')
+			self.ln_string = ''
+			self.update_linenums()
 
-
-		self.update_idletasks()
 
 		return 'break'
 
@@ -2594,7 +2562,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.text_widget = tab.text_widget
 		self.scrollbar.config(command=self.text_widget.yview)
 		self.scrollbar.set(*self.text_widget.yview())
-		if self.want_ln: self.update_linenums()
+		if self.want_ln == 2: self.update_linenums()
 		self.text_widget.grid_configure(row=0, column=0, sticky='nswe')
 		self.text_widget.focus_set()
 
@@ -2643,7 +2611,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.tabindex = new_idx = idx
 
-
+		self.wait_for(30)
 		self.tab_close(self.tabs[old_idx])
 		self.tab_open(self.tabs[new_idx])
 		self.update_title()
@@ -2727,6 +2695,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['scrollbar_width'] = self.scrollbar_width
 		d['elementborderwidth'] = self.elementborderwidth
 		d['version_control_cmd'] = self.version_control_cmd
+		d['margin_fullscreen'] = self.margin_fullscreen
+		d['margin'] = self.margin
 		d['check_syntax'] = self.check_syntax
 		d['want_ln'] = self.want_ln
 		d['syntax'] = self.syntax
@@ -2796,6 +2766,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.scrollbar_width = d['scrollbar_width']
 		self.elementborderwidth	= d['elementborderwidth']
 		self.version_control_cmd = d['version_control_cmd']
+		self.margin_fullscreen = d['margin_fullscreen']
+		self.margin = d['margin']
 		self.check_syntax = d['check_syntax']
 		self.want_ln = d['want_ln']
 		self.syntax = d['syntax']
@@ -3591,7 +3563,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			print(e)
 
 
-	def change_indentation_width(self, width):
+	def change_tabsize(self, width):
 		''' width is integer between 1-8
 		'''
 
@@ -3602,8 +3574,59 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.ind_depth = width
 		self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
-		self.text_widget.config(tabs=(self.tab_width, ))
+		for tab in self.tabs + [self.help_tab, self.err_tab]:
+			tab.text_widget.config(tabs=(self.tab_width, ))
 
+
+	def is_fullscreen(self):
+
+		# last fallback
+		width_editor = int(self.geometry().split('x')[0])
+		width_screen = self.winfo_screenwidth()
+		res = width_editor == width_screen
+
+		# preferring wm attributes (for no particular reason)
+		if self.wm_attributes().count('-fullscreen') != 0:
+			res = self.wm_attributes('-fullscreen') == 1
+
+		# first fallback
+		elif self.wm_attributes().count('-zoomed') != 0:
+			res = self.wm_attributes('-zoomed') == 1
+
+		return res
+
+
+	def apply_left_margin(self, **kwargs):
+
+		self.ln_widget.config(**kwargs)
+
+
+	def set_left_margin(self, width_normal, width_fullscreen=None):
+		'''	Set distance from left screen edge to start of text,
+			for normal window, and possible separate width for fullscreen
+
+			to reset both to defaults:
+			set_left_margin(0)
+
+			reset only margin of normal window:
+			set_left_margin(0, self.margin_fullscreen)
+
+		'''
+
+		if type(width_normal) != int: return
+
+		if width_normal < 3: width_normal = 3
+
+		self.margin, self.margin_fullscreen = width_normal, width_normal
+
+		if type(width_fullscreen) == int:
+			if width_fullscreen < 3: width_fullscreen = 3
+			self.margin_fullscreen = width_fullscreen
+
+		if self.is_fullscreen(): kwargs={'width':self.margin_fullscreen}
+		else: kwargs={'width':self.margin}
+
+		self.apply_left_margin(**kwargs)
 
 
 	def set_scrollbar_widths(self, width, elementborderwidth):
@@ -4298,22 +4321,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def run(self):
-		'''	Run file currently being edited. This can not catch errlines of
-			those exceptions that are catched. Like:
-
-			try:
-				code known sometimes failing with SomeError
-				(but might also fail with other error-type)
-			except SomeError:
-				some other code but no raising error
-
-			Note: 	Above code will raise an error in case
-			 		code in try-block raises some other error than SomeError.
-					In that case those errlines will be of course catched.
-
-			What this means: If you self.run() with intention to spot possible
-			errors in your program, you should use logging (in except-block)
-			if you are not 100% sure about your code in except-block.
+		'''	Run file currently being edited.
 		'''
 		curtab = self.tabs[self.tabindex]
 		if (self.state != 'normal') or (curtab.type != 'normal'):
@@ -6344,6 +6352,28 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
+
+	def do_maximize(self, want_maximize):
+		''' fullscreen option seems to exist now on all win/linux/mac
+			didn't use to, so:
+		'''
+
+		if self.wm_attributes().count('-fullscreen') != 0:
+			self.wm_attributes('-fullscreen', want_maximize)
+
+		elif self.wm_attributes().count('-zoomed') != 0:
+			self.wm_attributes('-zoomed', want_maximize)
+
+		elif want_maximize:
+			width_screen = self.winfo_screenwidth()
+			height_screen = self.winfo_screenheight()
+			self.geometry('%dx%d+0+0' % (width_screen, height_screen) )
+
+		else:
+			self.geometry(self.geom)
+
+
+
 	def esc_override(self, event):
 		'''	Enable toggle fullscreen with Esc.
 		'''
@@ -6354,15 +6384,40 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return 'break'
 
 
-		if self.wm_attributes().count('-fullscreen') != 0:
-			if self.state == 'normal':
-				if self.wm_attributes('-fullscreen') == 1:
-					self.wm_attributes('-fullscreen', 0)
-				else:
-					self.wm_attributes('-fullscreen', 1)
-				return 'break'
+		delay = 300
+		want_maximize = 1
+		kwargs={'width':self.margin_fullscreen}
 
-		self.bell()
+		if self.is_fullscreen():
+			delay = 200
+			want_maximize = 0
+			kwargs={'width':self.margin}
+
+
+		if self.margin != self.margin_fullscreen:
+
+			self.wait_for(200)
+			self.apply_left_margin(**kwargs)
+			self.wait_for(300)
+
+
+			# Prevent flashing 1&2/3
+			if want_maximize:
+				self.orig_bg_color = self.cget('bg')
+				self.config(bg=self.bgcolor)
+
+			self.do_maximize(want_maximize)
+
+			# Prevent flashing 3/3
+			if want_maximize:
+				self.config(bg=self.orig_bg_color)
+
+			return 'break'
+
+
+		self.do_maximize(want_maximize)
+		self.after(delay, lambda kwargs=kwargs: self.apply_left_margin(**kwargs) )
+
 		return 'break'
 
 
@@ -6598,7 +6653,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		self.scrollbar.set(*args)
 
-		if self.want_ln: self.update_linenums()
+		if self.want_ln == 2: self.update_linenums()
 
 ########## Overrides End
 ########## Utilities Begin

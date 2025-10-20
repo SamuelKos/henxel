@@ -14,6 +14,10 @@ partly done, not error raising
 
 renamed:
 self.contents --> self.text_widget
+change_indentation_width --> change_tabsize, help done
+
+
+walk_tabs added delay, done
 
 
 ########################
@@ -310,32 +314,94 @@ also macos, font-scaling in future?
 
 
 
+
+
+
+
+###############################################################
+###############################################################
 to set indentation:
+set_left_margin(width_normal, width_fullscreen=None)
+
+
+reset done:
+to reset both to defaults:
+set_left_margin(0)
+reset only margin of normal window:
+set_left_margin(0, self.margin_fullscreen)
+
+help done
+
+
+
 column configure before this?
-set btn_git width >= 3, is conf, also fullscreen
+width >= 3
+is conf, also fullscreen
 
 
-to temporarily set indentation:
+self.margin = 3
+self.margin_fullscreen = 3
+== total width of left margin
+
+
+
+done:
+self.want_ln: 2, 1, 0
+toggle_ln: on, off, indent0
+
+
+done:
+added delay when widths are different
+ecs_override:
+if self.width_normal != self.width_fullscreen:
+add some delay to prevent jump/flashiness
+done
+
+
+esc_override, done
+is_fullscreen()
+do_maximize()
+			
+
+
+not done begin:
+distance from linenumbers to text: ########################
+add spaces to numbers?
+linemask?
+not use when want_ln == 0
+
+
+
 scroll horizontally?
 no work:
 e.tk.eval('.!editor.!frame.!text2 xview scroll -10 units')
 e.tk.eval('.!editor.!frame.!text2 xview scroll -1 pages')
 
 
+###############################################################
+###############################################################
+
+
+setting line wrapping on off?
+
+
+help no can search ##########################
+
 
 searching etc with slow tagging(wait_fors) --> can goto_def and esc too fast
+
+
+not unique, tab wordexpand, give list?
 
 
 move_many_lines check win11, done?
 
 
 count and keep cache of all py files, even if closed?
+better cache file path, done
 
 
 run file even without filename
-
-
-better cache file path #####
 
 
 check why:

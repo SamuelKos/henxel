@@ -189,7 +189,31 @@
 	  Drag editor-window to place one likes. Resize it to size one wants.
 	  Then call: e.use_geometry('current')
 
+	
+	How to: set left margin
+	  Set distance from left screen edge to start of text
+	  for normal window, and possible separate width for fullscreen
+
+	  - reset both to defaults
+		e.set_left_margin(0)
+
+	  - reset only margin of normal window
+		e.set_left_margin(0, e.margin_fullscreen)
 		
+	  Usage Examples
+	  - set different margin for normal window and fullscreen
+		e.set_left_margin(10, 20)
+		
+	  - set same margin for normal window and fullscreen
+		e.set_left_margin(10)
+		
+	  - change only margin for normal window (to 10)
+		e.set_left_margin(10, e.margin_fullscreen)
+		
+	  - change only margin for fullscreen window (to 20)
+		e.set_left_margin(e.margin, 20)
+
+	
 	How to: set editor to check syntax at exit
 	  Should syntax of open py-files be checked at exit?
 	  e.check_syntax_on_exit()
@@ -341,11 +365,11 @@
 		You might need to reduce indentation.
 	
 	
-	How to: change indent-depth
-		For all files:
-	  - If you started editor with: import henxel and e=henxel.Editor(),
-		then to change indent-depth in python-console:
-		e.change_indentation_width(8)
+	How to: change tabsize
+		Size can be 1-8, default is 4
+		
+		Change size for all files:
+	  - e.change_tabsize(8)
 		
 		For code-snippet:
 	  - If you copied something to your editor that has different indentation
