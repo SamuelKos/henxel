@@ -85,6 +85,21 @@ FLAGS = importflags.FLAGS
 ############ Imports End
 ############ Module Utilities Begin
 
+def get_font(want_list):
+	fontname = None
+
+	fontfamilies = [f for f in tkinter.font.families()]
+
+	for font in want_list:
+		if font in fontfamilies:
+			fontname = font
+			break
+
+	if not fontname: fontname = 'TkDefaulFont'
+
+	return fontname
+
+
 def get_info():
 	''' Print names of methods in class Editor,
 		which gathers some information.
@@ -157,17 +172,18 @@ def stash_pop():
 	'''
 	subprocess.run('git stash pop -q'.split())
 
+
 ############ Module Utilities End
 ############ Class Tab Begin
 
-############
 from dataclasses import dataclass, field
 from typing import Any, List
 
-# must know all attributes
-
 @dataclass
 class Tab:
+	'''	Represents a tab-page of an Editor-instance
+	'''
+
 	# This must be first because it has no default value
 	# same thing as with function arguments
 	text_widget: tkinter.Text
@@ -176,13 +192,7 @@ class Tab:
 	bookmarks: List[str] = field(default_factory=list)
 	bookmarks_stash: List[str] = field(default_factory=list)
 
-	# filepath should be pathlib.Path
-	# But it is used in condition checking like: if filepath
-	# To Fix: replace if tab.filepath with:
-	# filepath = False
-	# do something that should get: filepath = somePath
-	# Then: if filepath: tab.filepath = filepath
-	#if tab.type == 'normal'
+	# False in creation, normally pathlib.Path
 	filepath: Any = False
 
 
@@ -203,55 +213,6 @@ class Tab:
 	par_err: bool = False
 	check_scope: bool = False
 
-########
-
-
-##class Tab:
-##	'''	Represents a tab-page of an Editor-instance
-##	'''
-##
-##	def __init__(self, **entries):
-##		''' active		Bool
-##			filepath	pathlib.Path
-##
-##			tcl_name_of_contents,
-##			contents,
-##			oldcontents,
-##			position,
-##			type		String
-##
-##			chk_sum		Integer
-##			text_widget tkinter.Text
-##
-##			bookmarks_stash,
-##			bookmarks	List
-##
-##		'''
-##
-##		self.active = False
-##		self.filepath = None
-##		self.contents = ''
-##		self.oldcontents = ''
-##		self.position = '1.0'
-##		self.type = 'newtab'
-##		self.chk_sum = 0
-##		self.bookmarks = list()
-##		self.bookmarks_stash = list()
-##		self.text_widget = None
-##		self.tcl_name_of_contents = ''
-##
-##		self.__dict__.update(entries)
-##
-##
-##	def __str__(self):
-##
-##		return	'\nfilepath: %s\nactive: %s\ntype: %s\nposition: %s' % (
-##				str(self.filepath),
-##				str(self.active),
-##				self.type,
-##				self.position
-##				)
-##
 
 ############ Class Tab End
 ############ Class Editor Begin
@@ -269,8 +230,8 @@ class Tab:
 ###############################################################################
 
 ############ Constants Begin
-CACHEPATH = 'editor.tag'
-CONFPATH = 'editor.cnf'
+CACHEPATH = 'henxel.cache'
+CONFPATH = 'henxel.cnf'
 ICONPATH = 'editor.png'
 HELPPATH = 'help.txt'
 KEYS_HLP = 'shortcuts.txt'
@@ -301,6 +262,17 @@ GOODFONTS = [
 			'Noto Sans Mono'
 			]
 
+# Want list for keywords, used with italic-setting
+GOODFONTS2 = [
+'Optima',
+'Avenir',
+'Rockwell',
+'Trebuchet MS',
+'Menlo',
+'Courier New'
+]
+
+
 ############ Constants End
 ############ Init etc. Begin
 
@@ -319,9 +291,10 @@ class Editor(tkinter.Toplevel):
 	helptxt = None
 
 	root = None
-	font = None
+	textfont = None
 	menufont = None
 	boldfont = None
+	keyword_font = None
 
 	mac_term = None
 	win_id = None
@@ -384,32 +357,17 @@ class Editor(tkinter.Toplevel):
 	def __new__(cls, *args, debug=False, **kwargs):
 
 		if not cls.root:
-			# Q: Does launch-test have its own root? A: Yes:
-##			if flags and flags.get('launch_test') == True:
-##				print('BBBB')
-			# Was earlier v.0.2.2 in init:
-
-			# self.root = tkinter.Tk().withdraw()
-
-			# wich worked in Debian 11, but not in Debian 12,
-			# resulted error msg like: class str has no some attribute etc.
-			# After changing this line in init to:
-
-			# self.root = tkinter.Tk()
-			# self.root.withdraw()
-
-			# Editor would launch, but after closing and reopening in the same python-console-instance,
-			# there would be same kind of messages but about icon, and also fonts would change.
-			# This is why that stuff is now here to keep those references.
+			# Q: Does launch-test have its own root? A: Yes
 
 			cls.root = tkinter.Tk()
 			cls.root.withdraw()
 
 
-		if not cls.font:
-			cls.font = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
+		if not cls.textfont:
+			cls.textfont = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
 			cls.menufont = tkinter.font.Font(family='TkDefaulFont', size=10, name='menufont')
-			cls.boldfont = cls.font.copy()
+			cls.boldfont = cls.textfont.copy()
+			cls.keyword_font = tkinter.font.Font(family='TkDefaulFont', size=12, name='keyword_font')
 
 
 		if not cls.pkg_contents:
@@ -519,7 +477,7 @@ class Editor(tkinter.Toplevel):
 			# Used in check_caps
 			self.to_be_cancelled = list()
 
-			self.color_linenums = '#c0c0c0'
+			self.color_linenums = ('#c0c0c0', '#c0c0c0') #(current, default)
 			self.ln_string = ''
 			self.want_ln = 2
 			self.syntax = True
@@ -529,7 +487,7 @@ class Editor(tkinter.Toplevel):
 			self.check_syntax = False
 
 			################################
-			# editor.cnf is read from here #
+			# henxel.cnf is read from here #
 			################################
 			# if in venv, put conf in venv-dir
 			if sys.prefix != sys.base_prefix:
@@ -548,15 +506,21 @@ class Editor(tkinter.Toplevel):
 			self.geom = '+%d+0'
 			if self.os_type == 'windows': self.geom = '-0+0'
 
-			self.font = self.__class__.font
+			self.textfont = self.__class__.textfont
 			self.menufont = self.__class__.menufont
 			self.boldfont = self.__class__.boldfont
+			self.keyword_font = self.__class__.keyword_font
+			self.keyword_font.config(family='Optima', slant='italic', size=13)
+			self.fonts = dict()
+			for font in [self.textfont, self.menufont, self.keyword_font]:
+				self.fonts[font.name] = font
 
 			# Can be changed with set_version_control_cmd()
 			self.version_control_cmd = 'git branch --show-current'.split()
 
 
-			# Search related variables Begin
+			##### Search related variables Begin
+
 			# This marks range of focus-tag:
 			self.search_focus = ('1.0', '1.0')
 			self.mark_indexes = list() # of int
@@ -573,7 +537,9 @@ class Editor(tkinter.Toplevel):
 
 			# Used for counting indentation
 			self.search_count_var = tkinter.IntVar()
-			# Search related variables End
+
+			##### Search related variables End
+
 
 			self.errlines = list()
 			self.err = False
@@ -788,30 +754,22 @@ class Editor(tkinter.Toplevel):
 				self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
 
 				# Set Font
-				fontname = None
-
-				fontfamilies = [f for f in tkinter.font.families()]
-
-				for font in GOODFONTS:
-					if font in fontfamilies:
-						fontname = font
-						break
-
-				if not fontname:
-					fontname = 'TkDefaulFont'
-
+				fontname = get_font(GOODFONTS)
+				fontname_keyword = get_font(GOODFONTS2)
 
 				size0, size1 = 12, 10
 				# There is no font-scaling in macOS?
 ##				if self.os_type == 'mac_os': size0, size1 = 22, 16
 				if self.os_type == 'mac_os': size0, size1 = 16, 14
 
-				self.font.config(family=fontname, size=size0)
+				self.textfont.config(family=fontname, size=size0)
 				self.menufont.config(family=fontname, size=size1)
+				self.keyword_font.config(family=fontname_keyword, size=size0-3)
+				# keywords are set little smaller size than normal text
 
 
 				self.ind_depth = TAB_WIDTH
-				self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
+				self.tab_width = self.textfont.measure(self.ind_depth * self.tab_char)
 				# One char width is: self.tab_width // self.ind_depth
 				# Use this in measuring padding
 				pad_x =  self.tab_width // self.ind_depth // 3
@@ -863,7 +821,7 @@ class Editor(tkinter.Toplevel):
 			self.btn_git.config(font=self.menufont)
 
 			# Hide selection in linenumbers
-			self.ln_widget.config(font=self.font, foreground=self.color_linenums, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.color_linenums, inactiveselectbackground=self.bgcolor, state='disabled', padx=self.pad, pady=self.pad, width=self.margin)
+			self.ln_widget.config(font=self.textfont, foreground=self.color_linenums[0], background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.color_linenums[0], inactiveselectbackground=self.bgcolor, state='disabled', padx=self.pad, pady=self.pad, width=self.margin)
 
 
 
@@ -968,7 +926,7 @@ class Editor(tkinter.Toplevel):
 
 			self.line_can_update = False
 
-			self.boldfont.config(**self.font.config())
+			self.boldfont.config(**self.textfont.config())
 			self.boldfont.config(weight='bold')
 
 			self.init_syntags()
@@ -2642,57 +2600,65 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def load_config(self, data):
 
-		font, menufont = self.fonts_exists(data)
-		self.set_config(data, font, menufont)
+		textfont, menufont, keyword_font = self.fonts_exists(data)
+		self.set_config(data, textfont, menufont, keyword_font)
 
 
-	def fonts_exists(self, dictionary):
+	def fonts_exists(self, data):
 
-		res = True
 		fontfamilies = [f for f in tkinter.font.families()]
 
-		font = dictionary['font']['family']
+		####
+		textfont = data['fonts']['textfont']['family']
 
-		if font not in fontfamilies:
-			print(f'Font {font.upper()} does not exist.')
-			font = False
+		if textfont not in fontfamilies:
+			print(f'Font {textfont.upper()} does not exist.')
+			textfont = False
 
-		menufont = dictionary['menufont']['family']
+		####
+		menufont = data['fonts']['menufont']['family']
 
-		if dictionary['menufont']['family'] not in fontfamilies:
+		if menufont not in fontfamilies:
 			print(f'Font {menufont.upper()} does not exist.')
 			menufont = False
 
-		return font, menufont
+		####
+		keyword_font = data['fonts']['keyword_font']['family']
+
+		if keyword_font not in fontfamilies:
+			print(f'Font {keyword_font.upper()} does not exist.')
+			keyword_font.upper = False
+
+		return textfont, menufont, keyword_font
 
 
 	def get_config(self):
-		dictionary = d = dict()
+		d = dict()
 		d['curtheme'] = self.curtheme
 		d['lastdir'] = self.lastdir.__str__()
 
+		###################
 		# Replace possible Tkdefaulfont as family with real name,
 		# if not mac_os, because tkinter.font.Font does not recognise
 		# this: .APPLESYSTEMUIFONT
+		fonts = dict()
+
+		def fix_fontname(font):
+			if font.cget('family') == 'TkDefaulFont':
+				return font.config()
+			else:
+				return font.actual()
+
 
 		if self.os_type == 'mac_os':
-
-			if self.font.cget('family') == 'TkDefaulFont':
-				d['font'] = self.font.config()
-
-			else:
-				d['font'] = self.font.actual()
-
-			if self.menufont.cget('family') == 'TkDefaulFont':
-				d['menufont'] = self.menufont.config()
-
-			else:
-				d['menufont'] = self.menufont.actual()
-
+			for font in self.fonts.values():
+				fonts[font.name] = fix_fontname(font)
 		else:
-			d['font'] = self.font.actual()
-			d['menufont'] = self.menufont.actual()
+			for font in self.fonts.values():
+				fonts[font.name] = font.actual()
 
+		d['fonts'] = fonts
+		####################
 
 		d['scrollbar_width'] = self.scrollbar_width
 		d['elementborderwidth'] = self.elementborderwidth
@@ -2731,49 +2697,35 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 							(key, tab.__dict__.get(key)) for key in whitelist
 							]) for tab in self.tabs ]
 
+		return d
 
-		return dictionary
 
+	def set_config(self, data, textfont, menufont, keyword_font):
 
-	def set_config(self, dictionary, font, menufont):
-		''' NOTE: if setting here anything like
-
-			self.margin = d['margin']
-
-			That works only if self.margin has been initialized in __init__
-			*before* calling this set_config
-		'''
-
-		d = dictionary
+		d = data
 		# Set Font Begin ##############################
 
 		# Both missing:
-		if not font and not menufont:
-			fontname = None
+		if not textfont and not menufont:
 
-			fontfamilies = [f for f in tkinter.font.families()]
-
-			for font in GOODFONTS:
-				if font in fontfamilies:
-					fontname = font
-					break
-
-			if not fontname:
-				fontname = 'TkDefaulFont'
-
-			d['font']['family'] = fontname
-			d['menufont']['family'] = fontname
+			fontname = get_font(GOODFONTS)
+			d['fonts']['textfont']['family'] = fontname
+			d['fonts']['menufont']['family'] = fontname
 
 		# One missing, copy existing:
-		elif bool(font) ^ bool(menufont):
-			if font:
-				d['menufont']['family'] = font
+		elif bool(textfont) ^ bool(menufont):
+			if textfont:
+				d['fonts']['menufont']['family'] = textfont
 			else:
-				d['font']['family'] = menufont
+				d['fonts']['textfont']['family'] = menufont
 
+		if not keyword_font:
+			fontname = get_font(GOODFONTS2)
+			d['fonts']['keyword_font']['family'] = fontname
 
-		self.font.config(**d['font'])
-		self.menufont.config(**d['menufont'])
+		self.textfont.config(**d['fonts']['textfont'])
+		self.menufont.config(**d['fonts']['menufont'])
+		self.keyword_font.config(**d['fonts']['keyword_font'])
 		self.scrollbar_width = d['scrollbar_width']
 		self.elementborderwidth	= d['elementborderwidth']
 		self.version_control_cmd = d['version_control_cmd']
@@ -2791,7 +2743,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.bgcolor, self.fgcolor = self.themes[self.curtheme]['normal_text'][:]
 
 		###
-		self.tab_width = self.font.measure(self.ind_depth * TAB_WIDTH_CHAR)
+		self.tab_width = self.textfont.measure(self.ind_depth * TAB_WIDTH_CHAR)
 
 		pad_x =  self.tab_width // self.ind_depth // 3
 		pad_y = pad_x
@@ -2869,7 +2821,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.update_syntags_colors(tab)
 
 
-		w.config(font=self.font, tabs=(self.tab_width, ), bd=self.pad,
+		w.config(font=self.textfont, tabs=(self.tab_width, ), bd=self.pad,
 				padx=self.pad, pady=self.pad, foreground=self.fgcolor,
 				background=self.bgcolor, insertbackground=self.fgcolor)
 
@@ -2967,7 +2919,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		w = tab.text_widget
 
-		w.tag_config('keywords', font=self.boldfont)
+		w.tag_config('keywords', font=self.keyword_font)
 		w.tag_config('numbers', font=self.boldfont)
 		w.tag_config('comments', font=self.boldfont)
 		w.tag_config('breaks', font=self.boldfont)
@@ -3585,7 +3537,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.ind_depth = width
-		self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
+		self.tab_width = self.textfont.measure(self.ind_depth * self.tab_char)
 		for tab in self.tabs + [self.help_tab, self.err_tab]:
 			tab.text_widget.config(tabs=(self.tab_width, ))
 
@@ -3696,9 +3648,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def set_ln_widget_colors(self):
 
-		self.ln_widget.config(foreground=self.color_linenums, background=self.bgcolor,
+		self.ln_widget.config(foreground=self.color_linenums[0], background=self.bgcolor,
 							selectbackground=self.bgcolor,
-							selectforeground=self.color_linenums,
+							selectforeground=self.color_linenums[0],
 							inactiveselectbackground=self.bgcolor )
 
 
@@ -3731,10 +3683,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def update_fonts(self):
 		# There could be a geometry change, so:
 		if self.geom: self.flag_check_geom_at_exit = True
-		self.boldfont.config(**self.font.config())
+		self.boldfont.config(**self.textfont.config())
 		self.boldfont.config(weight='bold')
 
-		self.tab_width = self.font.measure(self.ind_depth * self.tab_char)
+		self.tab_width = self.textfont.measure(self.ind_depth * self.tab_char)
 		pad_x =  self.tab_width // self.ind_depth // 3
 		self.pad = pad_y = pad_x
 
@@ -3745,20 +3697,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 							elementborderwidth=self.elementborderwidth)
 
 
-
 		for tab in self.tabs + [self.help_tab, self.err_tab]:
-			tab.text_widget.tag_config('keywords', font=self.boldfont)
-			tab.text_widget.tag_config('numbers', font=self.boldfont)
-			tab.text_widget.tag_config('comments', font=self.boldfont)
-			tab.text_widget.tag_config('breaks', font=self.boldfont)
-			tab.text_widget.tag_config('calls', font=self.boldfont)
 			tab.text_widget.config(tabs=(self.tab_width, ), padx=self.pad, pady=self.pad)
 
 
 		self.ln_widget.config(padx=self.pad, pady=self.pad)
 		self.y_extra_offset = self.text_widget['highlightthickness'] + self.text_widget['bd'] + self.text_widget['pady']
 		#self.bbox_height = self.text_widget.bbox('@0,0')[3]
-
 
 
 	def font_choose(self, event=None):
@@ -3780,7 +3725,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
 				self.text_widget.bind( shortcut, self.font_choose)) )
 
-		changefont.FontChooser( fonttop, [self.font, self.menufont], big,
+		changefont.FontChooser( fonttop, [self.textfont, self.menufont, self.keyword_font], big,
 			sb_widths=(self.scrollbar_width, self.elementborderwidth),
 			on_fontchange=self.update_fonts )
 		self.text_widget.bind( shortcut, self.do_nothing)
@@ -3875,7 +3820,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tagname = 'sel'
 
 			if tagname == 'linenumbers':
-				initcolor = self.color_linenums
+				initcolor = self.color_linenums[0]
 				patt = 'Choose fgcolor for: %s' % tagname
 
 			elif wid.frontback_mode == 'foreground':
@@ -3897,7 +3842,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if tagname == 'linenumbers':
 				try:
-					self.color_linenums = tmpcolor
+					self.color_linenums[0] = tmpcolor
 					self.set_ln_widget_colors()
 
 				except (tkinter.TclError, AttributeError) as e:
@@ -4000,19 +3945,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if tagname == 'Save_TMP':
 				wid.tmp_theme = copy.deepcopy(self.themes)
+				wid.color_linenumbers_tmp = self.color_linenums[0]
 				wid.flag_tmp = True
 				self.flash_tag(t, tagname)
 
 			elif tagname == 'TMP' and wid.flag_tmp:
 				self.themes = copy.deepcopy(wid.tmp_theme)
+				self.color_linenums[0] = wid.color_linenumbers_tmp
 				self.flash_tag(t, tagname)
 
 			elif tagname == 'Start':
 				self.themes = copy.deepcopy(wid.start_theme)
+				self.color_linenums[0] = wid.color_linenumbers_start
 				self.flash_tag(t, tagname)
 
 			elif tagname == 'Defaults':
 				self.themes = copy.deepcopy(self.default_themes)
+				self.color_linenums[0] = self.color_linenums[1]
 				self.flash_tag(t, tagname)
 
 
@@ -4054,6 +4003,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		c.title('Choose Color')
 		c.start_theme = copy.deepcopy(self.themes)
 		c.tmp_theme = copy.deepcopy(self.themes)
+		c.color_linenumbers_start = self.color_linenums[0]
+		c.color_linenumbers_tmp = self.color_linenums[0]
 		c.flag_tmp = False
 
 		shortcut_color = "<Alt-s>"
@@ -8430,7 +8381,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.to_be_closed.append(filetop)
 
 
-			fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.font, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
+			fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.textfont, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
 
 			return 'break'
 
@@ -8949,7 +8900,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		filetop.title('Select File')
 		self.to_be_closed.append(filetop)
 
-		fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.font, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
+		fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.textfont, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
 
 		# Editor remains responsive while doing wait_variable()
 		# but widgets have been disabled
@@ -9190,7 +9141,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			wanted_num_chars = want = time_wanted // step
 
 			# Check not over screen width 1
-			width_char = self.font.measure('A')
+			width_char = self.textfont.measure('A')
 			width_scr = self.text_widget.winfo_width()
 			num_chars = width_scr // width_char
 

@@ -13,8 +13,6 @@ class FontChooser:
 			on_fontchange	function, used in change_font()
 							and checkbutton_command(). It is executed after
 							change on any item in fontlist.
-						This is practically same as if there would be virtual
-						event <<FontChanged>> and on_fontchange binded to it.
 		'''
 
 		self.top = master
@@ -49,22 +47,24 @@ class FontChooser:
 		self.optionmenu = tkinter.OptionMenu(self.topframe, self.var, *self.option_menu_list,
 											command=self.optionmenu_command)
 
-		# Set font of dropdown button:
+		# Set font of dropdown button
 		self.optionmenu.config(font=('TkDefaultFont',10))
 
-		# Set font of dropdown items:
+		# Set font of dropdown items
 		self.menu = self.topframe.nametowidget(self.optionmenu.menuname)
 		self.menu.config(font=('TkDefaultFont',10))
 
-		# Optionmenu contains font-instances to be configured:
+		# Optionmenu contains font-instances to be configured
 		self.optionmenu.pack(side=tkinter.LEFT)
 
-
+		# This button toggles font-size of fontchooser widgets between big and small size
+		# It can be used if size is too small or too big
 		self.button = tkinter.Button(self.topframe, text='BIG', command=self.button_command)
 		self.button.pack()
 		self.scrollbar = tkinter.Scrollbar(self.topframe)
 
-		# Listbox contains font-choises to select from:
+
+		# Listbox contains font-choises to select from
 		self.lb = tkinter.Listbox(self.topframe, font=('TkDefaultFont', 10),
 								selectmode=tkinter.SINGLE, width=40,
 								yscrollcommand=self.scrollbar.set)
@@ -75,10 +75,11 @@ class FontChooser:
 							elementborderwidth=self.elementborderwidth, command=self.lb.yview)
 
 
-		# With spinbox we set font size:
+		# Spinbox sets font size
 		self.sb = tkinter.Spinbox(self.topframe, font=('TkDefaultFont', 10), from_=self.min,
 								to=self.max, increment=1, width=3, command=self.change_font)
 		self.sb.pack(pady=10, anchor='w')
+
 
 		# Make checkboxes for other font configurations
 		self.bold = tkinter.StringVar()
@@ -86,9 +87,18 @@ class FontChooser:
 									offvalue='normal', onvalue='bold', text='Bold',
 									variable=self.bold)
 		self.cb1.pack(pady=10, anchor='w')
-		self.cb1.config(command=lambda args=[self.bold, 'weight']:
-						self.checkbutton_command(args))
+		self.cb1.config(command=lambda args=[self.bold, 'weight']: self.checkbutton_command(args) )
 
+		#######
+
+		self.ital = tkinter.StringVar()
+		self.cb2 = tkinter.Checkbutton(self.topframe, font=('TkDefaultFont', 10),
+									offvalue='roman', onvalue='italic', text='Italic',
+									variable=self.ital)
+		self.cb2.pack(pady=10, anchor='w')
+		self.cb2.config(command=lambda args=[self.ital, 'slant']: self.checkbutton_command(args) )
+
+		# End of checkboxes #####
 
 
 		self.filter_mono = tkinter.IntVar()
@@ -106,6 +116,7 @@ class FontChooser:
 
 		# Check rest font configurations:
 		self.cb1.deselect()
+		self.cb2.deselect()
 		self.cb5.deselect()
 
 		if self.font['weight'] == 'bold': self.cb1.select()
@@ -135,22 +146,16 @@ class FontChooser:
 					self.lb,
 					self.sb,
 					self.cb1,
+					self.cb2,
 					self.cb5
 					]
 
-		if self.button['text'] == 'BIG':
-			for widget in widgetlist:
-				widget.config(font=('TkDefaultFont', 20))
+		text, size = 'BIG', 20
+		if self.button['text'] == 'BIG': text, size = 'SMALL', 10
 
-		if self.button['text'] == 'SMALL':
-			for widget in widgetlist:
-				widget.config(font=('TkDefaultFont', 10))
+		self.button['text'] = text
 
-		if self.button['text'] == 'BIG':
-			self.button['text'] = 'SMALL'
-		else:
-			self.button['text'] = 'BIG'
-
+		for widget in widgetlist: widget.config(font=('TkDefaultFont', size))
 
 
 	def update_fontlistbox(self, event=None):
@@ -214,8 +219,10 @@ class FontChooser:
 		self.sb.insert(0, fontsize)
 
 		self.cb1.deselect()
+		self.cb2.deselect()
 
 		if self.font['weight'] == 'bold': self.cb1.select()
+		if self.font['slant'] == 'italic': self.cb2.select()
 
 
 	def change_font(self, event=None):
@@ -258,12 +265,11 @@ class FontChooser:
 
 		font = tkinter.font.Font(family='TkDefaultFont', size=12)
 
-		# Test: filter out vertical fonts.
-		def test_font(f):
+		def font_is_vertical(f):
 			return f[0] == '@'
 
 
-		fontnames = [f for f in tkinter.font.families() if not test_font(f)]
+		fontnames = [f for f in tkinter.font.families() if not font_is_vertical(f)]
 
 		# Remove duplicates then sort
 		s = set(fontnames)
