@@ -311,24 +311,30 @@ class Tab:
 	
 
 
+need to conf spacing1
+
+
+check keyword_font fonts for linux windows
+
 
 conf should be dataclass
-
-
-changefont: check for total time for animation
-
-
-debug testlaunch no work
 
 
 note ln_update: if font is different at @0,0 like def with smaller font
 its bbox is different. --> sometimes wonky linenums
 
 
-def class async different color yellow? #######
+
+
 
 
 linescpacing increase?
+
+
+changefont: check for total time for animation, need check
+
+
+debug testlaunch no work
 
 
 delete move_by_words select_by_words
