@@ -295,6 +295,7 @@ class Editor(tkinter.Toplevel):
 	menufont = None
 	boldfont = None
 	keyword_font = None
+	linenum_font = None
 
 	mac_term = None
 	win_id = None
@@ -366,8 +367,10 @@ class Editor(tkinter.Toplevel):
 		if not cls.textfont:
 			cls.textfont = tkinter.font.Font(family='TkDefaulFont', size=12, name='textfont')
 			cls.menufont = tkinter.font.Font(family='TkDefaulFont', size=10, name='menufont')
-			cls.boldfont = cls.textfont.copy()
 			cls.keyword_font = tkinter.font.Font(family='TkDefaulFont', size=12, name='keyword_font')
+			cls.linenum_font = tkinter.font.Font(family='TkDefaulFont', size=12, name='linenum_font')
+
+			cls.boldfont = cls.textfont.copy()
 
 
 		if not cls.pkg_contents:
@@ -510,9 +513,10 @@ class Editor(tkinter.Toplevel):
 			self.menufont = self.__class__.menufont
 			self.boldfont = self.__class__.boldfont
 			self.keyword_font = self.__class__.keyword_font
+			self.linenum_font = self.__class__.linenum_font
 			self.keyword_font.config(family='Optima', slant='italic', size=13)
 			self.fonts = dict()
-			for font in [self.textfont, self.menufont, self.keyword_font]:
+			for font in [self.textfont, self.menufont, self.keyword_font, self.linenum_font]:
 				self.fonts[font.name] = font
 
 			# Can be changed with set_version_control_cmd()
@@ -764,6 +768,7 @@ class Editor(tkinter.Toplevel):
 
 				self.textfont.config(family=fontname, size=size0)
 				self.menufont.config(family=fontname, size=size1)
+				self.linenum_font.config(family=fontname, size=size0)
 				self.keyword_font.config(family=fontname_keyword, size=size0-3)
 				# keywords are set little smaller size than normal text
 
@@ -821,7 +826,7 @@ class Editor(tkinter.Toplevel):
 			self.btn_git.config(font=self.menufont)
 
 			# Hide selection in linenumbers
-			self.ln_widget.config(font=self.textfont, foreground=self.color_linenums[0], background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.color_linenums[0], inactiveselectbackground=self.bgcolor, state='disabled', padx=self.pad, pady=self.pad, width=self.margin)
+			self.ln_widget.config(font=self.linenum_font, foreground=self.color_linenums[0], background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.color_linenums[0], inactiveselectbackground=self.bgcolor, state='disabled', padx=self.pad, pady=self.pad, width=self.margin)
 
 
 
@@ -877,9 +882,9 @@ class Editor(tkinter.Toplevel):
 
 			# if self.y_extra_offset > 0, it needs attention in update_linenums
 			self.y_extra_offset = self.text_widget['highlightthickness'] + self.text_widget['bd'] + self.text_widget['pady']
-			# Needed in update_linenums() and sbset_override()
-			self.bbox_height = self.text_widget.bbox('@0,0')[3]
-			self.text_widget_height = self.scrollbar.winfo_height()
+			# These two are needed in update_linenums() and sbset_override(), and are set to correct values later in init
+			self.line_height = 1
+			self.text_widget_height = 1
 
 
 			# Register validation-functions, note the tuple-syntax:
@@ -924,6 +929,7 @@ class Editor(tkinter.Toplevel):
 			#################
 
 
+
 			self.line_can_update = False
 
 			self.boldfont.config(**self.textfont.config())
@@ -931,6 +937,10 @@ class Editor(tkinter.Toplevel):
 
 			self.init_syntags()
 
+
+			################
+			# Tabs Begin
+			##################
 
 			# Create tabs for help and error pages
 			newtab = Tab(self.create_textwidget())
@@ -1035,6 +1045,14 @@ class Editor(tkinter.Toplevel):
 				self.entry.insert(0, curtab.filepath)
 				self.entry.xview_moveto(1.0)
 
+			#################
+			# Tabs End
+			#############
+
+
+			# Now, get better values for these
+			self.line_height = self.text_widget.bbox('@0,0')[3]
+			self.text_widget_height = self.scrollbar.winfo_height()
 
 
 			############
@@ -1104,8 +1122,8 @@ class Editor(tkinter.Toplevel):
 ##
 ##			# Note also this
 ##			if self.flags and self.flags.get('launch_test'):
-##				print(self.bbox_height,  self.text_widget_height)
-##				# self.bbox_height == 25,  self.text_widget_height == 616
+##				print(self.line_height,  self.text_widget_height)
+##				# self.line_height == 25,  self.text_widget_height == 616
 ##				# --> self.text_widget is now 'packed' by (grid) geometry-manager
 
 		except Exception as init_err:
@@ -1845,9 +1863,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 
 		tab = self.tabs[self.tabindex]
-		# More info in update_linenums()
-		self.bbox_height = tab.text_widget.bbox('@0,0')[3]
-		self.text_widget_height = self.scrollbar.winfo_height()
 		if self.want_ln == 2: self.update_linenums()
 
 
@@ -2297,8 +2312,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		col= ''
 		ln = ''
 
-		# line-height is used as step, it depends on font
-		step = self.bbox_height
+		# line-height is used as step, it depends on many things, one is font
+		step = self.line_height
 
 		nl = '\n'
 		lineMask = '%s\n'
@@ -2371,7 +2386,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# (x-offset, y-offset, width, height) in pixels
 			# Want y-offset of first visible line, and reverse it
 
-
+			# note: if font is different at @0,0 like def with smaller font
+			# its bbox is different. --> sometimes wonky linenums
+			# --> should use dlineinfo?
 			y_offset = self.text_widget.bbox('@0,0')[1]
 
 			y_offset *= -1
@@ -2381,9 +2398,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				y_offset += self.y_extra_offset
 
 			tt.config(state='normal')
-			tt.delete('1.0', tkinter.END)
-			tt.insert('1.0', self.ln_string)
-			tt.tag_add('justright', '1.0', tkinter.END)
+			tt.delete('1.0', 'end')
+			tt.insert('1.0', ln)
+			tt.tag_add('justright', '1.0', 'end')
+
 
 			# 3: Then scroll ln_widget same amount to fix offset
 			# compared to text-widget:
@@ -2600,36 +2618,28 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def load_config(self, data):
 
-		textfont, menufont, keyword_font = self.fonts_exists(data)
-		self.set_config(data, textfont, menufont, keyword_font)
+		textfont, menufont, keyword_font, linenum_font = self.fonts_exists(data)
+		self.set_config(data, textfont, menufont, keyword_font, linenum_font)
 
 
 	def fonts_exists(self, data):
 
 		fontfamilies = [f for f in tkinter.font.families()]
 
-		####
+		def set_font_no_exist(font):
+			if font not in fontfamilies:
+				print(f'Font {font.upper()} does not exist.')
+				return False
+
 		textfont = data['fonts']['textfont']['family']
-
-		if textfont not in fontfamilies:
-			print(f'Font {textfont.upper()} does not exist.')
-			textfont = False
-
-		####
 		menufont = data['fonts']['menufont']['family']
-
-		if menufont not in fontfamilies:
-			print(f'Font {menufont.upper()} does not exist.')
-			menufont = False
-
-		####
 		keyword_font = data['fonts']['keyword_font']['family']
+		linenum_font = data['fonts']['linenum_font']['family']
 
-		if keyword_font not in fontfamilies:
-			print(f'Font {keyword_font.upper()} does not exist.')
-			keyword_font.upper = False
+		for font in (textfont, menufont, keyword_font, linenum_font):
+			font = set_font_no_exist(font)
 
-		return textfont, menufont, keyword_font
+		return textfont, menufont, keyword_font, keyword_font
 
 
 	def get_config(self):
@@ -2700,7 +2710,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return d
 
 
-	def set_config(self, data, textfont, menufont, keyword_font):
+	def set_config(self, data, textfont, menufont, keyword_font, linenum_font):
 
 		d = data
 		# Set Font Begin ##############################
@@ -2723,9 +2733,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			fontname = get_font(GOODFONTS2)
 			d['fonts']['keyword_font']['family'] = fontname
 
+		if not linenum_font:
+			fontname = textfont
+			d['fonts']['linenum_font']['family'] = fontname
+
 		self.textfont.config(**d['fonts']['textfont'])
 		self.menufont.config(**d['fonts']['menufont'])
 		self.keyword_font.config(**d['fonts']['keyword_font'])
+		self.linenum_font.config(**d['fonts']['linenum_font'])
 		self.scrollbar_width = d['scrollbar_width']
 		self.elementborderwidth	= d['elementborderwidth']
 		self.version_control_cmd = d['version_control_cmd']
@@ -3680,7 +3695,53 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tab.text_widget.tag_config(tagname, background=bg, foreground=fg)
 
 
-	def update_fonts(self):
+	def update_fonts(self, fontname=None):
+		''' fontname: String in self.fonts.keys
+		'''
+
+		# There are two cases, when one has to check lineheights of text_widget and ln_widget
+		# A: changing linenum_font
+		# B: changing textfont
+
+		# A: changing linenum_font --> no need to update anything related to text_widget
+		# just check lineheights
+		if fontname and fontname == 'linenum_font':
+
+			res = True
+			old_spacing = self.ln_widget.tag_cget('justright', 'spacing1')
+
+			# Want this:
+			# lineheight text_widget >= lineheight ln_widget
+			#########################################
+			# count diff lineheights
+			self.ln_string = ''
+			self.ln_widget.tag_config('justright', spacing1=0)
+			self.ln_widget.update_idletasks()
+			self.wait_for(200)
+			self.update_linenums()
+			a = self.text_widget.dlineinfo('@0,0')[3]
+			b = self.ln_widget.dlineinfo('@0,0')[3]
+			#print(a,b)
+			diff = a - b
+			spacing = old_spacing
+
+			# Linenumbers can't be higher than text
+			if diff < 0:
+				res =  False
+				self.bell()
+				print('Lineheight of linenumbers cant be bigger than lineheight of text-window.')
+				print('If want bigger linenumbers, increase textfont size first')
+			elif diff > 0:
+				spacing = diff
+
+			if not diff == 0:
+				self.ln_widget.tag_config('justright', spacing1=spacing)
+
+			# No further action is required so return
+			return res
+
+
+
 		# There could be a geometry change, so:
 		if self.geom: self.flag_check_geom_at_exit = True
 		self.boldfont.config(**self.textfont.config())
@@ -3703,7 +3764,51 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.ln_widget.config(padx=self.pad, pady=self.pad)
 		self.y_extra_offset = self.text_widget['highlightthickness'] + self.text_widget['bd'] + self.text_widget['pady']
-		#self.bbox_height = self.text_widget.bbox('@0,0')[3]
+		self.line_height = self.text_widget.dlineinfo('@0,0')[3]
+
+
+		# B: changing textfont --> there is need to update all things related to text_widget
+		# This was done above, now check lineheights
+
+		# Update ln_widget spacing after changing textfont, Begin
+		if fontname and fontname == 'textfont':
+			self.ln_string = ''
+			self.ln_widget.tag_config('justright', spacing1=0)
+			self.ln_widget.update_idletasks()
+			self.wait_for(200)
+			self.update_linenums()
+
+			a = self.text_widget.dlineinfo('@0,0')[3]
+			b = self.ln_widget.dlineinfo('@0,0')[3]
+			print(a,b)
+			diff = a - b
+			spacing = 0
+
+			size = self.linenum_font.cget('size')
+
+			# Linenumbers can't be higher than text
+			while diff < 0:
+				size -= 1
+				print(size)
+				self.linenum_font.config(size=size)
+				self.ln_string = ''
+				self.ln_widget.update_idletasks()
+				self.wait_for(200)
+				self.update_linenums()
+
+				a = self.text_widget.dlineinfo('@0,0')[3]
+				b = self.ln_widget.dlineinfo('@0,0')[3]
+				print(a,b)
+				diff = a - b
+
+
+			if diff > 0:
+				spacing = diff
+
+			self.ln_widget.tag_config('justright', spacing1=spacing)
+			# Update ln_widget spacing after changing textfont, End
+
+		return True
 
 
 	def font_choose(self, event=None):
@@ -3725,7 +3830,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
 				self.text_widget.bind( shortcut, self.font_choose)) )
 
-		changefont.FontChooser( fonttop, [self.textfont, self.menufont, self.keyword_font], big,
+		changefont.FontChooser( fonttop, [self.textfont, self.menufont, self.keyword_font, self.linenum_font], big,
 			sb_widths=(self.scrollbar_width, self.elementborderwidth),
 			on_fontchange=self.update_fonts )
 		self.text_widget.bind( shortcut, self.do_nothing)
@@ -4772,7 +4877,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# Taken from center_view:
-		num_lines = self.text_widget_height // self.bbox_height
+		num_lines = self.text_widget_height // self.line_height
 		# Lastline of visible window
 		lastline_screen = int(float(self.text_widget.index('@0,65535')))
 		firstline_screen = lastline_screen - num_lines
@@ -4866,7 +4971,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
-		num_lines = self.text_widget_height // self.bbox_height
+		num_lines = self.text_widget_height // self.line_height
 		num_scroll = num_lines // 3
 		pos = self.text_widget.index('insert')
 		#posint = int(float(self.text_widget.index('insert')))

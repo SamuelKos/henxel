@@ -13,12 +13,9 @@ editor.tag --> henxel.cache
 editor.cnf --> henxel.cnf
 
 
-
 self.fonts = dict, done
-
 self.font --> self.textfont, done
-
-
+self.linenum_font
 self.keyword_font
 GOODFONTS2
 Courier New
@@ -39,6 +36,7 @@ not when actually printed with print()
 renamed:
 self.contents --> self.text_widget
 change_indentation_width --> change_tabsize, help done
+self.bbox --> self.line_height
 
 
 change color of linenumbers, done
@@ -275,8 +273,6 @@ self.tabs = [ Tab(self.create_textwidget(), **items) for items in d['tabs'] ]
 
 
 
-
-
 from dataclasses import dataclass, field
 from typing import Any, List
 
@@ -322,8 +318,14 @@ conf should be dataclass
 changefont: check for total time for animation
 
 
-ln font also
-tag newline with boldfont to fix lineheight?
+debug testlaunch no work
+
+
+note ln_update: if font is different at @0,0 like def with smaller font
+its bbox is different. --> sometimes wonky linenums
+
+
+def class async different color yellow? #######
 
 
 linescpacing increase?

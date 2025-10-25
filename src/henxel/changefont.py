@@ -12,7 +12,8 @@ class FontChooser:
 
 			on_fontchange	function, used in change_font()
 							and checkbutton_command(). It is executed after
-							change on any item in fontlist.
+							change on any item in fontlist. It should return True or False depending on
+							how good the results were. If return False, old values are restored for that font
 		'''
 
 		self.top = master
@@ -59,14 +60,14 @@ class FontChooser:
 
 		# This button toggles font-size of fontchooser widgets between big and small size
 		# It can be used if size is too small or too big
-		self.button = tkinter.Button(self.topframe, text='BIG', command=self.button_command)
+		self.button = tkinter.Button(self.topframe, text='SMALL', command=self.button_command)
 		self.button.pack()
 		self.scrollbar = tkinter.Scrollbar(self.topframe)
 
 
 		# Listbox contains font-choises to select from
 		self.lb = tkinter.Listbox(self.topframe, font=('TkDefaultFont', 10),
-								selectmode=tkinter.SINGLE, width=40,
+								selectmode='single', width=40,
 								yscrollcommand=self.scrollbar.set)
 		self.lb.pack(pady=10, side='left')
 		self.scrollbar.pack(side='left', fill='y')
@@ -125,7 +126,8 @@ class FontChooser:
 
 
 		# Increase font-size
-		if big: self.button_command()
+		if big:
+			self.button_command()
 
 
 		self.fontnames = list()
@@ -176,7 +178,6 @@ class FontChooser:
 		self.top.selection_clear()
 		self.lb.delete(0, 'end')
 
-
 		for name in fonts:
 			self.lb.insert('end', name)
 
@@ -186,6 +187,9 @@ class FontChooser:
 			fontname = self.font.actual("family")
 			fontindex = fonts.index(fontname)
 			self.top.after(100, lambda args=[fontindex]: self.lb.select_set(args))
+			# Next line sets "index of listbox insertion cursor",
+			# cursor theme is for example: dotbox
+			self.top.after(100, lambda args=[fontindex]: self.lb.activate(args))
 			self.top.after(300, lambda args=[fontindex]: self.lb.see(args))
 
 		except ValueError:
@@ -200,11 +204,28 @@ class FontChooser:
 		var = args[0]
 		key = args[1]
 
-
+		old_value = self.font[key]
 		self.font[key] = var.get()
+		new_value = var.get()
 
 		if self.on_fontchange:
-			self.on_fontchange()
+			# Enable canceling unwanted changes
+			try:
+				if not self.on_fontchange(fontname=self.font.name):
+
+					# cb reset
+					cb = self.cb1
+					if var == self.ital:
+						cb = self.cb2
+					cb.deselect()
+
+					#self.wait_for(300)
+
+					if old_value == cb['onvalue']:
+						self.cb.select()
+
+			except Exception as e:
+				print(e)
 
 
 	def optionmenu_command(self, event=None):
@@ -232,8 +253,13 @@ class FontChooser:
 		l = None
 		l = self.lb.curselection()
 
+		old_family = self.font['family']
+		old_size = self.font['size']
+		flag_only_size = False
+
 
 		if l in [(), None, ""]:
+			flag_only_size = True
 			self.font.config(
 				size=self.sb.get()
 				)
@@ -248,7 +274,40 @@ class FontChooser:
 
 
 		if self.on_fontchange:
-			self.on_fontchange()
+
+			# Enable canceling unwanted changes
+			if not self.on_fontchange(fontname=self.font.name):
+
+				if flag_only_size:
+					self.font.config(size=old_size)
+					self.wait_for(200)
+
+					# sb reset
+					self.sb.delete(0, 'end')
+					self.sb.insert(0, old_size)
+
+				else:
+					self.font.config(
+						family=old_family,
+						size=old_size
+						)
+					self.wait_for(200)
+
+					# sb reset
+					self.sb.delete(0, 'end')
+					self.sb.insert(0, old_size)
+
+					# lb reset
+					self.update_fontlistbox()
+##					self.top.selection_clear()
+##
+##					# Show current fontname in listbox
+##					fontname = self.font.actual("family")
+##					fontindex = self.fontnames.index(fontname)
+##					self.top.after(100, lambda args=[fontindex]: self.lb.select_set(args))
+##					self.top.after(300, lambda args=[fontindex]: self.lb.see(args))
+
+					### change_font End ########
 
 
 	def wait_for(self, ms):
@@ -276,16 +335,39 @@ class FontChooser:
 		fontnames = [f for f in s]
 		fontnames.sort()
 
+		# flag_skip_animation related stuff is commemted for fixing later
+##		maxtime = 1000
+##		flag_skip_animation = False
+##		t1 = int(self.top.tk.eval('clock milliseconds'))
+##		i = 0
 
 		for name in fontnames:
+
+##			t2 = int(self.top.tk.eval('clock milliseconds'))
+##			diff = t2-t1
+##			if diff > maxtime:
+##				flag_skip_animation = True
+##				break
+
 			font.config(family=name)
 			font_is_fixed = font.metrics()['fixed']
 			self.fontnames.append(name)
 			self.lb.insert('end', name)
 			self.lb.see('end')
 			self.wait_for(4)
+##			i += 1
 
 			if font_is_fixed: self.fontnames_mono.append(name)
+
+
+##		if flag_skip_animation:
+##			#print('jou')
+##			for name in fontnames[i:]:
+##				font.config(family=name)
+##				font_is_fixed = font.metrics()['fixed']
+##				self.fontnames.append(name)
+##				self.lb.insert('end', name)
+##				if font_is_fixed: self.fontnames_mono.append(name)
 
 
 		# Show current fontname in listbox
