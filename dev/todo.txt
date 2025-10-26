@@ -311,10 +311,18 @@ class Tab:
 	
 
 
-need to conf spacing1
+
+check keyword_font fonts for linux ###
 
 
-check keyword_font fonts for linux windows
+win: no henxel.cache, done with ugly fix
+
+ln_widget width in windows too narrow, done
+
+win check esc_override from fullscreen to normal sometimes flash
+done
+
+
 
 
 conf should be dataclass

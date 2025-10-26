@@ -270,6 +270,9 @@ GOODFONTS2 = [
 'Trebuchet MS',
 'Menlo',
 'Courier New'
+'Sitka Text',
+'Sitka Text Semibold',
+'Comic Sans MS'
 ]
 
 
@@ -574,8 +577,10 @@ class Editor(tkinter.Toplevel):
 
 			# distance from left screen edge to text
 			# can be set with: set_left_margin(width_normal, width_fullscreen)
-			self.margin = 3
-			self.margin_fullscreen = 3
+			self.default_marginal = 3
+			if self.os_type != 'mac_os': self.default_marginal = 4
+			self.margin = self.default_marginal
+			self.margin_fullscreen = self.default_marginal
 
 			# Just in case, set to normal at end of init
 			self.state = 'init'
@@ -3613,12 +3618,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if type(width_normal) != int: return
 
-		if width_normal < 3: width_normal = 3
+		if width_normal < self.default_marginal: width_normal = self.default_marginal
 
 		self.margin, self.margin_fullscreen = width_normal, width_normal
 
 		if type(width_fullscreen) == int:
-			if width_fullscreen < 3: width_fullscreen = 3
+			if width_fullscreen < self.default_marginal: width_fullscreen = self.default_marginal
 			self.margin_fullscreen = width_fullscreen
 
 		if self.is_fullscreen(): kwargs={'width':self.margin_fullscreen}
@@ -6510,7 +6515,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 				return 'break'
 
-
 		delay = 300
 		want_maximize = 1
 		kwargs={'width':self.margin_fullscreen}
@@ -6521,22 +6525,29 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			kwargs={'width':self.margin}
 
 
-		if self.margin != self.margin_fullscreen:
-
-			self.wait_for(200)
-			self.apply_left_margin(**kwargs)
-			self.wait_for(300)
-
+		if self.margin != self.margin_fullscreen or (self.os_type == 'windows' and not want_maximize):
+			if self.margin != self.margin_fullscreen:
+				self.wait_for(200)
+				self.apply_left_margin(**kwargs)
+				self.wait_for(300)
 
 			# Prevent flashing 1&2/3
-			if want_maximize:
+			if want_maximize or self.os_type == 'windows':
 				self.orig_bg_color = self.cget('bg')
 				self.config(bg=self.bgcolor)
 
+			# windows stuff here should be checked what is really needed
+			if self.os_type == 'windows':
+				self.update_idletasks()
+				self.wait_for(100)
 			self.do_maximize(want_maximize)
+			if self.os_type == 'windows':
+				self.update_idletasks()
+				self.wait_for(100)
+
 
 			# Prevent flashing 3/3
-			if want_maximize:
+			if want_maximize or self.os_type == 'windows':
 				self.config(bg=self.orig_bg_color)
 
 			return 'break'
@@ -8559,12 +8570,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# --> Benefit is not as great but still about 1:3
 
 		p = pathlib.Path(self.env) / CACHEPATH
+		if self.os_type == 'windows':
+			p = p.__str__().replace('\\','/')
 
 		# build tcl-dict: {key1 value1 key2 value2}
 		# {myfile.py .!editor.!frame.!text2..}
 		filedict = '{'
 		for tab in tab_list:
 			fpath = tab.filepath.resolve()
+			if self.os_type == 'windows':
+						fpath = fpath.__str__().replace('\\','/')
 			tk_wid = tab.tcl_name_of_contents
 			filedict += f'{fpath} {tk_wid} '
 		# remove trailing space just in case
@@ -8603,6 +8618,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		have_py_files = False
 		p = pathlib.Path(self.env) / CACHEPATH
+		# Want: WYSIWYG-string to pass to eval, but '\' causes problems in 2025
+		# --> Pretty ugly fix for tkinter evals escapes
+		if self.os_type == 'windows':
+			p = p.__str__().replace('\\','/')
 
 		# save tags at exit
 		###############
@@ -8615,6 +8634,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					have_py_files = True
 					tab.chk_sum = len(tab.contents)
 					fpath = tab.filepath.resolve()
+					if self.os_type == 'windows':
+						fpath = fpath.__str__().replace('\\','/')
 					tk_wid = tab.tcl_name_of_contents
 					filedict += f'{fpath} {tk_wid} '
 		# remove trailing space just in case
