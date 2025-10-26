@@ -8570,18 +8570,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# --> Benefit is not as great but still about 1:3
 
 		p = pathlib.Path(self.env) / CACHEPATH
-		if self.os_type == 'windows':
-			p = p.__str__().replace('\\','/')
+
+		# In Tcl, need to enclose strings with possible '\'s inside curlies {}
+		# set cache_path {%s} % string_with_possible_\
 
 		# build tcl-dict: {key1 value1 key2 value2}
 		# {myfile.py .!editor.!frame.!text2..}
 		filedict = '{'
 		for tab in tab_list:
 			fpath = tab.filepath.resolve()
-			if self.os_type == 'windows':
-						fpath = fpath.__str__().replace('\\','/')
 			tk_wid = tab.tcl_name_of_contents
-			filedict += f'{fpath} {tk_wid} '
+			filedict += '{%s} %s ' % (fpath, tk_wid)
 		# remove trailing space just in case
 		filedict = filedict[:-1]
 		filedict += '}'
@@ -8589,7 +8588,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		try:
 			self.tk.eval('''
-			set cache_path %s
+			set cache_path {%s}
 			set ch [open $cache_path r]
 			set taginfo [read $ch]
 			close $ch
@@ -8618,10 +8617,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		have_py_files = False
 		p = pathlib.Path(self.env) / CACHEPATH
-		# Want: WYSIWYG-string to pass to eval, but '\' causes problems in 2025
-		# --> Pretty ugly fix for tkinter evals escapes
-		if self.os_type == 'windows':
-			p = p.__str__().replace('\\','/')
 
 		# save tags at exit
 		###############
@@ -8634,10 +8629,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					have_py_files = True
 					tab.chk_sum = len(tab.contents)
 					fpath = tab.filepath.resolve()
-					if self.os_type == 'windows':
-						fpath = fpath.__str__().replace('\\','/')
 					tk_wid = tab.tcl_name_of_contents
-					filedict += f'{fpath} {tk_wid} '
+					filedict += '{%s} %s ' % (fpath, tk_wid)
 		# remove trailing space just in case
 		filedict = filedict[:-1]
 		filedict += '}'
@@ -8647,7 +8640,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		tags = ' '.join(self.tagnames)
 		try:
 			self.tk.eval('''
-			set cache_path %s
+			set cache_path {%s}
 			set taginfo {}
 			set filedict %s
 			foreach fpath [dict keys $filedict] {
