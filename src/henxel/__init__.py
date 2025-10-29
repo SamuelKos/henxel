@@ -265,13 +265,15 @@ GOODFONTS = [
 # Want list for keywords, used with italic-setting
 GOODFONTS2 = [
 'Optima',
+'DejaVu Serif',
+'Sitka Text',
+'Sitka Text Semibold',
 'Avenir',
 'Rockwell',
 'Trebuchet MS',
 'Menlo',
 'Courier New'
-'Sitka Text',
-'Sitka Text Semibold',
+'DejaVu Sans',
 'Comic Sans MS'
 ]
 
@@ -577,10 +579,10 @@ class Editor(tkinter.Toplevel):
 
 			# distance from left screen edge to text
 			# can be set with: set_left_margin(width_normal, width_fullscreen)
-			self.default_marginal = 3
-			if self.os_type != 'mac_os': self.default_marginal = 4
-			self.margin = self.default_marginal
-			self.margin_fullscreen = self.default_marginal
+			self.default_margin = 3
+			if self.os_type != 'mac_os': self.default_margin = 4
+			self.margin = self.default_margin
+			self.margin_fullscreen = self.default_margin
 
 			# Just in case, set to normal at end of init
 			self.state = 'init'
@@ -902,6 +904,10 @@ class Editor(tkinter.Toplevel):
 			self.line_height = 1
 			self.text_widget_height = 1
 
+			# If there is no ln_widget, btn_git shrinks to its own width
+			# which can be less than 5
+			if self.want_ln == 0:
+				self.btn_git.config(width=5)
 
 			# Register validation-functions, note the tuple-syntax:
 			self.validate_gotoline = (self.register(self.do_validate_gotoline), '%i', '%S', '%P')
@@ -2298,6 +2304,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def toggle_ln(self, event=None):
 
+		self.orig_bg_color = self.cget('bg')
+
 		self.wait_for(100)
 
 		# 2 1 0
@@ -2311,10 +2319,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.ln_widget.config(state='disabled')
 
 		elif self.want_ln == 0:
+			self.wait_for(100)
+			# This line prevents some flashing
+			self.btn_git.config(width=5)
+			self.update_idletasks()
+
 			self.ln_widget.grid_remove()
 			self.frame.grid_configure(row=1, column=0, columnspan=4,
 										sticky='nswe')
 		else:
+			self.btn_git.config(width=3)
 			self.ln_widget.grid_configure(row=1, column = 0, sticky='nsew')
 			self.frame.grid_configure(row=1, column=1, columnspan=3,
 										sticky='nswe')
@@ -3618,12 +3632,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if type(width_normal) != int: return
 
-		if width_normal < self.default_marginal: width_normal = self.default_marginal
+		if width_normal < self.default_margin: width_normal = self.default_margin
 
 		self.margin, self.margin_fullscreen = width_normal, width_normal
 
 		if type(width_fullscreen) == int:
-			if width_fullscreen < self.default_marginal: width_fullscreen = self.default_marginal
+			if width_fullscreen < self.default_margin: width_fullscreen = self.default_margin
 			self.margin_fullscreen = width_fullscreen
 
 		if self.is_fullscreen(): kwargs={'width':self.margin_fullscreen}
@@ -4360,11 +4374,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		i = int(tagname.split("-")[1])
 		filepath, errline = self.errlines[i]
 
-		filepath = pathlib.Path(filepath)
+		# stdin: runned tab without filename
+		if filepath != "<stdin>": filepath = pathlib.Path(filepath)
 		openfiles = [tab.filepath for tab in self.tabs]
 
 		# Clicked activetab
-		if filepath == self.tabs[self.oldindex].filepath:
+		if filepath == self.tabs[self.oldindex].filepath or filepath == "<stdin>":
 			new_index = self.oldindex
 
 		# Clicked file that is open, switch activetab
@@ -4456,7 +4471,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''	Run file currently being edited.
 		'''
 		curtab = self.tabs[self.tabindex]
-		if (self.state != 'normal') or (curtab.type != 'normal'):
+		if (self.state != 'normal'):
 			self.bell()
 			return 'break'
 
@@ -4464,8 +4479,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
+		kwargs = {'stderr': subprocess.PIPE}
+		code = curtab.filepath
+
+		# Enable running code without filename
+		if (curtab.type != 'normal'):
+			tmp = self.text_widget.get('1.0', 'end')
+			tmp = bytes(tmp, 'utf-8')
+			kwargs['input'] = tmp
+			code = '-'
+
 		# https://docs.python.org/3/library/subprocess.html
-		res = subprocess.run(['python', curtab.filepath], stderr=subprocess.PIPE).stderr
+		res = subprocess.run(['python', code], **kwargs).stderr
 
 		err = res.decode()
 
@@ -4531,8 +4556,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				data = line.split(',')[:2]
 				linenum = data[1][6:]
 				path = data[0][8:-1]
-				pathlen = len(path) + 2
-				filepath = pathlib.Path(path)
+
+				# Running tab without filename
+				if self.tabs[self.oldindex].type != 'normal':
+					if "<stdin>" in path:
+						filepath = "<stdin>"
+						path = "<stdin>"
+						pathlen = len(path) + 2
+
+				# Normal case
+				else:
+					path = data[0][8:-1]
+					pathlen = len(path) + 2
+					filepath = pathlib.Path(path)
+
 
 				self.errlines.append((filepath, linenum))
 

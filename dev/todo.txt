@@ -12,6 +12,12 @@ done:
 editor.tag --> henxel.cache
 editor.cnf --> henxel.cnf
 
+can now run tab without filename
+
+
+DejaVu Serif
+DejaVu Sans
+
 
 self.fonts = dict, done
 self.font --> self.textfont, done
@@ -315,12 +321,12 @@ class Tab:
 check keyword_font fonts for linux ###
 
 
-win: no henxel.cache, done with ugly fix
-
 ln_widget width in windows too narrow, done
 
-win check esc_override from fullscreen to normal sometimes flash
-done
+
+
+newtab seems to have syntax on by default 
+
 
 
 
@@ -330,16 +336,13 @@ conf should be dataclass
 
 note ln_update: if font is different at @0,0 like def with smaller font
 its bbox is different. --> sometimes wonky linenums
-
-
-
-
+ln_update should be done with tcl?
 
 
 linescpacing increase?
 
 
-changefont: check for total time for animation, need check
+changefont: max total time for animation, needs check
 
 
 debug testlaunch no work
