@@ -37,7 +37,8 @@ fix for printing issue with macos12, mac_print
 partly done,
 not when error msg comes from raising, catched or not
 not when actually printed with print()
-
+e.tk.eval('chan configure stdout')
+'-blocking 1 -buffering line -buffersize 4096 -encoding utf-8 -eofchar {} -translation crlf -mode 9600,n,8,1 -xchar {\x11 \x13}'
 
 renamed:
 self.contents --> self.text_widget

@@ -4479,20 +4479,39 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		kwargs = {'stderr': subprocess.PIPE}
-		code = curtab.filepath
+
+		source = curtab.filepath
+
+		d = dict(stderr=subprocess.PIPE)
+		if self.os_type == 'mac_os': d = dict(capture_output=True)
 
 		# Enable running code without filename
 		if (curtab.type != 'normal'):
 			tmp = self.text_widget.get('1.0', 'end')
 			tmp = bytes(tmp, 'utf-8')
-			kwargs['input'] = tmp
-			code = '-'
+			d['input'] = tmp
+			source = '-'
 
-		# https://docs.python.org/3/library/subprocess.html
-		res = subprocess.run(['python', code], **kwargs).stderr
 
-		err = res.decode()
+		err = ''
+
+		if self.os_type == 'mac_os':
+			has_err = False
+			p = subprocess.run(['python', source], **d)
+
+			try: p.check_returncode()
+
+			except subprocess.CalledProcessError:
+				has_err = True
+
+			out = p.stdout.decode()
+			if len(out) > 0: print(out)
+			if has_err: err = p.stderr.decode()
+
+		else:
+			# https://docs.python.org/3/library/subprocess.html
+			err = subprocess.run(['python', code], **d).stderr.decode()
+
 
 		self.err = False
 		if len(err) != 0:
