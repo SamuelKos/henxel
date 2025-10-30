@@ -1,4 +1,4 @@
-############ Stucture briefing Begin
+############# Stucture briefing Begin
 
 # Stucture briefing
 # TODO
@@ -631,7 +631,8 @@ class Editor(tkinter.Toplevel):
 											tabstyle='wordprocessor', highlightthickness=0,
 											relief='flat')
 			#############
-			self.frame = tkinter.Frame(self, bd=0, padx=0, pady=0, highlightthickness=0)
+			self.text_frame = tkinter.Frame(self, bd=0, padx=0, pady=0, highlightthickness=0)
+
 
 			self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL,
 											highlightthickness=0, bd=0, takefocus=0)
@@ -809,7 +810,7 @@ class Editor(tkinter.Toplevel):
 
 
 			#################
-			self.frame.config(bg=self.bgcolor)
+			self.text_frame.config(bg=self.bgcolor)
 
 			# Configure Text-widgets of tabs and find active tab
 			self.config_tabs()
@@ -822,7 +823,7 @@ class Editor(tkinter.Toplevel):
 
 
 
-			msg_defaults = dict(parent=self.frame, type='okcancel')
+			msg_defaults = dict(parent=self.text_frame, type='okcancel')
 			self.msgbox = tkinter.messagebox.Message(**msg_defaults)
 
 			# Needed in leave() taglink in: Run file Related
@@ -935,16 +936,24 @@ class Editor(tkinter.Toplevel):
 
 
 			# Second and final row, also in root:
-			# ln_widget / frame(text_widget) / scrollbar
-			self.ln_widget.grid_configure(row=1, column = 0, sticky='nsew')
+			# ln_widget / text_frame(text_widget) / scrollbar
+			if self.want_ln > 0:
+				self.ln_widget.grid_configure(row=1, column = 0, sticky='nsew')
 
-			self.frame.rowconfigure(0, weight=1)
-			self.frame.columnconfigure(0, weight=1)
 
-			# text_widget is only one in frame
+			self.text_frame.rowconfigure(0, weight=1)
+			self.text_frame.columnconfigure(0, weight=1)
+
+
+			# text_widget is only one in text_frame
 			self.text_widget.grid_configure(row=0, column=0, sticky='nsew')
 
-			self.frame.grid_configure(row=1, column=1, columnspan=3,
+
+			if self.want_ln == 0:
+				self.text_frame.grid_configure(row=1, column=0, columnspan=4,
+										sticky='nswe')
+			else:
+				self.text_frame.grid_configure(row=1, column=1, columnspan=3,
 										sticky='nswe')
 
 			self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
@@ -1620,7 +1629,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		del self.scrollbar
 		del self.expander
 		del self.popup
-		del self.frame
+		del self.text_frame
 		del self.msgbox
 
 
@@ -2319,18 +2328,21 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.ln_widget.config(state='disabled')
 
 		elif self.want_ln == 0:
+			self.config(bg=self.bgcolor)
 			self.wait_for(100)
-			# This line prevents some flashing
 			self.btn_git.config(width=5)
 			self.update_idletasks()
 
 			self.ln_widget.grid_remove()
-			self.frame.grid_configure(row=1, column=0, columnspan=4,
+			self.text_frame.grid_configure(row=1, column=0, columnspan=4,
 										sticky='nswe')
+			self.wait_for(200)
+			self.config(bg=self.orig_bg_color)
+
 		else:
 			self.btn_git.config(width=3)
 			self.ln_widget.grid_configure(row=1, column = 0, sticky='nsew')
-			self.frame.grid_configure(row=1, column=1, columnspan=3,
+			self.text_frame.grid_configure(row=1, column=1, columnspan=3,
 										sticky='nswe')
 			self.ln_string = ''
 			self.update_linenums()
@@ -2846,7 +2858,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def create_textwidget(self):
-		return tkinter.Text(self.frame, **self.text_widget_basic_config)
+		return tkinter.Text(self.text_frame, **self.text_widget_basic_config)
 
 
 	def set_textwidget(self, tab):
@@ -3720,7 +3732,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.update_syntags_colors(tab)
 			self.set_text_widget_colors(tab)
 
-		self.frame.config(bg=self.bgcolor)
+		self.text_frame.config(bg=self.bgcolor)
 		self.set_ln_widget_colors()
 
 		return 'break'
@@ -4025,7 +4037,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.update_syntags_colors(tab)
 					self.set_text_widget_colors(tab)
 
-				self.frame.config(bg=self.bgcolor)
+				self.text_frame.config(bg=self.bgcolor)
 				self.set_ln_widget_colors()
 
 			# if closed editor and still pressing ok in colorchooser:
@@ -4134,7 +4146,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.update_syntags_colors(tab)
 					self.set_text_widget_colors(tab)
 
-				self.frame.config(bg=self.bgcolor)
+				self.text_frame.config(bg=self.bgcolor)
 				self.set_ln_widget_colors()
 
 
@@ -4495,6 +4507,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		err = ''
 
+		# fix for macos12 printing issue
 		if self.os_type == 'mac_os':
 			has_err = False
 			p = subprocess.run(['python', source], **d)
@@ -4510,7 +4523,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		else:
 			# https://docs.python.org/3/library/subprocess.html
-			err = subprocess.run(['python', code], **d).stderr.decode()
+			err = subprocess.run(['python', source], **d).stderr.decode()
 
 
 		self.err = False
@@ -8062,10 +8075,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Gotoline etc Begin
 
 	def stop_goto_def(self, event=None):
+
 		self.bind("<Escape>", self.esc_override)
 		self.text_widget.unbind( "<Double-Button-1>", funcid=self.bid )
 		self.text_widget.config(state='normal')
 		self.state = 'normal'
+
 		# Space is on hold for extra 200ms, released below
 		self.text_widget.unbind( "<space>", funcid=self.bid4 )
 		bid_tmp = self.text_widget.bind( "<space>", self.do_nothing_without_bell)

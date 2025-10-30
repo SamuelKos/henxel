@@ -2,11 +2,11 @@
 
 import aa
 import time
-time.sleep(2)
+#time.sleep(2)
 print('before')
-time.sleep(2)
+time.sleep(4)
 print('before2')
 time.sleep(2)
-aa.f1()
+#aa.f1()
 
 print('after')

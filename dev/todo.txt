@@ -52,37 +52,15 @@ change color of linenumbers, done
 walk_tabs added delay, done
 
 
-########################
-Tab is now dataclass 
+mark cursor place when searching etc
+animate cursor disabled
 
-in config related:
-def create_textwidget(self):
-	return tkinter.Text(self.frame, **self.text_widget_basic_config)
 
-in set_config:
-self.tabs = [ Tab(self.create_textwidget(), **items) for items in d['tabs'] ]
+frame whole line
 
-####
-from dataclasses import dataclass, field
-from typing import Any, List
 
-# must know all attributes
 
-@dataclass
-class Tab:
-	text_widget: tkinter.Text
 
-	filepath: Any = False
-
-	chk_sum: int = 0
-	oldlinenum: int = 0
-
-	bookmarks: list = field(default_factory=list)
-	bookmarks_stash: list = field(default_factory=list)
-
-	tcl_name_of_contents: str = ''
-	etc..
-#############################
 
 
 
