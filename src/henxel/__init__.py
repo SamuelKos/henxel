@@ -1,4 +1,4 @@
-############# Stucture briefing Begin
+############ Stucture briefing Begin
 
 # Stucture briefing
 # TODO
@@ -474,7 +474,7 @@ class Editor(tkinter.Toplevel):
 			# Prevent flashing 1/3
 			# Get original background, which is returned at end of init
 			# after editor gets mapped
-			self.orig_bg_color = self.cget('bg')
+##			self.orig_bg_color = self.cget('bg')
 			# This would set background to transparent: self.config(bg='')
 			# but setting it to: self.bgcolor later works better
 
@@ -579,10 +579,9 @@ class Editor(tkinter.Toplevel):
 
 			# distance from left screen edge to text
 			# can be set with: set_left_margin(width_normal, width_fullscreen)
-			self.default_margin = 3
-			if self.os_type != 'mac_os': self.default_margin = 4
-			self.margin = self.default_margin
-			self.margin_fullscreen = self.default_margin
+			self.default_margin = 5
+##			if self.os_type != 'mac_os': self.default_margin = 4
+			self.margin, self.margin_fullscreen = 5, 5
 
 			# Just in case, set to normal at end of init
 			self.state = 'init'
@@ -614,7 +613,7 @@ class Editor(tkinter.Toplevel):
 			####################################
 			# width of btn_git must be 3 to make tight fit for
 			# 4 digit linenumbers in ln_widget
-			self.btn_git = tkinter.Button(self, width=3, takefocus=0, relief='flat',
+			self.btn_git = tkinter.Button(self, width=4, takefocus=0, relief='flat',
 										highlightthickness=0, padx=0, state='disabled')
 			self.entry = tkinter.Entry(self, highlightthickness=0, takefocus=0)
 			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
@@ -624,7 +623,6 @@ class Editor(tkinter.Toplevel):
 			self.btn_save = tkinter.Button(self, takefocus=0, text='Save',
 										highlightthickness=0, command=self.save)
 
-			self.ln_widget = tkinter.Text(self, width=self.margin, highlightthickness=0, relief='flat')
 
 
 			self.text_widget_basic_config = dict(undo=True, maxundo=-1, autoseparators=True,
@@ -632,6 +630,9 @@ class Editor(tkinter.Toplevel):
 											relief='flat')
 			#############
 			self.text_frame = tkinter.Frame(self, bd=0, padx=0, pady=0, highlightthickness=0)
+
+			self.ln_widget = tkinter.Text(self.text_frame, width=self.margin, highlightthickness=0, relief='flat')
+
 
 
 			self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL,
@@ -905,11 +906,6 @@ class Editor(tkinter.Toplevel):
 			self.line_height = 1
 			self.text_widget_height = 1
 
-			# If there is no ln_widget, btn_git shrinks to its own width
-			# which can be less than 5
-			if self.want_ln == 0:
-				self.btn_git.config(width=5)
-
 			# Register validation-functions, note the tuple-syntax:
 			self.validate_gotoline = (self.register(self.do_validate_gotoline), '%i', '%S', '%P')
 			self.validate_search = (self.register(self.do_validate_search), '%i', '%s', '%S')
@@ -935,26 +931,23 @@ class Editor(tkinter.Toplevel):
 										sticky='nsew')
 
 
-			# Second and final row, also in root:
-			# ln_widget / text_frame(text_widget) / scrollbar
-			if self.want_ln > 0:
-				self.ln_widget.grid_configure(row=1, column = 0, sticky='nsew')
-
 
 			self.text_frame.rowconfigure(0, weight=1)
-			self.text_frame.columnconfigure(0, weight=1)
 
-
-			# text_widget is only one in text_frame
-			self.text_widget.grid_configure(row=0, column=0, sticky='nsew')
-
-
-			if self.want_ln == 0:
-				self.text_frame.grid_configure(row=1, column=0, columnspan=4,
+			# Second and final row is in text_frame, excluding scrollbar:
+			# text_frame(ln_widget) / text_frame(text_widget) / scrollbar
+			self.text_frame.grid_configure(row=1, column=0, columnspan=4,
 										sticky='nswe')
+
+			if self.want_ln > 0:
+				self.text_frame.columnconfigure(1, weight=1)
+				self.ln_widget.grid_configure(row=0, column = 0, sticky='nsew')
+				self.text_widget.grid_configure(row=0, column=1, columnspan=3, sticky='nsew')
+
 			else:
-				self.text_frame.grid_configure(row=1, column=1, columnspan=3,
-										sticky='nswe')
+				self.text_frame.columnconfigure(0, weight=1)
+				self.text_widget.grid_configure(row=0, column=0, columnspan=4, sticky='nsew')
+
 
 			self.scrollbar.grid_configure(row=1,column=4, sticky='nse')
 			#################
@@ -1096,7 +1089,7 @@ class Editor(tkinter.Toplevel):
 			curtab.text_widget.bind( "<Control-O>", self.test_bind)
 
 			# Prevent flashing 2/3
-			self.config(bg=self.bgcolor)
+##			self.config(bg=self.bgcolor)
 
 			############
 			# Get window positioning with geometry call to work below
@@ -1128,10 +1121,10 @@ class Editor(tkinter.Toplevel):
 			else:
 				self.text_widget.focus_set()
 
-			# Prevent flashing 3/3
-			while not self.text_widget.winfo_viewable():
-				self.wait_for(200)
-			self.config(bg=self.orig_bg_color)
+##			# Prevent flashing 3/3
+##			while not self.text_widget.winfo_viewable():
+##				self.wait_for(200)
+##			self.config(bg=self.orig_bg_color)
 
 
 			# no conf, or geometry reset to 'default'
@@ -2313,8 +2306,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def toggle_ln(self, event=None):
 
-		self.orig_bg_color = self.cget('bg')
-
 		self.wait_for(100)
 
 		# 2 1 0
@@ -2328,21 +2319,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.ln_widget.config(state='disabled')
 
 		elif self.want_ln == 0:
-			self.config(bg=self.bgcolor)
 			self.wait_for(100)
-			self.btn_git.config(width=5)
-			self.update_idletasks()
 
 			self.ln_widget.grid_remove()
-			self.text_frame.grid_configure(row=1, column=0, columnspan=4,
-										sticky='nswe')
-			self.wait_for(200)
-			self.config(bg=self.orig_bg_color)
-
+			self.text_frame.columnconfigure(1, weight=0)
+			self.text_frame.columnconfigure(0, weight=1)
+			self.text_widget.grid_configure(row=0, column=0, columnspan=4,
+									sticky='nsew')
 		else:
-			self.btn_git.config(width=3)
-			self.ln_widget.grid_configure(row=1, column = 0, sticky='nsew')
-			self.text_frame.grid_configure(row=1, column=1, columnspan=3,
+			self.text_frame.columnconfigure(0, weight=0)
+			self.text_frame.columnconfigure(1, weight=1)
+			self.ln_widget.grid_configure(row=0, column=0, sticky='nsew')
+			self.text_widget.grid_configure(row=0, column=1, columnspan=3,
 										sticky='nswe')
 			self.ln_string = ''
 			self.update_linenums()
@@ -2587,7 +2575,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.scrollbar.config(command=self.text_widget.yview)
 		self.scrollbar.set(*self.text_widget.yview())
 		if self.want_ln == 2: self.update_linenums()
-		self.text_widget.grid_configure(row=0, column=0, sticky='nswe')
+
+		if self.want_ln > 0:
+			self.text_widget.grid_configure(row=0, column=1, columnspan=3, sticky='nsew')
+		else:
+			self.text_widget.grid_configure(row=0, column=0, columnspan=4, sticky='nsew')
+
+
 		self.text_widget.focus_set()
 
 		# This is needed for some reason to prevent flashing

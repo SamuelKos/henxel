@@ -56,7 +56,7 @@ mark cursor place when searching etc
 animate cursor disabled
 
 
-frame whole line
+frame whole line, done
 
 
 
