@@ -49,17 +49,19 @@ self.bbox --> self.line_height
 change color of linenumbers, done
 
 
-walk_tabs added delay, done
-
-
-mark cursor place when searching etc
-animate cursor disabled
-
-
-frame whole line, done
+mark cursor place when searching etc, cursor disabled:
+indicate_mousepos()
+done
 
 
 
+
+
+popup --> normal menu?
+run after copy paste
+
+
+iterm2
 
 
 
