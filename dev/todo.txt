@@ -8,6 +8,14 @@ git diff -w == no space diffs
 Below this: done ################################################
 
 
+export conf without filepaths, done
+
+
+set_left_margin
+set_left_margin_gap
+done
+
+
 done:
 editor.tag --> henxel.cache
 editor.cnf --> henxel.cnf
@@ -15,30 +23,11 @@ editor.cnf --> henxel.cnf
 can now run tab without filename
 
 
-DejaVu Serif
-DejaVu Sans
-
-
-self.fonts = dict, done
-self.font --> self.textfont, done
-self.linenum_font
-self.keyword_font
-GOODFONTS2
-Courier New
-Optima
-Rockwell
-Trebuchet MS
-Menlo
-Avenir
-
-
-
 fix for printing issue with macos12, mac_print
 partly done,
 not when error msg comes from raising, catched or not
 not when actually printed with print()
-e.tk.eval('chan configure stdout')
-'-blocking 1 -buffering line -buffersize 4096 -encoding utf-8 -eofchar {} -translation crlf -mode 9600,n,8,1 -xchar {\x11 \x13}'
+
 
 renamed:
 self.contents --> self.text_widget
@@ -52,16 +41,7 @@ change color of linenumbers, done
 mark cursor place when searching etc, cursor disabled:
 indicate_mousepos()
 done
-
-
-
-
-
-popup --> normal menu?
-run after copy paste
-
-
-iterm2
+needs check
 
 
 
@@ -247,80 +227,27 @@ Below this: not done:
 ###############################################
 
 
+e.tk.eval('chan configure stdout')
+'-blocking 1 -buffering line -buffersize 4096 -encoding utf-8 -eofchar {} -translation crlf -mode 9600,n,8,1 -xchar {\x11 \x13}'
 
 
-Tab is now dataclass 
-################################################
-config related:
-def create_textwidget(self):
-	return tkinter.Text(self.frame, **self.text_widget_basic_config)
-
-set_config:
-self.tabs = [ Tab(self.create_textwidget(), **items) for items in d['tabs'] ]
+popup --> normal menu to btn_git?
 
 
 
-from dataclasses import dataclass, field
-from typing import Any, List
-
-# must know all attributes
-
-@dataclass
-class Tab:
-	text_widget: tkinter.Text
-
-	# filepath should be pathlib.Path
-	# But it is used in condition checking like: if filepath
-	# To Fix: replace if filepath with: if tab.type == 'normal'
-	filepath: Any = False
-
-	chk_sum: int = 0
-	oldlinenum: int = 0
-
-	bookmarks: list = field(default_factory=list)
-	bookmarks_stash: list = field(default_factory=list)
-
-	tcl_name_of_contents: str = ''
-	position: str = '1.0'
-	type: str = 'newtab'
-	contents: str = ''
-	oldcontents: str = ''
-	anchorname: str = ''
-	oldline: str = ''
-	bid_space: str = ''
-
-	active: bool = False
-	inspected: bool = False
-	par_err: bool = False
-	check_scope: bool = False
-	
-################################################	
-	
-
-
-
-check keyword_font fonts for linux ###
-
-
-ln_widget width in windows too narrow, done
+indicate ######################
+idx_linestart/end
+if line isempty
+etc
 
 
 
 newtab seems to have syntax on by default 
 
 
-
-
-
-conf should be dataclass
-
-
 note ln_update: if font is different at @0,0 like def with smaller font
 its bbox is different. --> sometimes wonky linenums
 ln_update should be done with tcl?
-
-
-linescpacing increase?
 
 
 changefont: max total time for animation, needs check
@@ -329,13 +256,15 @@ changefont: max total time for animation, needs check
 debug testlaunch no work
 
 
-delete move_by_words select_by_words
+conf should be dataclass?
+linescpacing increase?
+test reduce in update_tokens?
+
+
+delete move_by_words select_by_words?
 instead, at first bind: animate char by char until:
 1: second bind
 or 2: idx_linestart/end
-
-
-test reduce?
 
 
 #######
@@ -348,37 +277,6 @@ if self.os_type == 'mac_os':
 	
 also macos, font-scaling in future?
 ######
-
-
-
-###############################################################
-margins begin
-
-column configure before this?
-width >= 3
-is conf, also fullscreen
-
-
-self.margin = 3
-self.margin_fullscreen = 3
-== total width of left margin			
-
-
-not done begin:
-distance from linenumbers to text: ########################
-add spaces to numbers?
-linemask?
-not use when want_ln == 0
-
-
-
-scroll horizontally?
-no work:
-e.tk.eval('.!editor.!frame.!text2 xview scroll -10 units')
-e.tk.eval('.!editor.!frame.!text2 xview scroll -1 pages')
-
-margins end
-###############################################################
 
 
 setting line wrapping on off?
@@ -397,10 +295,6 @@ move_many_lines check win11, done?
 
 
 count and keep cache of all py files, even if closed?
-better cache file path, done
-
-
-run file even without filename
 
 
 check why:
@@ -408,10 +302,6 @@ home/end/gotolineend does see() or ensure_idx()
 
 
 check breakpoint usage
-
-
-paste inside multiline string no work
-check paste token update
 
 
 check use of 'defline'-tag, self.deflines in
@@ -427,14 +317,22 @@ currently found one error:
 if self.can_do_syntax():
 			self.line_can_update = True
 ###
-
-
-
-
+###
 copy/paste two lines sometimes no work
 check copy paste overrides
 check with defaults?
 copy whole lines
+
+cursor is in multiline string does not always work?
+because strings tag are not updated correctly
+check insert triples, then write in them couple lines
+check_line print scope
+maybe try:
+	return override if triple in oldline: check scope
+
+paste inside multiline string no work
+check paste token update
+###
 
 
 split __init__.py to smaller files/modules
@@ -444,13 +342,6 @@ split __init__.py to smaller files/modules
 Add Settings section in help?, not done ######
 Add Settings widget
 
-
-cursor is in multiline string does not always work?
-because strings tag are not updated correctly
-check insert triples, then write in them couple lines
-check_line print scope
-maybe try:
-	return override if triple in oldline: check scope
 
 
 
@@ -531,9 +422,6 @@ NameError: name 'helptxt' is not defined
 
 
 print_bookmarks show scope
-
-
-grid after set textwidgets?
 
 
 list tree of deflines

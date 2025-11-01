@@ -520,7 +520,6 @@ class Editor(tkinter.Toplevel):
 			self.boldfont = self.__class__.boldfont
 			self.keyword_font = self.__class__.keyword_font
 			self.linenum_font = self.__class__.linenum_font
-			self.keyword_font.config(family='Optima', slant='italic', size=13)
 			self.fonts = dict()
 			for font in [self.textfont, self.menufont, self.keyword_font, self.linenum_font]:
 				self.fonts[font.name] = font
@@ -579,8 +578,9 @@ class Editor(tkinter.Toplevel):
 
 			# distance from left screen edge to text
 			# can be set with: set_left_margin(width_normal, width_fullscreen)
-			self.default_margin = 4
-			self.margin, self.margin_fullscreen = 4, 4
+			# and: set_left_margin_gap(gap_normal, gap_fullscreen)
+			self.default_margin, self.margin, self.margin_fullscreen = 4, 5, 5
+			self.gap, self.gap_fullscreen = 0, 0
 
 			# Just in case, set to normal at end of init
 			self.state = 'init'
@@ -658,9 +658,9 @@ class Editor(tkinter.Toplevel):
 				#this_func_no_exist()
 
 			else:
-				self.popup.add_command(label="         run", command=self.run)
 				self.popup.add_command(label="        copy", command=self.copy)
 				self.popup.add_command(label="       paste", command=self.paste)
+				self.popup.add_command(label="         run", command=self.run)
 				self.popup.add_command(label="##   comment", command=self.comment)
 				self.popup.add_command(label="   uncomment", command=self.uncomment)
 
@@ -844,7 +844,7 @@ class Editor(tkinter.Toplevel):
 
 			# Hide selection in linenumbers, etc
 			self.ln_widget.config(font=self.linenum_font, foreground=self.color_linenums[0], background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.color_linenums[0], inactiveselectbackground=self.bgcolor, state='disabled', padx=self.pad, pady=self.pad, width=self.margin)
-			self.ln_widget.tag_config('justright', justify=tkinter.RIGHT, spacing1=self.spacing_linenums)
+			self.ln_widget.tag_config('justright', justify=tkinter.RIGHT, spacing1=self.spacing_linenums, rmargin=self.gap)
 
 
 
@@ -1042,9 +1042,12 @@ class Editor(tkinter.Toplevel):
 				tab.text_widget.edit_reset()
 				tab.text_widget.edit_modified(0)
 
-			######################
-			# Load tags from cache whenever possible
-			# --> init takes much less time
+
+			#########################################
+			# Load tags from cache whenever possible,
+			# even though it makes almost no difference for any normal computer
+			# under 20 years old. Still, init takes much less time if using
+			# really slow computer like rpi1.
 			if len(tags_from_cache) > 0:
 				t1 = int(self.root.tk.eval('clock milliseconds'))
 				success = self.load_tags(tags_from_cache)
@@ -1099,8 +1102,6 @@ class Editor(tkinter.Toplevel):
 			# This geometry call has to be before deiconify
 			diff = self.winfo_screenwidth() - self.winfo_width()
 			tests = (self.os_type != 'windows', self.geom == '+%d+0', diff > 0)
-			# Setting of geometry can be left to window manager with:
-			# self.use_geometry(0) --> self.geom == False
 			if self.geom:
 				if all(tests):
 					# Not Windows and first launch
@@ -2638,6 +2639,28 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Tab Related End
 ########## Configuration Related Begin
 
+	def export_config(self):
+		''' Export configuration without tabs and no geometry-conf
+			--> in effect, theme related-stuff
+		'''
+		# Considering as rarely used
+		import tkinter.filedialog
+		fname_as_string = p = tkinter.filedialog.asksaveasfilename(initialfile='henxel.cnf')
+
+		data = self.get_config(notabs=True)
+
+		string_representation = json.dumps(data)
+
+		try:
+			with open(p, 'w', encoding='utf-8') as f:
+				f.write(string_representation)
+				print('\nExported configuration to:\n%s' % p)
+
+		except EnvironmentError as e:
+			print(e.__str__())
+			print('\nCould not export configuration')
+
+
 	def save_config(self):
 		data = self.get_config()
 
@@ -2681,7 +2704,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return textfont, menufont, keyword_font, keyword_font
 
 
-	def get_config(self):
+	def get_config(self, notabs=False):
+		''' notabs: for export_config
+		'''
+
 		d = dict()
 		d['curtheme'] = self.curtheme
 		d['lastdir'] = self.lastdir.__str__()
@@ -2709,21 +2735,30 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['fonts'] = fonts
 		####################
 
-		d['scrollbar_width'] = self.scrollbar_width
-		d['elementborderwidth'] = self.elementborderwidth
+		d['scrollbar_widths'] = self.scrollbar_width, self.elementborderwidth
 		d['version_control_cmd'] = self.version_control_cmd
-		d['margin_fullscreen'] = self.margin_fullscreen
+		d['marginals'] = self.margin, self.margin_fullscreen, self.gap, self.gap_fullscreen
 		d['color_linenums'] = self.color_linenums
 		d['spacing_linenums'] = self.spacing_linenums
-		d['margin'] = self.margin
 		d['check_syntax'] = self.check_syntax
 		d['want_ln'] = self.want_ln
 		d['syntax'] = self.syntax
-		d['geom'] = self.geom
 		d['ind_depth'] = self.ind_depth
 		d['themes'] = self.themes
 
-		for tab in self.tabs:
+		geom = self.geom
+		if notabs: geom = False
+		d['geom'] = geom
+
+		tabs = self.tabs
+		if notabs:
+			tabs = list()
+			newtab = Tab(self.create_textwidget())
+			newtab.active = True
+			tabs.append(newtab)
+
+
+		for tab in tabs:
 			# Convert tab.filepath to string for serialization
 			if tab.filepath:
 				tab.filepath = tab.filepath.__str__()
@@ -2745,7 +2780,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		d['tabs'] = [ dict([
 							(key, tab.__dict__.get(key)) for key in whitelist
-							]) for tab in self.tabs ]
+							]) for tab in tabs ]
 
 		return d
 
@@ -2753,17 +2788,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def set_config(self, data, textfont, menufont, keyword_font, linenum_font):
 
 		d = data
+
 		# Set Font Begin ##############################
+		flag_check_lineheights = False
+		if not all((textfont, linenum_font)): flag_check_lineheights = True
 
 		# Both missing:
 		if not textfont and not menufont:
-
 			fontname = get_font(GOODFONTS)
 			d['fonts']['textfont']['family'] = fontname
 			d['fonts']['menufont']['family'] = fontname
 
 		# One missing, copy existing:
 		elif bool(textfont) ^ bool(menufont):
+
 			if textfont:
 				d['fonts']['menufont']['family'] = textfont
 			else:
@@ -2776,19 +2814,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not linenum_font:
 			fontname = get_font(reversed(GOODFONTS))
 			d['fonts']['linenum_font']['family'] = fontname
+
+
+		self.spacing_linenums = d['spacing_linenums']
+
+		if flag_check_lineheights:
 			self.flag_check_lineheights = True
+			self.spacing_linenums = 0
+
 
 		self.textfont.config(**d['fonts']['textfont'])
 		self.menufont.config(**d['fonts']['menufont'])
 		self.keyword_font.config(**d['fonts']['keyword_font'])
 		self.linenum_font.config(**d['fonts']['linenum_font'])
-		self.scrollbar_width = d['scrollbar_width']
-		self.elementborderwidth	= d['elementborderwidth']
+		self.scrollbar_width, self.elementborderwidth = d['scrollbar_widths']
+		self.margin, self.margin_fullscreen, self.gap, self.gap_fullscreen = d['marginals']
 		self.version_control_cmd = d['version_control_cmd']
-		self.margin_fullscreen = d['margin_fullscreen']
 		self.color_linenums = d['color_linenums']
-		self.spacing_linenums = d['spacing_linenums']
-		self.margin = d['margin']
 		self.check_syntax = d['check_syntax']
 		self.want_ln = d['want_ln']
 		self.syntax = d['syntax']
@@ -3618,13 +3660,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return res
 
 
-	def apply_left_margin(self, **kwargs):
+	def apply_left_margin(self, ln_kwargs, just_kwargs):
 
-		self.ln_widget.config(**kwargs)
+		self.ln_widget.config(**ln_kwargs)
+		self.ln_widget.tag_config('justright', **just_kwargs)
 
 
 	def set_left_margin(self, width_normal, width_fullscreen=None):
-		'''	Set distance from left screen edge to start of text,
+		'''	Set total distance from left screen edge to start of text,
 			for normal window, and possible separate width for fullscreen
 
 			to reset both to defaults:
@@ -3633,22 +3676,73 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			reset only margin of normal window:
 			set_left_margin(0, self.margin_fullscreen)
 
+			see also: set_left_margin_gap
 		'''
 
 		if type(width_normal) != int: return
 
-		if width_normal < self.default_margin: width_normal = self.default_margin
+		if width_normal <= self.default_margin: width_normal = self.default_margin
 
 		self.margin, self.margin_fullscreen = width_normal, width_normal
 
 		if type(width_fullscreen) == int:
-			if width_fullscreen < self.default_margin: width_fullscreen = self.default_margin
+			if width_fullscreen <= self.default_margin: width_fullscreen = self.default_margin
 			self.margin_fullscreen = width_fullscreen
 
 		if self.is_fullscreen(): kwargs={'width':self.margin_fullscreen}
 		else: kwargs={'width':self.margin}
 
-		self.apply_left_margin(**kwargs)
+		self.ln_widget.config(**kwargs)
+
+
+	def set_left_margin_gap(self, gap_normal, gap_fullscreen=None):
+		'''	Set distance(length of empty space) from linenumbers to start of text,
+			for normal window, and possible separate width for fullscreen.
+
+			This does not change total distance of left_margin, which can
+			be done with set_left_margin. After using this, one can increase
+			lenght of total margin, with set_left_margin, if necessary.
+
+			Reset both to defaults:
+			set_left_margin_gap(0)
+
+			Reset only gap of normal window:
+			set_left_margin_gap(0, self.gap_fullscreen)
+
+			distance can be int --> pixels
+			or string like 1c --> note, this adds much space
+
+			Example: set_left_margin_gap(10, '2c')
+
+		'''
+
+		if type(gap_normal) not in (int, str): return
+		if type(gap_normal) == str: pass
+		else:
+			if gap_normal <= 0: gap_normal = 0
+		try: self.ln_widget.tag_config('justright', rmargin=gap_normal)
+		except tkinter.TclError as e:
+			print(e)
+			return
+
+		self.gap, self.gap_fullscreen = gap_normal, gap_normal
+
+
+		if type(gap_fullscreen) in (int, str):
+			if type(gap_fullscreen) == str: pass
+			else:
+				if gap_fullscreen <= 0: gap_fullscreen = 0
+			try:
+				self.ln_widget.tag_config('justright', rmargin=gap_fullscreen)
+				self.gap_fullscreen = gap_fullscreen
+			except tkinter.TclError as e:
+				print(e)
+				return
+
+
+		gap = self.gap
+		if self.is_fullscreen(): gap = self.gap_fullscreen
+		self.ln_widget.tag_config('justright', rmargin=gap)
 
 
 	def set_scrollbar_widths(self, width, elementborderwidth):
@@ -6553,7 +6647,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
-
 	def do_maximize(self, want_maximize):
 		''' fullscreen option seems to exist now on all win/linux/mac
 			didn't use to, so:
@@ -6574,7 +6667,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.geometry(self.geom)
 
 
-
 	def esc_override(self, event):
 		'''	Enable toggle fullscreen with Esc.
 		'''
@@ -6586,19 +6678,21 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		delay = 300
 		want_maximize = 1
-		kwargs={'width':self.margin_fullscreen}
+		ln_kwargs={'width':self.margin_fullscreen}
+		just_kwargs = {'rmargin':self.gap_fullscreen}
 
 		if self.is_fullscreen():
 			delay = 200
 			want_maximize = 0
-			kwargs={'width':self.margin}
+			ln_kwargs={'width':self.margin}
+			just_kwargs = {'rmargin':self.gap}
 
 
 		if self.margin != self.margin_fullscreen or (self.os_type == 'windows' and not want_maximize):
 			if self.margin != self.margin_fullscreen:
+				self.wait_for(100)
+				self.apply_left_margin(ln_kwargs, just_kwargs)
 				self.wait_for(200)
-				self.apply_left_margin(**kwargs)
-				self.wait_for(300)
 
 			# Prevent flashing 1&2/3
 			if want_maximize or self.os_type == 'windows':
@@ -6618,7 +6712,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.do_maximize(want_maximize)
-		self.after(delay, lambda kwargs=kwargs: self.apply_left_margin(**kwargs) )
+
+		self.after(delay, lambda args=(ln_kwargs, just_kwargs): self.apply_left_margin(*args) )
 
 		return 'break'
 
