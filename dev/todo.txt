@@ -16,6 +16,17 @@ set_left_margin_gap
 done
 
 
+fontchoose use incremental after?
+
+
+mark cursor place when searching etc, cursor disabled:
+cursor_frame
+done
+
+
+
+
+
 done:
 editor.tag --> henxel.cache
 editor.cnf --> henxel.cnf
@@ -38,10 +49,6 @@ self.bbox --> self.line_height
 change color of linenumbers, done
 
 
-mark cursor place when searching etc, cursor disabled:
-indicate_mousepos()
-done
-needs check
 
 
 

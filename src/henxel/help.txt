@@ -49,18 +49,6 @@
 		in top-left corner. (info on setting other version control program
 		is below )
 		
-	  - If wanting to use current configuration on many environments,
-		it can be exported with e.export_config(). It sets e.geom to False
-		so one must do: e.use_geometry('default') after first launch with
-		that conf. It also does not have any tabs or bookmarks etc.
-		Name of conf-file has to be 'henxel.cnf' and it has to be in
-		python env-directory, when in use.
-		
-		For example: One has nice working conf in some project and thinks
-		about using it as default for some new projects: 1: e.export_config
-		2: Start new project 3: cd mynew_project/my_python_venv_folder
-		4: cp path_to_exported_conf . 5: launch henxel
-		
 	  - If you do something in python-console that waits for user input,
 		Editor will be freezed during that time, like when viewing help
 		of some function.
@@ -101,6 +89,11 @@
 	  - It is good practise to always: open newtab, open file
 
 	
+	Selection
+	  - Long selection: if cursor is not visible,
+		to show wanted side of selection, toggle left/right -keys
+
+
 	Bookmarks
 	  - Are very useful
 	  - Create/remove bookmark with Cmd/Alt-p
@@ -118,7 +111,6 @@
 		Easy: Press Cmd/Alt-p to bookmark match with focus
 		Or You can scroll, Goto def etc, and when find something interesting
 		Click there and Press Cmd/Alt-p to bookmark that position
-		(note: cursor is invisible while searching)
 		
 	  - Are saved in configuration. Note: currently only open files can have
 		bookmarks. When tab is closed its bookmarks are gone, but editor will
@@ -155,14 +147,8 @@
 	  - One can also select function of interest while searching,
 		other than on match, and press Alt-g to get there.
 		Or just click the function name, then press Alt-g
-		(note: cursor is invisible while searching)
 		
 	
-	Selection
-	  - Long selection: if cursor is not visible,
-		to show wanted side of selection, toggle left/right -keys
-
-
 	Set editor size and position
 	  - help(e.use_geometry)
 	  - Editor is normally using default size and positioned on top-right corner
@@ -199,77 +185,6 @@
 	  Drag editor-window to place one likes. Resize it to size one wants.
 	  Then call: e.use_geometry('current')
 
-	
-	Set left margin
-	  A: Set total distance from left screen edge to start of text
-	  for normal window, and possible separate width for fullscreen.
-	  Recommended to use same margin for both, but they can be different
-	  if for example want 'centered view' in fullscreen view.
-
-	  - reset both to defaults
-		e.set_left_margin(0)
-
-	  - reset only margin of normal window
-		e.set_left_margin(0, e.margin_fullscreen)
-		
-	  Examples
-	  - set different margin for normal window and fullscreen
-		e.set_left_margin(10, 20)
-		
-	  - set same margin for normal window and fullscreen
-		e.set_left_margin(10)
-		
-	  - change only margin for normal window (to 10)
-		e.set_left_margin(10, e.margin_fullscreen)
-		
-	  - change only margin for fullscreen window (to 20)
-		e.set_left_margin(e.margin, 20)
-		
-		
-	  B: Set distance(length of empty space) from linenumbers to start of text,
-	  for normal window, and possible separate width for fullscreen.
-
-	  This does not change total distance of left_margin. After using this, one
-	  can increase lenght of total margin, with set_left_margin, if necessary.
-
-	  - Reset both to defaults:
-	    set_left_margin_gap(0)
-
-	  - Reset only gap of normal window:
-	    set_left_margin_gap(0, self.gap_fullscreen)
-
-	  distance can be int --> pixels
-	  or string like 1c --> note, this adds much space
-
-	  Example: set_left_margin_gap(10, '2c')
-
-	
-	Set scrollbar width
-	  - e.set_scrollbar_widths(width, elementborderwidth)
-	
-	
-	Change tabsize
-		Size can be 1-8, default is 4
-		
-		Change size for all files:
-	  - e.change_tabsize(8)
-		
-		For code-snippet:
-	  - If you copied something to your editor that has different indentation
-		than rest of the file:
-		(Note that you don't have to do anything if it is indented with normal
-		4 spaces and you have indent-depth the normal 4 )
-		1: Make sure you copied the block starting with one empty line.
-		2: Click cursor to start of empty line and paste.
-		
-		Then select that code and press Ctrl-t, and
-		it should then be indented as you wanted and you can then continue
-		indenting the pasted code to the right place.
-		
-		(Note that you don't have to do anything if you open a file that has
-		different indentation than your setting, it is changed automatically
-		and saved with tabbed indentation after you for example close it.)
-	
 	
 	Check syntax at exit
 	  Should syntax of open py-files be checked at exit?
@@ -409,6 +324,93 @@
 			Adding to lineend: "$"
 			Concatenate lines: "\n+"
 
+	
+	Set left margin
+	  A: Set total distance from left edge of editor window to start of text
+	  for normal window, and possible separate width for fullscreen.
+	  Recommended to use same margin for both, but they can be different
+	  if for example want 'centered view' in fullscreen view.
+	  Without arguments, prints current setting.
+
+	  - reset both to defaults
+		e.set_left_margin(0)
+
+	  - reset only margin of normal window
+		e.set_left_margin(0, e.margin_fullscreen)
+		
+	  Examples
+	  - set different margin for normal window and fullscreen
+		e.set_left_margin(10, 20)
+		
+	  - set same margin for normal window and fullscreen
+		e.set_left_margin(10)
+		
+	  - change only margin for normal window (to 10)
+		e.set_left_margin(10, e.margin_fullscreen)
+		
+	  - change only margin for fullscreen window (to 20)
+		e.set_left_margin(e.margin, 20)
+		
+		
+	  B: Set distance(length of empty space) from linenumbers to start of text,
+	  for normal window, and possible separate width for fullscreen.
+
+	  This does not change total distance of left_margin. After using this, one
+	  can increase lenght of total margin, with set_left_margin, if necessary.
+	  Without arguments, prints current setting.
+
+	  - Reset both to defaults:
+	    set_left_margin_gap(0)
+
+	  - Reset only gap of normal window:
+	    set_left_margin_gap(0, self.gap_fullscreen)
+
+	  distance can be int --> pixels
+	  or string like 1c --> note, this adds much space
+
+	  Example: set_left_margin_gap(10, '2c')
+
+	
+	Set scrollbar width
+	  - e.set_scrollbar_widths(width, elementborderwidth)
+	
+	
+	Change tabsize
+		Size can be 1-8, default is 4
+		
+		Change size for all files:
+	  - e.change_tabsize(8)
+		
+		For code-snippet:
+	  - If you copied something to your editor that has different indentation
+		than rest of the file:
+		(Note that you don't have to do anything if it is indented with normal
+		4 spaces and you have indent-depth the normal 4 )
+		1: Make sure you copied the block starting with one empty line.
+		2: Click cursor to start of empty line and paste.
+		
+		Then select that code and press Ctrl-t, and
+		it should then be indented as you wanted and you can then continue
+		indenting the pasted code to the right place.
+		
+		(Note that you don't have to do anything if you open a file that has
+		different indentation than your setting, it is changed automatically
+		and saved with tabbed indentation after you for example close it.)
+	
+	
+	Export configuration	
+	  - If wanting to use current configuration on many environments,
+		it can be exported with e.export_config(). It sets e.geom to False
+		so one must do: e.use_geometry('default') after first launch with
+		that conf. It also does not have any tabs or bookmarks etc.
+		Name of conf-file has to be 'henxel.cnf' and it has to be in
+		python env-directory, when in use.
+		
+		For example: One has nice working conf in some project and thinks
+		about using it as default for some new projects: 1: e.export_config
+		2: Start new project 3: cd mynew_project/my_python_venv_folder
+		4: cp path_to_exported_conf . 5: launch henxel
+	
 	
 	Execute part of the code from editor in Python-console
 	  - Remember to put import-lines before the desired code-blocks. Then

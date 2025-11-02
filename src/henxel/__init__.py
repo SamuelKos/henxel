@@ -257,6 +257,7 @@ GOODFONTS = [
 			'Consolas',
 			'Noto Mono',
 			'Noto Sans Mono',
+			'FreeMono',
 			'Courier 10 Pitch',
 			'Courier',
 			'Courier New'
@@ -552,6 +553,9 @@ class Editor(tkinter.Toplevel):
 
 			self.errlines = list()
 			self.err = False
+
+			# Used for showing insertion cursor when text is disabled
+			self.cursor_frame = None
 
 			# When clicked with mouse button 1 while searching
 			# to set cursor position to that position clicked.
@@ -1135,8 +1139,12 @@ class Editor(tkinter.Toplevel):
 				lambda args=['current']: self.use_geometry(*args))
 
 
+			# Used to show cursor when text is disabled
+			self.cursor_frame_init()
+
 			if self.flag_check_lineheights:
 				self.handle_diff_lineheights()
+
 
 			self.__class__.alive = True
 			self.state = 'normal'
@@ -3666,9 +3674,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.ln_widget.tag_config('justright', **just_kwargs)
 
 
-	def set_left_margin(self, width_normal, width_fullscreen=None):
-		'''	Set total distance from left screen edge to start of text,
-			for normal window, and possible separate width for fullscreen
+	def set_left_margin(self, width_normal=None, width_fullscreen=None):
+		'''	Set total distance from left edge of editor window to start of text,
+			for normal window, and possible separate width for fullscreen.
+
+			Without arguments, print current setting.
 
 			to reset both to defaults:
 			set_left_margin(0)
@@ -3679,7 +3689,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			see also: set_left_margin_gap
 		'''
 
-		if type(width_normal) != int: return
+		if type(width_normal) != int:
+			print('normal:', self.margin, 'fullscreen:', self.margin_fullscreen)
+			return
 
 		if width_normal <= self.default_margin: width_normal = self.default_margin
 
@@ -3695,13 +3707,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.ln_widget.config(**kwargs)
 
 
-	def set_left_margin_gap(self, gap_normal, gap_fullscreen=None):
+	def set_left_margin_gap(self, gap_normal=None, gap_fullscreen=None):
 		'''	Set distance(length of empty space) from linenumbers to start of text,
 			for normal window, and possible separate width for fullscreen.
 
 			This does not change total distance of left_margin, which can
 			be done with set_left_margin. After using this, one can increase
 			lenght of total margin, with set_left_margin, if necessary.
+
+			Without arguments, print current setting.
 
 			Reset both to defaults:
 			set_left_margin_gap(0)
@@ -3716,7 +3730,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		'''
 
-		if type(gap_normal) not in (int, str): return
+		if type(gap_normal) not in (int, str):
+			print('normal:', self.gap, 'fullscreen:', self.gap_fullscreen)
+			return
+
 		if type(gap_normal) == str: pass
 		else:
 			if gap_normal <= 0: gap_normal = 0
@@ -4547,6 +4564,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 
+		self.cursor_frame.place_forget()
+
+
 		self.tab_close(self.tabs[err_tab_index])
 		self.tabs.pop(err_tab_index)
 
@@ -4557,7 +4577,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tab_open(self.tabs[new_index])
 		self.tabindex = new_index
 
-		self.err_tab.text_widget.tag_remove( 'animate', '1.0', 'end')
+
 		self.err_tab.text_widget.delete('1.0', 'end')
 
 		self.bind("<Escape>", self.esc_override)
@@ -4566,6 +4586,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			lambda event: self.raise_popup(event))
 		self.state = 'normal'
 		self.update_title()
+
+		### tag_link End ######
 
 
 	def run(self):
@@ -4628,7 +4650,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not self.err: return
 
 		# Show 'insertion cursor' while text_widget is disabled
-		self.bid_mouse = self.bind( "<Button-1>", func=self.indicate_mousepos, add=True)
+		self.bid_mouse = self.bind( "<Button-1>", func=self.cursor_frame_set, add=True)
 		self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 		self.bind("<Escape>", self.stop_show_errors)
 
@@ -4738,11 +4760,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def stop_show_errors(self, event=None):
 		self.state = 'normal'
 
+		self.cursor_frame.place_forget()
+
 		self.tab_close(self.tabs[self.tabindex])
 		self.tabs.pop()
 		self.tabindex = self.oldindex
 		self.tab_open(self.tabs[self.tabindex])
-		self.err_tab.text_widget.tag_remove( 'animate', '1.0', 'end')
 		self.err_tab.text_widget.delete('1.0', 'end')
 
 		self.bind("<Escape>", self.esc_override)
@@ -8170,9 +8193,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.unbind( "<Button-1>", funcid=self.bid_mouse)
 		self.text_widget.unbind( "<Double-Button-1>", funcid=self.bid )
 
-		self.text_widget.tag_remove( 'animate', '1.0', 'end')
 		self.text_widget.config(state='normal')
 		self.state = 'normal'
+
+		self.cursor_frame.place_forget()
+
 
 		# Space is on hold for extra 200ms, released below
 		self.text_widget.unbind( "<space>", funcid=self.bid4 )
@@ -8297,7 +8322,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					func=lambda event: self.update_curpos(event, **{'on_stop':self.stop_goto_def}), add=True )
 
 				# Show 'insertion cursor' while text_widget is disabled
-				self.bid_mouse = self.bind( "<Button-1>", func=self.indicate_mousepos, add=True)
+				self.bid_mouse = self.bind( "<Button-1>", func=self.cursor_frame_set, add=True)
 
 				self.text_widget.unbind( "<space>", funcid=self.tabs[self.tabindex].bid_space )
 				self.bid4 = self.text_widget.bind( "<space>", self.stop_goto_def )
@@ -9591,7 +9616,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 
-		self.help_tab.text_widget.tag_remove( 'animate', '1.0', 'end')
+		self.cursor_frame.place_forget()
 
 
 		self.tab_close(self.tabs[self.tabindex])
@@ -9633,7 +9658,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# Show 'insertion cursor' while text_widget is disabled
-		self.bid_mouse = self.bind( "<Button-1>", func=self.indicate_mousepos, add=True)
+		self.bid_mouse = self.bind( "<Button-1>", func=self.cursor_frame_set, add=True)
 		self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 		self.bind("<Escape>", self.stop_help)
 
@@ -10967,18 +10992,47 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		return 'break'
 
 
-	def indicate_mousepos(self, event=None):
-		''' Mark insertion cursor place. Used while text_widget is disabled
-			to help seeing cursor position
+	def cursor_frame_init(self):
+		''' Mark insertion cursor while text_widget is disabled
+		'''
+		self.cursor_frame = tkinter.Frame(self)
+		self.cursor_frame.place_configure(x=30, y=30, width=1, height=1)
+		self.cursor_frame.place_forget()
+
+
+	def cursor_frame_set(self, event=None):
+		''' Mark insertion cursor while text_widget is disabled
+			Helps seeing cursor position
 		'''
 
+		self.wait_for(30)
 		bg, fg = self.themes[self.curtheme]['sel'][:]
-		self.text_widget.tag_config('animate', background=bg, foreground=fg)
-		self.text_widget.tag_remove( 'animate', '1.0', 'end')
+		self.cursor_frame.config(bg=bg)
+		self.cursor_frame.place_forget()
 
-		# current: index that is closest to mouse
-		pos = self.text_widget.index('current')
-		self.text_widget.tag_add('animate', pos, '%s +1c' % pos)
+		# Why _ inplace of w: bbox-width can be
+		# for example, in case of empty line, lenght of whole line
+		x, y, _, h = self.text_widget.bbox('current')
+		idx_cur = self.text_widget.index('current')
+		idx = self.text_widget.index('@%d,%d' % (x, y) )
+
+		# These are offsets of text_widget, relative to root.
+		# They have to be added, because cursor_frame is in root
+		offset_x = self.ln_widget.winfo_width()
+		if self.want_ln == 0: offset_x = 0
+		offset_y = self.entry.winfo_height()
+
+		w = self.pad -1
+		x = x + offset_x
+		y = y + offset_y
+
+		# Sometimes this happens, like when clicking at linestart:
+		# real index is one char greater than what is being marked
+		if self.text_widget.compare(idx_cur, '>', idx):
+			# but this seems to fix it, mostly
+			x = x + self.pad*3
+
+		self.cursor_frame.place_configure(x=x, y=y, width=w, height=h)
 
 		return
 
@@ -11017,8 +11071,9 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.text_widget.tag_remove('focus', '1.0', tkinter.END)
 		self.text_widget.tag_remove('match', '1.0', tkinter.END)
 		self.text_widget.tag_remove('match_zero_lenght', '1.0', tkinter.END)
-		self.text_widget.tag_remove( 'animate', '1.0', 'end')
 		self.text_widget.tag_remove('sel', '1.0', tkinter.END)
+
+		self.cursor_frame.place_forget()
 
 
 		# Leave marks on replaced areas, Esc clears.
@@ -11157,7 +11212,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.bid_show_prev = None
 
 		# Show 'insertion cursor' while text_widget is disabled
-		self.bid_mouse = self.bind( "<Button-1>", func=self.indicate_mousepos, add=True)
+		self.bid_mouse = self.bind( "<Button-1>", func=self.cursor_frame_set, add=True)
 
 		self.bid3 = self.text_widget.bind("<Double-Button-1>",
 			func=lambda event: self.update_curpos(event, **{'on_stop':self.stop_search}),
@@ -11267,7 +11322,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		# Show 'insertion cursor' while text_widget is disabled
-		self.bid_mouse = self.bind( "<Button-1>", func=self.indicate_mousepos, add=True)
+		self.bid_mouse = self.bind( "<Button-1>", func=self.cursor_frame_set, add=True)
 
 		self.bid3 = self.text_widget.bind("<Double-Button-1>",
 			func=lambda event: self.update_curpos(event, **{'on_stop':self.stop_search}),
