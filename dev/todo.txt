@@ -16,15 +16,9 @@ set_left_margin_gap
 done
 
 
-fontchoose use incremental after?
-
-
 mark cursor place when searching etc, cursor disabled:
 cursor_frame
 done
-
-
-
 
 
 done:
@@ -233,23 +227,42 @@ self.cur_defline = '-1.-1'
 Below this: not done:
 ###############################################
 
-
 e.tk.eval('chan configure stdout')
 '-blocking 1 -buffering line -buffersize 4096 -encoding utf-8 -eofchar {} -translation crlf -mode 9600,n,8,1 -xchar {\x11 \x13}'
+
+newtab seems to have syntax on by default 
+
+
+
+
+todo: copy paste, defline ########
+tabify_lines also paste from git diff
+
+
+line_can_update check done
+fixed can_do_syntax
+removed is_pyfile
+removed inspected attribute of tab
+
+
+
+####
+tk text biggest issue: no prehook
+--> no can validate --> things like: near impossible undo handling
+solution: ctext
+is used in for example: tkcon
+adds only little overhead: does work on cheap mid 90's laptop
+####
+
 
 
 popup --> normal menu to btn_git?
 
 
-
-indicate ######################
-idx_linestart/end
-if line isempty
-etc
+fontchoose use incremental after?
+changefont: max total time for animation, needs check
 
 
-
-newtab seems to have syntax on by default 
 
 
 note ln_update: if font is different at @0,0 like def with smaller font
@@ -257,7 +270,6 @@ its bbox is different. --> sometimes wonky linenums
 ln_update should be done with tcl?
 
 
-changefont: max total time for animation, needs check
 
 
 debug testlaunch no work
@@ -346,7 +358,7 @@ split __init__.py to smaller files/modules
 
 
 
-Add Settings section in help?, not done ######
+Add Settings section in help?
 Add Settings widget
 
 
@@ -649,114 +661,18 @@ self.anchorname --> tab.anchorname
 self.text_widget_basic_config
 
 
-space: exit to defline, when gotodef? like in search
-
-
-Frame skip bindlevel etc check, no check?
-
-
-all ctrl-somekey --> alt-somekey
-like ctrl-gf etc
-ctrl-ae --> alt-ae
-
-
 self.pad
 			
-
-stashing --> automatic, or at least importflag?
-
-
-set_textwidget, return widget instead of side-effect?
-
-
-
-
-
-
-################################################
-# Thinking about how to get scope limits faster Begin
-
-searching scopepath is slow with long scopes like Editor
-and searching starts from near end
-
+			
+# something:
 henxel.Editor.__bases__
 type(self).__name__
-
 [i for i in dir(henxel.Editor) if i not in dir(henxel.tkinter.Toplevel)]
 
-
-1: get to indent 1 --> defline
-2: m = re.search(defline, contents)
-3: pos_def = m.start()
-
-patt1 = r'(?:^async[[:blank:]]+def)|(?:^def[[:blank:]]+)|(?:^class[[:blank:]]+)'
-patt2 = r'(?:^def\s+)|(?:^class\s+)|(?:^async\s+def)'
-
-p = re.compile(patt2)
-
-def re_search(defline, p, contents):
-	t0 = int(e.root.tk.eval('clock milliseconds'))
-	m = re.search(defline, contents)
-	pos_def = m.start()
-	last = 0
-	new = 0
-	for m in p.finditer(contents):
-		new = m
-		if new.start() > pos_def: break
-		last = new
-	else:
-		if new: last = new
-	if last:
-		k = last.endpos-last.start()
-		res = e.contents.index('end -%dc' % k )
-		t1 = int(e.root.tk.eval('clock milliseconds'))
-		print(res, t1-t0, 'ms')
-
-	
-
-# s=tab.contents, update it at search start
-cont = e.tabs[e.tabindex].contents
-patt = r'(?:^def\s+)|(?:^class\s+)|(?:^async\s+def)'
-chars_to_end =offset= e.contents.count('insert linestart', 'end', 'chars' )[0]
-
-def re_search(searchword, contents, offset):
-	t0 = int(e.root.tk.eval('clock milliseconds'))
-	m = re.search(searchword, contents[:-offset], flags=re.MULTILINE)
-	k = m.endpos-m.start()
-	res = e.contents.index('end -%dc' % k )
-	t1 = int(e.root.tk.eval('clock milliseconds'))
-	print(res, t1-t0, 'ms')
-
-# Thinking about how to get scope limits faster End
-################################################
-
-
-
-
-
-ln_widget dark brown or gray
-
-
-
-
-
-To help, notes: loadfile always opens file in current tab
-	--> old file is saved and closed but bookmarks are gone
-	--> when planning opening new file from disk,
-		check is current tab something one wants to keep open, or does it have important
-		bookmarks, if is, then open new tab first, and then open file to it.
-	--> It is good practise to always: open newtab, open file
-			
 
 henxel.get_info()
 list funcs which gets some info
 check list add comments
-
-
-show_err() run() combine similar parts?
-
-
-quit_me docstring
 
 
 idx_lineend() == display line end, this is ok?
@@ -766,12 +682,6 @@ copy block to empty line indent0 no work?
 
 
 sel.first sel.last scope edit_search_setting ?
-
-
-check syntax when no debug?
-
-
-move many lines is very slow! almost dangerous ########
 
 
 ####
@@ -804,11 +714,6 @@ insert .pos and tab -->
 self.tabs[self.tabindex]nposition
 
 
-	
-docstring:
-	intention
-	called from
-
 
 ####
 curline needs highligh #################
@@ -820,40 +725,11 @@ when update color:
 	when self.bgcolor changes
 	
 
-set geometry remember last pos size
-root with pos ? self,
-
-
-choose font loadfile scrollbar widht same as editor
-launch first, then insert text etc.
-
-
-set waiting cursor in init?
-Reordering test for slow machines
-test with no conf
-
-
-use same padx in every widget
-ln_wid, cont --> relief flat ok?
-
-
 need: select_lines(startline, endline) ############
 maybe put in gotoline? if ',:-?' in linenum: 1,100 then select, show last etc
---> goodbye vim
 
 
-font choose check
-colors edit enable toggle bold ############
-
-
-Mod1-Shift-(
-	works
-
-self.contents.bind( "<Control-Shift-(>",
-	bad event (
-	--> 89
-
-not tested in linux windows
+color_choose: enable toggle bold ############
 
 
 red = r'#c01c28'
@@ -883,8 +759,6 @@ view changes, after open tab, restore_bookmarks() is used in:
 
 tokens
 ###########################
-check_line:
-self.check_scope	scope
 
 Note:
 When adding inside(after first char and before last char) tag-range,
@@ -892,229 +766,9 @@ added letters will get tagged automatically
 and old tags keep their tags.
 
 
-Note:
-'strings' in e.contents.tag_names('insert')
-will return true if cursor is at marked places or between them:
-
-<INSERT>''' multiline string
-multiline string
-''<INSERT>'
-
-
 when to check all_cont?
 undo redo paste comment indent tabify_lines
 indent unindent tokens scope?
-# check update range in comment uncomment paste #########
-
-
-search: when to set line_can_update? #################
-
-
-######
-self.par_err set in backspace_override and in insert/update tokens, when:
-	self.checkpars() returns True
-	should be also set when commenting line with pars, done in check_line ok?
-######
-
-backspace_override: no quote tests done ok? --> check_line
-
-
-insert_tokens
-	f-strings green?
-
-
-
-###
-debug: show errors in editor like when running scripts?
-debug help?
-when debug show info about being in debug-mode somewhere?
-Q:how to test methods? A:manually
-Q:how to not do overlapping tests, like normal and debug?
-A: currently doing only debug-test because it pretty much includes normal
-###
-
-
-########################################
-test-launch conf related thinking begin
-
-when this: if not test.cnf: make_test_conf() ?
-at start of test-launch? no?
-at importtime if debug?
-
-
-
-save_config(data_dict, path, )
-
-
-
-made with: custom test_launch with:
-
-test-launch no can save with normal CONFPATH #####
-
-test-launch conf is in package?
-get path of TEST_CONFPATH:
-	if sys.prefix != sys.base_prefix:
-		envpath = sys.prefix
-	else:
-		envpath = None
-		raise ValueError
-	
-	filepath = pathlib.Path(envpath) / TEST_CONFPATH
-	
-
-loadfile(filepath):
-		filepath is pathlib.Path
-		If filepath is python-file, convert indentation to tabs.
-		File is always opened to *current* tab
-		
-
-new_tab()
-open other file
-etc
-
-custom: self.save_config()
-
-test-launch conf related thinking end
-######################################
-
-
-
-
-################################################
-TO NOTES START
-
-####
-A geometry string is a standard way of describing the size and location of a top-level window
-on a desktop. A geometry string has this general form:
-	'wxh±x±y' where:
-	The w and h parts give the window width and height in pixels.
-	They are separated by the character 'x'.
-
-If the next part has the form +x,
-it specifies that the left side of the window should be x pixels from the left side of the desktop.
-If it has the form -x,
-the right side of the window is x pixels from the right side of the desktop.
-
-If the next part has the form +y,
-it specifies that the top of the window should be y pixels below the top of the desktop.
-If it has the form -y,
-the bottom of the window will be y pixels above the bottom edge of the desktop.
-####
-
-
-####
-contents.search searches logical lines, not display lines
---> no need to check for wrapped lines
-####
-
-
-####
-File "<stdin>", line 12, in <module>
-is last line of launch_test_as_string in build_launch_test()
-####
-
-
-#####
-When:
-	1: Some part of code is not tested(executed at launch-test)
-	2: That part is changed
-	3: Change has no syntax errors
-	4: Change has runtime error:
-		For example: wrong naming of object: "import functool" instead of "import functools"
-	
-Then: test-launch passes but after restart:
---> bad things can happen if code is part of __init__ for example
-#####
-
-
-
-######
-__new__ is always executed when __init__ would be executed
-######
-
-
-######
-quitme popup
-	needs lambda if doing restart: subprocess.run
-######
-
-
-about indexes
-###
-top = self.getlineno("@0,0")
-bot = self.getlineno("@0,65535")
-if top == bot and text.winfo_height() == 1:
-	# Geometry manager hasn't run yet
-	height = int(text['height'])
-	bot = top + height - 1
-return top, bot
-###
-
-
-#####
-It could be a multiline action, like replace_all
-If trying to undo redo, redo will put cursor to action end,
-undo to action start, if they dont fit in same screen, fail
-
-Undo and indexes:
-1: Redoing an action will put cursor to end of action, that got redoed,
-just like when anything is normally being done
-(example: after inserting letter, cursor is at end of letter)
-
-2: Undoing an action will put cursor to start, where action, that got
-undoed, would have started.
-(example: after undoing insert letter,
-cursor is at start of letter that no longer exist)
-#####		
-
-
-##
-test-launch has own root
-##
-
-
-
-- test-launch: subprocess in subprocess does work!
-	But at start of class Editor:
-		No need App-name at launch-test, also this would deadlock the editor
-		in last call to subprocess with osascript. Value of mac_term would be 'Python'
-		when doing launch-test, that might be the reason.
-	
-	in quit_me:
-	# Test-launch Editor (it is set to non visible, but flags can here be edited)
-	###################################################################
-	# Note that currently this callback(quit_me) is binded with old flags.
-	# --> If one changes flags here, and does cmd-q, old flags are still used
-	# in test-launch. But after next cmd-q, new flags are binded, and used.
-	# In short:	If changing flags, and want to see the difference:
-	# 			do cmd-q two times! (and maybe clear console after first one)
-	###################################################################
-	# https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
-	
-	
-- bookmarks check:
-	view changes, after open tab, restore_bookmarks() is used in:
-		walk_tabs *
-		del_tab *
-		
-		run *
-		show_errors *
-		stop_show_errors *
-		
-		help *
-		stop_help *
-		
-		new_tab *
-		tag_link *
-		loadfile *
-		save *
-		
-		
-TO NOTES END
-########################
-		
-		
-
 
 
 
@@ -1235,38 +889,6 @@ u+2335
 ⌵
 
 
-check win linux:
-	self.contents.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
-	Alt-shift-F
-	etc?
-
-Cmd-shift-F
-select cur scope only
-
-
-Control-89
-Cmd-89
-	walk_scope() (rising tendency)
-	8 goto next(up) defline
-	9 goto prev(down) defline
-
-
-Control-Shift-()
-Cmd-Shift-()
-	walk_scope() (diving tendency)
- 	( goto absolutely next(up) defline
-	) goto absolutely prev(down) defline
-
-
-
-
-async def only
-
-
-@f1
-@f2
-def funcname[str]():    not done #########################
-
 
 get_scope_end() get_scope_start() get_scope_path()
 ################################################################################################
@@ -1274,11 +896,7 @@ get_scope_end() get_scope_start() get_scope_path()
 
 update help
 uncomment '##' must be at indent0 or it can not be removed --> help?
-Control-d not Control-c to quit multiline command --> help
-
-
-sel many lines:
-linenum yview_scroll etc:  center_view()
+Control-d not Control-c to quit multiline command --> help?
 
 
 handle_normal_entry
@@ -1286,9 +904,6 @@ handle_normal_entry
 
 save file to disk when pressing save
 
-
-python not remommended install with brew?
-pyenv
 
 get(elided) -displaychars
 elided text is getted by default
@@ -1350,8 +965,6 @@ If both are fullscreen, there is no freezing.
 This is little similar to win11-behaviour when not using idle-shell
 
 
-macos: sometimes closing in fullscreen no get focus back terminal
-
 
 fdialog.py
 	filter:
@@ -1373,9 +986,6 @@ when paste multiline, then undo that, then paste again same thing, then again un
 
 
 check is it necessary to check event.state in select_by_words etc
-
-
-show cursor when disabled state, no?
 
 
 bitmap check ensure width?
@@ -1442,10 +1052,6 @@ check before copy, paste:
 tab-comp in entry?
 
 
-if selecting many lines down then many lines back up, or vice versa:
-	no see selection
-
-
 guides ?
 	on mouseover guideline: show startline of block
 
@@ -1472,10 +1078,112 @@ padx = self.tab_width // self.ind_depth // 3
 pady = padx
 in init apply conf and update fonts
 
-############################################
+
+
+##########################################################
 # Not essential End
-############################################
-# Below this, notes
+##########################################################
+
+##########################################################
+TO NOTES START
+
+####
+A geometry string is a standard way of describing the size and location of a top-level window
+on a desktop. A geometry string has this general form:
+	'wxh±x±y' where:
+	The w and h parts give the window width and height in pixels.
+	They are separated by the character 'x'.
+
+If the next part has the form +x,
+it specifies that the left side of the window should be x pixels from the left side of the desktop.
+If it has the form -x,
+the right side of the window is x pixels from the right side of the desktop.
+
+If the next part has the form +y,
+it specifies that the top of the window should be y pixels below the top of the desktop.
+If it has the form -y,
+the bottom of the window will be y pixels above the bottom edge of the desktop.
+####
+
+
+####
+contents.search searches logical lines, not display lines
+--> no need to check for wrapped lines
+####
+
+
+####
+File "<stdin>", line 12, in <module>
+is last line of launch_test_as_string in build_launch_test()
+This stdin means input file was: '-' see run() for example
+####
+
+
+######
+__new__ is always executed when __init__ would be executed
+######
+
+
+######
+quitme popup
+	needs lambda if doing restart: subprocess.run
+######
+
+
+about indexes
+###
+top = self.getlineno("@0,0")
+bot = self.getlineno("@0,65535")
+if top == bot and text.winfo_height() == 1:
+	# Geometry manager hasn't run yet
+	height = int(text['height'])
+	bot = top + height - 1
+return top, bot
+###
+
+
+#####
+It could be a multiline action, like replace_all
+If trying to undo redo, redo will put cursor to action end,
+undo to action start, if they dont fit in same screen, fail
+
+Undo and indexes:
+1: Redoing an action will put cursor to end of action, that got redoed,
+just like when anything is normally being done
+(example: after inserting letter, cursor is at end of letter)
+
+2: Undoing an action will put cursor to start, where action, that got
+undoed, would have started.
+(example: after undoing insert letter,
+cursor is at start of letter that no longer exist)
+#####		
+
+
+##
+test-launch has own root
+##
+
+
+- test-launch: subprocess in subprocess does work!
+	
+	
+- bookmarks check:
+	view changes, after open tab, restore_bookmarks() is used in:
+		walk_tabs *
+		del_tab *
+		
+		run *
+		show_errors *
+		stop_show_errors *
+		
+		help *
+		stop_help *
+		
+		new_tab *
+		tag_link *
+		loadfile *
+		save *
+		
 
 
 unbind /give info about cmd shift A? man page
@@ -1509,38 +1217,6 @@ proc ::tk::mac::ReopenApplication {} {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-entry.winfo_atom('bg')
-81
-e.entry.winfo_atom('fg')
-82
-e.entry.winfo_atomname(81)
-'bg'
-e.entry.winfo_atomname(82)
-'fg'
-
-
-
-
 Manual selection handling in Text-widget:
 self.contents.mark_names()
 'insert', 'current', 'tk::anchor1'
@@ -1552,6 +1228,27 @@ else: SEL_LAST
 
 
 
+############# About screen dimensions Begin
+
+# This is correct:
+# .winfo_screenheight()
+# .winfo_screenwidth()
+
+# check screen dpi:
+#
+# import tkinter
+# import tkinter.font
+# root = tkinter.Tk()
+# t = tkinter.Text(root)
+# t.pack()
+# f = tkinter.font.Font(t, family='TkDefaulFont', size=12)
+# dpi = f.metrics().get('linespace')*5
+
+############### About screen dimensions End
+
+
+
+####### EVENT STATES #########
 
 win
 plain a	==8
@@ -1846,26 +1543,27 @@ e.tk.eval('foreach index [array names ::tcl::WordBreakRE] {puts $::tcl::WordBrea
 # self.anykeyid = self.mywidget1.bind( "<Any-Key>", func=self.mycallback1)
 # self.anybutid = self.mywidget1.bind( "<Any-Button>", func=self.mycallback2)
 
-# self.contents.unbind("<Any-Key>", funcid=self.anykeyid)
-# self.contents.unbind("<Any-Button>", funcid=self.anybutid)
+# self.mywidget1.unbind("<Any-Key>", funcid=self.anykeyid)
+# self.mywidget1.unbind("<Any-Button>", funcid=self.anybutid)
 
 
 
-############# About screen dimensions Begin
 
-# This is correct:
-# .winfo_screenheight()
-# .winfo_screenwidth()
 
-# check screen dpi:
-#
-# import tkinter
-# import tkinter.font
-# root = tkinter.Tk()
-# t = tkinter.Text(root)
-# t.pack()
-# f = tkinter.font.Font(t, family='TkDefaulFont', size=12)
-# dpi = f.metrics().get('linespace')*5
 
-############### About screen dimensions End
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

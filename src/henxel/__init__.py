@@ -129,7 +129,6 @@ def get_info():
 			'handle_window_resize',
 			'idx_lineend',
 			'idx_linestart',
-			'is_pyfile',
 			'line_is_bookmarked',
 			'line_is_defline',
 			'line_is_elided',
@@ -209,7 +208,6 @@ class Tab:
 	bid_space: str = ''
 
 	active: bool = False
-	inspected: bool = False
 	par_err: bool = False
 	check_scope: bool = False
 
@@ -590,15 +588,12 @@ class Editor(tkinter.Toplevel):
 			self.state = 'init'
 
 
-			# quick fix for macos 12 printing issue
-			# Don't know the case in newer versions
+			# fix for macos printing issue starting from about Python 3.11
 			if self.os_type == 'mac_os':
-				import re
-				self._magic_re = re.compile(r'([\\{}])')
-				self._space_re = re.compile(r'([\s])', re.ASCII)
+				import builtins
 				global print
 				def print(*args, **kwargs):
-					self.mac_print(*args,**kwargs)
+					builtins.print(*args, end=chr(13)+chr(10), **kwargs) #CR+LF
 
 
 			self.helptxt = 'Could not load help-file. Press ESC to return.'
@@ -1290,11 +1285,13 @@ Error messages Begin
 
 		# When syntax is not updating use this:
 		def f1():
+			for i in range(10):
+				print(i)
 
-			t1 = int(self.root.tk.eval('clock milliseconds'))
-			self.get_scope_start()
-			t2 = int(self.root.tk.eval('clock milliseconds'))
-			print(t2-t1, 'ms')
+##			t1 = int(self.root.tk.eval('clock milliseconds'))
+##			self.get_scope_start()
+##			t2 = int(self.root.tk.eval('clock milliseconds'))
+##			print(t2-t1, 'ms')
 
 ##			print('\nState:', self.state,
 ##			'\ntcl_name_self:', self.tcl_name_of_contents,
@@ -2504,7 +2501,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Prevent loosing bookmarks when mistakenly pressed ctrl-d
 		# --> Ask confirmation if tab have bookmarks
 		tests = ( save == True and len(oldtab.bookmarks) > 0,
-				oldtab.type == 'normal' or hasattr(oldtab, 'inspected')
+				oldtab.type == 'normal'
 				)
 		if all(tests):
 			msg_options = dict(message='Current tab has bookmarks',
@@ -3082,29 +3079,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
-	def is_pyfile(self, tab=None):
-		res = False
-
-		if not tab:
-			tab = self.tabs[self.tabindex]
-
-		if tab.filepath:
-			if '.py' in tab.filepath.suffix:
-				res = True
-
-		# This flag is set in insert_inspected()
-		elif hasattr(tab, 'inspected'):
-			res = True
-
-		return res
-
-
 	def can_do_syntax(self, tab=None):
 
-		if not tab:
-			tab = self.tabs[self.tabindex]
+		if not tab: tab = self.tabs[self.tabindex]
 
-		return self.syntax and self.is_pyfile(tab)
+		res = True
+
+		if tab.filepath and '.py' not in tab.filepath.suffix:
+			res = False
+
+		if tab.type == 'help': res = False
+
+		res = self.syntax and res
+
+		return res
 
 
 	def get_tokens(self, tab, update=False):
@@ -4566,7 +4554,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.cursor_frame.place_forget()
 
-
 		self.tab_close(self.tabs[err_tab_index])
 		self.tabs.pop(err_tab_index)
 
@@ -4581,7 +4568,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.err_tab.text_widget.delete('1.0', 'end')
 
 		self.bind("<Escape>", self.esc_override)
-		self.unbind( "<Button-1>", funcid=self.bid_mouse)
+		self.unbind( "<ButtonRelease-1>", funcid=self.bid_mouse)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 		self.state = 'normal'
@@ -4618,7 +4605,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		err = ''
 
-		# fix for macos12 printing issue
+		# fix for macos printing issue
 		if self.os_type == 'mac_os':
 			has_err = False
 			p = subprocess.run(['python', source], **d)
@@ -4629,7 +4616,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				has_err = True
 
 			out = p.stdout.decode()
-			if len(out) > 0: print(out)
+			if len(out) > 0:
+				out = out.splitlines()
+				for item in out: print(item)
 			if has_err: err = p.stderr.decode()
 
 		else:
@@ -4649,8 +4638,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		if not self.err: return
 
-		# Show 'insertion cursor' while text_widget is disabled
-		self.bid_mouse = self.bind( "<Button-1>", func=self.cursor_frame_set, add=True)
 		self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 		self.bind("<Escape>", self.stop_show_errors)
 
@@ -4682,7 +4669,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.text_widget.tag_config(tagname)
 
 			# Why ButtonRelease instead of just Button-1:
-			# https://stackoverflow.com/questions/24113946/unable-to-move-text-insert-index-with-mark-set-widget-function-python-tkint
+			# https://stackoverflow.com/questions/24113946
 
 			self.text_widget.tag_bind(tagname, "<ButtonRelease-1>",
 				lambda event, arg=tagname: self.lclick(arg, event))
@@ -4749,6 +4736,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.err_tab.text_widget.mark_set('insert', self.err_tab.position)
 		self.err_tab.text_widget.see(self.err_tab.position)
 
+		# Show 'insertion cursor' while text_widget is disabled
+		self.bid_mouse = self.bind( "<ButtonRelease-1>", func=self.cursor_frame_set, add=True)
+
+
 		self.err_tab.text_widget.focus_set()
 		self.text_widget.edit_reset()
 		self.text_widget.edit_modified(0)
@@ -4769,7 +4760,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.err_tab.text_widget.delete('1.0', 'end')
 
 		self.bind("<Escape>", self.esc_override)
-		self.unbind( "<Button-1>", funcid=self.bid_mouse)
+		self.unbind( "<ButtonRelease-1>", funcid=self.bid_mouse)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 
@@ -4909,7 +4900,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Note: Puts insertion-cursor on defline, for example selection purposes
 
 		'''
-		# Why can_do_syntax, instead of is_pyfile? Because tag: 'strings' is
+		# Why can_do_syntax? Because tag: 'strings' is
 		# used while parsing. Tag exists only if synxtax-highlighting is on.
 		# This means one can not walk_scope without syntax-highlight.
 		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search', 'goto_def']):
@@ -5040,7 +5031,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			--> goto class definition line, try again
 
 		'''
-		# Why can_do_syntax, instead of is_pyfile? Because tag: 'strings' is
+		# Why can_do_syntax? Because tag: 'strings' is
 		# used while parsing. Tag exists only if synxtax-highlighting is on.
 		# This means one can not walk_scope without syntax-highlight.
 		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search', 'goto_def']):
@@ -6583,7 +6574,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##			For example if trying to undo long indentation action: At first try
 ##			it notices that after undoing action, cursor is not on original screen
 ##			and so it redoes the action to fix the "no can see undo" -issue told above.
-##			But if action one tries to undo is long, cursor will not ever be visible on screen
+##			But if action, the one one wants to undo, is long, cursor will not ever be visible on screen
 ##				(after func1)
 ##			--> redo(func2) always happen and so long actions are never undoed.
 ##
@@ -6979,50 +6970,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Utilities Begin
 
 
-	def _join(self, value):
-		''' used in  mac_print
-		'''
-		return ' '.join(map(self._stringify, value))
-
-
-	def _stringify(self, value):
-		''' used in mac_print
-		'''
-		if isinstance(value, (list, tuple)):
-			if len(value) == 1:
-				value = self._stringify(value[0])
-				if self._magic_re.search(value):
-					value = '%s' % value
-			else:
-				value = '%s' % self._join(value)
-		else:
-			if isinstance(value, bytes):
-				value = str(value, 'latin1')
-			else:
-				value = str(value)
-			if not value:
-				value = '{}'
-			elif self._magic_re.search(value):
-				# add '\' before special characters and spaces
-				value = self._magic_re.sub(r'\\\1', value)
-				value = value.replace('\n', r'\n')
-				value = self._space_re.sub(r'\\\1', value)
-				if value[0] == '"':
-					value = '\\' + value
-			elif value[0] == '"' or self._space_re.search(value):
-				value = '%s' % value
-		return value
-
-
-	def mac_print(self, *args, **kwargs):
-		''' Quick fix for macos12 printing issue (taken from tkinter-module)
-			Uses Tcl to print
-		'''
-
-		tmp = 'puts {%s}' % self._join(args)
-		self.tk.eval(tmp)
-
-
 	def insert_inspected(self):
 		''' Tries to inspect selection. On success: opens new tab and pastes lines there.
 			New tab can be safely closed with ctrl-d later, or saved with new filename.
@@ -7075,10 +7022,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
 						tmp = ''.join(tmp)
 						curtab.contents = tmp
-
-						# This flag is used in handle_search_entry()
-						curtab.inspected = True
-
 					else:
 						curtab.contents = fcontents
 
@@ -7145,10 +7088,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				curtab.text_widget.mark_set('insert', curtab.position)
 				curtab.text_widget.see(curtab.position)
 
-
-				# This flag is used in handle_search_entry()
-				curtab.inspected = True
-
 				if self.can_do_syntax(curtab):
 					self.update_lineinfo(curtab)
 					a = self.get_tokens(curtab)
@@ -7192,7 +7131,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if indentation_is_alien:
 				tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
-
 			else:
 				tmp[:] = [self.tabify(line) for line in tmp]
 
@@ -7478,7 +7416,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Search backwards and get function/class names.
 		patt = ' '
 
-		if self.is_pyfile():
+		if self.can_do_syntax():
 			if scope_name := self.get_scope_path(index):
 				patt = ' @' + scope_name + ' @'
 
@@ -8240,27 +8178,27 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		''' Get word under cursor or use selection and
 			go to function definition
 
-			Example: search definition of method: is_pyfile()
+			Example: search definition of method: line_is_elided()
+
 			A: Using selection:
-			 self.is_pyfile
-			 lf.is_pyfile
-			 is_pyfile
+			 self.line_is_elided
+			 lf.line_is_elided
+			 line_is_elided
 
 			B: Using shortcut without selection when (easiest way)
 			cursor is at or in between
-			self.i<INS>s_pyfile<INS>
 
-			Works also when searching/replacing, just press Alt-g
-			on match.
+			self.l<INS>ine_is_elided<INS>
+
+			Works also when searching/replacing, just press Alt-g on match.
 
 			One can also select other function of interest while searching
-			or just click the function name (note: cursor is invisible while searching)
-			and press Alt-g
+			or just click the function name and press Alt-g
 
 			Arrow key or Control-np --> back to search matches
 		'''
 
-		if (not self.is_pyfile()) or (self.state not in ['normal', 'search', 'replace']):
+		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search', 'replace']):
 			self.bell()
 			return 'break'
 
@@ -8630,8 +8568,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.text_widget.mark_set('insert', '1.0')
 				self.text_widget.see('1.0')
 
-				self.line_can_update = True
-
 				if self.can_do_syntax(curtab):
 					self.update_lineinfo(curtab)
 					self.insert_tokens(self.get_tokens(curtab), tab=curtab)
@@ -8670,7 +8606,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Prevent loosing bookmarks mistakenly
 		# --> Ask confirmation if tab have bookmarks
 		tests = ( len(curtab.bookmarks) > 0,
-				curtab.type == 'normal' or hasattr(curtab, 'inspected')
+				curtab.type == 'normal'
 				)
 		if all(tests):
 			msg_options = dict(message='Current tab has bookmarks',
@@ -9799,12 +9735,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# If at start of line: move line to match indent of previous line.
 			elif indentation_level := self.tab_over_indent():
 				self.text_widget.insert(tkinter.INSERT, indentation_level * '\t')
-				self.line_can_update = True
+				if self.can_do_syntax(): self.line_can_update = True
 				return 'break'
 
 			else:
 				# tab_over_indent sets this to false
-				self.line_can_update = True
+				if self.can_do_syntax(): self.line_can_update = True
 				return
 
 		try:
@@ -9841,7 +9777,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tkinter.TclError:
 			pass
 
-		self.line_can_update = True
+		if self.can_do_syntax(): self.line_can_update = True
 
 		return 'break'
 
@@ -9942,7 +9878,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tkinter.TclError:
 			pass
 
-		self.line_can_update = True
+		if self.can_do_syntax(): self.line_can_update = True
 
 		return 'break'
 
@@ -9951,6 +9887,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.state != 'normal':
 			self.bell()
 			return 'break'
+
+		self.line_can_update = False
 
 		try:
 			s = self.text_widget.index(tkinter.SEL_FIRST)
@@ -9961,8 +9899,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			endline,_ = self.get_line_col_as_int(index=e)
 			endpos = self.text_widget.index( '%s +1l lineend' % e )
-
-			self.line_can_update = False
 
 			for linenum in range(startline, endline+1):
 				self.text_widget.insert('%d.0' % linenum, '##')
@@ -9976,7 +9912,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tkinter.TclError as e:
 			startpos = self.text_widget.index( 'insert -1l linestart' )
 			endpos = self.text_widget.index( 'insert +1l lineend' )
-			self.line_can_update = False
 			self.text_widget.insert('%s linestart' % tkinter.INSERT, '##')
 
 			if self.can_do_syntax():
@@ -9985,14 +9920,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.text_widget.edit_separator()
-		if self.can_do_syntax():
-			self.line_can_update = True
+		if self.can_do_syntax(): self.line_can_update = True
 
 		return 'break'
 
 
 	def uncomment(self, event=None):
-		''' Should work even if there are uncommented lines between commented lines. '''
+		''' Should work even if there are uncommented lines between commented lines.
+		'''
+
 		if self.state != 'normal':
 			self.bell()
 			return 'break'
@@ -10031,6 +9967,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# No selection, uncomment curline
 		except tkinter.TclError as e:
+			if self.can_do_syntax():self.line_can_update = True
+
 			tmp = self.text_widget.get('%s linestart' % idx_ins,
 				'%s lineend' % idx_ins)
 
@@ -10041,8 +9979,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.text_widget.edit_separator()
 
 
-		if self.can_do_syntax():
-			self.line_can_update = True
+		if self.can_do_syntax():self.line_can_update = True
 
 		return 'break'
 
