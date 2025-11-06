@@ -11,6 +11,37 @@ Below this: done ################################################
 export conf without filepaths, done
 
 
+
+##handle_diff_lineheigths
+##widget with one line one char with boldfont
+##measure_tag: tag with boldfont color fg=bg
+##insert 'BBB' to curtab @0,0 with this tag
+##self.text_widget.insert('@0,0', 'AAA', 'measure_tag')
+##--> self.text_widget.dlineinfo('@0,0')[3] etc..
+##self.text_widget.delete('@0,0', '@0,0 +3c')
+
+
+somewhat works:
+e.text_widget.tag_config('comments',spacing1=0)
+e.text_widget.tag_config('comments',offset=1)
+			
+
+
+
+
+black = r'#221247' # blue tint
+e.text_widget.dlineinfo('insert')
+(6, 274, 403, 19, 15)
+
+white = r'#d3d7cf'
+e.text_widget.dlineinfo('insert')
+(6, 293, 300, 18, 15)
+
+replaced less yellow
+green less green, more orange?
+
+
+
 set_left_margin
 set_left_margin_gap
 done
@@ -40,10 +71,9 @@ change_indentation_width --> change_tabsize, help done
 self.bbox --> self.line_height
 
 
-change color of linenumbers, done
-
-
-
+comments with same font and color than linenumbers
+done
+needs check
 
 
 
@@ -239,20 +269,23 @@ todo: copy paste, defline ########
 tabify_lines also paste from git diff
 
 
-line_can_update check done
-fixed can_do_syntax
-removed is_pyfile
-removed inspected attribute of tab
+help theme colors linenum colors same with comments etc
+help how to change bg color
 
 
 
-####
-tk text biggest issue: no prehook
---> no can validate --> things like: near impossible undo handling
-solution: ctext
-is used in for example: tkcon
-adds only little overhead: does work on cheap mid 90's laptop
-####
+syntax_can_auto_update: check again ###########################
+syntax_can_auto_update is only temporary stopper-flag
+used in many places to temporarily stop auto_update_syntax.
+
+		
+
+set_line_can_update_to_true --> auto_update_syntax_stop/continue
+update_line --> auto_update_syntax
+line_can_update --> syntax_can_update
+done
+
+
 
 
 
@@ -1086,6 +1119,13 @@ in init apply conf and update fonts
 
 ##########################################################
 TO NOTES START
+
+
+####
+self.line_can_update is only temporary stopper-flag for self.update_line()
+It should always be set back to True
+####
+
 
 ####
 A geometry string is a standard way of describing the size and location of a top-level window

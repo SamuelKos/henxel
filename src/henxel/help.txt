@@ -186,6 +186,12 @@
 	  Then call: e.use_geometry('current')
 
 	
+	Set editor to launch fullscreen
+	  e.editor_starts_fullscreen()  --> current value
+	  e.editor_starts_fullscreen(1) --> start fullscreen
+	  e.editor_starts_fullscreen(0) --> normal start
+	
+	
 	Check syntax at exit
 	  Should syntax of open py-files be checked at exit?
 	  e.check_syntax_on_exit()

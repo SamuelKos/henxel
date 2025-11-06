@@ -85,6 +85,7 @@ FLAGS = importflags.FLAGS
 ############ Imports End
 ############ Module Utilities Begin
 
+# Module Utilities Begin
 def get_font(want_list):
 	fontname = None
 
@@ -484,7 +485,6 @@ class Editor(tkinter.Toplevel):
 			# Used in check_caps
 			self.to_be_cancelled = list()
 
-			self.color_linenums = ('#c0c0c0', '#c0c0c0') #(current, default)
 			self.flag_check_lineheights = False
 			self.ln_string = ''
 			self.want_ln = 2
@@ -513,6 +513,7 @@ class Editor(tkinter.Toplevel):
 
 			self.geom = '+%d+0'
 			if self.os_type == 'windows': self.geom = '-0+0'
+			self.start_fullscreen = False
 
 			self.textfont = self.__class__.textfont
 			self.menufont = self.__class__.menufont
@@ -588,7 +589,7 @@ class Editor(tkinter.Toplevel):
 			self.state = 'init'
 
 
-			# fix for macos printing issue starting from about Python 3.11
+			# fix for macos printing issue starting from about Python 3.12?
 			if self.os_type == 'mac_os':
 				import builtins
 				global print
@@ -664,7 +665,7 @@ class Editor(tkinter.Toplevel):
 				self.popup.add_command(label="   uncomment", command=self.uncomment)
 
 			self.popup.add_command(label="  select all", command=self.select_all)
-			self.popup.add_command(label="    open mod", command=self.insert_inspected)
+			self.popup.add_command(label="    open mod", command=self.view_module)
 			self.popup.add_command(label="      errors", command=self.show_errors)
 			self.popup.add_command(label="        help", command=self.help)
 
@@ -706,6 +707,8 @@ class Editor(tkinter.Toplevel):
 
 			# Colors Begin #######################
 
+			# This is also color of comments
+			ln_color = '#c0c0c0'
 			red = r'#c01c28'
 			cyan = r'#2aa1b3'
 			magenta = r'#a347ba'
@@ -713,7 +716,8 @@ class Editor(tkinter.Toplevel):
 			orange = r'#e95b38'
 			#yellow = r'#d0d101'
 			gray = r'#508490'
-			black = r'#000000'
+			plain_black = r'#000000'
+			black = r'#221247' # blue tint
 			white = r'#d3d7cf'
 
 
@@ -737,8 +741,8 @@ class Editor(tkinter.Toplevel):
 			n['bools'] = ['', magenta]
 			d['strings'] = ['', green]
 			n['strings'] = ['', green]
-			d['comments'] = ['', gray]
-			n['comments'] = ['', gray]
+			d['comments'] = ['', ln_color]
+			n['comments'] = ['', ln_color]
 			d['calls'] = ['', cyan]
 			n['calls'] = ['', cyan]
 			d['breaks'] = ['', orange]
@@ -842,7 +846,8 @@ class Editor(tkinter.Toplevel):
 			self.btn_git.config(font=self.menufont)
 
 			# Hide selection in linenumbers, etc
-			self.ln_widget.config(font=self.linenum_font, foreground=self.color_linenums[0], background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=self.color_linenums[0], inactiveselectbackground=self.bgcolor, state='disabled', padx=self.pad, pady=self.pad, width=self.margin)
+			bg, fg = self.themes[self.curtheme]['comments'][:]
+			self.ln_widget.config(font=self.linenum_font, foreground=fg, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=fg, inactiveselectbackground=self.bgcolor, state='disabled', padx=self.pad, pady=self.pad, width=self.margin)
 			self.ln_widget.tag_config('justright', justify=tkinter.RIGHT, spacing1=self.spacing_linenums, rmargin=self.gap)
 
 
@@ -952,7 +957,7 @@ class Editor(tkinter.Toplevel):
 
 
 
-			self.line_can_update = False
+			self.syntax_can_auto_update = False
 
 			self.boldfont.config(**self.textfont.config())
 			self.boldfont.config(weight='bold')
@@ -1065,7 +1070,7 @@ class Editor(tkinter.Toplevel):
 			self.scrollbar.set(*self.text_widget.yview())
 			self.anchorname = curtab.anchorname
 			self.tcl_name_of_contents = curtab.tcl_name_of_contents
-			self.line_can_update = True
+			self.syntax_can_auto_update = True
 
 			if curtab.filepath:
 				self.entry.insert(0, curtab.filepath)
@@ -1077,8 +1082,10 @@ class Editor(tkinter.Toplevel):
 
 
 			# Now, get better values for these
-			self.line_height = self.text_widget.bbox('@0,0')[3]
+			#self.line_height = self.text_widget.bbox('@0,0')[3]
+			self.line_height = self.text_widget.dlineinfo('@0,0')[3]
 			self.text_widget_height = self.scrollbar.winfo_height()
+			print(self.line_height, self.text_widget_height)
 
 
 			############
@@ -1136,6 +1143,12 @@ class Editor(tkinter.Toplevel):
 
 			# Used to show cursor when text is disabled
 			self.cursor_frame_init()
+
+
+			if self.start_fullscreen:
+				delay = 300
+				self.put_editor_fullscreen(delay)
+
 
 			if self.flag_check_lineheights:
 				self.handle_diff_lineheights()
@@ -1285,8 +1298,21 @@ Error messages Begin
 
 		# When syntax is not updating use this:
 		def f1():
-			for i in range(10):
-				print(i)
+			keys = ('ascent', 'descent', 'linespace')
+
+			print()
+			for fontname in ('textfont', 'linenum_font'):
+				font = self.fonts.get(fontname)
+				metrics = font.metrics()
+				metrics.pop('fixed')
+
+				print(font.name[:7], metrics, 'size:', font.cget('size'))
+
+			lineheight, baseline = self.text_widget.dlineinfo('insert')[-2:]
+			print('textfont:', 'lineheight:', lineheight, 'baseline:', baseline)
+			lineheight, baseline = self.ln_widget.dlineinfo('@0,0')[-2:]
+			print('linefont:', 'lineheight:', lineheight, 'baseline:', baseline)
+
 
 ##			t1 = int(self.root.tk.eval('clock milliseconds'))
 ##			self.get_scope_start()
@@ -1297,7 +1323,7 @@ Error messages Begin
 ##			'\ntcl_name_self:', self.tcl_name_of_contents,
 ##			'\ntcl_name_tab:', self.tabs[self.tabindex].tcl_name_of_contents,
 ##			'\ncheck_scope:', self.tabs[self.tabindex].check_scope,
-##			'\nline_can_update:', self.line_can_update)
+##			'\nsyntax_can_auto_update:', self.syntax_can_auto_update)
 
 		def f2():
 			print(self.state)
@@ -1671,7 +1697,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Closing after: first launch, no conf or geometry reset to 'default'
 		# Assuming if user changed geometry, it was not satisfactory
 		# --> use current geometry
-		if self.flag_check_geom_at_exit:
+		if self.flag_check_geom_at_exit and not self.is_fullscreen():
 			geom_current = self.geometry()
 			if self.geom != geom_current: self.geom = geom_current
 
@@ -1872,7 +1898,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tokens of the line has to be updated for syntax highlight.
 
 			When this is called, the info is up to date and thus
-			prevents update for the line (in update_line() ), which is the purpose.
+			prevents update for the line (in auto_update_syntax), which is the purpose.
 		'''
 
 		if not tab:
@@ -1884,10 +1910,26 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		tab.oldlinenum,_ = self.get_line_col_as_int(tab=tab)
 
 
-	def update_line(self, event=None):
+	def auto_update_syntax_stop(self):
+		''' syntax_can_auto_update is only temporary stopper-flag
+			used in many places to temporarily stop auto_update_syntax.
+		'''
+		self.syntax_can_auto_update = False
+
+
+	def auto_update_syntax_continue(self):
+		''' syntax_can_auto_update is only temporary stopper-flag
+			used in many places to temporarily stop auto_update_syntax.
+		'''
+		if self.syntax: self.syntax_can_auto_update = True
+
+
+	def auto_update_syntax(self, event=None):
 		'''	Triggers after event: <<WidgetViewSync>>
 
-			Used to update linenumbers and syntax highlighting of current line
+			Used to update linenumbers and syntax highlighting of current line.
+			Intention of this is to update syntax when normally just typing in.
+			This is not used for example when doing paste.
 
 			The event itself is generated *after* when inserting, deleting
 			or on screen geometry change, but not when just scrolling (like yview).
@@ -1899,7 +1941,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.want_ln == 2: self.update_linenums()
 
 
-		if self.can_do_syntax(tab) and self.line_can_update:
+		# syntax_can_auto_update is only temporary stopper-flag used in many places to
+		# temporarily stop auto_update_syntax. It should always be set back to True.
+		if self.can_do_syntax(tab) and self.syntax_can_auto_update:
 
 			# Tag alter triggers this event if font changes, like from normal to bold.
 			# --> need to check if line is changed to prevent self-trigger
@@ -2097,6 +2141,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind( "<dagger>", self.toggle_color)		# Alt-t
 			w.bind( "<ssharp>", self.color_choose)		# Alt-s
 
+
 			w.bind( "<Mod1-Key-BackSpace>", self.del_to_dot)
 			w.bind( "<Mod1-Key-Return>", self.load)
 
@@ -2204,7 +2249,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.event_add('<<PrevLine>>', *tmp)
 
 
-		w.bind( "<<WidgetViewSync>>", self.update_line)
+		w.bind( "<<WidgetViewSync>>", self.auto_update_syntax)
 		# Viewsync-event does not trigger at window size changes,
 		# to get linenumbers right, one binds to this:
 		w.bind("<Configure>", self.handle_window_resize)
@@ -2429,7 +2474,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# its bbox is different. --> sometimes wonky linenums
 			# --> should use dlineinfo?
 			y_offset = self.text_widget.bbox('@0,0')[1]
-
 			y_offset *= -1
 
 			# if self.y_extra_offset > 0, this is needed:
@@ -2743,8 +2787,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['scrollbar_widths'] = self.scrollbar_width, self.elementborderwidth
 		d['version_control_cmd'] = self.version_control_cmd
 		d['marginals'] = self.margin, self.margin_fullscreen, self.gap, self.gap_fullscreen
-		d['color_linenums'] = self.color_linenums
 		d['spacing_linenums'] = self.spacing_linenums
+		d['start_fullscreen'] = self.start_fullscreen
 		d['check_syntax'] = self.check_syntax
 		d['want_ln'] = self.want_ln
 		d['syntax'] = self.syntax
@@ -2835,7 +2879,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.scrollbar_width, self.elementborderwidth = d['scrollbar_widths']
 		self.margin, self.margin_fullscreen, self.gap, self.gap_fullscreen = d['marginals']
 		self.version_control_cmd = d['version_control_cmd']
-		self.color_linenums = d['color_linenums']
+		self.start_fullscreen = d['start_fullscreen']
 		self.check_syntax = d['check_syntax']
 		self.want_ln = d['want_ln']
 		self.syntax = d['syntax']
@@ -3026,7 +3070,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.tag_config('keywords', font=self.keyword_font)
 		#w.tag_config('tests', font=self.keyword_font)
 		w.tag_config('numbers', font=self.boldfont)
-		w.tag_config('comments', font=self.boldfont)
+		w.tag_config('comments', font=self.linenum_font, spacing1=self.spacing_linenums)
 		w.tag_config('breaks', font=self.boldfont)
 		w.tag_config('calls', font=self.boldfont)
 
@@ -3053,7 +3097,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.syntax:
 			self.syntax = False
-			self.line_can_update = False
+			self.syntax_can_auto_update = False
 
 			for tab in self.tabs:
 				for tag in self.tagnames:
@@ -3063,7 +3107,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		else:
 			self.syntax = True
-			self.line_can_update = False
+			self.syntax_can_auto_update = False
 
 			for tab in self.tabs:
 
@@ -3074,7 +3118,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.insert_tokens(a, tab=tab)
 
 
-			self.line_can_update = True
+			self.syntax_can_auto_update = True
 
 			return 'break'
 
@@ -3563,6 +3607,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Syntax highlight End
 ########## Theme Related Begin
 
+	def editor_starts_fullscreen(self, value=None):
+		if value == None: print(self.start_fullscreen)
+		elif value: self.start_fullscreen = True
+		else: self.start_fullscreen = False
+
+
 	def use_geometry(self, geom_string):
 		'''
 			To let window-manager handle positioning and size of the editor,
@@ -3592,6 +3642,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		'''
 
+		def give_info_fullscreen():
+			self.wait_for(100)
+			self.bell()
+			print('Can not set fullscreen-size as default size.')
+			print('But editor can be set launch to fullscreen with:')
+			print()
+			print('start_fullscreen(True)')
+
+
 		if geom_string in (False, 0, ''):
 			self.geom = False
 			print('Geometry changes are applied at next restart')
@@ -3599,9 +3658,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		elif type(geom_string) != str: return
 		elif geom_string == self.geom: return
 		elif geom_string == 'default':
-			geom_string =self.geom= '+%d+0'
+			geom_string = self.geom = '+%d+0'
 			if self.os_type == 'windows':
-				geom_string =self.geom= '-0+0'
+				geom_string = self.geom = '-0+0'
 			diff = self.winfo_screenwidth() - self.winfo_width()
 			tests = (self.os_type != 'windows', self.geom == '+%d+0', diff > 0)
 			if all(tests): self.geometry('+%d+0' % diff )
@@ -3611,14 +3670,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Used at first launch
 		elif geom_string == 'current':
-			self.geom = self.geometry()
+			if not self.is_fullscreen(): self.geom = self.geometry()
+			else: give_info_fullscreen()
 			return
 
 		# Actually wanting to set some size and position to be used at startup
 		# geom_string is 'wxh±x±y'
 		try:
 			self.geometry(geom_string)
-			self.geom = geom_string
+
+			if self.is_fullscreen(): give_info_fullscreen()
+			else: self.geom = geom_string
+
 		except tkinter.TclError as e:
 			print(e)
 
@@ -3645,7 +3708,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		width_screen = self.winfo_screenwidth()
 		res = width_editor == width_screen
 
-		# preferring wm attributes (for no particular reason)
+		# preferring wm attributes
 		if self.wm_attributes().count('-fullscreen') != 0:
 			res = self.wm_attributes('-fullscreen') == 1
 
@@ -3804,10 +3867,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def set_ln_widget_colors(self):
-
-		self.ln_widget.config(foreground=self.color_linenums[0], background=self.bgcolor,
+		# Linenumbers use same color with comments
+		bg, fg = self.themes[self.curtheme]['comments'][:]
+		self.ln_widget.config(foreground=fg, background=self.bgcolor,
 							selectbackground=self.bgcolor,
-							selectforeground=self.color_linenums[0],
+							selectforeground=fg,
 							inactiveselectbackground=self.bgcolor )
 
 
@@ -3838,6 +3902,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def handle_diff_lineheights(self, event=None):
+
 		self.ln_string = ''
 		self.ln_widget.tag_config('justright', spacing1=0)
 		self.ln_widget.update_idletasks()
@@ -3867,14 +3932,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if diff > 0:
 			spacing = diff
 
+
 		self.ln_widget.tag_config('justright', spacing1=spacing)
+
+		for tab in self.tabs + [self.help_tab, self.err_tab]:
+			tab.text_widget.tag_config('comments', spacing1=spacing)
+
 		self.spacing_linenums = spacing
 
 
 	def on_fontchange(self, fontname=None):
 		''' fontname: String in self.fonts.keys
 
-			Check is made in cases A and B that linenum_font does not get bigger than textfont.
+			Check is made in cases A and B so that linenum_font does not get bigger than textfont.
 
 			B:
 			When textfont or keyword_font is changed, linenum_font is changed automatically:
@@ -3926,6 +3996,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if not diff == 0:
 				self.ln_widget.tag_config('justright', spacing1=spacing)
 
+				for tab in self.tabs + [self.help_tab, self.err_tab]:
+					tab.text_widget.tag_config('comments', spacing1=spacing)
+
+
 			if spacing != old_spacing:
 				self.spacing_linenums = spacing
 			# No further action is required so return
@@ -3964,7 +4038,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Update ln_widget spacing after changing textfont or keyword_font
 		if fontname and fontname in ('textfont', 'keyword_font'):
 			self.handle_diff_lineheights()
-
 
 		return True
 
@@ -4036,7 +4109,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		syntags = [
 		'normal_text',
-		'linenumbers',
 		'keywords',
 		'numbers',
 		'bools',
@@ -4067,7 +4139,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		]
 
 		onlyfore = [
-		'linenumbers',
 		'keywords',
 		'numbers',
 		'bools',
@@ -4084,9 +4155,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if tagname == 'selected':
 				tagname = 'sel'
 
-			if tagname == 'linenumbers':
-				initcolor = self.color_linenums[0]
-				patt = 'Choose fgcolor for: %s' % tagname
 
 			elif wid.frontback_mode == 'foreground':
 				initcolor = self.text_widget.tag_cget(tagname, 'foreground')
@@ -4101,18 +4169,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tmpcolor = str(res)
 
 			if tmpcolor in [None, '']:
-				wid.focus_set()
-				return 'break'
-
-
-			if tagname == 'linenumbers':
-				try:
-					self.color_linenums[0] = tmpcolor
-					self.set_ln_widget_colors()
-
-				except (tkinter.TclError, AttributeError) as e:
-					pass
-
 				wid.focus_set()
 				return 'break'
 
@@ -4210,23 +4266,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if tagname == 'Save_TMP':
 				wid.tmp_theme = copy.deepcopy(self.themes)
-				wid.color_linenumbers_tmp = self.color_linenums[0]
 				wid.flag_tmp = True
 				self.flash_tag(t, tagname)
 
 			elif tagname == 'TMP' and wid.flag_tmp:
 				self.themes = copy.deepcopy(wid.tmp_theme)
-				self.color_linenums[0] = wid.color_linenumbers_tmp
 				self.flash_tag(t, tagname)
 
 			elif tagname == 'Start':
 				self.themes = copy.deepcopy(wid.start_theme)
-				self.color_linenums[0] = wid.color_linenumbers_start
 				self.flash_tag(t, tagname)
 
 			elif tagname == 'Defaults':
 				self.themes = copy.deepcopy(self.default_themes)
-				self.color_linenums[0] = self.color_linenums[1]
 				self.flash_tag(t, tagname)
 
 
@@ -4268,8 +4320,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		c.title('Choose Color')
 		c.start_theme = copy.deepcopy(self.themes)
 		c.tmp_theme = copy.deepcopy(self.themes)
-		c.color_linenumbers_start = self.color_linenums[0]
-		c.color_linenumbers_tmp = self.color_linenums[0]
 		c.flag_tmp = False
 
 		shortcut_color = "<Alt-s>"
@@ -4315,7 +4365,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'Text',
 		'Background',
 		'normal_text',
-		'linenumbers',
 		'keywords',
 		'numbers',
 		'bools',
@@ -4334,8 +4383,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'Start',
 		'Defaults'
 		]
-
-
 
 
 
@@ -4392,7 +4439,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		t.insert(i, '\nSelect tag you want to modify\n', 'title')
 		t.insert(i, 'normal text\n', 'normal_text')
-		t.insert(i, 'linenumbers\n', 'linenumbers')
 
 
 		t.insert(i, '\nSyntax highlight tags\n', 'title')
@@ -4655,7 +4701,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.errlines = list()
 		openfiles = [tab.filepath for tab in self.tabs]
 
-		self.line_can_update = False
+		self.syntax_can_auto_update = False
 
 		for tag in self.text_widget.tag_names():
 			if 'hyper' in tag:
@@ -4744,8 +4790,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.text_widget.edit_reset()
 		self.text_widget.edit_modified(0)
 
-		if self.syntax:
-			self.line_can_update = True
+		if self.syntax: self.syntax_can_auto_update = True
 
 
 	def stop_show_errors(self, event=None):
@@ -6409,7 +6454,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Do paste string
 		# Put mark, so one can get end index of new string
-		self.line_can_update = False
+		self.syntax_can_auto_update = False
 		self.text_widget.mark_set('paste', ins_old)
 		self.text_widget.insert(ins_old, s)
 
@@ -6420,8 +6465,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.can_do_syntax():
 			self.update_lineinfo()
 			self.update_tokens( start=start, end=end)
-			self.line_can_update = True
-
 
 		if not have_selection:
 			self.ensure_idx_visibility(ins_old)
@@ -6436,6 +6479,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.text_widget.edit_separator()
+		if self.syntax: self.syntax_can_auto_update = True
 
 		return 'break'
 
@@ -6453,7 +6497,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# is empty
 			return 'break'
 
-		self.line_can_update = False
+		self.syntax_can_auto_update = False
 		have_selection = False
 
 		if len( self.text_widget.tag_ranges('sel') ) > 0:
@@ -6476,21 +6520,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			e = self.text_widget.index( 'insert lineend')
 			t = self.text_widget.get( s, e )
 
-
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens( start=s, end=e, line=t )
-				self.line_can_update = True
-
 
 			if have_selection:
 				self.text_widget.tag_add('sel', selstart, selend)
 
-			else:
-				self.text_widget.tag_add('sel', idx_ins, tkinter.INSERT)
+			else: self.text_widget.tag_add('sel', idx_ins, tkinter.INSERT)
+
 
 			self.text_widget.mark_set('insert', idx_ins)
-
 
 			self.wait_for(100)
 			self.ensure_idx_visibility(idx_ins)
@@ -6502,18 +6542,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			e = self.text_widget.index( '%s lineend' % idx_ins)
 			t = self.text_widget.get( s, e )
 
-
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens( start=s, end=e, line=t )
-				self.line_can_update = True
-
 
 			if have_selection:
 				self.text_widget.tag_add('sel', selstart, selend)
 
-			else:
-				self.text_widget.tag_add('sel', idx_ins, tkinter.INSERT)
+			else: self.text_widget.tag_add('sel', idx_ins, tkinter.INSERT)
 
 			self.text_widget.mark_set('insert', idx_ins)
 
@@ -6526,12 +6562,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if self.can_do_syntax():
 				self.update_lineinfo()
 				self.update_tokens( start=s, end=e, line=t )
-				self.line_can_update = True
 
 			if have_selection:
 				self.text_widget.tag_add('sel', selstart, selend)
 				self.text_widget.mark_set('insert', idx_ins)
 
+
+		if self.syntax: self.syntax_can_auto_update = True
 
 		return 'break'
 
@@ -6589,6 +6626,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##			--> just appply normal undo/redo (func1) without visibility-check
 
 
+		self.syntax_can_auto_update = False
 
 		try:
 
@@ -6596,7 +6634,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Linenumbers of top and bottom lines currently displayed on screen
 			top_line,_ = self.get_line_col_as_int(index='@0,0')
 			bot_line,_ = self.get_line_col_as_int(index='@0,65535')
-			self.line_can_update = False
 			self.wait_for(33)
 
 			func1()
@@ -6639,10 +6676,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.update_lineinfo()
 				self.update_tokens(start=s, end=e)
-				self.line_can_update = True
 
 		except tkinter.TclError:
 			self.bell()
+
+		if self.syntax: self.syntax_can_auto_update = True
 
 		return 'break'
 
@@ -6660,6 +6698,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.text_widget.tag_add('sel', 1.0, tkinter.END)
 		return 'break'
 
+
+	def put_editor_fullscreen(self, delay):
+		ln_kwargs={'width':self.margin_fullscreen}
+		just_kwargs = {'rmargin':self.gap_fullscreen}
+
+		self.do_maximize(1)
+		self.after(delay, lambda args=(ln_kwargs, just_kwargs): self.apply_left_margin(*args) )
 
 	def do_maximize(self, want_maximize):
 		''' fullscreen option seems to exist now on all win/linux/mac
@@ -6777,7 +6822,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			If at indent0 of empty line or non empty line:
 			move line and/or cursor to closest indentation
 		'''
-		self.line_can_update = False
+		self.syntax_can_auto_update = False
 
 		# There should not be selection
 		ins = tkinter.INSERT
@@ -6970,11 +7015,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Utilities Begin
 
 
-	def insert_inspected(self):
-		''' Tries to inspect selection. On success: opens new tab and pastes lines there.
-			New tab can be safely closed with ctrl-d later, or saved with new filename.
+	def view_module(self):
+		''' Open module to new Tab. Uses selection as name of module.
 
-			Note: calls importlib.import_module() on target
+			Tab can be safely closed after reading, or saved with new filename.
+
+			Note: calls importlib.import_module() on selection.
 
 		'''
 		try:
@@ -6990,11 +7036,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
-		is_module = False
-
 		try:
 			mod = importlib.import_module(target)
-			is_module = True
 			filepath = inspect.getsourcefile(mod)
 
 			if not filepath:
@@ -7007,7 +7050,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				with open(filepath, 'r', encoding='utf-8') as f:
 					fcontents = f.read()
 
-					self.line_can_update = False
+					self.syntax_can_auto_update = False
 
 					# new_tab() calls tab_close()
 					# and updates self.tabindex
@@ -7030,16 +7073,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					curtab.text_widget.mark_set('insert', curtab.position)
 					curtab.text_widget.see(curtab.position)
 
+
 					if self.can_do_syntax(curtab):
 						self.update_lineinfo(curtab)
 						a = self.get_tokens(curtab)
 						self.insert_tokens(a, tab=curtab)
-						self.line_can_update = True
+
 
 					curtab.text_widget.focus_set()
 					self.text_widget.edit_reset()
 					self.text_widget.edit_modified(0)
 
+					self.auto_update_syntax_continue()
 					return 'break'
 
 
@@ -7047,69 +7092,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				print(e.__str__())
 				print(f'\n Could not open file: {filepath}')
 				self.bell()
+				self.auto_update_syntax_continue()
 				return 'break'
 
-		except ModuleNotFoundError:
-			print(f'\n Is not a module: {target}')
-			# will continue to next try-block
+		except ModuleNotFoundError as err:
+			print(err.__str__())
 		except TypeError as ee:
 			print(ee.__str__())
 			self.bell()
+			self.auto_update_syntax_continue()
 			return 'break'
 
 
-		if not is_module:
-
-			try:
-				modulepart = target[:target.rindex('.')]
-				object_part = target[target.rindex('.')+1:]
-				mod = importlib.import_module(modulepart)
-				target_object = getattr(mod, object_part)
-
-				l = inspect.getsourcelines(target_object)
-				t = ''.join(l[0])
-
-				self.line_can_update = False
-
-				# new_tab() calls tab_close()
-				# and updates self.tabindex
-				self.new_tab()
-
-				curtab = self.tabs[self.tabindex]
-
-				indentation_is_alien, indent_depth = self.check_indent_depth(t)
-
-				tmp = t.splitlines(True)
-				tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
-				tmp = ''.join(tmp)
-				curtab.contents = tmp
-
-				curtab.text_widget.insert('1.0', curtab.contents)
-				curtab.text_widget.mark_set('insert', curtab.position)
-				curtab.text_widget.see(curtab.position)
-
-				if self.can_do_syntax(curtab):
-					self.update_lineinfo(curtab)
-					a = self.get_tokens(curtab)
-					self.insert_tokens(a, tab=curtab)
-					self.line_can_update = True
-
-				curtab.text_widget.focus_set()
-				self.text_widget.edit_reset()
-				self.text_widget.edit_modified(0)
-
-				return 'break'
-
-
-			# from rindex()
-			except ValueError:
-				self.bell()
-				return 'break'
-
-			except Exception as e:
-				self.bell()
-				print(e.__str__())
-				return 'break'
+		self.auto_update_syntax_continue()
 
 		return 'break'
 
@@ -7138,14 +7133,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tmp = ''.join(tmp)
 
 
-			self.line_can_update = False
+			self.syntax_can_auto_update = False
 			self.text_widget.delete(start, end)
 			self.text_widget.insert(start, tmp)
 
 			if self.can_do_syntax(tab):
 				self.update_lineinfo(tab)
 				self.update_tokens(start=start, end=end, tab=tab)
-				self.line_can_update = True
+				self.syntax_can_auto_update = True
 
 			self.text_widget.edit_separator()
 
@@ -8556,7 +8551,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.remove_bookmarks(all_tabs=False)
 
 				######
-				self.line_can_update = False
+				self.syntax_can_auto_update = False
 
 				self.entry.delete(0, tkinter.END)
 				if curtab.filepath != None:
@@ -8571,7 +8566,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				if self.can_do_syntax(curtab):
 					self.update_lineinfo(curtab)
 					self.insert_tokens(self.get_tokens(curtab), tab=curtab)
-					self.line_can_update = True
+					self.syntax_can_auto_update = True
 
 				self.text_widget.edit_reset()
 				self.text_widget.edit_modified(0)
@@ -8956,10 +8951,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 					if self.can_do_syntax(tab=oldtab):
 						self.update_lineinfo(tab=oldtab)
-						self.line_can_update = False
+						self.syntax_can_auto_update = False
 						self.insert_tokens(self.get_tokens(oldtab), tab=oldtab)
-						self.line_can_update = True
-
+						self.syntax_can_auto_update = True
+					else:
+						# Remove tags
+						for tag in self.tagnames:
+							self.text_widget.tag_remove(tag, '1.0', 'end')
 
 				oldtab.text_widget.edit_reset()
 				oldtab.text_widget.edit_modified(0)
@@ -8982,7 +8980,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					return False
 
 
-				self.line_can_update = False
+				self.syntax_can_auto_update = False
 
 				# new_tab() calls tab_close()
 				# and updates self.tabindex
@@ -9004,8 +9002,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				if self.can_do_syntax(tab=newtab):
 					self.update_lineinfo(tab=newtab)
 					self.insert_tokens(self.get_tokens(newtab), tab=newtab)
-					self.line_can_update = True
+				else:
+					# Remove tags
+					for tag in self.tagnames:
+						self.text_widget.tag_remove(tag, '1.0', 'end')
 
+				self.syntax_can_auto_update = True
 
 				newtab.text_widget.edit_reset()
 				newtab.text_widget.edit_modified(0)
@@ -9735,16 +9737,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# If at start of line: move line to match indent of previous line.
 			elif indentation_level := self.tab_over_indent():
 				self.text_widget.insert(tkinter.INSERT, indentation_level * '\t')
-				if self.can_do_syntax(): self.line_can_update = True
+				if self.can_do_syntax(): self.syntax_can_auto_update = True
 				return 'break'
 
 			else:
 				# tab_over_indent sets this to false
-				if self.can_do_syntax(): self.line_can_update = True
+				if self.can_do_syntax(): self.syntax_can_auto_update = True
 				return
 
 		try:
-			self.line_can_update = False
+			self.syntax_can_auto_update = False
 			startline = int(self.text_widget.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.text_widget.index(tkinter.SEL_LAST).split(sep='.')[0])
 			i = self.text_widget.index(tkinter.INSERT)
@@ -9777,7 +9779,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tkinter.TclError:
 			pass
 
-		if self.can_do_syntax(): self.line_can_update = True
+		if self.can_do_syntax(): self.syntax_can_auto_update = True
 
 		return 'break'
 
@@ -9812,7 +9814,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return 'break'
 
 		try:
-			self.line_can_update = False
+			self.syntax_can_auto_update = False
 
 			# Unindenting curline only:
 			if len(self.text_widget.tag_ranges('sel')) == 0:
@@ -9878,7 +9880,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tkinter.TclError:
 			pass
 
-		if self.can_do_syntax(): self.line_can_update = True
+		if self.can_do_syntax(): self.syntax_can_auto_update = True
 
 		return 'break'
 
@@ -9888,7 +9890,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		self.line_can_update = False
+		self.syntax_can_auto_update = False
 
 		try:
 			s = self.text_widget.index(tkinter.SEL_FIRST)
@@ -9920,7 +9922,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.text_widget.edit_separator()
-		if self.can_do_syntax(): self.line_can_update = True
+		if self.can_do_syntax(): self.syntax_can_auto_update = True
 
 		return 'break'
 
@@ -9945,12 +9947,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			endpos = self.text_widget.index('%s +1l lineend' % e)
 			changed = False
 
-			self.line_can_update = False
+			self.syntax_can_auto_update = False
 
 			for linenum in range(startline, endline+1):
 				tmp = self.text_widget.get('%d.0' % linenum,'%d.0 lineend' % linenum)
 
-				if tmp.lstrip()[:2] == '##':
+				if tmp[:2] == '##':
 					self.text_widget.delete('%d.0' % linenum,
 						'%d.0 +2c' % linenum)
 
@@ -9967,19 +9969,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# No selection, uncomment curline
 		except tkinter.TclError as e:
-			if self.can_do_syntax():self.line_can_update = True
+			if self.can_do_syntax():self.syntax_can_auto_update = True
 
 			tmp = self.text_widget.get('%s linestart' % idx_ins,
 				'%s lineend' % idx_ins)
 
-			if tmp.lstrip()[:2] == '##':
+			if tmp[:2] == '##':
 				self.text_widget.delete('%s linestart' % idx_ins,
 					'%s linestart +2c' % idx_ins)
 
 				self.text_widget.edit_separator()
 
 
-		if self.can_do_syntax():self.line_can_update = True
+		if self.can_do_syntax():self.syntax_can_auto_update = True
 
 		return 'break'
 
@@ -10950,8 +10952,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# Why _ inplace of w: bbox-width can be
 		# for example, in case of empty line, lenght of whole line
 		x, y, _, h = self.text_widget.bbox('current')
-		idx_cur = self.text_widget.index('current')
+
+		idx_cur = self.text_widget.index('insert')
 		idx = self.text_widget.index('@%d,%d' % (x, y) )
+		#print(idx_cur, idx)
 
 		# These are offsets of text_widget, relative to root.
 		# They have to be added, because cursor_frame is in root
@@ -10964,10 +10968,11 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		y = y + offset_y
 
 		# Sometimes this happens, like when clicking at linestart:
-		# real index is one char greater than what is being marked
+		# 'real/current' index is one char greater than what is being marked
 		if self.text_widget.compare(idx_cur, '>', idx):
+			prev_bbox_w = self.text_widget.bbox('%s -1c' % idx_cur)[2]
 			# but this seems to fix it, mostly
-			x = x + self.pad*3
+			x = x + prev_bbox_w
 
 		self.cursor_frame.place_configure(x=x, y=y, width=w, height=h)
 
@@ -11071,7 +11076,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				self.update_lineinfo()
 				self.insert_tokens(self.get_tokens(curtab, update=True))
 
-		if self.can_do_syntax(): self.line_can_update = True
+		if self.can_do_syntax(): self.syntax_can_auto_update = True
 
 
 		self.state = 'normal'
@@ -11520,7 +11525,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		self.entry.flag_start = True
-		self.line_can_update = False
+		self.syntax_can_auto_update = False
 		self.wait_for(100)
 
 		self.show_next()
