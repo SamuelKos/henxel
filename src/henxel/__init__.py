@@ -1524,27 +1524,63 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			setting. You can split command string to list with split,
 			or use shlex-modules split.
 
-			For example, default commands splitting:
+			Default commands splitting:
 			  cmd_as_list = 'git branch --show-current'.split()
 			Then:
 			  e.set_version_control_cmd(cmd_as_list)
+
+			Likely not needed, but in tricky cases, make
+			shell-script to get branch and then use path to that script as command.
+			Just remember to put: #!/usr/bin/env bash  or whatever to first line of script.
+			And likely the script has to be runnable by user: chmod u+x my_script.sh
+			Then: s = ['/path/to/my_script.sh'] and: e.set_version_control_cmd(s)
 		'''
 
 		if type(cmd_as_list) != list: return
 
-		p = subprocess.run(cmd_as_list, check=True, capture_output=True)
+		# 1: Get that error msg
+		d = dict(stderr=subprocess.PIPE)
+		if self.os_type == 'mac_os': d = dict(capture_output=True)
+		has_err = False
+		res = False
 
-		try:
-			p.check_returncode()
-			branch = p.stdout.decode().strip()
-			if len(branch) > 0:
+		# fix for macos printing issue
+		if self.os_type == 'mac_os':
+			p = subprocess.run(cmd_as_list, **d)
+
+			try: p.check_returncode()
+			except subprocess.CalledProcessError: has_err = True
+
+			if has_err:
+				err = p.stderr.decode()
+				err = err.splitlines()
+				for item in err: print(item)
+				return
+
+			out = p.stdout.decode().strip()
+			if len(out) > 0:
+				branch = out
 				print('Current branch:', branch)
 				self.branch = branch
 				self.version_control_cmd = cmd_as_list
 				self.restore_btn_git()
 
-		except subprocess.CalledProcessError:
-			print('\n' + p.stderr.decode().strip())
+		else:
+			# https://docs.python.org/3/library/subprocess.html
+			res = subprocess.run(cmd_as_list, **d)
+			err = res.stderr.decode()
+			if len(err) > 0:
+				print(err)
+				return
+
+			else:
+				branch = subprocess.run(cmd_as_list, check=True,
+							capture_output=True).stdout.decode().strip()
+
+				print('Current branch:', branch)
+				self.branch = branch
+				self.version_control_cmd = cmd_as_list
+				self.restore_btn_git()
 
 
 	def check_syntax_on_exit(self, setting=3):
