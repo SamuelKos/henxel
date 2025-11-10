@@ -28,18 +28,8 @@ e.text_widget.tag_config('comments',offset=1)
 
 
 
-
-black = r'#221247' # blue tint
-e.text_widget.dlineinfo('insert')
-(6, 274, 403, 19, 15)
-
-white = r'#d3d7cf'
-e.text_widget.dlineinfo('insert')
-(6, 293, 300, 18, 15)
-
-replaced less yellow
-green less green, more orange?
-
+replaced less yellow, done
+ffc800
 
 
 set_left_margin
@@ -274,17 +264,31 @@ help how to change bg color
 
 
 
-syntax_can_auto_update: check again ###########################
+syntax_can_auto_update:
+done
+
 syntax_can_auto_update is only temporary stopper-flag
 used in many places to temporarily stop auto_update_syntax.
 
 		
 
-set_line_can_update_to_true --> auto_update_syntax_stop/continue
+
+line_can_update --> syntax_can_auto_update
+auto_update_syntax_stop/continue
 update_line --> auto_update_syntax
-line_can_update --> syntax_can_update
+
 done
 
+
+
+check print long list with old mac_print
+
+
+paste to multiline string, done
+
+
+move by 2 words: ctrl-,.  #######################
+alt/cmd?
 
 
 

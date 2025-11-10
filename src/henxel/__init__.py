@@ -85,7 +85,6 @@ FLAGS = importflags.FLAGS
 ############ Imports End
 ############ Module Utilities Begin
 
-# Module Utilities Begin
 def get_font(want_list):
 	fontname = None
 
@@ -474,7 +473,7 @@ class Editor(tkinter.Toplevel):
 			# Prevent flashing 1/3
 			# Get original background, which is returned at end of init
 			# after editor gets mapped
-##			self.orig_bg_color = self.cget('bg')
+			self.orig_bg_color = self.cget('bg')
 			# This would set background to transparent: self.config(bg='')
 			# but setting it to: self.bgcolor later works better
 
@@ -714,12 +713,14 @@ class Editor(tkinter.Toplevel):
 			magenta = r'#a347ba'
 			green = r'#26a269'
 			orange = r'#e95b38'
-			#yellow = r'#d0d101'
+			yellow = r'#d0d101'
 			gray = r'#508490'
-			plain_black = r'#000000'
+			#plain_blackk = r'#000000'
 			black = r'#221247' # blue tint
 			white = r'#d3d7cf'
 
+			strings_day = '#1b774c'
+			calls_day = '#1b3db5'
 
 			self.default_themes = dict()
 			self.default_themes['day']   = d = dict()
@@ -739,11 +740,11 @@ class Editor(tkinter.Toplevel):
 			n['numbers'] = ['', red]
 			d['bools'] = ['', magenta]
 			n['bools'] = ['', magenta]
-			d['strings'] = ['', green]
+			d['strings'] = ['', strings_day]
 			n['strings'] = ['', green]
-			d['comments'] = ['', ln_color]
+			d['comments'] = ['', black]
 			n['comments'] = ['', ln_color]
-			d['calls'] = ['', cyan]
+			d['calls'] = ['', calls_day]
 			n['calls'] = ['', cyan]
 			d['breaks'] = ['', orange]
 			n['breaks'] = ['', orange]
@@ -755,8 +756,8 @@ class Editor(tkinter.Toplevel):
 			d['focus'] = ['lightgreen', 'black']
 			n['focus'] = ['lightgreen', 'black']
 
-			d['replaced'] = ['yellow', 'black']
-			n['replaced'] = ['yellow', 'black']
+			d['replaced'] = [yellow, 'black']
+			n['replaced'] = [yellow, 'black']
 
 			d['mismatch'] = ['brown1', 'white']
 			n['mismatch'] = ['brown1', 'white']
@@ -786,8 +787,8 @@ class Editor(tkinter.Toplevel):
 				self.textfont.config(family=fontname, size=size0)
 				self.menufont.config(family=fontname, size=size1)
 				self.linenum_font.config(family=fontname_linenum, size=size0-2)
-				self.keyword_font.config(family=fontname_keyword, size=size0-3)
-				# keywords are set little smaller size than normal text
+				self.keyword_font.config(family=fontname_keyword, size=size0-3, slant='italic')
+				# keywords are set little smaller size than normal text and cursived
 
 
 				self.ind_depth = TAB_WIDTH
@@ -1056,7 +1057,7 @@ class Editor(tkinter.Toplevel):
 				t1 = int(self.root.tk.eval('clock milliseconds'))
 				success = self.load_tags(tags_from_cache)
 				t2 = int(self.root.tk.eval('clock milliseconds'))
-				print(t2-t1, 'ms')
+				#print(t2-t1, 'ms')
 
 				if not success:
 					print('Could not load tags from cache-file:\n %s' % p)
@@ -1097,7 +1098,7 @@ class Editor(tkinter.Toplevel):
 			curtab.text_widget.bind( "<Control-O>", self.test_bind)
 
 			# Prevent flashing 2/3
-##			self.config(bg=self.bgcolor)
+			self.config(bg=self.bgcolor)
 
 			############
 			# Get window positioning with geometry call to work below
@@ -1127,10 +1128,10 @@ class Editor(tkinter.Toplevel):
 			else:
 				self.text_widget.focus_set()
 
-##			# Prevent flashing 3/3
-##			while not self.text_widget.winfo_viewable():
-##				self.wait_for(200)
-##			self.config(bg=self.orig_bg_color)
+			# Prevent flashing 3/3
+			while not self.text_widget.winfo_viewable():
+				self.wait_for(200)
+			self.config(bg=self.orig_bg_color)
 
 
 			# no conf, or geometry reset to 'default'
@@ -1518,7 +1519,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return success_all
 
 
-	def set_version_control_cmd(self, cmd_as_list):
+	def set_version_control_cmd(self, cmd_as_list=None):
 		''' Set command to fetch current version control branch.
 			Command must be given as list. Command is tried before
 			setting. You can split command string to list with split,
@@ -1535,21 +1536,29 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			And likely the script has to be runnable by user: chmod u+x my_script.sh
 			Then: s = ['/path/to/my_script.sh'] and: e.set_version_control_cmd(s)
 		'''
+		if cmd_as_list == None:
+			print(self.version_control_cmd)
 
-		if type(cmd_as_list) != list: return
+		elif type(cmd_as_list) != list: return
 
-		# 1: Get that error msg
-		d = dict(stderr=subprocess.PIPE)
+
+		d = dict(stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		if self.os_type == 'mac_os': d = dict(capture_output=True)
 		has_err = False
-		res = False
+		out = ''
 
 		# fix for macos printing issue
 		if self.os_type == 'mac_os':
-			p = subprocess.run(cmd_as_list, **d)
+			try:
+				p = subprocess.run(cmd_as_list, **d)
 
-			try: p.check_returncode()
-			except subprocess.CalledProcessError: has_err = True
+				try: p.check_returncode()
+				except subprocess.CalledProcessError:
+					has_err = True
+
+			except Exception as ee:
+				print(ee.__str__())
+				return
 
 			if has_err:
 				err = p.stderr.decode()
@@ -1558,29 +1567,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return
 
 			out = p.stdout.decode().strip()
-			if len(out) > 0:
-				branch = out
-				print('Current branch:', branch)
-				self.branch = branch
-				self.version_control_cmd = cmd_as_list
-				self.restore_btn_git()
 
 		else:
 			# https://docs.python.org/3/library/subprocess.html
-			res = subprocess.run(cmd_as_list, **d)
-			err = res.stderr.decode()
+			p = subprocess.run(cmd_as_list, **d)
+			err = p.stderr.decode()
 			if len(err) > 0:
 				print(err)
 				return
 
 			else:
-				branch = subprocess.run(cmd_as_list, check=True,
-							capture_output=True).stdout.decode().strip()
+				out = p.stdout.decode().strip()
 
-				print('Current branch:', branch)
-				self.branch = branch
-				self.version_control_cmd = cmd_as_list
-				self.restore_btn_git()
+		if len(out) > 0:
+			branch = out
+			print('Current branch:', branch)
+			self.branch = branch
+			self.version_control_cmd = cmd_as_list
+			self.restore_btn_git()
+
 
 
 	def check_syntax_on_exit(self, setting=3):
@@ -1916,9 +1921,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			e = 'insert lineend'
 
 		#print('check_line:', s, e)
-		# Remove old tags:
-		for tag in self.tagnames:
-			self.text_widget.tag_remove( tag, s, e)
 
 
 		if tab.check_scope:
@@ -1935,6 +1937,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			When this is called, the info is up to date and thus
 			prevents update for the line (in auto_update_syntax), which is the purpose.
+
+			This should be called before calling: auto_update_syntax_continue
 		'''
 
 		if not tab:
@@ -1977,8 +1981,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.want_ln == 2: self.update_linenums()
 
 
-		# syntax_can_auto_update is only temporary stopper-flag used in many places to
-		# temporarily stop auto_update_syntax. It should always be set back to True.
 		if self.can_do_syntax(tab) and self.syntax_can_auto_update:
 
 			# Tag alter triggers this event if font changes, like from normal to bold.
@@ -3133,7 +3135,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.syntax:
 			self.syntax = False
-			self.syntax_can_auto_update = False
+			self.auto_update_syntax_stop()
 
 			for tab in self.tabs:
 				for tag in self.tagnames:
@@ -3143,7 +3145,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		else:
 			self.syntax = True
-			self.syntax_can_auto_update = False
+			self.auto_update_syntax_stop()
 
 			for tab in self.tabs:
 
@@ -3154,7 +3156,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.insert_tokens(a, tab=tab)
 
 
-			self.syntax_can_auto_update = True
+			self.auto_update_syntax_continue()
 
 			return 'break'
 
@@ -4737,7 +4739,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.errlines = list()
 		openfiles = [tab.filepath for tab in self.tabs]
 
-		self.syntax_can_auto_update = False
+		self.auto_update_syntax_stop()
+
 
 		for tag in self.text_widget.tag_names():
 			if 'hyper' in tag:
@@ -4826,7 +4829,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.text_widget.edit_reset()
 		self.text_widget.edit_modified(0)
 
-		if self.syntax: self.syntax_can_auto_update = True
+		self.auto_update_syntax_continue()
 
 
 	def stop_show_errors(self, event=None):
@@ -6433,10 +6436,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not self.flag_fix_indent or t != self.checksum_fix_indent:
 			self.paste_fallback(event=event)
 			self.text_widget.edit_separator()
-			#print('paste norm')
+			#print('paste normal')
 			return 'break'
 
-		#print('paste ride')
+		#print('paste override')
 
 
 		[ ins_old, have_selection, selection_started_from_top,
@@ -6490,13 +6493,30 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Do paste string
 		# Put mark, so one can get end index of new string
-		self.syntax_can_auto_update = False
+		self.auto_update_syntax_stop()
 		self.text_widget.mark_set('paste', ins_old)
 		self.text_widget.insert(ins_old, s)
 
 
 		start = self.text_widget.index( '%s linestart' % ins_old)
 		end = self.text_widget.index( 'paste lineend')
+
+
+		tab = self.tabs[self.tabindex]
+		if self.cursor_is_in_multiline_string(tab=tab):
+
+			# fix for multiline strings at __main__()
+			# Taken from check_line
+			if r := self.text_widget.tag_prevrange('deflin', 'insert'):
+				start = r[0] + ' linestart'
+			else:
+				start = '1.0'
+
+			if r := self.text_widget.tag_nextrange('deflin', 'insert'):
+				end = r[0] + ' -1 lines linestart'
+			else:
+				end = 'end'
+
 
 		if self.can_do_syntax():
 			self.update_lineinfo()
@@ -6515,7 +6535,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.text_widget.edit_separator()
-		if self.syntax: self.syntax_can_auto_update = True
+		self.auto_update_syntax_continue()
 
 		return 'break'
 
@@ -6533,7 +6553,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# is empty
 			return 'break'
 
-		self.syntax_can_auto_update = False
+		self.auto_update_syntax_stop()
 		have_selection = False
 
 		if len( self.text_widget.tag_ranges('sel') ) > 0:
@@ -6604,7 +6624,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.text_widget.mark_set('insert', idx_ins)
 
 
-		if self.syntax: self.syntax_can_auto_update = True
+		self.auto_update_syntax_continue()
 
 		return 'break'
 
@@ -6662,7 +6682,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##			--> just appply normal undo/redo (func1) without visibility-check
 
 
-		self.syntax_can_auto_update = False
+		self.auto_update_syntax_stop()
 
 		try:
 
@@ -6716,7 +6736,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tkinter.TclError:
 			self.bell()
 
-		if self.syntax: self.syntax_can_auto_update = True
+		self.auto_update_syntax_continue()
 
 		return 'break'
 
@@ -6858,7 +6878,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			If at indent0 of empty line or non empty line:
 			move line and/or cursor to closest indentation
 		'''
-		self.syntax_can_auto_update = False
 
 		# There should not be selection
 		ins = tkinter.INSERT
@@ -7003,13 +7022,21 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Cursor indexes when pressed return:
 		line, col = self.get_line_col_as_int()
 
+		def finish_return():
+			self.text_widget.see(f'{line+1}.0')
+			self.text_widget.edit_separator()
+			return 'break'
+
+
+		tab = self.tabs[self.tabindex]
+		if self.cursor_is_in_multiline_string(tab=tab):
+			tab.check_scope = True
+
 
 		# First an easy case:
 		if col == 0:
 			self.text_widget.insert(tkinter.INSERT, '\n')
-			self.text_widget.see(f'{line+1}.0')
-			self.text_widget.edit_separator()
-			return 'break'
+			return finish_return()
 
 
 		tmp = self.text_widget.get('%s.0' % str(line),'%s.0 lineend' % str(line))
@@ -7019,9 +7046,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if tmp[:col].isspace() and not tmp[col:].isspace():
 			self.text_widget.insert(tkinter.INSERT, '\n')
 			self.text_widget.insert('%s.0' % str(line+1), tmp[:col])
-			self.text_widget.see(f'{line+1}.0')
-			self.text_widget.edit_separator()
-			return 'break'
+			return finish_return()
 
 		else:
 			# rstrip space to prevent indentation sailing.
@@ -7035,9 +7060,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Manual newline because return is overrided.
 			self.text_widget.insert(tkinter.INSERT, '\n')
 			self.text_widget.insert(tkinter.INSERT, i*'\t')
-			self.text_widget.see(f'{line+1}.0')
-			self.text_widget.edit_separator()
-			return 'break'
+			return finish_return()
 
 
 	def sbset_override(self, *args):
@@ -7071,6 +7094,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
+		self.auto_update_syntax_stop()
+
 
 		try:
 			mod = importlib.import_module(target)
@@ -7085,8 +7110,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			try:
 				with open(filepath, 'r', encoding='utf-8') as f:
 					fcontents = f.read()
-
-					self.syntax_can_auto_update = False
 
 					# new_tab() calls tab_close()
 					# and updates self.tabindex
@@ -7120,24 +7143,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.text_widget.edit_reset()
 					self.text_widget.edit_modified(0)
 
-					self.auto_update_syntax_continue()
-					return 'break'
-
 
 			except (EnvironmentError, UnicodeDecodeError) as e:
 				print(e.__str__())
 				print(f'\n Could not open file: {filepath}')
 				self.bell()
-				self.auto_update_syntax_continue()
-				return 'break'
 
 		except ModuleNotFoundError as err:
 			print(err.__str__())
 		except TypeError as ee:
 			print(ee.__str__())
 			self.bell()
-			self.auto_update_syntax_continue()
-			return 'break'
 
 
 		self.auto_update_syntax_continue()
@@ -7147,6 +7163,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def tabify_lines(self, event=None):
 		tab = self.tabs[self.tabindex]
+
+		self.auto_update_syntax_stop()
 
 		try:
 			startline = self.text_widget.index(tkinter.SEL_FIRST).split(sep='.')[0]
@@ -7169,20 +7187,21 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tmp = ''.join(tmp)
 
 
-			self.syntax_can_auto_update = False
 			self.text_widget.delete(start, end)
 			self.text_widget.insert(start, tmp)
 
 			if self.can_do_syntax(tab):
 				self.update_lineinfo(tab)
 				self.update_tokens(start=start, end=end, tab=tab)
-				self.syntax_can_auto_update = True
 
 			self.text_widget.edit_separator()
 
 
 		except tkinter.TclError as e:
 			print(e)
+
+
+		self.auto_update_syntax_continue()
 
 		return 'break'
 
@@ -7238,6 +7257,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 
 		if self.branch:
+			self.btn_git.config(bitmap='')
 			branch = self.branch[:5]
 			# Set branch name lenght to 5.
 			# Reason: avoid ln_widget geometry changes
@@ -8254,11 +8274,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Reduce greatly search time, compared to re-aproach
 		self.deflines = self.get_deflines(self.tabs[self.tabindex])
+
 		for item in self.deflines:
 			if item[2] == word_at_cursor:
 				pos = str(item[1])
 				break
 		else:
+			print('Could not find:', word_at_cursor)
 			self.bell()
 			return 'break'
 
@@ -8560,6 +8582,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return
 
 
+		self.auto_update_syntax_stop()
+
+
 		# Using *same* tab:
 		try:
 			with open(filename, 'r', encoding='utf-8') as f:
@@ -8586,8 +8611,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				curtab.position = '1.0'
 				self.remove_bookmarks(all_tabs=False)
 
-				######
-				self.syntax_can_auto_update = False
 
 				self.entry.delete(0, tkinter.END)
 				if curtab.filepath != None:
@@ -8602,11 +8625,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				if self.can_do_syntax(curtab):
 					self.update_lineinfo(curtab)
 					self.insert_tokens(self.get_tokens(curtab), tab=curtab)
-					self.syntax_can_auto_update = True
 
 				self.text_widget.edit_reset()
 				self.text_widget.edit_modified(0)
-				######
+
 
 		except (EnvironmentError, UnicodeDecodeError) as e:
 			print(e.__str__())
@@ -8617,7 +8639,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.entry.insert(0, curtab.filepath)
 				self.entry.xview_moveto(1.0)
 
+
 		self.text_widget.focus_set()
+		self.auto_update_syntax_continue()
 		return
 
 
@@ -8984,16 +9008,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if oldtab.filepath != None:
 					update_entry()
+					self.auto_update_syntax_stop()
 
 					if self.can_do_syntax(tab=oldtab):
 						self.update_lineinfo(tab=oldtab)
-						self.syntax_can_auto_update = False
 						self.insert_tokens(self.get_tokens(oldtab), tab=oldtab)
-						self.syntax_can_auto_update = True
 					else:
 						# Remove tags
 						for tag in self.tagnames:
 							self.text_widget.tag_remove(tag, '1.0', 'end')
+
+					self.auto_update_syntax_continue()
 
 				oldtab.text_widget.edit_reset()
 				oldtab.text_widget.edit_modified(0)
@@ -9016,7 +9041,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					return False
 
 
-				self.syntax_can_auto_update = False
+				self.auto_update_syntax_stop()
 
 				# new_tab() calls tab_close()
 				# and updates self.tabindex
@@ -9043,7 +9068,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					for tag in self.tagnames:
 						self.text_widget.tag_remove(tag, '1.0', 'end')
 
-				self.syntax_can_auto_update = True
+				self.auto_update_syntax_continue()
 
 				newtab.text_widget.edit_reset()
 				newtab.text_widget.edit_modified(0)
@@ -9052,7 +9077,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Should not happen
 			else:
 				print('Error in save() while saving tab:')
-				print(oldtab)
+				print(oldtab.filepath)
 				return False
 
 
@@ -9746,6 +9771,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.state in [ 'search', 'replace', 'replace_all', 'goto_def' ]:
 			return 'break'
 
+		self.auto_update_syntax_stop()
+
+
 		if len(self.text_widget.tag_ranges('sel')) == 0:
 
 			if self.can_expand_word():
@@ -9768,21 +9796,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				# Tab-completion also with Shift-Tab,
 				# which is intended to help tab-completing with slow/lazy fingers
 
+				self.auto_update_syntax_continue()
 				return 'break'
 
 			# If at start of line: move line to match indent of previous line.
 			elif indentation_level := self.tab_over_indent():
 				self.text_widget.insert(tkinter.INSERT, indentation_level * '\t')
-				if self.can_do_syntax(): self.syntax_can_auto_update = True
+
+				self.auto_update_syntax_continue()
 				return 'break'
 
 			else:
-				# tab_over_indent sets this to false
-				if self.can_do_syntax(): self.syntax_can_auto_update = True
+				self.auto_update_syntax_continue()
 				return
 
+
 		try:
-			self.syntax_can_auto_update = False
 			startline = int(self.text_widget.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.text_widget.index(tkinter.SEL_LAST).split(sep='.')[0])
 			i = self.text_widget.index(tkinter.INSERT)
@@ -9815,7 +9844,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tkinter.TclError:
 			pass
 
-		if self.can_do_syntax(): self.syntax_can_auto_update = True
+
+		self.auto_update_syntax_continue()
 
 		return 'break'
 
@@ -9823,6 +9853,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def unindent(self, event=None):
 		if self.state in [ 'search', 'replace', 'replace_all', 'goto_def' ]:
 			return 'break'
+
+		self.auto_update_syntax_stop()
 
 
 		if len(self.text_widget.tag_ranges('sel')) == 0:
@@ -9847,11 +9879,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				# Tab-completion also with Shift-Tab,
 				# which is intended to help tab-completing with slow/lazy fingers
 
+				self.auto_update_syntax_continue()
 				return 'break'
 
 		try:
-			self.syntax_can_auto_update = False
-
 			# Unindenting curline only:
 			if len(self.text_widget.tag_ranges('sel')) == 0:
 				startline = int(self.text_widget.index(tkinter.INSERT).split(sep='.')[0])
@@ -9916,7 +9947,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		except tkinter.TclError:
 			pass
 
-		if self.can_do_syntax(): self.syntax_can_auto_update = True
+
+		self.auto_update_syntax_continue()
 
 		return 'break'
 
@@ -9926,7 +9958,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		self.syntax_can_auto_update = False
+		self.auto_update_syntax_stop()
 
 		try:
 			s = self.text_widget.index(tkinter.SEL_FIRST)
@@ -9958,7 +9990,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.text_widget.edit_separator()
-		if self.can_do_syntax(): self.syntax_can_auto_update = True
+		self.auto_update_syntax_continue()
 
 		return 'break'
 
@@ -9972,6 +10004,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 		idx_ins = self.text_widget.index(tkinter.INSERT)
+		self.auto_update_syntax_stop()
 
 		try:
 			s = self.text_widget.index(tkinter.SEL_FIRST)
@@ -9983,7 +10016,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			endpos = self.text_widget.index('%s +1l lineend' % e)
 			changed = False
 
-			self.syntax_can_auto_update = False
 
 			for linenum in range(startline, endline+1):
 				tmp = self.text_widget.get('%d.0' % linenum,'%d.0 lineend' % linenum)
@@ -10005,7 +10037,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# No selection, uncomment curline
 		except tkinter.TclError as e:
-			if self.can_do_syntax():self.syntax_can_auto_update = True
+			self.auto_update_syntax_continue()
 
 			tmp = self.text_widget.get('%s linestart' % idx_ins,
 				'%s lineend' % idx_ins)
@@ -10017,7 +10049,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.text_widget.edit_separator()
 
 
-		if self.can_do_syntax():self.syntax_can_auto_update = True
+		self.auto_update_syntax_continue()
 
 		return 'break'
 
@@ -10987,9 +11019,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		# Why _ inplace of w: bbox-width can be
 		# for example, in case of empty line, lenght of whole line
+		# and don't want so wide cursor
 		x, y, _, h = self.text_widget.bbox('current')
 
-		idx_cur = self.text_widget.index('insert')
+		idx_ins = self.text_widget.index('insert') # real index of insert
 		idx = self.text_widget.index('@%d,%d' % (x, y) )
 		#print(idx_cur, idx)
 
@@ -11004,10 +11037,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		y = y + offset_y
 
 		# Sometimes this happens, like when clicking at linestart:
-		# 'real/current' index is one char greater than what is being marked
-		if self.text_widget.compare(idx_cur, '>', idx):
-			prev_bbox_w = self.text_widget.bbox('%s -1c' % idx_cur)[2]
-			# but this seems to fix it, mostly
+		# 'insert'-index is one char greater than what is about to be marked
+		if self.text_widget.compare(idx_ins, '>', idx):
+			prev_bbox_w = self.text_widget.bbox('%s -1c' % idx_ins)[2]
+			# This fixes it
 			x = x + prev_bbox_w
 
 		self.cursor_frame.place_configure(x=x, y=y, width=w, height=h)
@@ -11112,7 +11145,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				self.update_lineinfo()
 				self.insert_tokens(self.get_tokens(curtab, update=True))
 
-		if self.can_do_syntax(): self.syntax_can_auto_update = True
+
+		self.auto_update_syntax_continue()
 
 
 		self.state = 'normal'
@@ -11561,10 +11595,12 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		self.entry.flag_start = True
-		self.syntax_can_auto_update = False
-		self.wait_for(100)
+		self.auto_update_syntax_stop()
 
+
+		self.wait_for(100)
 		self.show_next()
+
 
 		self.bid_show_next = self.bind("<Control-n>", self.show_next )
 		self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
