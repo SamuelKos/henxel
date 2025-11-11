@@ -172,6 +172,12 @@ def stash_pop():
 	subprocess.run('git stash pop -q'.split())
 
 
+class FakeEvent:
+	''' Dummy helper class, used in move_by_words2
+	'''
+
+	keysym = 'Right'
+
 ############ Module Utilities End
 ############ Class Tab Begin
 
@@ -664,6 +670,7 @@ class Editor(tkinter.Toplevel):
 				self.popup.add_command(label="   uncomment", command=self.uncomment)
 
 			self.popup.add_command(label="  select all", command=self.select_all)
+			self.popup.add_command(label="   strip one", command=self.strip_first_char)
 			self.popup.add_command(label="    open mod", command=self.view_module)
 			self.popup.add_command(label="      errors", command=self.show_errors)
 			self.popup.add_command(label="        help", command=self.help)
@@ -2093,6 +2100,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind( "<Control-Shift-Left>", self.select_by_words)
 			w.bind( "<Control-Shift-Right>", self.select_by_words)
 
+
 			w.bind( "<Control-Up>", self.move_many_lines)
 			w.bind( "<Control-Down>", self.move_many_lines)
 			w.bind( "<Control-Shift-Up>", self.move_many_lines)
@@ -2192,6 +2200,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.bind( "<Control-A>", self.goto_linestart)
 		w.bind( "<Control-E>", self.goto_lineend)
 
+
+		###
+		w.bind( "<Control-.>", self.move_by_words2)
+		###
 
 
 
@@ -5681,6 +5693,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return pos
 
 
+	def move_by_words2(self, event=None):
+		event = FakeEvent()
+		print('jou', event.keysym)
+		for i in range(2):
+			try:
+				self.move_by_words(event=event)
+			except Exception as e:
+				print(e)
+
+		return 'break'
+
+
 	def move_by_words(self, event=None):
 		'''	Pressed ctrl or Alt and arrow left or right.
 			Make <<NextWord>> and <<PrevWord>> to handle lineends.
@@ -7161,18 +7185,61 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
+	def strip_first_char(self, event=None):
+		''' Remove first char of every line of selection
+
+			is popup-menu item
+
+			intention: fix for pasted diff-output lines
+
+			After paste from diff, use this first,
+			then tabify with ctrl-t
+
+
+			This assumes that addition indicator character,
+			like "+" in git diff,
+			is not inside indentation
+		'''
+
+		self.auto_update_syntax_stop()
+
+		tab = self.tabs[self.tabindex]
+
+		try:
+			start = 'sel.first linestart'
+			end = 'sel.last lineend'
+
+			startline,_ = self.get_line_col_as_int(tab=tab, index=start)
+			endline,_ = self.get_line_col_as_int(tab=tab, index=end)
+
+			for line in range(startline, endline+1):
+				tab.text_widget.delete('%d.0' % line, '%d.1' % line)
+
+
+			if self.can_do_syntax(tab):
+				self.update_lineinfo(tab)
+				self.update_tokens(start=start, end=end, tab=tab)
+
+			tab.text_widget.edit_separator()
+
+		except tkinter.TclError as e:
+			print(e)
+
+
+		self.auto_update_syntax_continue()
+
+		return 'break'
+
+
 	def tabify_lines(self, event=None):
 		tab = self.tabs[self.tabindex]
 
 		self.auto_update_syntax_stop()
 
 		try:
-			startline = self.text_widget.index(tkinter.SEL_FIRST).split(sep='.')[0]
-			endline = self.text_widget.index(tkinter.SEL_LAST).split(sep='.')[0]
-
-			start = '%s.0' % startline
-			end = '%s.0 lineend' % endline
-			tmp = self.text_widget.get(start, end)
+			start = tab.text_widget.index('sel.first linestart')
+			end = tab.text_widget.index('sel.last lineend')
+			tmp = tab.text_widget.get(start, end)
 
 			indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
 
@@ -7187,14 +7254,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tmp = ''.join(tmp)
 
 
-			self.text_widget.delete(start, end)
-			self.text_widget.insert(start, tmp)
+			tab.text_widget.delete(start, end)
+			tab.text_widget.insert(start, tmp)
 
 			if self.can_do_syntax(tab):
 				self.update_lineinfo(tab)
 				self.update_tokens(start=start, end=end, tab=tab)
 
-			self.text_widget.edit_separator()
+			tab.text_widget.edit_separator()
 
 
 		except tkinter.TclError as e:
@@ -10711,6 +10778,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		if not self.search_settings:
 			self.reset_search_setting()
+
 
 		defaults = [
 				'search',

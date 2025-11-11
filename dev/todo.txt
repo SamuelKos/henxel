@@ -11,6 +11,13 @@ Below this: done ################################################
 export conf without filepaths, done
 
 
+remove first char of every line of selection
+is menu item
+intention: use first on paste from diff, then tabify with ctrl-t
+strip_first_char
+help done
+
+
 
 ##handle_diff_lineheigths
 ##widget with one line one char with boldfont
@@ -291,6 +298,60 @@ move by 2 words: ctrl-,.  #######################
 alt/cmd?
 
 
+macos open finder to cur folder: #######################
+open .
+
+
+
+
+
+#####################################
+tk.BitmapImage(file=f[, background=b][, foreground=c])
+logo = tk.BitmapImage('logo.xbm', foreground='red'
+
+e.tk.eval('image names')
+
+
+
+cmd = '''
+set info [image create bitmap -data {
+# define info_width 8
+# define info_height 21
+static unsigned char info_bits[] = {
+0x3c, 0x2a, 0x16, 0x2a, 0x14, 0x00, 0x00, 0x3f, 0x15,
+0x2e, 0x14, 0x2c, 0x14, 0x2c, 0x14, 0x2c, 0x14, 0x2c,
+0xd7, 0xab, 0x55
+}}]
+'''
+
+img_name = e.tk.eval(cmd)
+
+btn_git_tcl_name = e.nametowidget(e.btn_git).__str__()
+
+cmd2 = '''
+%s config -image %s -text " devel"
+''' % (btn_git_tcl_name, img_name)
+
+img_name = e.tk.eval(cmd2)
+
+e.btn_git.config(compound='left')
+e.btn_git.config(bd=0)
+
+width_text = e.menufont.measure('123456')
+width_img = 8
+width_total = width_text + width_img +10
+print(width_total)
+e.btn_git.config(width=width_total)
+
+#####################################
+
+
+
+
+
+search -all
+user settable
+--> get only first match on line
 
 
 popup --> normal menu to btn_git?
