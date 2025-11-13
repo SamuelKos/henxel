@@ -100,12 +100,6 @@
 	  - Hide bookmarks with Cmd/Alt-u (if have too many, so it is easier
 		to navigate. They can be restored later)
 		
-		To remove single hided bookmark, first check linenumber with:
-		1: e.print_bookmarks(True) --> Show also hided bookmarks
-		2: Goto that line with stashed bookmark
-		3: bookmark: Cmd/Alt-p on that line, this removes hided bookmark
-		4: and if not want leave this new bookmark, again: Cmd/Alt-p
-		
 	  - Walk bookmarks with Cmd/Alt-bB
 	  - Can also be created while searching:
 		Easy: Press Cmd/Alt-p to bookmark match with focus
@@ -120,7 +114,6 @@
 		e.remove_bookmarks() --> from current tab
 		e.remove_bookmarks(all_tabs=True) --> from all tabs
 		e.print_bookmarks() of current tab
-		e.print_bookmarks(show_stashed=True) --> Show also hided bookmarks
 		
 		With this one can save bookmarks if need for example; close tab
 		but want to keep record of its bookmarks, just note that
@@ -133,6 +126,12 @@
 		e.unstash_bookmarks() --> restore hided bookmarks to tab
 		e.unstash_bookmarks(all_tabs=True) --> to all tabs
 
+		To remove just one hided bookmark, first check linenumber with:
+		1: e.print_bookmarks()
+		2: Goto that line with stashed bookmark
+		3: bookmark: Cmd/Alt-p on that line, this removes hided bookmark
+		4: and if not want leave this new bookmark, again: Cmd/Alt-p
+		
 
 	Goto definition
 	  - Of function in current tab with Cmd/Alt-g
@@ -197,12 +196,9 @@
 	  e.check_syntax_on_exit()
 	
 	  - Without arguments, return current setting
-	  - 1: do check
-	  - 0: no check (default)
-	
-	  Note: Every time doing run,
-	  syntax of all py-files of project, open or not, is checked
-	  
+	  - 1: do check (default)
+	  - 0: no check
+		  
 	  If just want to check syntax of open py-files, independent of setting:
 	  e.save_forced() --> True if no saving errors
 	  e.tab_has_syntax_error() --> False if no syntax errors
@@ -254,6 +250,19 @@
 		   --> it will remove first character from every line of selection
 		3: Ensure you still have selected pasted lines and press Ctrl-t
 		4: Done
+		
+	
+	Fix possible printing issue with macOS
+	  - When using macOS, printing from editor might not work as normal,
+		there could be only linefeeds, no translation: \n --> CR+LF
+		This change came in about Python 3.13, but it could work in newer
+		macOS versions than 12.
+		
+	  - If having issues printing: e.use_mac_print_init()
+		Without arguments returns current Value
+		1: Use fix  0: Use normal print
+		
+	  - By default, normal printing is used
 		
 		
 	Elide

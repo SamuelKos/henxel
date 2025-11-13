@@ -11,6 +11,15 @@ Below this: done ################################################
 export conf without filepaths, done
 
 
+use_mac_print_init()
+is conf, default off, done
+help update done
+
+
+paste to multiline string, done
+paste_fallback, done
+
+
 remove first char of every line of selection
 is menu item
 intention: use first on paste from diff, then tabify with ctrl-t
@@ -32,12 +41,9 @@ somewhat works:
 e.text_widget.tag_config('comments',spacing1=0)
 e.text_widget.tag_config('comments',offset=1)
 			
-
-
-
-replaced less yellow, done
-ffc800
-
+			
+			
+			
 
 set_left_margin
 set_left_margin_gap
@@ -48,10 +54,6 @@ mark cursor place when searching etc, cursor disabled:
 cursor_frame
 done
 
-
-done:
-editor.tag --> henxel.cache
-editor.cnf --> henxel.cnf
 
 can now run tab without filename
 
@@ -66,6 +68,22 @@ renamed:
 self.contents --> self.text_widget
 change_indentation_width --> change_tabsize, help done
 self.bbox --> self.line_height
+editor.tag --> henxel.cache
+editor.cnf --> henxel.cnf
+line_can_update --> syntax_can_auto_update
+added: auto_update_syntax_stop/continue
+update_line --> auto_update_syntax
+
+
+syntax_can_auto_update:
+done
+
+syntax_can_auto_update is only temporary stopper-flag
+used in many places to temporarily stop auto_update_syntax.
+
+		
+
+
 
 
 comments with same font and color than linenumbers
@@ -263,48 +281,64 @@ newtab seems to have syntax on by default
 
 
 todo: copy paste, defline ########
-tabify_lines also paste from git diff
 
 
-help theme colors linenum colors same with comments etc
-help how to change bg color
+test change font when no linenumbers want_ln 0 1
 
 
+to help: linenum color same with comments etc
+to help: how to change bg color
 
-syntax_can_auto_update:
-done
-
-syntax_can_auto_update is only temporary stopper-flag
-used in many places to temporarily stop auto_update_syntax.
-
-		
-
-
-line_can_update --> syntax_can_auto_update
-auto_update_syntax_stop/continue
-update_line --> auto_update_syntax
-
-done
-
-
-
-check print long list with old mac_print
-
-
-paste to multiline string, done
 
 
 move by 2 words: ctrl-,.  #######################
 alt/cmd?
 
 
+
+Control-np --> just np? easy on search, search next?
+no?
+
+
+
+
 macos open finder to cur folder: #######################
 open .
 
 
+--> check_line multiline fix for indent0
+generates indentation errors --> using old way to get start ends
+
+
+check import bookmarks
 
 
 
+##########
+To Notes:
+
+# Crazy fix (stuff goes to stdin)
+self.clipboard_clear()
+[self.clipboard_append( str(arg) + ' ' ) for arg in args ]
+self.clipboard_append( chr(13)) # + chr(10) )
+
+mac_term = self.__class__.mac_term
+triple = r"'''"
+tmp = ['osascript', '-e', 'tell app "%s" to activate' % mac_term,
+'-e', 'tell application "System Events" to keystroke "%s"' % triple,
+'-e', 'tell application "System Events" to keystroke "v" using command down',
+'-e', 'tell application "System Events" to keystroke "%s"' % triple,
+'-e', 'tell application "System Events" to key down {return}',
+'-e', 'tell application "System Events" to key up {return}'
+]
+
+subprocess.run(tmp)
+###########3
+
+
+
+
+done, this should be user settable bitmap: set_bitmap(bitmap_as_string) ########
 #####################################
 tk.BitmapImage(file=f[, background=b][, foreground=c])
 logo = tk.BitmapImage('logo.xbm', foreground='red'
@@ -313,26 +347,27 @@ e.tk.eval('image names')
 
 
 
-cmd = '''
-set info [image create bitmap -data {
-# define info_width 8
-# define info_height 21
-static unsigned char info_bits[] = {
+create_pic_cmd = '''
+set infopic [image create bitmap -data {
+# define infopic_width 8
+# define infopic_height 21
+static unsigned char infopic_bits[] = {
 0x3c, 0x2a, 0x16, 0x2a, 0x14, 0x00, 0x00, 0x3f, 0x15,
 0x2e, 0x14, 0x2c, 0x14, 0x2c, 0x14, 0x2c, 0x14, 0x2c,
 0xd7, 0xab, 0x55
 }}]
 '''
 
-img_name = e.tk.eval(cmd)
+img_name = e.tk.eval(create_pic_cmd)
 
 btn_git_tcl_name = e.nametowidget(e.btn_git).__str__()
+
 
 cmd2 = '''
 %s config -image %s -text " devel"
 ''' % (btn_git_tcl_name, img_name)
 
-img_name = e.tk.eval(cmd2)
+e.tk.eval(cmd2)
 
 e.btn_git.config(compound='left')
 e.btn_git.config(bd=0)
@@ -349,11 +384,6 @@ e.btn_git.config(width=width_total)
 
 
 
-search -all
-user settable
---> get only first match on line
-
-
 popup --> normal menu to btn_git?
 
 
@@ -361,13 +391,9 @@ fontchoose use incremental after?
 changefont: max total time for animation, needs check
 
 
-
-
 note ln_update: if font is different at @0,0 like def with smaller font
 its bbox is different. --> sometimes wonky linenums
 ln_update should be done with tcl?
-
-
 
 
 debug testlaunch no work
@@ -377,11 +403,6 @@ conf should be dataclass?
 linescpacing increase?
 test reduce in update_tokens?
 
-
-delete move_by_words select_by_words?
-instead, at first bind: animate char by char until:
-1: second bind
-or 2: idx_linestart/end
 
 
 #######
@@ -1187,8 +1208,12 @@ TO NOTES START
 
 
 ####
-self.line_can_update is only temporary stopper-flag for self.update_line()
-It should always be set back to True
+self.syntax_can_auto_update is only temporary stopper-flag for self.auto_update_syntax(),
+this flag is used in many places to temporarily stop auto_update_syntax.
+
+syntax_can_auto_update
+auto_update_syntax_stop/continue
+auto_update_syntax
 ####
 
 

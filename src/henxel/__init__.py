@@ -45,6 +45,9 @@
 ############ Imports Begin
 
 # From standard library
+from dataclasses import dataclass, field
+from typing import Any, List
+import builtins
 import tkinter.messagebox
 import tkinter.font
 import tkinter
@@ -172,17 +175,16 @@ def stash_pop():
 	subprocess.run('git stash pop -q'.split())
 
 
+@dataclass
 class FakeEvent:
-	''' Dummy helper class, used in move_by_words2
+	''' Used in move_by_words2
 	'''
 
-	keysym = 'Right'
+	keysym: str = 'Left'
 
 ############ Module Utilities End
 ############ Class Tab Begin
 
-from dataclasses import dataclass, field
-from typing import Any, List
 
 @dataclass
 class Tab:
@@ -497,7 +499,7 @@ class Editor(tkinter.Toplevel):
 			self.oldconf = None
 			self.tab_char = TAB_WIDTH_CHAR
 			# Check syntax at exit
-			self.check_syntax = False
+			self.check_syntax = True
 
 			################################
 			# henxel.cnf is read from here #
@@ -590,16 +592,12 @@ class Editor(tkinter.Toplevel):
 			self.default_margin, self.margin, self.margin_fullscreen = 4, 5, 5
 			self.gap, self.gap_fullscreen = 0, 0
 
+			## Fix for macos printing issue starting from about Python 3.13
+			self.fix_mac_print = False
+
 			# Just in case, set to normal at end of init
 			self.state = 'init'
 
-
-			# fix for macos printing issue starting from about Python 3.12?
-			if self.os_type == 'mac_os':
-				import builtins
-				global print
-				def print(*args, **kwargs):
-					builtins.print(*args, end=chr(13)+chr(10), **kwargs) #CR+LF
 
 
 			self.helptxt = 'Could not load help-file. Press ESC to return.'
@@ -615,10 +613,9 @@ class Editor(tkinter.Toplevel):
 
 			# Initiate widgets
 			####################################
-			# width of btn_git must be 3 to make tight fit for
-			# 4 digit linenumbers in ln_widget
-			self.btn_git = tkinter.Button(self, width=5, takefocus=0, relief='flat',
+			self.btn_git = tkinter.Button(self, takefocus=0, relief='flat', compound='left', bd=0,
 										highlightthickness=0, padx=0, state='disabled')
+
 			self.entry = tkinter.Entry(self, highlightthickness=0, takefocus=0)
 			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
 
@@ -691,12 +688,17 @@ class Editor(tkinter.Toplevel):
 							data = json.loads(string_representation)
 
 					except EnvironmentError as e:
-						print(e.__str__())
-						print(f'\n Could not load existing configuration file: {p}')
+						builtins.print(e.__str__())
+						builtins.print(f'\n Could not load existing configuration file: {p}')
 
 			if data:
 				self.oldconf = string_representation
 				self.load_config(data)
+
+
+			## Fix for macos printing issue starting from about Python 3.13 Begin
+			if self.os_type == 'mac_os' and self.fix_mac_print:
+				self.fix_mac_print_init()
 
 
 			# Get version control branch #######
@@ -707,8 +709,6 @@ class Editor(tkinter.Toplevel):
 							check=True, capture_output=True).stdout.decode().strip()
 				except Exception as e:
 					pass
-
-			self.restore_btn_git() # Show branch if on one
 
 
 			# Colors Begin #######################
@@ -902,6 +902,29 @@ class Editor(tkinter.Toplevel):
 				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
 				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
 
+
+			# Configure btn_git Begin
+			# Create bitmap-image to show on btn_git
+			create_pic_cmd = '''
+set infopic [image create bitmap -data {
+# define infopic_width 8
+# define infopic_height 21
+static unsigned char infopic_bits[] = {
+0x3c, 0x2a, 0x16, 0x2a, 0x14, 0x00, 0x00, 0x3f, 0x15,
+0x2e, 0x14, 0x2c, 0x14, 0x2c, 0x14, 0x2c, 0x14, 0x2c,
+0xd7, 0xab, 0x55
+}}]
+'''
+
+			self.img_name = self.tk.eval(create_pic_cmd)
+
+			width_text = self.menufont.measure('123456')
+			width_img = 8
+			width_total = width_text + width_img + self.pad*4
+			self.btn_git.config(image=self.img_name, width=width_total)
+
+			self.restore_btn_git() # Show branch if on one
+			# Configure btn_git End
 
 			# Widgets are now initiated (except error and help-tabs)
 			###########################
@@ -1306,21 +1329,27 @@ Error messages Begin
 
 		# When syntax is not updating use this:
 		def f1():
-			keys = ('ascent', 'descent', 'linespace')
 
+			l = [i for i in range(60)]
 			print()
-			for fontname in ('textfont', 'linenum_font'):
-				font = self.fonts.get(fontname)
-				metrics = font.metrics()
-				metrics.pop('fixed')
 
-				print(font.name[:7], metrics, 'size:', font.cget('size'))
 
-			lineheight, baseline = self.text_widget.dlineinfo('insert')[-2:]
-			print('textfont:', 'lineheight:', lineheight, 'baseline:', baseline)
-			lineheight, baseline = self.ln_widget.dlineinfo('@0,0')[-2:]
-			print('linefont:', 'lineheight:', lineheight, 'baseline:', baseline)
-
+##			#######
+##			keys = ('ascent', 'descent', 'linespace')
+##
+##			print()
+##			for fontname in ('textfont', 'linenum_font'):
+##				font = self.fonts.get(fontname)
+##				metrics = font.metrics()
+##				metrics.pop('fixed')
+##
+##				print(font.name[:7], metrics, 'size:', font.cget('size'))
+##
+##			lineheight, baseline = self.text_widget.dlineinfo('insert')[-2:]
+##			print('textfont:', 'lineheight:', lineheight, 'baseline:', baseline)
+##			lineheight, baseline = self.ln_widget.dlineinfo('@0,0')[-2:]
+##			print('linefont:', 'lineheight:', lineheight, 'baseline:', baseline)
+##			#######
 
 ##			t1 = int(self.root.tk.eval('clock milliseconds'))
 ##			self.get_scope_start()
@@ -1595,19 +1624,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 
-	def check_syntax_on_exit(self, setting=3):
+	def check_syntax_on_exit(self, setting=None):
 		''' Should syntax of open py-files be checked at exit
 			Without arguments, return current setting
-			1: do check
-			0: no check (default)
+			1: do check (default)
+			0: no check
 		'''
 
-		if type(setting) != int: return
-		elif setting == self.check_syntax: return
-		elif setting == 3: print(self.check_syntax)
-		elif setting == 0: self.check_syntax = False
-		elif setting == 1: self.check_syntax = True
-		else: return
+		if setting == None: print(self.check_syntax)
+		elif setting: self.check_syntax = True
+		else: self.check_syntax = False
+		return
 
 
 	def tab_has_syntax_error(self):
@@ -1621,7 +1648,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						ast.parse(tab.contents, filename=tab.filepath.resolve())
 
 					except Exception as e:
-						err = '\t' +  e.__str__() + '\n'
+						err = '\t' +  e.__str__()
 						print( '\nIn: ', tab.filepath.resolve().__str__() )
 						print(err)
 						flag_cancel = True
@@ -1852,7 +1879,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Check if need to update tokens in whole scope
 		if not tab.check_scope:
 
-			if self.cursor_is_in_multiline_string(tab):tab.check_scope = True
+			if self.cursor_is_in_multiline_string(tab): tab.check_scope = True
 
 			elif on_oldline:
 
@@ -1889,18 +1916,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		s,e = '',''
 
 		if tab.check_scope:
-			# fix for multiline strings at __main__()
-			###
-			if r := self.text_widget.tag_prevrange('deflin', 'insert'):
-				s = r[0] + ' linestart'
-			else:
-				s = '1.0'
+##			# This generates indentation errors:
+##			# fix for multiline strings at __main__()
+##			###
+##			if r := self.text_widget.tag_prevrange('deflin', 'insert'):
+##				s = r[0] + ' linestart'
+##			else:
+##				s = '1.0'
+##
+##			if r := self.text_widget.tag_nextrange('deflin', 'insert'):
+##				e = r[0] + ' -1 lines linestart'
+##			else:
+##				e = 'end'
 
-			if r := self.text_widget.tag_nextrange('deflin', 'insert'):
-				e = r[0] + ' -1 lines linestart'
-			else:
-				e = 'end'
-
+##			# Another version
 ##			if t := self.get_absolutely_next_defline(down=False, update=True):
 ##				_, next_deflinenum_as_float, _ = t
 ##				s = str(next_deflinenum_as_float) + ' linestart'
@@ -1913,21 +1942,21 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##			else:
 ##				e = 'end'
 
-			###
 
-##			# Was:
-##			( scope_line, ind_defline, idx_scope_start) = self.get_scope_start()
-##
-##			idx_scope_end = self.get_scope_end(ind_defline, idx_scope_start)
-##
-##			s = '%s linestart' % idx_scope_start
-##			e = idx_scope_end
+			# Currently used version
+			( scope_line, ind_defline, idx_scope_start) = self.get_scope_start()
+
+			idx_scope_end = self.get_scope_end(ind_defline, idx_scope_start)
+
+			s = '%s linestart' % idx_scope_start
+			e = idx_scope_end
 
 		else:
 			s = 'insert linestart'
 			e = 'insert lineend'
 
-		#print('check_line:', s, e)
+##		print('\ncheck_line:', '\nold_line:', oldline, '\nnew_line:', newline,
+##			'\non_oldline:', on_oldline, '\ncheck_scope:', tab.check_scope, s, e)
 
 
 		if tab.check_scope:
@@ -2203,6 +2232,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		###
 		w.bind( "<Control-.>", self.move_by_words2)
+		w.bind( "<Control-,>", self.move_by_words2)
 		###
 
 
@@ -2840,6 +2870,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['spacing_linenums'] = self.spacing_linenums
 		d['start_fullscreen'] = self.start_fullscreen
 		d['check_syntax'] = self.check_syntax
+		d['fix_mac_print'] = self.fix_mac_print
 		d['want_ln'] = self.want_ln
 		d['syntax'] = self.syntax
 		d['ind_depth'] = self.ind_depth
@@ -2931,6 +2962,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.version_control_cmd = d['version_control_cmd']
 		self.start_fullscreen = d['start_fullscreen']
 		self.check_syntax = d['check_syntax']
+		self.fix_mac_print = d['fix_mac_print']
 		self.want_ln = d['want_ln']
 		self.syntax = d['syntax']
 		self.geom = d['geom']
@@ -3204,7 +3236,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	class LastToken:
-		''' Dummy helper class, used in insert_tokens and update_tokens
+		''' Used in insert_tokens and update_tokens
 			to prevent error
 
 			when brace-opener (,[ or { is first character of py-file
@@ -3457,7 +3489,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			flag_err = True
 			tab.check_scope = True
-
+			print('update_tokens: indent_err')
 
 		except tokenize.TokenError as ee:
 
@@ -3469,6 +3501,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			elif 'multi-line string' in ee.args[0]:
 				flag_err = True
 				tab.check_scope = True
+
+			print('update_tokens: other_err')
 
 
 
@@ -4008,7 +4042,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if size of linenum_font is increased, then check is made that it does not get bigger than textfont.
 		'''
 
-		# There are two cases, when one has to check lineheights of text_widget and ln_widget
+		# There are two cases when lineheights of text_widget and ln_widget has to be checked
 		# A: changing linenum_font
 		# B: changing textfont or keyword_font
 
@@ -4075,6 +4109,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		for tab in self.tabs + [self.help_tab, self.err_tab]:
 			tab.text_widget.config(tabs=(self.tab_width, ), padx=self.pad, pady=self.pad)
+
+
+		# btn_git
+		width_text = self.menufont.measure('123456')
+		width_img = 8
+		width_total = width_text + width_img + self.pad*4
+		self.btn_git.config(image=self.img_name, width=width_total)
 
 
 		self.ln_widget.config(padx=self.pad, pady=self.pad)
@@ -4689,7 +4730,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		source = curtab.filepath
 
 		d = dict(stderr=subprocess.PIPE)
-		if self.os_type == 'mac_os': d = dict(capture_output=True)
+		if self.os_type == 'mac_os' and self.fix_mac_print:
+			d = dict(capture_output=True)
 
 		# Enable running code without filename
 		if (curtab.type != 'normal'):
@@ -4702,7 +4744,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		err = ''
 
 		# fix for macos printing issue
-		if self.os_type == 'mac_os':
+		if self.os_type == 'mac_os' and self.fix_mac_print:
 			has_err = False
 			p = subprocess.run(['python', source], **d)
 
@@ -4712,9 +4754,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				has_err = True
 
 			out = p.stdout.decode()
-			if len(out) > 0:
-				out = out.splitlines()
-				for item in out: print(item)
+			if len(out) > 0: print(out)
 			if has_err: err = p.stderr.decode()
 
 		else:
@@ -5694,13 +5734,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def move_by_words2(self, event=None):
-		event = FakeEvent()
-		print('jou', event.keysym)
-		for i in range(2):
-			try:
-				self.move_by_words(event=event)
-			except Exception as e:
-				print(e)
+		''' Move two words by time with Control-period or comma
+		'''
+
+		direction = 'Left'
+		if event.keysym == 'period': direction = 'Right'
+		event = FakeEvent(keysym=direction)
+
+		self.move_by_words(event=event)
+
+		if direction == 'Right': idx = self.idx_lineend()
+		else: idx = self.idx_linestart()[0]
+		if self.text_widget.compare( idx, '!=', 'insert'):
+			self.move_by_words(event=event)
 
 		return 'break'
 
@@ -6443,6 +6489,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				preserve indentation
 				of all lines in selection.
 
+
 			This is done if self.flag_fix_indent is True.
 			If not, paste_fallback() is used instead.
 			self.flag_fix_indent is set in copy()
@@ -6516,7 +6563,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# Do paste string
-		# Put mark, so one can get end index of new string
+		# Put mark --> can get end index of new string
 		self.auto_update_syntax_stop()
 		self.text_widget.mark_set('paste', ins_old)
 		self.text_widget.insert(ins_old, s)
@@ -6527,22 +6574,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		tab = self.tabs[self.tabindex]
-		if self.cursor_is_in_multiline_string(tab=tab):
-
-			# fix for multiline strings at __main__()
-			# Taken from check_line
-			if r := self.text_widget.tag_prevrange('deflin', 'insert'):
-				start = r[0] + ' linestart'
-			else:
-				start = '1.0'
-
-			if r := self.text_widget.tag_nextrange('deflin', 'insert'):
-				end = r[0] + ' -1 lines linestart'
-			else:
-				end = 'end'
+		in_string = False
+		if self.cursor_is_in_multiline_string(tab=tab): in_string = True
 
 
-		if self.can_do_syntax():
+		if self.can_do_syntax() and not in_string:
 			self.update_lineinfo()
 			self.update_tokens( start=start, end=end)
 
@@ -6592,6 +6628,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.text_widget.event_generate('<<Paste>>')
 
 
+		tab = self.tabs[self.tabindex]
+		in_string = False
+		if self.cursor_is_in_multiline_string(tab=tab): in_string = True
+
+
 		# Selected many lines or
 		# one line and cursor is not at the start of next line:
 		if len(tmp) > 1:
@@ -6600,7 +6641,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			e = self.text_widget.index( 'insert lineend')
 			t = self.text_widget.get( s, e )
 
-			if self.can_do_syntax():
+			if self.can_do_syntax() and not in_string:
 				self.update_lineinfo()
 				self.update_tokens( start=s, end=e, line=t )
 
@@ -6622,7 +6663,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			e = self.text_widget.index( '%s lineend' % idx_ins)
 			t = self.text_widget.get( s, e )
 
-			if self.can_do_syntax():
+			if self.can_do_syntax() and not in_string:
 				self.update_lineinfo()
 				self.update_tokens( start=s, end=e, line=t )
 
@@ -6639,7 +6680,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			e = self.text_widget.index( 'insert lineend')
 			t = self.text_widget.get( s, e )
 
-			if self.can_do_syntax():
+			if self.can_do_syntax() and not in_string:
 				self.update_lineinfo()
 				self.update_tokens( start=s, end=e, line=t )
 
@@ -7034,6 +7075,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Trigger parcheck
 			if not tab.par_err and ( prev_char in pars): tab.par_err = True
 
+
 		return
 
 
@@ -7096,6 +7138,117 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 ########## Overrides End
 ########## Utilities Begin
+
+	def use_mac_print_init(self, use=None):
+		''' Setting, should alternative print-function be used
+			to fix possible printing issue when using macOS.
+			default is False
+		'''
+		if self.os_type != 'mac_os': return
+		if use == None: print(self.fix_mac_print)
+		elif use:
+			if self.fix_mac_print != True:
+				self.fix_mac_print = True
+				self.fix_mac_print_init()
+		else:
+			if self.fix_mac_print != False:
+				self.fix_mac_print = False
+				self.undo_fix_mac_print_init()
+
+
+	def undo_fix_mac_print_init(self):
+		global print
+
+		def print(*args, **kwargs):
+			builtins.print(*args, **kwargs)
+			return
+
+
+	def fix_mac_print_init(self):
+		global print
+
+		def print(*args, **kwargs):
+			# Most of below is fixing long lines not wrapping -issue
+
+			# Screen width should not be hardcoded
+			width_screen = 80
+			width_prompt = 4
+			width_screen_startline = width_screen - width_prompt
+
+			# Join arguments to one string
+			total = ''
+			for arg in args:
+				total += str(arg) + ' '
+
+			total = total[:-1]
+			total_as_list = total.splitlines()
+
+
+			def get_lenght(tmp):
+				# Count length of string tmp
+				# No need to check for line delimeters because splitlines() has removed those
+				lenght = 0
+				for char in tmp:
+					if char == '\t': lenght += 4
+					else: lenght += 1
+
+				return lenght
+
+			def tabs_to_spaces(tmp):
+				return tmp.replace('\t', 4*' ')
+
+
+			if len(total_as_list) ==  0 or len(args) == 0:
+				builtins.print('', end=chr(13)+chr(10) )
+
+
+			#############
+			# Real start
+			print_lines = list()
+
+
+			# Explanation of below: iter over lines in total_as_list
+			# if len(line) > width_screen: split line to multiple lines
+			firstline = total_as_list[0]
+
+			# Handle prompt-line
+			if get_lenght(firstline) > width_screen_startline:
+				tmp = firstline[:width_screen_startline]
+
+				print_lines.append( tabs_to_spaces(tmp) )
+				firstline = firstline[width_screen_startline:]
+
+				while get_lenght(firstline) > width_screen:
+					tmp = firstline[:width_screen]
+
+					print_lines.append( tabs_to_spaces(tmp) )
+					firstline = firstline[width_screen:]
+
+				print_lines.append(tabs_to_spaces(firstline))
+			else: print_lines.append(tabs_to_spaces(firstline))
+
+
+			if len(total_as_list) > 1:
+				for i in range(1, len(total_as_list)):
+					nextline = total_as_list[i]
+
+					# Handle rest lines
+					while get_lenght(nextline) > width_screen:
+						tmp = nextline[:width_screen]
+
+						print_lines.append( tabs_to_spaces(tmp) )
+						nextline = nextline[width_screen:]
+
+					print_lines.append(tabs_to_spaces(nextline))
+
+
+			# Aand print
+			for line in print_lines: builtins.print(line, end=chr(13)+chr(10) )
+
+
+			return
+
+			## Fix for macos printing issue End ##
 
 
 	def view_module(self):
@@ -7213,7 +7366,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			endline,_ = self.get_line_col_as_int(tab=tab, index=end)
 
 			for line in range(startline, endline+1):
-				tab.text_widget.delete('%d.0' % line, '%d.1' % line)
+				idx = '%d.0' % line
+				if tab.text_widget.get(idx) == '\n': continue
+				tab.text_widget.delete(idx)
 
 
 			if self.can_do_syntax(tab):
@@ -7324,11 +7479,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 
 		if self.branch:
-			self.btn_git.config(bitmap='')
 			branch = self.branch[:5]
-			# Set branch name lenght to 5.
-			# Reason: avoid ln_widget geometry changes
-			# when showing capslock-state in btn_git.
+			# Set branch name lenght to 5
+
 			if len(branch) < 5:
 				diff = 5-len(branch)
 				t=1
@@ -7339,20 +7492,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						branch = ' ' + branch
 					t *= -1
 
+			# Add one space to start to get some space from bitmap
+			branch = ' ' + branch
+
 			self.btn_git.config(text=branch, disabledforeground='')
 
 			if 'main' in self.branch or 'master' in self.branch:
 				self.btn_git.config(disabledforeground='brown1')
 
 		else:
-			self.btn_git.config(bitmap='info', disabledforeground='')
+			self.btn_git.config(text=' jou  ', disabledforeground='')
 
 
 	def flash_btn_git(self):
 		''' Flash text and enable canceling flashing later.
 		'''
 
-		self.btn_git.config(bitmap='')
 		bg, fg = self.themes[self.curtheme]['normal_text'][:]
 
 ##		For some times:
@@ -7380,8 +7535,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			t1 = get_wait_time(i, 300, 1, 2)
 			t2 = get_wait_time(i, 300, 2, 2)
 
-			l1 = lambda kwargs={'text': 5*' ', 'disabledforeground': 'brown1'}: self.btn_git.config(**kwargs)
-			l2 = lambda kwargs={'text': 'CAPS '}: self.btn_git.config(**kwargs)
+			l1 = lambda kwargs={'text': 6*' ', 'disabledforeground': 'brown1'}: self.btn_git.config(**kwargs)
+			l2 = lambda kwargs={'text': ' CAPS '}: self.btn_git.config(**kwargs)
 
 
 			###
@@ -7424,6 +7579,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# CapsLock is off but self.capslock is True:
 			elif e in [0, 8] and self.capslock in [True, 'init']:
+				if self.capslock == 'init':
+					self.capslock = False
+					return 'break'
+
 				self.capslock = False
 
 				# If quickly pressed CapsLock off,
@@ -9191,21 +9350,27 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 ##	Note: goto_bookmark() is in Gotoline etc -section
 
-	def print_bookmarks(self, show_stashed=False):
+	def print_bookmarks(self):
 
 		self.wait_for(100)
 
-		l = sorted([ (mark, self.text_widget.index(mark)) for mark in self.text_widget.mark_names() if 'bookmark' in mark], key=lambda x:float(x[1]) )
+		marks = self.text_widget.mark_names()
+		bookmarks = marks[:]
+		l = sorted([ (mark, self.text_widget.index(mark)) for mark in bookmarks if 'bookmark' in mark], key=lambda x:float(x[1]) )
 
 		for (mark, pos) in l: print(mark, pos)
 
 
-		if show_stashed:
-			print('\nHided bookmarks:')
+		stashed = marks[:]
+		for mark in stashed:
+			if 'stashed' in mark: break
+		else: return
 
-			l = sorted([ (mark, self.text_widget.index(mark)) for mark in self.text_widget.mark_names() if 'stashed' in mark], key=lambda x:float(x[1]) )
 
-			for (mark, pos) in l: print(mark, pos)
+		print('\nHided bookmarks:')
+		l = sorted([ (mark, self.text_widget.index(mark)) for mark in stashed if 'stashed' in mark], key=lambda x:float(x[1]) )
+
+		for (mark, pos) in l: print(mark, pos)
 
 
 	def line_is_bookmarked(self, index, tab=None, mark_patt='bookmark'):
