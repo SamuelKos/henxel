@@ -4,7 +4,7 @@
 # TODO
 # Imports
 # Module Utilities
-# Class Tab
+# Other Classes
 
 ####################
 # Class Editor Begin
@@ -44,10 +44,14 @@
 ############ TODO End
 ############ Imports Begin
 
-# From standard library
-from dataclasses import dataclass, field
-from typing import Any, List
+# macos printing fix related imports begin
+# get terminal size
+import os
 import builtins
+# macos printing fix related imports end
+
+
+# From standard library
 import tkinter.messagebox
 import tkinter.font
 import tkinter
@@ -174,16 +178,11 @@ def stash_pop():
 	'''
 	subprocess.run('git stash pop -q'.split())
 
-
-@dataclass
-class FakeEvent:
-	''' Used in move_by_words2
-	'''
-
-	keysym: str = 'Left'
-
 ############ Module Utilities End
-############ Class Tab Begin
+############ Other Classes Begin
+
+from dataclasses import dataclass, field
+from typing import Any, List
 
 
 @dataclass
@@ -220,7 +219,14 @@ class Tab:
 	check_scope: bool = False
 
 
-############ Class Tab End
+@dataclass
+class FakeEvent:
+	''' Used in move_by_words2
+	'''
+
+	keysym: str = 'Left'
+
+############ Other Classes End
 ############ Class Editor Begin
 
 ###############################################################################
@@ -697,8 +703,9 @@ class Editor(tkinter.Toplevel):
 
 
 			## Fix for macos printing issue starting from about Python 3.13 Begin
+			# Can be set with: use_mac_print_fix
 			if self.os_type == 'mac_os' and self.fix_mac_print:
-				self.fix_mac_print_init()
+				self.fix_mac_print_use()
 
 
 			# Get version control branch #######
@@ -1329,9 +1336,8 @@ Error messages Begin
 
 		# When syntax is not updating use this:
 		def f1():
-
 			l = [i for i in range(60)]
-			print()
+			print(l)
 
 
 ##			#######
@@ -7139,7 +7145,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Overrides End
 ########## Utilities Begin
 
-	def use_mac_print_init(self, use=None):
+	def use_mac_print_fix(self, use=None):
 		''' Setting, should alternative print-function be used
 			to fix possible printing issue when using macOS.
 			default is False
@@ -7149,14 +7155,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		elif use:
 			if self.fix_mac_print != True:
 				self.fix_mac_print = True
-				self.fix_mac_print_init()
+				self.fix_mac_print_use()
+				print('Using mac_print_fix now')
+			else:
+				print('Using mac_print_fix already')
 		else:
 			if self.fix_mac_print != False:
 				self.fix_mac_print = False
-				self.undo_fix_mac_print_init()
+				self.normal_print_use()
+				print('Using normal print now')
+			else:
+				print('Using normal print already')
 
 
-	def undo_fix_mac_print_init(self):
+	def normal_print_use(self):
 		global print
 
 		def print(*args, **kwargs):
@@ -7164,15 +7176,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return
 
 
-	def fix_mac_print_init(self):
+	def fix_mac_print_use(self):
 		global print
 
 		def print(*args, **kwargs):
 			# Most of below is fixing long lines not wrapping -issue
-
-			# Screen width should not be hardcoded
-			width_screen = 80
 			width_prompt = 4
+			width_screen = os.get_terminal_size()[0]
 			width_screen_startline = width_screen - width_prompt
 
 			# Join arguments to one string
@@ -7180,26 +7190,36 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			for arg in args:
 				total += str(arg) + ' '
 
-			total = total[:-1]
+			total = total[:-1].replace('\t', 4*' ')
 			total_as_list = total.splitlines()
 
 
-			def get_lenght(tmp):
-				# Count length of string tmp
-				# No need to check for line delimeters because splitlines() has removed those
-				lenght = 0
-				for char in tmp:
-					if char == '\t': lenght += 4
-					else: lenght += 1
+			def handle_overlong(tmp, width=80):
+				''' Arrange wordwrap on line tmp
 
-				return lenght
+					tmp string	to be wrapped
 
-			def tabs_to_spaces(tmp):
-				return tmp.replace('\t', 4*' ')
+					width int	of terminal
+				'''
+				# Note, this is called when tmp is over width chars
+				tmp = tmp[:width]
+				idx = width
+
+				try:
+					idx = tmp.rindex(' ')
+					tmp = tmp[:idx].rstrip()
+					idx = len(tmp)
+
+				# rindex, no spaces in string
+				except ValueError: pass
+
+				return tmp, idx
 
 
-			if len(total_as_list) ==  0 or len(args) == 0:
-				builtins.print('', end=chr(13)+chr(10) )
+
+			if len(total_as_list) == 0:
+				builtins.print('', end=chr(13)+chr(10), **kwargs)
+				return
 
 
 			#############
@@ -7212,20 +7232,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			firstline = total_as_list[0]
 
 			# Handle prompt-line
-			if get_lenght(firstline) > width_screen_startline:
-				tmp = firstline[:width_screen_startline]
+			if len(firstline) > width_screen_startline:
+				tmp, idx = handle_overlong(firstline, width_screen_startline)
 
-				print_lines.append( tabs_to_spaces(tmp) )
-				firstline = firstline[width_screen_startline:]
+				print_lines.append(tmp)
+				firstline = firstline[idx:].lstrip()
 
-				while get_lenght(firstline) > width_screen:
-					tmp = firstline[:width_screen]
+				while len(firstline) > width_screen:
+					tmp, idx = handle_overlong(firstline, width_screen)
 
-					print_lines.append( tabs_to_spaces(tmp) )
-					firstline = firstline[width_screen:]
+					print_lines.append(tmp)
+					firstline = firstline[idx:].lstrip()
 
-				print_lines.append(tabs_to_spaces(firstline))
-			else: print_lines.append(tabs_to_spaces(firstline))
+				print_lines.append(firstline)
+			else: print_lines.append(firstline)
 
 
 			if len(total_as_list) > 1:
@@ -7233,17 +7253,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					nextline = total_as_list[i]
 
 					# Handle rest lines
-					while get_lenght(nextline) > width_screen:
-						tmp = nextline[:width_screen]
+					while len(nextline) > width_screen:
+						tmp, idx = handle_overlong(nextline, width_screen)
 
-						print_lines.append( tabs_to_spaces(tmp) )
-						nextline = nextline[width_screen:]
+						print_lines.append(tmp)
+						nextline = nextline[idx:].lstrip()
 
-					print_lines.append(tabs_to_spaces(nextline))
+					print_lines.append(nextline)
 
 
 			# Aand print
-			for line in print_lines: builtins.print(line, end=chr(13)+chr(10) )
+			for line in print_lines: builtins.print(line, end=chr(13)+chr(10), **kwargs)
 
 
 			return
@@ -10865,8 +10885,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		'''
 
-		for line in helptxt.split('\n'):
-			print(line)
+		print(helptxt)
 
 
 	def edit_search_setting(self, search_setting):

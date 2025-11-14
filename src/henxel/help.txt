@@ -253,16 +253,19 @@
 		
 	
 	Fix possible printing issue with macOS
-	  - When using macOS, printing from editor might not work as normal,
-		there could be only linefeeds, no translation: \n --> CR+LF
-		This change came in about Python 3.13, but it could work in newer
-		macOS versions than 12.
+	  - When using macOS, printing from editor might not work.
+		For example line-wrapping could be missing and there could be
+		only linefeeds, no translation: \n --> CR+LF
+		This change came in about Python 3.13, but printing might work
+		in newer macOS versions than 12.
 		
-	  - If having issues printing: e.use_mac_print_init()
-		Without arguments returns current Value
-		1: Use fix  0: Use normal print
+	  --> If having issues with printing: e.use_mac_print_fix(1)
+		Without arguments, it returns current setting.
+		e.use_mac_print_fix(1): Use fix,  0: Use normal print
 		
-	  - By default, normal printing is used
+		This is then saved in configuration
+	  
+	  - By default, normal printing is used on all platforms
 		
 		
 	Elide
