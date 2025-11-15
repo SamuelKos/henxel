@@ -44,13 +44,6 @@
 ############ TODO End
 ############ Imports Begin
 
-# macos printing fix related imports begin
-# get terminal size
-import os
-import builtins
-# macos printing fix related imports end
-
-
 # From standard library
 import tkinter.messagebox
 import tkinter.font
@@ -70,7 +63,7 @@ import sys
 import tokenize
 import keyword
 
-# From current directory
+# From this package
 from . import wordexpand
 from . import changefont
 from . import fdialog
@@ -88,6 +81,21 @@ import threading
 # Look in: build_launch_test()
 import importflags
 FLAGS = importflags.FLAGS
+
+
+# MacOS printing fix related Begin ############
+from . import printer
+
+# Pass printer to other modules
+PRINTER = importflags.PRINTER # list of one func
+DEFAUL_PRINTER = print
+FIIXED_PRINTER = printer.get_fixed_printer()
+PRINTER.append(DEFAUL_PRINTER)
+# MacOS printing fix related End #########
+
+# These are still on testing
+from .decorators import do_twice, debug
+
 
 ############ Imports End
 ############ Module Utilities Begin
@@ -199,7 +207,7 @@ class Tab:
 	bookmarks_stash: List[str] = field(default_factory=list)
 
 	# False in creation, normally pathlib.Path
-	filepath: Any = False
+	filepath: Any = None
 
 
 	chk_sum: int = 0
@@ -694,8 +702,8 @@ class Editor(tkinter.Toplevel):
 							data = json.loads(string_representation)
 
 					except EnvironmentError as e:
-						builtins.print(e.__str__())
-						builtins.print(f'\n Could not load existing configuration file: {p}')
+						print(e.__str__())
+						print(f'\n Could not load existing configuration file: {p}')
 
 			if data:
 				self.oldconf = string_representation
@@ -705,7 +713,7 @@ class Editor(tkinter.Toplevel):
 			## Fix for macos printing issue starting from about Python 3.13 Begin
 			# Can be set with: use_mac_print_fix
 			if self.os_type == 'mac_os' and self.fix_mac_print:
-				self.fix_mac_print_use()
+				self.change_printer_to(FIIXED_PRINTER)
 
 
 			# Get version control branch #######
@@ -1335,6 +1343,8 @@ Error messages Begin
 	def test_bind(self, event=None, f=1):
 
 		# When syntax is not updating use this:
+		@do_twice
+		@debug
 		def f1():
 			l = [i for i in range(60)]
 			print(l)
@@ -7155,120 +7165,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		elif use:
 			if self.fix_mac_print != True:
 				self.fix_mac_print = True
-				self.fix_mac_print_use()
+				self.change_printer_to(FIIXED_PRINTER)
 				print('Using mac_print_fix now')
 			else:
 				print('Using mac_print_fix already')
 		else:
 			if self.fix_mac_print != False:
 				self.fix_mac_print = False
-				self.normal_print_use()
+				self.change_printer_to(DEFAUL_PRINTER)
 				print('Using normal print now')
 			else:
 				print('Using normal print already')
 
 
-	def normal_print_use(self):
+	def change_printer_to(self, printer):
 		global print
+		print = printer
 
-		def print(*args, **kwargs):
-			builtins.print(*args, **kwargs)
-			return
-
-
-	def fix_mac_print_use(self):
-		global print
-
-		def print(*args, **kwargs):
-			# Most of below is fixing long lines not wrapping -issue
-			width_prompt = 4
-			width_screen = os.get_terminal_size()[0]
-			width_screen_startline = width_screen - width_prompt
-
-			# Join arguments to one string
-			total = ''
-			for arg in args:
-				total += str(arg) + ' '
-
-			total = total[:-1].replace('\t', 4*' ')
-			total_as_list = total.splitlines()
-
-
-			def handle_overlong(tmp, width=80):
-				''' Arrange wordwrap on line tmp
-
-					tmp string	to be wrapped
-
-					width int	of terminal
-				'''
-				# Note, this is called when tmp is over width chars
-				tmp = tmp[:width]
-				idx = width
-
-				try:
-					idx = tmp.rindex(' ')
-					tmp = tmp[:idx].rstrip()
-					idx = len(tmp)
-
-				# rindex, no spaces in string
-				except ValueError: pass
-
-				return tmp, idx
-
-
-
-			if len(total_as_list) == 0:
-				builtins.print('', end=chr(13)+chr(10), **kwargs)
-				return
-
-
-			#############
-			# Real start
-			print_lines = list()
-
-
-			# Explanation of below: iter over lines in total_as_list
-			# if len(line) > width_screen: split line to multiple lines
-			firstline = total_as_list[0]
-
-			# Handle prompt-line
-			if len(firstline) > width_screen_startline:
-				tmp, idx = handle_overlong(firstline, width_screen_startline)
-
-				print_lines.append(tmp)
-				firstline = firstline[idx:].lstrip()
-
-				while len(firstline) > width_screen:
-					tmp, idx = handle_overlong(firstline, width_screen)
-
-					print_lines.append(tmp)
-					firstline = firstline[idx:].lstrip()
-
-				print_lines.append(firstline)
-			else: print_lines.append(firstline)
-
-
-			if len(total_as_list) > 1:
-				for i in range(1, len(total_as_list)):
-					nextline = total_as_list[i]
-
-					# Handle rest lines
-					while len(nextline) > width_screen:
-						tmp, idx = handle_overlong(nextline, width_screen)
-
-						print_lines.append(tmp)
-						nextline = nextline[idx:].lstrip()
-
-					print_lines.append(nextline)
-
-
-			# Aand print
-			for line in print_lines: builtins.print(line, end=chr(13)+chr(10), **kwargs)
-
-
-			return
-
-			## Fix for macos printing issue End ##
+		PRINTER.clear()
+		PRINTER.append(printer)
 
 
 	def view_module(self):

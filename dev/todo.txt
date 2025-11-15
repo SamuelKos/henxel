@@ -11,9 +11,24 @@ Below this: done ################################################
 export conf without filepaths, done
 
 
-use_mac_print_init()
+use_mac_print_fix()
 is conf, default off, done
 help update done
+
+
+Added files
+decorators.py
+printer.py
+
+
+Tab.filepath initial value from False --> None
+fixes entering 0 as filepath in some cases
+
+
+
+it seems that when doing multiline paste,
+after paste, when pasted lines are still selected,
+paste can be adjusted down with return
 
 
 paste to multiline string, done
@@ -288,6 +303,8 @@ test change font when no linenumbers want_ln 0 1
 
 to help: linenum color same with comments etc
 to help: how to change bg color
+to help: how to save as to path
+
 
 
 

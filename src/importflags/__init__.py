@@ -60,12 +60,12 @@ Example use in module henxel with MyClass and my_func:
 		do something else with or without flags etc
 
 
-Currently this is used in debugging, for test-launching Editor and
-to set visibility of test-launch.
+Currently this is used in debugging, for test-launching Editor,
+to set visibility of test-launch and to fix macOS printing issue.
 '''
 
-FLAGS=False
-
+FLAGS = False
+PRINTER = []
 
 
 
