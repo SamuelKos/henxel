@@ -85,6 +85,8 @@
 
 		Ctrl-left/right		Move cursor one word left/right
 		+Shift				Select words
+		
+		Ctrl-./,(dot/comma)	Move two words left/right
 
 		
 		left/right		If cursor is not visible, goto cursor

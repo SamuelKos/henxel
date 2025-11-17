@@ -22,6 +22,13 @@ is conf, default off, done
 help update done
 
 
+test subprocess run from only python to restart python console ###
+import sys
+import os
+os.execl(sys.executable, sys.executable, '-i', '-c', 'import henxel; e=henxel.Editor()')
+
+
+
 decorators:
 @debug: handles also exceptions
 

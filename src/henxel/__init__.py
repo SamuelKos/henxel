@@ -53,6 +53,7 @@ import inspect
 import json
 import copy
 import ast
+import os
 
 # Used in init
 import importlib.resources
@@ -1487,7 +1488,7 @@ Error messages Begin
 		# 	if self.flags and self.flags.get('my_flag'): self.do_something()
 		###################################################################
 		# Just want to change a flag: edit line in list below,
-		# when editing conf-related stuff, for example, one would:
+		# when editing conf-related stuff, for example, one would(in theory):
 		# 	'test_skip_conf=False'
 		###################################################################
 		# And when doing any of above, to see the difference:
@@ -1826,8 +1827,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if all(tests):
 			print('Restarting..')
-			tmp = [self.restart_script]
-			subprocess.run(tmp)
+
+			# This, quite hard to guess, line does it
+			os.execl(sys.executable, sys.executable,
+					'-i', '-c', 'import henxel; e=henxel.Editor()')
+
+			# to notes?
+			#tmp = [self.restart_script]
+			#subprocess.run(tmp)
+			#from os import getpid
+			#pid = str(getpid())
 
 		#### quit_me End ##############
 

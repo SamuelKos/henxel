@@ -63,7 +63,7 @@ class FDialog:
 		self.scrollbar_width, self.elementborderwidth = sb_widths
 
 		s0, s1 = 12, 10
-		if os_type == 'mac_os': s0, s1 = 22, 16
+		if os_type == 'mac_os': s0, s1 = 16, 14
 
 		if not self.font:
 			self.font = tkinter.font.Font(family='TkDefaulFont', size=s0)
@@ -153,17 +153,55 @@ class FDialog:
 			idx = event.widget.index('active')
 			idx_last_file = event.widget.size() - 1
 
-			if event.keysym == 'Up' and idx == 0:
-				event.widget.activate(idx_last_file)
-				event.widget.see(idx_last_file)
+			idx_start = event.widget.index('@0,0')
+			idx_end = event.widget.index('@0,65535')
+			num_items_onscreen = idx_end - idx_start + 1
 
-				return 'break'
 
-			elif event.keysym == 'Down' and idx == idx_last_file:
-				event.widget.activate(0)
-				event.widget.see(0)
+			if event.keysym == 'Up':
 
-				return 'break'
+				if idx == 0:
+					event.widget.activate(idx_last_file)
+					event.widget.see(idx_last_file)
+					return 'break'
+
+				# if all items are not visible
+				elif num_items_onscreen -1 < idx_last_file:
+
+					# if at first fifth: scroll up one line
+					one_fifth = num_items_onscreen * 2 // 10
+					if one_fifth > 10: one_fifth = 4
+					elif one_fifth < 3: one_fifth = 3
+
+					idx_new = idx_start + one_fifth
+
+					if idx < idx_new:
+						# scroll up one line
+						event.widget.see(idx_start - 1)
+
+
+
+			elif event.keysym == 'Down':
+
+				if idx == idx_last_file:
+					event.widget.activate(0)
+					event.widget.see(0)
+					return 'break'
+
+				# if all items are not visible
+				elif num_items_onscreen -1 < idx_last_file:
+
+					# if at last fifth: scroll down one line
+					one_fifth = num_items_onscreen * 2 // 10
+					if one_fifth > 10: one_fifth = 4
+					elif one_fifth < 3: one_fifth = 3
+
+					idx_new = idx_end - one_fifth
+
+					if idx > idx_new:
+						# scroll down one line
+						event.widget.see(idx_end + 1)
+
 
 
 	def nogoto_emptylist(self, event=None):

@@ -484,6 +484,11 @@
 	
 	  - More info is in function: e.build_launch_test
 	
+	  - If using macOS and have issues with error messages, first read
+		section above about how to: Fix possible printing issue with macOS.
+		Then add @debug decorator on top of buggy callback, and now can
+		debug with print-lines also.
+	
 	
 	Homepage: https://github.com/SamuelKos/henxel
 	
