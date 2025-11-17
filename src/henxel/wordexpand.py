@@ -29,7 +29,7 @@ from importflags import PRINTER
 def fix_print(func):
 	@functools.wraps(func)
 	def wrapper_print(*args, **kwargs):
-		printer = PRINTER[0]
+		printer = PRINTER['current']
 		printer(*args, **kwargs)
 	return wrapper_print
 

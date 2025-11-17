@@ -63,11 +63,6 @@ import sys
 import tokenize
 import keyword
 
-# From this package
-from . import wordexpand
-from . import changefont
-from . import fdialog
-
 # For executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
 import subprocess
@@ -87,15 +82,23 @@ FLAGS = importflags.FLAGS
 from . import printer
 
 # Pass printer to other modules
-PRINTER = importflags.PRINTER # list of one func
+PRINTER = importflags.PRINTER # dict
 DEFAUL_PRINTER = print
 FIIXED_PRINTER = printer.get_fixed_printer()
-PRINTER.append(DEFAUL_PRINTER)
+
+PRINTER['default'] = DEFAUL_PRINTER
+PRINTER['fixed'] = FIIXED_PRINTER
+PRINTER['current'] = DEFAUL_PRINTER
 # MacOS printing fix related End #########
+
 
 # These are still on testing
 from .decorators import do_twice, debug
 
+# From this package
+from . import wordexpand
+from . import changefont
+from . import fdialog
 
 ############ Imports End
 ############ Module Utilities Begin
@@ -1174,9 +1177,11 @@ static unsigned char infopic_bits[] = {
 				self.text_widget.focus_set()
 
 			# Prevent flashing 3/3
-			while not self.text_widget.winfo_viewable():
-				self.wait_for(200)
-			self.config(bg=self.orig_bg_color)
+			if self.flags and not self.flags.get('test_is_visible'): pass
+			else:
+				while not self.text_widget.winfo_viewable():
+					self.wait_for(200)
+				self.config(bg=self.orig_bg_color)
 
 
 			# no conf, or geometry reset to 'default'
@@ -1196,8 +1201,10 @@ static unsigned char infopic_bits[] = {
 				self.put_editor_fullscreen(delay)
 
 
-			if self.flag_check_lineheights:
-				self.handle_diff_lineheights()
+			if self.flags and not self.flags.get('test_is_visible'): pass
+			else:
+				if self.flag_check_lineheights:
+					self.handle_diff_lineheights()
 
 
 			self.__class__.alive = True
@@ -1340,14 +1347,15 @@ Error messages Begin
 		return 'break'
 
 
+	@debug
 	def test_bind(self, event=None, f=1):
 
 		# When syntax is not updating use this:
-		@do_twice
-		@debug
+		#@do_twice
+		#@debug
 		def f1():
-			l = [i for i in range(60)]
-			print(l)
+			l = [i for i in range(6)]
+			print(l[10])
 
 
 ##			#######
@@ -1550,10 +1558,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			flag_success = True
 			print('LAUNCHTEST, %s, START' % mode)
 
+			max_time = 5
 			tmp = self.build_launch_test(mode)
-			d = dict(capture_output=True)
-			p = subprocess.run(['python','-'], input=tmp, **d)
+			d = dict(capture_output=True, timeout=max_time)
 
+			# This try block catches only timeouts
+			try:
+				p = subprocess.run(['python','-'], input=tmp, **d)
+
+			except subprocess.TimeoutExpired as e:
+				print('TIMED OUT')
+				print(e)
+				return False
+
+			# Now, get the real Errors
 			try: p.check_returncode()
 
 			except subprocess.CalledProcessError:
@@ -1807,6 +1825,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		tests = [not quit_debug, self.debug, restart, self.restart_script]
 
 		if all(tests):
+			print('Restarting..')
 			tmp = [self.restart_script]
 			subprocess.run(tmp)
 
@@ -2249,6 +2268,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		###
 		w.bind( "<Control-.>", self.move_by_words2)
 		w.bind( "<Control-,>", self.move_by_words2)
+		w.bind( "<Control-Shift-K>", self.strip_first_char)
 		###
 
 
@@ -7181,9 +7201,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def change_printer_to(self, printer):
 		global print
 		print = printer
-
-		PRINTER.clear()
-		PRINTER.append(printer)
+		PRINTER['current'] = printer
 
 
 	def view_module(self):
@@ -7288,6 +7306,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			like "+" in git diff,
 			is not inside indentation
 		'''
+
+		if self.state != 'normal':
+			self.bell()
+			return 'break'
+
 
 		self.auto_update_syntax_stop()
 

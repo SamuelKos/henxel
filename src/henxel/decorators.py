@@ -1,7 +1,7 @@
 import functools
 import time
 
-# Get reference to printer set in henxel
+# Get reference to printer set in henxel.py
 from importflags import PRINTER
 
 
@@ -10,13 +10,11 @@ from importflags import PRINTER
 # With this arrangement there is no need to do anything else,
 # in this file, to actual code-lines which has print-calls.
 # Printer is always the same than user selected in editor-session.
-# Can't help Pythons pretty nasty decoration-syntax though.
-# Compare this to Pathlibs syntax: p = pathlib.Path(self.env) / CONFPATH
 
 def fix_print(func):
 	@functools.wraps(func)
 	def wrapper_print(*args, **kwargs):
-		printer = PRINTER[0]
+		printer = PRINTER['current']
 		printer(*args, **kwargs)
 	return wrapper_print
 
@@ -30,26 +28,6 @@ def print(*args, **kwargs): return
 
 # Most of this is taken from realpython-page about decorations
 
-##def do_twice(func):
-##	def wrapper_do_twice():
-##		func()
-##		func()
-##	return wrapper_do_twice
-
-##def do_twice(func):
-##	def wrapper_do_twice(*args, **kwargs):
-##		func(*args, **kwargs)
-##		func(*args, **kwargs)
-##	return wrapper_do_twice
-
-##def do_twice(func):
-##	def wrapper_do_twice(*args, **kwargs):
-##		func(*args, **kwargs)
-##		return func(*args, **kwargs)
-##	return wrapper_do_twice
-
-
-
 def do_twice(func):
 	@functools.wraps(func)
 	def wrapper_do_twice(*args, **kwargs):
@@ -58,20 +36,9 @@ def do_twice(func):
 	return wrapper_do_twice
 
 
-#boilerplate
-##def decorator(func):
-##	@functools.wraps(func)
-##	def wrapper_decorator(*args, **kwargs):
-##		# Do something before
-##		value = func(*args, **kwargs)
-##		# Do something after
-##		return value
-##	return wrapper_decorator
-
-
-
 def timer(func):
-	"""Print the runtime of the decorated function"""
+	''' Print the runtime of the decorated function
+	'''
 	@functools.wraps(func)
 	def wrapper_timer(*args, **kwargs):
 		start_time = time.perf_counter()
@@ -83,417 +50,69 @@ def timer(func):
 	return wrapper_timer
 
 
-
-###from decorators import timer
-##
-##@timer
-##def waste_some_time(num_times):
-##	for _ in range(num_times):
-##		sum([number**2 for number in range(10_000)])
-##
-##
-##
-###waste_some_time(1)
-##
-###waste_some_time(999)
-
-
-
 def debug(func):
-	"""Print the function signature and return value"""
+	''' Print the function signature and return value.
+		Also handles uncatched/raised errors.
+	'''
 	@functools.wraps(func)
 	def wrapper_debug(*args, **kwargs):
 		args_repr = [repr(a) for a in args]
 		kwargs_repr = [f"{k}={repr(v)}" for k, v in kwargs.items()]
 		signature = ", ".join(args_repr + kwargs_repr)
+
 		print(f"Calling {func.__name__}({signature})")
-		value = func(*args, **kwargs)
-		print(f"{func.__name__}() returned {repr(value)}")
-		return value
+		try:
+			value = func(*args, **kwargs)
+			print(f"{func.__name__}() returned {repr(value)}")
+			return value
+
+		except Exception as err:
+			# Get original traceback when can
+			if PRINTER['current'] == PRINTER['default']:
+				raise err
+
+			tb = err.__traceback__
+
+			print('\nTraceback (most recent call last):')
+
+			while tb is not None:
+
+				e = str(tb.tb_frame)
+
+				# Get actual start
+				idx = e.index(', ') + 2
+				e = e[idx:]
+
+				# file --> File
+				e0 = e[0].capitalize()
+
+				# -1: Remove trailing '>'
+				e = e[1:-1]
+
+				# Add '()' to indicate scope and
+				# indent of one spaces
+				e = ' ' + e0 + e + '()'
+
+				# Put scope in own line
+				e = e.replace(', code', '\n\tin')
+
+				print(e)
+				tb = tb.tb_next
+
+			print( type(err).__name__ +': '+ err.__str__() )
+
 	return wrapper_debug
 
 
-
-###from decorators import debug
-##
-##@debug
-##def make_greeting(name, age=None):
-##	if age is None:
-##		return f"Howdy {name}!"
-##	else:
-##		return f"Whoa {name}! {age} already, you're growing up!"
-##
-##
-##
-###make_greeting("Benjamin")
-##
-###make_greeting("Juan", age=114)
-##
-###make_greeting(name="Maria", age=116)
-##
-##
-##
-##import math
-###from decorators import debug
-##
-###math.factorial = debug(math.factorial)
-##
-##def approximate_e(terms=18):
-##	return sum(1 / math.factorial(n) for n in range(terms))
-##
-##
-##
-###from calculate_e import approximate_e
-##
-###approximate_e(terms=5)
-##
-##
-##
-##
-##
-##def slow_down(func):
-##	"""Sleep 1 second before calling the function"""
+### boilerplate
+##def decorator(func):
 ##	@functools.wraps(func)
-##	def wrapper_slow_down(*args, **kwargs):
-##		time.sleep(1)
-##		return func(*args, **kwargs)
-##	return wrapper_slow_down
-##
-##
-###from decorators import slow_down
-##
-##@slow_down
-##def countdown(from_number):
-##	if from_number < 1:
-##		print("Liftoff!")
-##	else:
-##		print(from_number)
-##		countdown(from_number - 1)
-##
-##
-###countdown(3)
-##
-##
-####
-###from decorators import debug, timer
-##
-##class TimeWaster:
-##	@debug
-##	def __init__(self, max_num):
-##		self.max_num = max_num
-##
-##	@timer
-##	def waste_time(self, num_times):
-##		for _ in range(num_times):
-##			sum([number**2 for number in range(self.max_num)])
-##
-##
-##
-###from class_decorators import TimeWaster
-##
-###tw = TimeWaster(1000)
-##
-###tw.waste_time(999)
-####
-##
-##
-##
-###from decorators import debug, do_twice
-##
-##@debug
-##@do_twice
-##def greet(name):
-##	print(f"Hello {name}")
-##
-##greet("Yadi")
-##
-##@do_twice
-##@debug
-##def greet(name):
-##	print(f"Hello {name}")
-##
-###greet("Yadi")
-##
-##
-##
-##
-##
-##def repeat(num_times):
-##	def decorator_repeat(func):
-##		@functools.wraps(func)
-##		def wrapper_repeat(*args, **kwargs):
-##			for _ in range(num_times):
-##				value = func(*args, **kwargs)
-##			return value
-##		return wrapper_repeat
-##	return decorator_repeat
-##
-##
-###from decorators import repeat
-##
-##@repeat(num_times=4)
-##def greet(name):
-##	print(f"Hello {name}")
-##
-##
-###greet("World")
-##
-##
-#####boilerplate keywords
-####def name(_func=None, *, key1=value1, key2=value2, ...):
-####    def decorator_name(func):
-####        ...  # Create and return a wrapper function.
-####
-####    if _func is None:
-####        return decorator_name
-####    else:
-####        return decorator_name(_func)
-##
-### applied to repeat decorator
-##
-##
-##def repeat(_func=None, *, num_times=2):
-##	def decorator_repeat(func):
-##		@functools.wraps(func)
-##		def wrapper_repeat(*args, **kwargs):
-##			for _ in range(num_times):
-##				value = func(*args, **kwargs)
-##			return value
-##		return wrapper_repeat
-##
-##	if _func is None:
-##		return decorator_repeat
-##	else:
-##		return decorator_repeat(_func)
-##
-##
-##
-###from decorators import repeat
-##
-##@repeat
-##def say_whee():
-##	print("Whee!")
-##
-##
-##@repeat(num_times=3)
-##def greet(name):
-##	print(f"Hello {name}")
-##
-###say_whee()
-##
-###greet('Penny')
-##
-##
-### count calls
-##
-##
-##def count_calls(func):
-##	@functools.wraps(func)
-##	def wrapper_count_calls(*args, **kwargs):
-##		wrapper_count_calls.num_calls += 1
-##		print(f"Call {wrapper_count_calls.num_calls} of {func.__name__}()")
-##		return func(*args, **kwargs)
-##	wrapper_count_calls.num_calls = 0
-##	return wrapper_count_calls
-##
-##
-##
-###from decorators import count_calls
-##
-##@count_calls
-##def say_whee():
-##	print("Whee!")
-##
-###say_whee()
-###say_whee()
-###say_whee.num_calls
-##
-##
-##
-### classes
-##class Counter:
-##	def __init__(self, start=0):
-##		self.count = start
-##	def __call__(self):
-##		self.count += 1
-##		print(f"Current count is {self.count}")
-##
-##
-###counter = Counter()
-###counter()
-##
-###counter()
-##
-###counter.count
-##
-##
-##
-##
-##
-##class CountCalls:
-##	def __init__(self, func):
-##		functools.update_wrapper(self, func)
-##		self.func = func
-##		self.num_calls = 0
-##
-##	def __call__(self, *args, **kwargs):
-##		self.num_calls += 1
-##		print(f"Call {self.num_calls} of {self.func.__name__}()")
-##		return self.func(*args, **kwargs)
-##
-##
-###from decorators import CountCalls
-##
-##@CountCalls
-##def say_whee():
-##	print("Whee!")
-##
-##
-###say_whee()
-###say_whee()
-###say_whee.num_calls
-##
-##
-##
-### slow as class
-##def slow_down(_func=None, *, rate=1):
-##	"""Sleep given amount of seconds before calling the function"""
-##	def decorator_slow_down(func):
-##		@functools.wraps(func)
-##		def wrapper_slow_down(*args, **kwargs):
-##			time.sleep(rate)
-##			return func(*args, **kwargs)
-##		return wrapper_slow_down
-##
-##	if _func is None:
-##		return decorator_slow_down
-##	else:
-##		return decorator_slow_down(_func)
-##
-##
-###from decorators import slow_down
-##
-##@slow_down(rate=2)
-##def countdown(from_number):
-##	if from_number < 1:
-##		print("Liftoff!")
-##	else:
-##		print(from_number)
-##		countdown(from_number - 1)
-##
-###countdown(3)
-##
-##
-##
-### singleton
-##def singleton(cls):
-##	"""Make a class a Singleton class (only one instance)"""
-##	@functools.wraps(cls)
-##	def wrapper_singleton(*args, **kwargs):
-##		if wrapper_singleton.instance is None:
-##			wrapper_singleton.instance = cls(*args, **kwargs)
-##		return wrapper_singleton.instance
-##	wrapper_singleton.instance = None
-##	return wrapper_singleton
-##
-##
-###from decorators import singleton
-##
-##@singleton
-##class TheOne:
-##	pass
-##
-###first_one = TheOne()
-###another_one = TheOne()
-###id(first_one)
-###id(another_one)
-##
-###first_one is another_one
-##
-##
-##
-### cache
-###from decorators import count_calls
-##
-##@count_calls
-##def fibonacci(num):
-##	if num < 2:
-##		return num
-##	return fibonacci(num - 1) + fibonacci(num - 2)
-##
-##
-###fibonacci(10)
-###fibonacci.num_calls
-##
-##
-##def cache(func):
-##	"""Keep a cache of previous function calls"""
-##	@functools.wraps(func)
-##	def wrapper_cache(*args, **kwargs):
-##		cache_key = args + tuple(kwargs.items())
-##		if cache_key not in wrapper_cache.cache:
-##			wrapper_cache.cache[cache_key] = func(*args, **kwargs)
-##		return wrapper_cache.cache[cache_key]
-##	wrapper_cache.cache = {}
-##	return wrapper_cache
-##
-##
-###from decorators import cache, count_calls
-##
-##@cache
-##@count_calls
-##def fibonacci(num):
-##	if num < 2:
-##		return num
-##	return fibonacci(num - 1) + fibonacci(num - 2)
-##
-##
-###fibonacci(10)
-###fibonacci(8)
-##
-##
-##
-##@functools.lru_cache(maxsize=4)
-##def fibonacci(num):
-##	if num < 2:
-##		value = num
-##	else:
-##		value = fibonacci(num - 1) + fibonacci(num - 2)
-##	print(f"Calculated fibonacci({num}) = {value}")
-##	return value
-##
-##
-###fibonacci(10)
-###fibonacci(8)
-###fibonacci(5)
-###fibonacci(5)
-###fibonacci.cache_info()
-##
-##
-### validate json
-###from flask import abort
-##def validate_json(*expected_args):
-##	def decorator_validate_json(func):
-##		@functools.wraps(func)
-##		def wrapper_validate_json(*args, **kwargs):
-##			json_object = request.get_json()
-##			for expected_arg in expected_args:
-##				if expected_arg not in json_object:
-##					abort(400)
-##			return func(*args, **kwargs)
-##		return wrapper_validate_json
-##	return decorator_validate_json
-##
-##
-##
-##
-##@validate_json("student_id")
-##def update_grade():
-##	json_data = request.get_json()
-##	# Update database.
-##	return "success!"
-
-
+##	def wrapper_decorator(*args, **kwargs):
+##		# Do something before
+##		value = func(*args, **kwargs)
+##		# Do something after
+##		return value
+##	return wrapper_decorator
 
 
 

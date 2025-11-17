@@ -2,13 +2,14 @@ import builtins
 import os
 
 
-def get_normal_printer():
-
-	def print(*args, **kwargs):
-		builtins.print(*args, **kwargs)
-		return
-
-	return print
+# Not used, but left as notes
+##def get_normal_printer():
+##
+##	def print(*args, **kwargs):
+##		builtins.print(*args, **kwargs)
+##		return
+##
+##	return print
 
 
 def get_fixed_printer():

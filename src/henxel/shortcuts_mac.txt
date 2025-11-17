@@ -105,6 +105,7 @@
 		Cmd-Shift-E		toggle, elide scope, if cursor is on defline
 		Cmd-Shift-F		select scope, where cursor is in
 		
+		Ctrl-Shift-K	Strip first character from every line of selection
 		Ctrl-t	Change indentation of selected lines to current setting
 		
 		------------------------------------------------------

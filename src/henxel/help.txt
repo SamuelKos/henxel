@@ -246,8 +246,10 @@
 	Pasting diff output to editor
 	  - When want to paste diff output lines, they must be cleaned from
 		indicator characters, like "+" in git diff.
-		1: Paste lines 2: From popup-menu, select "strip one"
-		   --> it will remove first character from every line of selection
+		1: Paste lines 
+		2: From popup-menu, select "strip one", or use shortcut:
+			Ctrl-Shift-K
+			--> it will remove first character from every line of selection	
 		3: Ensure you still have selected pasted lines and press Ctrl-t
 		4: Done
 		
@@ -467,13 +469,13 @@
 	  - To automate exit editor, check syntax, reopen python and editor
 		start editor with: e=henxel.Editor(debug=True)
 		
-		Then Cmd-q will do syntax checking on all python-files in package
+		Then Cmd-q will do syntax checking on all open python-files
 		and test-launch. This can also be done from popup-menu: test
 	  
 	  - If wanting to start editor using new code, from popup-menu: restart
-		Test-launch is then not done.
+		note: Test-launch is not done.
 		
-	  - Editor can be closed by pressing close button
+	  - Editor can be closed (with save) by pressing close button
 	
 	  - If editor did not launch, error message and info about recovering is printed
 		See: help(henxel.stash_pop)

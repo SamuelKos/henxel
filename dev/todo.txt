@@ -4,7 +4,13 @@ git config --global user.name
 git config --global user.email
 to set git diff tabsize to 4:
 git config --global core.pager 'less -x1,5'
+
+# diff: show function context
+# in git root:
+echo '*.py diff=python' >> .git/info/attributes
+
 git diff -w == no space diffs
+macos: open filebrowser from terminal to current folder: open .
 Below this: done ################################################
 
 
@@ -16,19 +22,16 @@ is conf, default off, done
 help update done
 
 
+decorators:
+@debug: handles also exceptions
+
+printing works also in macos when in mainloop ######
+
+
 Added files
 decorators.py
+dev/decorator_examples.txt
 printer.py
-
-
-Tab.filepath initial value from False --> None
-fixes entering 0 as filepath in some cases
-
-
-
-it seems that when doing multiline paste,
-after paste, when pasted lines are still selected,
-paste can be adjusted down with return
 
 
 paste to multiline string, done
@@ -39,6 +42,7 @@ remove first char of every line of selection
 is menu item
 intention: use first on paste from diff, then tabify with ctrl-t
 strip_first_char
+Ctrl-Shift-K
 help done
 
 
@@ -312,28 +316,35 @@ move by 2 words: ctrl-,.  #######################
 alt/cmd?
 
 
+cant gotodef from gotodef?
+
+
 
 Control-np --> just np? easy on search, search next?
 no?
 
 
 
-
-macos open finder to cur folder: #######################
-open .
-
-
 --> check_line multiline fix for indent0
-generates indentation errors --> using old way to get start ends
+generates indentation errors --> using old way to get scope start ends
 
 
 check import bookmarks
 
 
 
-##########
+###############################
 To Notes:
 
+#######
+it seems that when doing long multiline paste,
+after paste, when pasted lines are still selected,
+paste can be adjusted down with return if insert
+is at sel start
+#######
+
+
+#######
 # Crazy fix (stuff goes to stdin)
 self.clipboard_clear()
 [self.clipboard_append( str(arg) + ' ' ) for arg in args ]
@@ -350,7 +361,8 @@ tmp = ['osascript', '-e', 'tell app "%s" to activate' % mac_term,
 ]
 
 subprocess.run(tmp)
-###########3
+#######
+################################
 
 
 
