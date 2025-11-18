@@ -46,7 +46,7 @@ class FDialog:
 
 
 	def __init__(self, master, path, stringvar, font=None, menufont=None, sb_widths=None,
-				os_type='linux'):
+				os_type='linux', dir_reverse=True, file_reverse=False):
 		'''	master		tkinter.Toplevel
 			path		pathlib.Path
 			stringvar	tkinter.StringVar
@@ -61,6 +61,9 @@ class FDialog:
 		self.font = font
 		self.menufont = menufont
 		self.scrollbar_width, self.elementborderwidth = sb_widths
+		self.dir_reverse = dir_reverse
+		self.file_reverse = file_reverse
+
 
 		s0, s1 = 12, 10
 		if os_type == 'mac_os': s0, s1 = 16, 14
@@ -170,7 +173,7 @@ class FDialog:
 
 					# if at first fifth: scroll up one line
 					one_fifth = num_items_onscreen * 2 // 10
-					if one_fifth > 10: one_fifth = 4
+					if one_fifth > 10: one_fifth = 10
 					elif one_fifth < 3: one_fifth = 3
 
 					idx_new = idx_start + one_fifth
@@ -178,7 +181,6 @@ class FDialog:
 					if idx < idx_new:
 						# scroll up one line
 						event.widget.see(idx_start - 1)
-
 
 
 			elif event.keysym == 'Down':
@@ -205,28 +207,15 @@ class FDialog:
 
 
 	def nogoto_emptylist(self, event=None):
-		'''	prevent tabbing into empty file-box.
-			Tab to same line from dirs to files if possible.
+		'''	Prevent tabbing into empty file-box.
 		'''
 
-		if self.files.size() == 0:
-			return 'break'
-
+		if self.files.size() == 0: pass
 		else:
 			self.files.focus_set()
-
-			idx = self.dirs.index('active')
-			idx_last_file = self.files.size() - 1
-
-			if idx >= idx_last_file:
-				self.files.activate(idx_last_file)
-				self.files.see(idx_last_file)
-
-			else:
-				self.files.activate(idx)
-				self.files.see(idx)
-
-			return 'break'
+			self.files.activate(0)
+			self.files.see(0)
+		return 'break'
 
 
 	def quit_me(self, event=None):
@@ -305,7 +294,7 @@ class FDialog:
 
 				elif item.is_dir():
 
-					if item.name[0] == '.':
+					if item.name[0] in '._':
 						self.dotdirlist.append(item.name + '/')
 					else:
 						self.dirlist.append(item.name + '/')
@@ -323,11 +312,10 @@ class FDialog:
 			print(err)
 
 
-		# __pycache__/ etc last:
-		self.dirlist.sort(reverse=True)
+		self.dirlist.sort(reverse=self.dir_reverse)
 		self.dotdirlist.sort()
 
-		self.filelist.sort()
+		self.filelist.sort(reverse=self.file_reverse)
 		self.dotfilelist.sort()
 
 

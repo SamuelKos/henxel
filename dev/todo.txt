@@ -22,17 +22,24 @@ is conf, default off, done
 help update done
 
 
-test subprocess run from only python to restart python console ###
-import sys
-import os
-os.execl(sys.executable, sys.executable, '-i', '-c', 'import henxel; e=henxel.Editor()')
+gotodef from gotodef
+done
 
+
+set_filedialog_sorting_order(dir_reverse, file_reverse)
+is setting
+help done
+done
+
+redraw_syntax()
+done, help done, is menu item
+
+
+ctrl-. nowork linux win? #######
 
 
 decorators:
 @debug: handles also exceptions
-
-printing works also in macos when in mainloop ######
 
 
 Added files
@@ -298,11 +305,6 @@ self.cur_defline = '-1.-1'
 Below this: not done:
 ###############################################
 
-e.tk.eval('chan configure stdout')
-'-blocking 1 -buffering line -buffersize 4096 -encoding utf-8 -eofchar {} -translation crlf -mode 9600,n,8,1 -xchar {\x11 \x13}'
-
-newtab seems to have syntax on by default 
-
 
 
 
@@ -312,24 +314,16 @@ todo: copy paste, defline ########
 test change font when no linenumbers want_ln 0 1
 
 
-to help: linenum color same with comments etc
-to help: how to change bg color
-to help: how to save as to path
-
 
 
 
 move by 2 words: ctrl-,.  #######################
 alt/cmd?
-
-
-cant gotodef from gotodef?
-
+linux no work, win?
 
 
 Control-np --> just np? easy on search, search next?
 no?
-
 
 
 --> check_line multiline fix for indent0
@@ -340,8 +334,26 @@ check import bookmarks
 
 
 
+
 ###############################
 To Notes:
+
+
+#######
+printing works also in macos when in mainloop
+#######
+
+
+#######
+e.tk.eval('chan configure stdout')
+'-blocking 1 -buffering line -buffersize 4096 -encoding utf-8 -eofchar {} -translation crlf -mode 9600,n,8,1 -xchar {\x11 \x13}'
+#######
+
+
+#######
+newtab seems to have syntax on by default 
+#######
+
 
 #######
 it seems that when doing long multiline paste,

@@ -1,5 +1,36 @@
-				
-					
+		------------------------------------------------------
+		
+		
+		While searching:
+			Ctrl-n  Next match
+			Ctrl-p  Prev match
+			-	Copying text to clipboard is possible with yank-line etc.
+			-	Add bookmark is possible, so is Goto def from which:
+				arrow-key or Ctrl-np -> back to matches
+			-	Changing the replacement string is possible while replacing.
+			-	1: Press Space to exit search to focus.
+				2: Double-click to exit to cursor.
+				3: Press Esc to exit to cursor position at the start of the search.
+				Press arrow-key to refresh view back to cursor, if necessary.
+		
+		Also, after searching, show and select next/prev occurence of last search
+		(if no selection, else uses selection)
+			Ctrl-n  Next match
+			Ctrl-p  Prev match
+
+		While replacing:
+			Press Return once to replace, press again to move to next match,
+			(pressing again does not yet replace that next match)
+			
+			Matches can be skipped with Ctrl-np
+		
+		
+		
+		Default bindings: https://tcl.tk/man/tcl9.0/TkCmd/text.html#M192
+		
+		-------------------------------------------------------------
+						
+
 	.----------------------------------------------------.
 	|Below this, it is expected one started editor with: |
 	|													 |
@@ -59,7 +90,15 @@
 	  	This creates an empty file like 'touch'. This is done to
 		ensure filepath is ok. Contents will be saved to disk in
 		above mentioned situations.
-	  
+		
+		Examples:
+		A: Save to directory where python console was launhed:
+			filename.py
+		B: Save to subdirectory, counted from launch directory:
+			sub1/sub2/filename.py
+		C: Save to any directory, counted as before:
+			../../dir1/dir2/filename.py
+		
 	  - If a file was already open and user changed filename in entry,
 		old file is first saved (but not to disk) and then new file with
 		same content is created in a new tab (its contents are not yet in disk).
@@ -94,6 +133,14 @@
 		to show wanted side of selection, toggle left/right -keys
 
 
+	Refreshing syntax-highlighting
+	  - If highlighting looks wierd, choose 'draw syntax' from popup-menu.
+	  - Note that it might not get any better if there is some
+		syntax-error in the code. Fix the error then redraw.
+	  - Single line syntax can be refreshed by adding space
+		and then deleting it. Multiline strings: fix string, redraw.
+
+	
 	Bookmarks
 	  - Are very useful
 	  - Create/remove bookmark with Cmd/Alt-p
@@ -139,13 +186,19 @@
 		(or if there is selection, uses it)
 	  - Can be done also while searching,
 		just press arrow-key or Ctrl-np to get back to matches,
-		because esc will exit search
+		because esc will exit search.
 	  - Bookmarks can be created while doing goto def
 	  - Esc: exit to cursor position at the start of search/gotodef
 	  - Space: exit to definition line
 	  - One can also select function of interest while searching,
 		other than on match, and press Alt-g to get there.
 		Or just click the function name, then press Alt-g
+		
+	  - Note: when doing multiple gotodefs in a row,
+		pressing arrow key returns view to previous place,
+		where gotodef was executed. That means one can go one
+		'step' back but no more. This applies search also, so
+		again, ctrl-np is a safe choise while searching.
 		
 	
 	Set editor size and position
@@ -160,7 +213,7 @@
 	  - Save current geometry:
 		  e.use_geometry('current')
 		
-	  - Get current(and efective) setting
+	  - Show(does not edit setting) current full geometry-string
 		  e.geometry() or
 		  e.wm_geometry()
 		
@@ -289,14 +342,14 @@
 			https://www.tcl.tk/man/tcl9.0/TclCmd/regexp.html
 		
 		
-	  - Good news is, most of the time one does not need these.
-	  - When does, it most likely is:
+	  - Good news is, most of the time these are not needed.
+	  - When are, it most likely is:
 			
 			e.edit_search_setting('-start insert')
 		
 		This changes searching to start from insertion cursor
 		
-		If that wont help, below is couple more examples
+		If that won't help, below is couple more examples
 	
 	
 	SUBSTITUTION WITH REGEXP
@@ -328,7 +381,7 @@
 		Example 1 End
 
 
-		Example 2 Begin
+	  - Example 2 Begin
 		Adding space to end of substitution using:
 		search_word + () ==empty string
 		
@@ -402,6 +455,13 @@
 	
 	Set scrollbar width
 	  - e.set_scrollbar_widths(width, elementborderwidth)
+	
+	
+	Set filedialog sorting order (directories, files)
+	  - e.set_filedialog_sorting_order()	--> current values
+	  - e.set_filedialog_sorting_order(0,0)	--> both 'normal'
+	  - e.set_filedialog_sorting_order(1,1)	--> both reversed
+	  - default is (1,0) (directories with capital first letter last)
 	
 	
 	Change tabsize
@@ -480,7 +540,8 @@
 	  - If editor did not launch, error message and info about recovering is printed
 		See: help(henxel.stash_pop)
 	
-	  - Currently there is restart-script only for MacOS
+	  - Currently there is restart-script only for macOS, but test-launch
+		should be working on all platfroms.
 	
 	  - More info is in function: e.build_launch_test
 	

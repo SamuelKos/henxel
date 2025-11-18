@@ -549,8 +549,12 @@ class Editor(tkinter.Toplevel):
 			for font in [self.textfont, self.menufont, self.keyword_font, self.linenum_font]:
 				self.fonts[font.name] = font
 
-			# Can be changed with set_version_control_cmd()
+			# Can be changed with: set_version_control_cmd
 			self.version_control_cmd = 'git branch --show-current'.split()
+
+			# Used in filedialog, can be changed with: set_filedialog_sorting_order
+			self.dir_reverse = True
+			self.file_reverse = False
 
 
 			##### Search related variables Begin
@@ -685,6 +689,7 @@ class Editor(tkinter.Toplevel):
 				self.popup.add_command(label="   uncomment", command=self.uncomment)
 
 			self.popup.add_command(label="  select all", command=self.select_all)
+			self.popup.add_command(label=" draw syntax", command=self.redraw_syntax)
 			self.popup.add_command(label="   strip one", command=self.strip_first_char)
 			self.popup.add_command(label="    open mod", command=self.view_module)
 			self.popup.add_command(label="      errors", command=self.show_errors)
@@ -1355,6 +1360,7 @@ Error messages Begin
 		#@do_twice
 		#@debug
 		def f1():
+			print(60*'  BBB  ')
 			l = [i for i in range(6)]
 			print(l[10])
 
@@ -1826,17 +1832,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		tests = [not quit_debug, self.debug, restart, self.restart_script]
 
 		if all(tests):
+			if self.os_type != 'mac_os':
+				print('''Restarting is not yet supported on this platform.\n
+--> exit Python console, then restart it and editor.''')
+				return
+
+
 			print('Restarting..')
-
-			# This, quite hard to guess, line does it
+			# This, line does it, but only for macOS
 			os.execl(sys.executable, sys.executable,
-					'-i', '-c', 'import henxel; e=henxel.Editor()')
+					'-i', '-c', 'import henxel; e=henxel.Editor(debug=True)')
 
-			# to notes?
+			# was:
 			#tmp = [self.restart_script]
 			#subprocess.run(tmp)
-			#from os import getpid
-			#pid = str(getpid())
 
 		#### quit_me End ##############
 
@@ -2914,6 +2923,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['marginals'] = self.margin, self.margin_fullscreen, self.gap, self.gap_fullscreen
 		d['spacing_linenums'] = self.spacing_linenums
 		d['start_fullscreen'] = self.start_fullscreen
+		d['fdialog_sorting'] = self.dir_reverse, self.file_reverse
 		d['check_syntax'] = self.check_syntax
 		d['fix_mac_print'] = self.fix_mac_print
 		d['want_ln'] = self.want_ln
@@ -3004,6 +3014,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.linenum_font.config(**d['fonts']['linenum_font'])
 		self.scrollbar_width, self.elementborderwidth = d['scrollbar_widths']
 		self.margin, self.margin_fullscreen, self.gap, self.gap_fullscreen = d['marginals']
+		self.dir_reverse, self.file_reverse = d['fdialog_sorting']
 		self.version_control_cmd = d['version_control_cmd']
 		self.start_fullscreen = d['start_fullscreen']
 		self.check_syntax = d['check_syntax']
@@ -3264,6 +3275,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		res = self.syntax and res
 
 		return res
+
+
+	def redraw_syntax(self):
+		''' Redraw syntax of current tab
+		'''
+		if self.can_do_syntax(): self.update_tokens('1.0', 'end')
+		return 'break'
 
 
 	def get_tokens(self, tab, update=False):
@@ -3534,7 +3552,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			flag_err = True
 			tab.check_scope = True
-			print('update_tokens: indent_err')
+			#print('update_tokens: indent_err')
+
 
 		except tokenize.TokenError as ee:
 
@@ -3547,7 +3566,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				flag_err = True
 				tab.check_scope = True
 
-			print('update_tokens: other_err')
+			#print('update_tokens: other_err')
 
 
 
@@ -3572,6 +3591,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			par_err = self.checkpars(start_line, tab)
 
 		tab.par_err = par_err
+
 
 		if not par_err:
 			# Not always checking whole file for par mismatches, so clear
@@ -8442,7 +8462,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Arrow key or Control-np --> back to search matches
 		'''
 
-		if (not self.can_do_syntax()) or (self.state not in ['normal', 'search', 'replace']):
+		if (not self.can_do_syntax()) or (self.state not in ['normal', 'goto_def', 'search', 'replace']):
 			self.bell()
 			return 'break'
 
@@ -8713,6 +8733,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Gotoline etc End
 ########## Save and Load Begin
 
+	def set_filedialog_sorting_order(self, dir_reverse=None, file_reverse=None):
+		''' Set sorting order of both "normal" directories and files
+			True means: use reversed order.
+			Default uses reverse for dirs and normal for files.
+			Example, set both to normal: set_filedialog_sorting_order(1,1)
+		'''
+
+		if dir_reverse is None and file_reverse is None: pass
+		else:
+			if dir_reverse: self.dir_reverse = True
+			else: self.dir_reverse = False
+			if file_reverse: self.file_reverse = True
+			else: self.file_reverse = False
+
+		print(self.dir_reverse, self.file_reverse)
+
+
 	def trace_filename(self, *args):
 
 		# Canceled
@@ -8881,7 +8918,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.text_widget.tag_remove('sel', '1.0', 'end')
 
 
-		# Called by: Open-button(event==None) or shortcut
+		# Called by: Open-button(event==None) or keyboard-shortcut
 		if (not event) or (event.widget != self.entry):
 
 			self.state = 'filedialog'
@@ -8908,7 +8945,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.to_be_closed.append(filetop)
 
 
-			fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.textfont, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
+			fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.textfont, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type, dir_reverse=self.dir_reverse, file_reverse=self.file_reverse)
 
 			return 'break'
 
@@ -9142,7 +9179,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return False
 
 
-		fpath_in_entry = pathlib.Path().cwd() / tmp_entry
+		fpath_in_entry = (pathlib.Path().cwd() / tmp_entry).resolve()
 		##############
 
 		try:
