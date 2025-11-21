@@ -1,16 +1,19 @@
 import functools
 import time
 
-# Get reference to printer set in henxel.py
+# Update printer, when necessary, Begin
+# Get reference to printer set in henxel/__init__.py
 from importflags import PRINTER
 
 
-# Update printer, when necessary, Begin
+#ORIGINAL_PRINTER = print
 
 # With this arrangement there is no need to do anything else,
 # in this file, to actual code-lines which has print-calls.
 # Printer is always the same than user selected in editor-session.
 
+# Note: this slows printing, better would be if this could be iffed away
+# when in mainloop, also in other modules
 def fix_print(func):
 	@functools.wraps(func)
 	def wrapper_print(*args, **kwargs):
@@ -19,9 +22,22 @@ def fix_print(func):
 	return wrapper_print
 
 
+# Originally uses just these three lines below, but if need dynamic defining,
+# there is use_fixed_printer() and reset_printer() below.
 global print
 @fix_print
 def print(*args, **kwargs): return
+
+
+##def use_fixed_printer():
+##	global print
+##	@fix_print
+##	def print(*args, **kwargs): return
+##
+##def reset_printer():
+##	global print
+##	print = ORIGINAL_PRINTER
+
 # Update printer, when necessary, End
 
 
@@ -71,35 +87,58 @@ def debug(func):
 			if PRINTER['current'] == PRINTER['default']:
 				raise err
 
-			tb = err.__traceback__
+
+			errors = list()
+			errors.append(err)
+			cur_err = err
+
+			# Get whole error-chain
+			while cur_err.__context__ is not None:
+				cur_err = cur_err.__context__
+				errors.append(cur_err)
+
 
 			print('\nTraceback (most recent call last):')
+			error = errors.pop()
 
-			while tb is not None:
+			# Parse errors
+			while error:
 
-				e = str(tb.tb_frame)
+				tb = error.__traceback__
+				while tb is not None:
 
-				# Get actual start
-				idx = e.index(', ') + 2
-				e = e[idx:]
+					e = str(tb.tb_frame)
 
-				# file --> File
-				e0 = e[0].capitalize()
+					# Get actual start
+					idx = e.index(', ') + 2
+					e = e[idx:]
 
-				# -1: Remove trailing '>'
-				e = e[1:-1]
+					# file --> File
+					e0 = e[0].capitalize()
 
-				# Add '()' to indicate scope and
-				# indent of one spaces
-				e = ' ' + e0 + e + '()'
+					# -1: Remove trailing '>'
+					e = e[1:-1]
 
-				# Put scope in own line
-				e = e.replace(', code', '\n\tin')
+					# Add '()' to indicate scope and
+					# indent of one spaces
+					e = ' ' + e0 + e + '()'
 
-				print(e)
-				tb = tb.tb_next
+					# Put scope in own line
+					e = e.replace(', code', '\n\tin')
 
-			print( type(err).__name__ +': '+ err.__str__() )
+					print(e)
+					tb = tb.tb_next
+
+				print( type(error).__name__ +': '+ error.__str__() )
+
+				try:
+					# Get next error from chain
+					error = errors.pop()
+					print('\nDuring handling of the above exception, another exception occurred:')
+
+				except IndexError:
+					error = None
+
 
 	return wrapper_debug
 

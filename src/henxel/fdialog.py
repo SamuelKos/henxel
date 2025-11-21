@@ -1,12 +1,13 @@
 import tkinter.font
 import tkinter
 import pathlib
-import functools
-
-# Get reference to printer set in henxel
-from importflags import PRINTER
 
 # Update printer, when necessary, Begin
+import functools
+# Get reference to printer set in henxel
+from importflags import PRINTER
+#ORIGINAL_PRINTER = print
+
 def fix_print(func):
 	@functools.wraps(func)
 	def wrapper_print(*args, **kwargs):
@@ -17,7 +18,18 @@ def fix_print(func):
 global print
 @fix_print
 def print(*args, **kwargs): return
+
+##def use_fixed_printer():
+##	global print
+##	@fix_print
+##	def print(*args, **kwargs): return
+##
+##def reset_printer():
+##	global print
+##	print = ORIGINAL_PRINTER
+
 # Update printer, when necessary, End
+
 
 
 class FDialog:

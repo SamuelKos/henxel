@@ -53,7 +53,6 @@ import inspect
 import json
 import copy
 import ast
-import os
 
 # Used in init
 import importlib.resources
@@ -93,8 +92,8 @@ PRINTER['current'] = DEFAUL_PRINTER
 # MacOS printing fix related End #########
 
 
-# These are still on testing
-from .decorators import do_twice, debug
+# Used on debugging
+from .decorators import do_twice, debug # reset_printer, use_fixed_printer
 
 # From this package
 from . import wordexpand
@@ -237,6 +236,7 @@ class FakeEvent:
 	'''
 
 	keysym: str = 'Left'
+	state: int = 999
 
 ############ Other Classes End
 ############ Class Editor Begin
@@ -265,7 +265,7 @@ START_WIN = 'restart_editor_todo.bat'
 START_NIX = 'restart_editor_todo.sh'
 
 
-VERSION = importlib.metadata.version(__name__)
+VERSION = importlib.metadata.version('henxel')#__name__)
 
 
 TAB_WIDTH = 4
@@ -314,6 +314,7 @@ class Editor(tkinter.Toplevel):
 
 	# Normal stuff
 	alive = False
+	in_mainloop = False
 
 	pkg_contents = None
 	no_icon = True
@@ -404,7 +405,7 @@ class Editor(tkinter.Toplevel):
 
 
 		if not cls.pkg_contents:
-			cls.pkg_contents = importlib.resources.files(__name__)
+			cls.pkg_contents = importlib.resources.files('henxel')#__name__)
 
 
 		if cls.pkg_contents:
@@ -486,6 +487,7 @@ class Editor(tkinter.Toplevel):
 			self.flags = self.__class__.flags
 			self.restart_script = self.__class__.restart_script
 			self.debug = debug
+
 
 			super().__init__(self.root, *args, class_='Henxel', bd=4, **kwargs)
 			self.protocol("WM_DELETE_WINDOW",
@@ -572,6 +574,7 @@ class Editor(tkinter.Toplevel):
 			self.search_matches = 0
 			self.old_word = ''
 			self.new_word = ''
+			self.search_history = ([],[]) # old_words, new_words
 
 			# Used for counting indentation
 			self.search_count_var = tkinter.IntVar()
@@ -721,8 +724,10 @@ class Editor(tkinter.Toplevel):
 
 			## Fix for macos printing issue starting from about Python 3.13 Begin
 			# Can be set with: use_mac_print_fix
-			if self.os_type == 'mac_os' and self.fix_mac_print:
+			tests = (not self.in_mainloop, self.fix_mac_print, self.os_type == 'mac_os')
+			if all(tests):
 				self.change_printer_to(FIIXED_PRINTER)
+				print('using fixed printer')
 
 
 			# Get version control branch #######
@@ -1356,13 +1361,16 @@ Error messages Begin
 	@debug
 	def test_bind(self, event=None, f=1):
 
-		# When syntax is not updating use this:
 		#@do_twice
 		#@debug
 		def f1():
 			print(60*'  BBB  ')
 			l = [i for i in range(6)]
-			print(l[10])
+			try:
+				print(l[10])
+			except IndexError:
+				print(bbb)
+
 
 
 ##			#######
@@ -1387,6 +1395,7 @@ Error messages Begin
 ##			t2 = int(self.root.tk.eval('clock milliseconds'))
 ##			print(t2-t1, 'ms')
 
+##			# When syntax is not updating use this:
 ##			print('\nState:', self.state,
 ##			'\ntcl_name_self:', self.tcl_name_of_contents,
 ##			'\ntcl_name_tab:', self.tabs[self.tabindex].tcl_name_of_contents,
@@ -1834,18 +1843,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if all(tests):
 			if self.os_type != 'mac_os':
 				print('''Restarting is not yet supported on this platform.\n
---> exit Python console, then restart it and editor.''')
+If want to restart editor with new code, first exit Python console, then restart it and editor.''')
 				return
 
 
 			print('Restarting..')
-			# This, line does it, but only for macOS
-			os.execl(sys.executable, sys.executable,
-					'-i', '-c', 'import henxel; e=henxel.Editor(debug=True)')
+			if not self.in_mainloop:
+				tmp = [self.restart_script]
+			else:
+				tmp = [sys.executable, '-m', 'henxel', '--debug']
 
-			# was:
-			#tmp = [self.restart_script]
-			#subprocess.run(tmp)
+			subprocess.run(tmp)
+
+
+##			# This line would also work, but only for macOS.
+##			os.execl(sys.executable, sys.executable, '-i', '-c', 'import henxel; e=henxel.Editor(debug=True)')
+
 
 		#### quit_me End ##############
 
@@ -2115,8 +2128,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if self.os_type == 'linux':
 			w.bind( "<ISO_Left_Tab>", self.unindent)
+			# Move by two words right/left
+			w.bind( "<Control-period>", self.move_by_words2)
+			w.bind( "<Control-comma>", self.move_by_words2)
 		else:
 			w.bind( "<Shift-Tab>", self.unindent)
+			w.bind( "<Control-.>", self.move_by_words2)
+			w.bind( "<Control-,>", self.move_by_words2)
+
 
 		w.unbind_class('Text', '<Button-3>')
 		w.unbind_class('Text', '<B3-Motion>')
@@ -2283,14 +2302,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.bind( "<Control-E>", self.goto_lineend)
 
 
-		###
-		w.bind( "<Control-.>", self.move_by_words2)
-		w.bind( "<Control-,>", self.move_by_words2)
-		w.bind( "<Control-Shift-K>", self.strip_first_char)
-		###
-
-
-
 		w.bind( "<Control-j>", self.center_view)
 		w.bind( "<Control-u>",
 			lambda event: self.center_view(event, **{'up':True}) )
@@ -2309,6 +2320,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		w.bind( "<Control-Tab>", self.insert_tab)
 
+		w.bind( "<Control-Shift-K>", self.strip_first_char)
 		w.bind( "<Control-t>", self.tabify_lines)
 		w.bind( "<Control-z>", self.undo_override)
 		w.bind( "<Control-Z>", self.redo_override)
@@ -2607,7 +2619,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# note: if font is different at @0,0 like def with smaller font
 			# its bbox is different. --> sometimes wonky linenums
 			# --> should use dlineinfo?
-			y_offset = self.text_widget.bbox('@0,0')[1]
+
+			# See dev/todo.txt for explanation why this is currently
+			# commented out, search "strange bug"
+			#y_offset = self.text_widget.bbox('@0,0')[1]
+			y_offset = self.text_widget.dlineinfo('@0,0')[1]
 			y_offset *= -1
 
 			# if self.y_extra_offset > 0, this is needed:
@@ -4793,7 +4809,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		source = curtab.filepath
-
 		d = dict(stderr=subprocess.PIPE)
 		if self.os_type == 'mac_os' and self.fix_mac_print:
 			d = dict(capture_output=True)
@@ -5804,14 +5819,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		direction = 'Left'
 		if event.keysym == 'period': direction = 'Right'
-		event = FakeEvent(keysym=direction)
 
-		self.move_by_words(event=event)
+
+		# There is no MacOS event check in move_by_words
+		# --> Choosing linux state as default
+		# These don't really matter so much, only to pass the state-checks
+		# This likely should be done with masks
+		f = self.move_by_words
+		event_state = 4
+		if self.os_type == 'windows': event_state = 262156
+
+
+		event = FakeEvent(keysym=direction, state=event_state)
+
+		f(event=event)
 
 		if direction == 'Right': idx = self.idx_lineend()
 		else: idx = self.idx_linestart()[0]
 		if self.text_widget.compare( idx, '!=', 'insert'):
-			self.move_by_words(event=event)
+			f(event=event)
 
 		return 'break'
 
@@ -5830,6 +5856,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if event.state != 4: return
 
 		elif self.os_type == 'windows':
+			# win10 and win11 has different event-states for some keys
 			if event.state not in [ 262156, 262148 ]: return
 
 
@@ -11185,6 +11212,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		if self.search_matches > 0:
 
 			self.old_word = search_word
+			self.search_history[0].append(self.old_word)
 			self.search_index = -1
 
 			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
@@ -11291,6 +11319,47 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.save_pos = self.text_widget.index(tkinter.INSERT)
 
 		on_stop()
+
+		return 'break'
+
+
+	@debug
+	def walk_search_history(self, event=None, direction='up'):
+		''' Walk search-history in entry with arrow up/down
+			while searching/replacing
+		'''
+
+		##
+		self.entry.config(validate='none')
+
+		# Get stuff after prompt
+		tmp_orig = self.entry.get()
+		idx = tmp_orig.index(':') + 2
+		self.entry.delete(idx, 'end')
+		self.entry.insert('end', 'This is a test, jou')
+
+		self.entry.select_from(idx)
+		self.entry.select_to('end')
+		self.entry.icursor(idx)
+		self.entry.xview_moveto(0)
+
+		self.entry.config(validate='key')
+		##
+
+
+		#search_word = tmp
+
+
+		#if direction == 'up':
+		#	walk history 'normally'
+		#	clear entry
+		#	insert next item from history --> need self.search_history_index
+		#	self.search_history_index += 1
+		# else:
+		#	walk history 'backwards'
+		#	clear entry
+		#	insert prev item from history
+		#	self.search_history_index -= 1
 
 		return 'break'
 
@@ -11411,6 +11480,12 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.text_widget.bind("<Return>", self.return_override)
 		self.entry.bind("<Control-n>", self.do_nothing_without_bell)
 		self.entry.bind("<Control-p>", self.do_nothing_without_bell)
+
+		#
+		self.entry.unbind("<Up>", funcid=self.bidup )
+		self.entry.unbind("<Down>", funcid=self.biddown )
+		#
+
 		self.bind( "<Return>", self.do_nothing_without_bell)
 
 
@@ -11425,7 +11500,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		### stop_search End ######
 
-
+	#@debug
 	def search(self, event=None):
 		'''	Ctrl-f --> search --> start_search --> show_next / show_prev --> stop_search
 		'''
@@ -11448,6 +11523,12 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.state = 'search'
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
+
+		##
+		self.bidup = self.entry.bind("<Up>", func=lambda event: self.walk_search_history(event, **{'direction':'up'}), add=True )
+		self.biddown = self.entry.bind("<Down>", func=lambda event: self.walk_search_history(event, **{'direction':'down'}), add=True )
+		##
+
 		self.entry.unbind("<Return>", funcid=self.entry.bid_ret)
 		self.entry.bind("<Return>", self.start_search)
 		self.bind("<Escape>", self.stop_search)
@@ -11558,6 +11639,13 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.state = state
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
+
+		##
+		self.bidup = self.entry.bind("<Up>", func=lambda event: self.walk_search_history(event, **{'direction':'up'}), add=True )
+		self.biddown = self.entry.bind("<Down>", func=lambda event: self.walk_search_history(event, **{'direction':'down'}), add=True )
+		##
+
+
 		self.entry.unbind("<Return>", funcid=self.entry.bid_ret)
 		self.entry.bind("<Return>", self.start_search)
 		self.bind("<Escape>", self.stop_search)
@@ -11665,6 +11753,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 			else:
 				self.new_word = tmp
+				self.search_history[1].append(self.new_word)
 		# Enable changing newword between replaces End
 		#################
 
@@ -11807,6 +11896,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		idx = tmp_orig.index(':') + 2
 		tmp = tmp_orig[idx:].strip()
 		self.new_word = tmp
+		self.search_history[1].append(self.new_word)
 
 		# No check for empty newword to enable deletion.
 

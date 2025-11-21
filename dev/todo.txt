@@ -22,24 +22,43 @@ is conf, default off, done
 help update done
 
 
-gotodef from gotodef
-done
+#### Really strange bug
+when cursor is on: comment line, that starts from indent0, at index:
+indent0, lineend or lineend -1c
 
+then, walk to next tab, close editor and reopen editor, don't change tab
 
-set_filedialog_sorting_order(dir_reverse, file_reverse)
-is setting
-help done
-done
+then, in python console:
+e.tabs[e.tabindex].text_widget.bbox('@0,0') --> normal
+
+#idx_err = (index of closed tab where cursor is on comment line):
+idx_err = e.tabindex-1
+
+e.tabs[idx_err].text_widget.bbox('@0,0') --> None!
+########
+
 
 redraw_syntax()
 done, help done, is menu item
 
 
-ctrl-. nowork linux win? #######
+printer.py lineends by os?
+
+tab focus toggle
+win linux=
+alt-ae linestrt end
+alt-shift-left/right selct to
+
+
+
 
 
 decorators:
 @debug: handles also exceptions
+
+
+walk history newword oldword
+
 
 
 Added files
