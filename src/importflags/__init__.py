@@ -65,9 +65,9 @@ to set visibility of test-launch and to fix macOS printing issue.
 '''
 
 FLAGS = False
-PRINTER = dict()
-
-
+PRINTER = {'default':1, 'fixed':2, 'current':3}
+IN_MAINLOOP = False
+debug_use_own_error_handler = False
 
 
 

@@ -5,13 +5,13 @@ import pathlib
 # Update printer, when necessary, Begin
 import functools
 # Get reference to printer set in henxel
-from importflags import PRINTER
+import importflags
 #ORIGINAL_PRINTER = print
 
 def fix_print(func):
 	@functools.wraps(func)
 	def wrapper_print(*args, **kwargs):
-		printer = PRINTER['current']
+		printer = importflags.PRINTER['current']
 		printer(*args, **kwargs)
 	return wrapper_print
 

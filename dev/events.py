@@ -23,7 +23,7 @@ def mycallback(event=None):
 
 	print(f'\nEnd Event {eventnum}:')
 	print(10*'= ')
-
+	print(event)
 
 
 textwid.bind('<Any-KeyPress>', mycallback)

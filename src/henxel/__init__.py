@@ -82,13 +82,12 @@ FLAGS = importflags.FLAGS
 from . import printer
 
 # Pass printer to other modules
-PRINTER = importflags.PRINTER # dict
 DEFAUL_PRINTER = print
 FIIXED_PRINTER = printer.get_fixed_printer()
 
-PRINTER['default'] = DEFAUL_PRINTER
-PRINTER['fixed'] = FIIXED_PRINTER
-PRINTER['current'] = DEFAUL_PRINTER
+importflags.PRINTER['default'] = DEFAUL_PRINTER
+importflags.PRINTER['fixed'] = FIIXED_PRINTER
+importflags.PRINTER['current'] = DEFAUL_PRINTER
 # MacOS printing fix related End #########
 
 
@@ -265,7 +264,7 @@ START_WIN = 'restart_editor_todo.bat'
 START_NIX = 'restart_editor_todo.sh'
 
 
-VERSION = importlib.metadata.version('henxel')#__name__)
+VERSION = importlib.metadata.version('henxel')
 
 
 TAB_WIDTH = 4
@@ -405,7 +404,7 @@ class Editor(tkinter.Toplevel):
 
 
 		if not cls.pkg_contents:
-			cls.pkg_contents = importlib.resources.files('henxel')#__name__)
+			cls.pkg_contents = importlib.resources.files('henxel')
 
 
 		if cls.pkg_contents:
@@ -486,7 +485,11 @@ class Editor(tkinter.Toplevel):
 			self.root = self.__class__.root
 			self.flags = self.__class__.flags
 			self.restart_script = self.__class__.restart_script
+			self.debug_decorator_always_use_own_error_handler = False
 			self.debug = debug
+			# Pass info to other modules
+			if self.in_mainloop:
+				importflags.IN_MAINLOOP = True
 
 
 			super().__init__(self.root, *args, class_='Henxel', bd=4, **kwargs)
@@ -639,7 +642,7 @@ class Editor(tkinter.Toplevel):
 			# Initiate widgets
 			####################################
 			self.btn_git = tkinter.Button(self, takefocus=0, relief='flat', compound='left', bd=0,
-										highlightthickness=0, padx=0, state='disabled')
+										highlightthickness=0, padx=0)
 
 			self.entry = tkinter.Entry(self, highlightthickness=0, takefocus=0)
 			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
@@ -721,6 +724,11 @@ class Editor(tkinter.Toplevel):
 				self.oldconf = string_representation
 				self.load_config(data)
 
+
+			# pass info to decorators-module
+			# can be set with: debug_always_use_own_error_handler
+			value = self.debug_decorator_always_use_own_error_handler
+			importflags.debug_use_own_error_handler = value
 
 			## Fix for macos printing issue starting from about Python 3.13 Begin
 			# Can be set with: use_mac_print_fix
@@ -1580,7 +1588,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# This try block catches only timeouts
 			try:
-				p = subprocess.run(['python','-'], input=tmp, **d)
+				p = subprocess.run([sys.executable, '-'], input=tmp, **d)
 
 			except subprocess.TimeoutExpired as e:
 				print('TIMED OUT')
@@ -1673,6 +1681,28 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.restore_btn_git()
 
 
+	def debug_always_use_own_error_handler(self, setting=None):
+		''' Should @debug -decorator use its own error-messages, which
+			are more packed than normal (less scrolling):
+
+			Without arguments, return current setting
+			1: yes
+			0: no (default)
+		'''
+		cur_value = self.debug_decorator_always_use_own_error_handler
+		if setting is None:
+			print(cur_value)
+			return
+		elif setting:
+			self.debug_decorator_always_use_own_error_handler = True
+			cur_value = True
+		else:
+			self.debug_decorator_always_use_own_error_handler = False
+			cur_value = False
+
+		importflags.debug_use_own_error_handler = cur_value
+		return
+
 
 	def check_syntax_on_exit(self, setting=None):
 		''' Should syntax of open py-files be checked at exit
@@ -1681,7 +1711,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			0: no check
 		'''
 
-		if setting == None: print(self.check_syntax)
+		if setting is None: print(self.check_syntax)
 		elif setting: self.check_syntax = True
 		else: self.check_syntax = False
 		return
@@ -1840,25 +1870,26 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Python console, by clicking close-button.
 		tests = [not quit_debug, self.debug, restart, self.restart_script]
 
+		# In debug and want restart
 		if all(tests):
-			if self.os_type != 'mac_os':
-				print('''Restarting is not yet supported on this platform.\n
+			# Sadly this is true
+			if not self.in_mainloop and self.os_type != 'mac_os':
+				print('''Restarting is not yet supported on this platform (when not in mainloop).\n
 If want to restart editor with new code, first exit Python console, then restart it and editor.''')
 				return
 
 
 			print('Restarting..')
+
+			# From macOS only
 			if not self.in_mainloop:
 				tmp = [self.restart_script]
+
+			# Restarting from mainloop works on every platform
 			else:
 				tmp = [sys.executable, '-m', 'henxel', '--debug']
 
 			subprocess.run(tmp)
-
-
-##			# This line would also work, but only for macOS.
-##			os.execl(sys.executable, sys.executable, '-i', '-c', 'import henxel; e=henxel.Editor(debug=True)')
-
 
 		#### quit_me End ##############
 
@@ -2201,6 +2232,10 @@ If want to restart editor with new code, first exit Python console, then restart
 			w.bind( "<Control-Shift-Left>", self.select_by_words)
 			w.bind( "<Control-Shift-Right>", self.select_by_words)
 
+			w.bind( "<Alt-a>", self.goto_linestart)
+			w.bind( "<Alt-e>", self.goto_lineend)
+			w.bind( "<Alt-Shift-Left>", self.goto_linestart)
+			w.bind( "<Alt-Shift-Right>", self.goto_lineend)
 
 			w.bind( "<Control-Up>", self.move_many_lines)
 			w.bind( "<Control-Down>", self.move_many_lines)
@@ -2296,12 +2331,6 @@ If want to restart editor with new code, first exit Python console, then restart
 		#######################################################
 
 		# self.os_type == any:
-		w.bind( "<Control-a>", self.goto_linestart)
-		w.bind( "<Control-e>", self.goto_lineend)
-		w.bind( "<Control-A>", self.goto_linestart)
-		w.bind( "<Control-E>", self.goto_lineend)
-
-
 		w.bind( "<Control-j>", self.center_view)
 		w.bind( "<Control-u>",
 			lambda event: self.center_view(event, **{'up':True}) )
@@ -2455,8 +2484,14 @@ If want to restart editor with new code, first exit Python console, then restart
 			self.bind( "<Control-R>", self.replace_all)
 			self.bind( "<Control-r>", self.replace)
 
-			self.bind( "<Alt-w>", self.walk_tabs)
-			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
+##			self.bind( "<Alt-w>", self.walk_tabs)
+##			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
+
+			##
+			self.bind( "<Alt-Right>", self.walk_tabs)
+			self.bind( "<Alt-Left>", lambda event: self.walk_tabs(event, **{'back':True}) )
+
+			##
 
 			self.entry.bind("<Left>", self.check_sel)
 			self.entry.bind("<Right>", self.check_sel)
@@ -2813,6 +2848,12 @@ If want to restart editor with new code, first exit Python console, then restart
 			self.bell()
 			return 'break'
 
+		def test_event(event_state):
+			# & 0x0008 : Also Left Alt was pressed, not Control, not Shift
+			tests = [event_state & 0x0008, not event_state & 0x0004, not event_state & 0x0001 ]
+			return all(tests)
+
+		if self.os_type in ['windows', 'linux'] and not test_event(event.state): return
 
 		idx = old_idx = self.tabindex
 
@@ -2934,6 +2975,7 @@ If want to restart editor with new code, first exit Python console, then restart
 		d['fonts'] = fonts
 		####################
 
+		d['debug_handler'] = self.debug_decorator_always_use_own_error_handler
 		d['scrollbar_widths'] = self.scrollbar_width, self.elementborderwidth
 		d['version_control_cmd'] = self.version_control_cmd
 		d['marginals'] = self.margin, self.margin_fullscreen, self.gap, self.gap_fullscreen
@@ -3029,6 +3071,7 @@ If want to restart editor with new code, first exit Python console, then restart
 		self.keyword_font.config(**d['fonts']['keyword_font'])
 		self.linenum_font.config(**d['fonts']['linenum_font'])
 		self.scrollbar_width, self.elementborderwidth = d['scrollbar_widths']
+		self.debug_decorator_always_use_own_error_handler = d['debug_handler']
 		self.margin, self.margin_fullscreen, self.gap, self.gap_fullscreen = d['marginals']
 		self.dir_reverse, self.file_reverse = d['fdialog_sorting']
 		self.version_control_cmd = d['version_control_cmd']
@@ -4810,7 +4853,7 @@ If want to restart editor with new code, first exit Python console, then restart
 
 		source = curtab.filepath
 		d = dict(stderr=subprocess.PIPE)
-		if self.os_type == 'mac_os' and self.fix_mac_print:
+		if self.os_type == 'mac_os' and not self.in_mainloop and self.fix_mac_print:
 			d = dict(capture_output=True)
 
 		# Enable running code without filename
@@ -4824,9 +4867,9 @@ If want to restart editor with new code, first exit Python console, then restart
 		err = ''
 
 		# fix for macos printing issue
-		if self.os_type == 'mac_os' and self.fix_mac_print:
+		if self.os_type == 'mac_os' and not self.in_mainloop and self.fix_mac_print:
 			has_err = False
-			p = subprocess.run(['python', source], **d)
+			p = subprocess.run([sys.executable, source], **d)
 
 			try: p.check_returncode()
 
@@ -4839,7 +4882,7 @@ If want to restart editor with new code, first exit Python console, then restart
 
 		else:
 			# https://docs.python.org/3/library/subprocess.html
-			err = subprocess.run(['python', source], **d).stderr.decode()
+			err = subprocess.run([sys.executable, source], **d).stderr.decode()
 
 
 		self.err = False
@@ -6112,6 +6155,18 @@ If want to restart editor with new code, first exit Python console, then restart
 			self.bell()
 			return 'break'
 
+
+		def test_event(event):
+			# & 0x0008 : Also Left Alt was pressed, not Control, not Shift
+			tests = [event.state & 0x0008, not event.state & 0x0004, not event.state & 0x0001,
+					event.keysym in ['Left', 'Right'] ]
+			return all(tests)
+
+		# Filter out these walk_tab binds that are in danger, and return if found: Alt-leftright
+		# Pass this: Alt-shift-left/right
+		if self.os_type in ['windows', 'linux'] and test_event(event): return
+
+
 		wid = event.widget
 		if wid == self.entry:
 			wid.selection_clear()
@@ -6128,29 +6183,24 @@ If want to restart editor with new code, first exit Python console, then restart
 		have_selection = False
 		want_selection = False
 
-		# (shift)?-Home/End
-		# ctrl-(shift)?-a/e
+		# win, linux
+		# Alt-a/e
+		# Alt-shift-left/right
+
+		# mac
 		# cmd-a/e
-
-		# If want selection:
-
-		# Pressed also shift, so adjust selection
-		# Linux, macOS state:
-		# shift == 1 (has and uses Home/End keys)
-		# ctrl-shift(a/e) == 5
-
-		# Windows states:
-		# shift-Home/End == 262145(win10), 262153(win11)
-		# ctrl-shift(a/e) == 13
-
-		# Also in mac_OS:
-		# command-shift-arrowleft or right == 105
+		# cmd-shift-left/right
 		# Note: command-shift-a or e not binded.
 
-		if event.state in [ 1, 5, 105, 13, 262145, 262153 ]:
-			want_selection = True
+		# all
+		# (shift)?-Home/End
 
-		# Ctrl/Cmd-a/e
+
+		# If want selection:
+		# Pressed also shift, so adjust selection
+		if  event.state & 0x0001: want_selection = True
+
+		# Alt/Cmd-a/e, Home/End
 		else:
 			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
@@ -7257,7 +7307,7 @@ If want to restart editor with new code, first exit Python console, then restart
 	def change_printer_to(self, printer):
 		global print
 		print = printer
-		PRINTER['current'] = printer
+		importflags.PRINTER['current'] = printer
 
 
 	def view_module(self):

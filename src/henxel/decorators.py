@@ -3,8 +3,7 @@ import time
 
 # Update printer, when necessary, Begin
 # Get reference to printer set in henxel/__init__.py
-from importflags import PRINTER
-
+import importflags
 
 #ORIGINAL_PRINTER = print
 
@@ -17,13 +16,14 @@ from importflags import PRINTER
 def fix_print(func):
 	@functools.wraps(func)
 	def wrapper_print(*args, **kwargs):
-		printer = PRINTER['current']
+		printer = importflags.PRINTER['current']
 		printer(*args, **kwargs)
 	return wrapper_print
 
 
 # Originally uses just these three lines below, but if need dynamic defining,
 # there is use_fixed_printer() and reset_printer() below.
+# However, printing seems to work just fine now without those.
 global print
 @fix_print
 def print(*args, **kwargs): return
@@ -83,9 +83,10 @@ def debug(func):
 			return value
 
 		except Exception as err:
-			# Get original traceback when can
-			if PRINTER['current'] == PRINTER['default']:
-				raise err
+			# See: __init__.py: Editor.debug_always_use_own_error_handler
+			if not importflags.debug_use_own_error_handler:
+				# Get original traceback when in mainloop
+				if importflags.IN_MAINLOOP: raise err
 
 
 			errors = list()

@@ -22,6 +22,31 @@ is conf, default off, done
 help update done
 
 
+Control-(shift)-ae
+Alt-ae + Alt-shift-leftright
+done, help done
+
+
+help mainloop vs console not done ############
+
+
+###########
+to notes
+def test_event(event):
+	# & 0x0008 : Also Left Alt was pressed, not Control, not Shift
+	tests = [event.state & 0x0008, not event.state & 0x0004, not event.state & 0x0001,
+			event.keysym in ['Left', 'Right'] ]
+	return all(tests)
+
+# Filter out these walk_tab binds that are in danger, and return if found: Alt-leftright
+# Pass this: Alt-shift-left/right
+if self.os_type in ['windows', 'linux'] and test_event(event): return
+###########
+
+
+
+
+
 #### Really strange bug
 when cursor is on: comment line, that starts from indent0, at index:
 indent0, lineend or lineend -1c
@@ -36,6 +61,15 @@ idx_err = e.tabindex-1
 
 e.tabs[idx_err].text_widget.bbox('@0,0') --> None!
 ########
+
+class int seems to be singleton ###
+--> can use a is b
+
+
+run(
+print(Program run start)
+print(Program run end)
+
 
 
 redraw_syntax()

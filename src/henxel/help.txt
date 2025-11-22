@@ -308,8 +308,11 @@
 		
 	
 	Fix possible printing issue with macOS
-	  - When using macOS, printing from editor might not work.
-		For example line-wrapping could be missing and there could be
+	  - When using macOS, printing from editor might not work when not in
+		mainloop(Editor is not in mainloop when launched with e=henxel.Editor
+		from Python-console)
+		
+	  - For example line-wrapping could be missing and there could be
 		only linefeeds, no translation: \n --> CR+LF
 		This change came in about Python 3.13, but printing might work
 		in newer macOS versions than 12.
@@ -320,9 +323,19 @@
 		
 		This is then saved in configuration
 	  
-	  - By default, normal printing is used on all platforms
+	  - By default, normal printing is used on all platforms.
+	  - When in mainloop, normal printing is used even if this setting is on.
 		
-		
+	
+	Guiding
+	  - There are no guides, but cursor can be used as a poor mans guide.
+		Except that normal cursor is not very good guide, so:
+		Enter search, but don't actually search anything. Now put cursor
+		on start of block/line that needs indentation-check. Then scroll up,
+		notice how this cursor does not move but goes just straight up and down
+		making it an excellent guide. Make check and esc away search afterwards.
+
+
 	Elide
 	  - Eliding is work-in-progress, it works but is not fully implemented:
 		For example, searching, gotoing is not done. Nested eliding, not done.
@@ -549,6 +562,10 @@
 		section above about how to: Fix possible printing issue with macOS.
 		Then add @debug decorator on top of buggy callback, and now can
 		debug with print-lines also.
+		
+	  - If want that @debug-decorator uses its own error-messages, which
+		are more packed than normal (less scrolling):
+		e.debug_always_use_own_error_handler(1)
 	
 	
 	Homepage: https://github.com/SamuelKos/henxel

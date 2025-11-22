@@ -20,12 +20,12 @@
 		Ctrl-Q  Close current tab without saving it
 		Ctrl-q  Close editor and save files and configuration.
 		
-		Alt-w	Open next tab
-		Alt-q	previous
+		Alt-right(or w)		Open next tab
+		Alt-left(or q)		previous
 		
 		
-		Ctrl-e  Move cursor to lineend (or use End-key)
-		Ctrl-a  to linestart (or use Home-key)
+		Alt-e  Move cursor to lineend (or use End-key)
+		Alt-a  to linestart (or use Home-key)
 		
 		
 		Ctrl-f  Search
@@ -69,8 +69,8 @@
 		Alt-t   Toggle color setting
 		
 		
-		Ctrl-shift-E	Select from cursor to lineend (or Shift-End)
-		Ctrl-shift-A	to linestart (or Shift-Home)
+		Alt-shift-right		Select from cursor to lineend (or Shift-End)
+		Alt-shift-left		to linestart (or Shift-Home)
 		
 
 		Ctrl-j/u	Scroll down 1/3 screens without moving cursor 
@@ -112,4 +112,9 @@
 		
 		Ctrl-Shift-K	Strip first character from every line of selection
 		Ctrl-t	Change indentation of selected lines to current setting
-
+		
+		
+		In Entry:
+		Ctrl-e		Move cursor to lineend (or use End-key)
+		Ctrl-a		to linestart (or use Home-key)
+		+ shift		Select from cursor to lineends (or Shift-Home/End)
