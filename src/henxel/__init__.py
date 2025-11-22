@@ -2484,8 +2484,8 @@ If want to restart editor with new code, first exit Python console, then restart
 			self.bind( "<Control-R>", self.replace_all)
 			self.bind( "<Control-r>", self.replace)
 
-##			self.bind( "<Alt-w>", self.walk_tabs)
-##			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
+			self.bind( "<Alt-w>", self.walk_tabs)
+			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
 
 			##
 			self.bind( "<Alt-Right>", self.walk_tabs)
@@ -6064,6 +6064,16 @@ If want to restart editor with new code, first exit Python console, then restart
 			self.bell()
 			return 'break'
 
+		def test_event(event):
+			# & 0x0008 : Also Left Alt was pressed, not Control, not Shift
+			tests = [event.state & 0x0008, not event.state & 0x0004, not event.state & 0x0001,
+					event.keysym in ['Left', 'Right'] ]
+			return all(tests)
+
+		# Filter out these walk_tab binds that are in danger, and return if found: Alt-left/right
+		# Pass this: Alt-shift-left/right
+		if self.os_type in ['windows', 'linux'] and test_event(event): return
+
 
 		wid = event.widget
 		if wid == self.entry:
@@ -6077,26 +6087,24 @@ If want to restart editor with new code, first exit Python console, then restart
 		have_selection = False
 		want_selection = False
 
-		# ctrl-(shift)?-a or e
-		# and cmd-a or e in macOS
+		# win, linux
+		# Alt-a/e
+		# Alt-shift-left/right
 
-		# If want selection:
-
-		# Pressed also shift, so adjust selection
-		# Linux, macOS state:
-		# ctrl-shift == 5
-
-		# Windows state: (with a or e, plain a is 8 in windows, so 8+5=13,
-		# long numbers are with arrowkeys, (or PgUp, Home and such))
-		# ctrl-shift == 13
-
-		# Also in mac_OS:
-		# command-shift-arrowleft or right == 105
+		# mac
+		# cmd-a/e
+		# cmd-shift-left/right
 		# Note: command-shift-a or e not binded.
 
+		# all
+		# (shift)?-Home/End
+
+
 		# If want selection:
-		if event.state in [ 1, 5, 105, 13, 262145, 262153 ]:
+		# Pressed also shift, so adjust selection
+		if  event.state & 0x0001:
 			want_selection = True
+
 			i = self.text_widget.index(tkinter.INSERT)
 
 			if len( self.text_widget.tag_ranges('sel') ) > 0:
@@ -6116,7 +6124,7 @@ If want to restart editor with new code, first exit Python console, then restart
 				# else:	from_top = False
 
 
-		# Dont want selection, ctrl/cmd-a/e:
+		# Don't want selection, Alt/Cmd-a/e, Home/End
 		else:
 			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
@@ -6162,7 +6170,7 @@ If want to restart editor with new code, first exit Python console, then restart
 					event.keysym in ['Left', 'Right'] ]
 			return all(tests)
 
-		# Filter out these walk_tab binds that are in danger, and return if found: Alt-leftright
+		# Filter out these walk_tab binds that are in danger, and return if found: Alt-left/right
 		# Pass this: Alt-shift-left/right
 		if self.os_type in ['windows', 'linux'] and test_event(event): return
 

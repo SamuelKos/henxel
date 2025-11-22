@@ -118,3 +118,4 @@
 		Ctrl-e		Move cursor to lineend (or use End-key)
 		Ctrl-a		to linestart (or use Home-key)
 		+ shift		Select from cursor to lineends (or Shift-Home/End)
+

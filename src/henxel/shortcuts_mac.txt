@@ -115,6 +115,10 @@
 		
 		
 		In Entry:
+		Moving and selecting works the same than in Text-window
+		
+		Additional(Cmd-ae etc works) shortcuts:
 		Ctrl-e		Move cursor to lineend (or use End-key)
 		Ctrl-a		to linestart (or use Home-key)
 		+ shift		Select from cursor to lineends (or Shift-Home/End)
+
