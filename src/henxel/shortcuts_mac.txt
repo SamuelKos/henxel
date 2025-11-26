@@ -43,7 +43,7 @@
 		
 		Shift-Tab  Unindent
 		Tab        Indent or walk complete-word expansions
-		Ctrl-Tab   Insert Tab
+		Ctrl-Tab   Insert Tab (in Text-window or in Entry)
 		
 		Cmd-BackSpace	Delete backwards from cursor until dot
 
@@ -55,14 +55,15 @@
 		Ctrl-k  Delete from insert to line end, (does not copy)
 		Cmd-z  Undo
 		Cmd-Z  Redo
-		
+		Fn-BackSpace	Delete right char, handy for quickly concate lines:
+						put cursor at lineend(Cmd-e), then Fn-BackSpace
 		
 		Ctrl-l   Toggle linenumbers
 		Ctrl-x   Toggle syntax highlight
 		
 		
-		Alt-f   Font setting
-		Alt-s   Color setting
+		Alt-f   Font setting, Note: does not work while in fullscreen
+		Alt-s   Color setting, also does not work while in fullscreen
 			Note, to change background color of editor:
 			choose background, then: normal text
 
@@ -82,9 +83,13 @@
 		
 		Cmd-up/down		Move cursor 10 lines up/down
 		
+
 		If have PgUp/Down -keys, use them (with Shift) to move/select faster
+		In macOS this is same as Fn-(Shift)-Up/Down
+		
 		If not, use
 		Control-1/2 (selecting), Control-3/4 just moving
+
 
 		Alt-left/right	Move cursor one word left/right
 		+shift			Select words

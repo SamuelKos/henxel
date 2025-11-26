@@ -12,6 +12,15 @@ try:
 	if first_arg == '--debug':
 		debug = True
 		print('starting debug mode')
+
+	try:
+		arg2 = sys.argv[2]
+		if arg2 == '--pid':
+			arg3 = sys.argv[3]
+			print(arg3)
+			Editor.pid_parent = arg3
+	except IndexError:
+		pass
 ##	else:
 ##		print('opening file:', first_arg)
 
@@ -32,3 +41,11 @@ e=Editor(debug=debug)
 #print(e.in_mainloop)
 
 e.mainloop()
+
+
+
+
+
+
+
+

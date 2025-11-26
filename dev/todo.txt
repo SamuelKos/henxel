@@ -22,26 +22,143 @@ is conf, default off, done
 help update done
 
 
-Control-(shift)-ae
-Alt-ae + Alt-shift-leftright
-done, help done
+run_as_module(cmd_as_list):
+default is False
+added to: [sys.executable, -m] ######
+is conf
+
+
+
+module docstring ######
+e.edit_search_set no need dash like: -regexp ###
+
+
+check event.state ####
 
 
 help mainloop vs console not done ############
 
 
-###########
-to notes
-def test_event(event):
-	# & 0x0008 : Also Left Alt was pressed, not Control, not Shift
-	tests = [event.state & 0x0008, not event.state & 0x0004, not event.state & 0x0001,
-			event.keysym in ['Left', 'Right'] ]
-	return all(tests)
+eval test_bind
+test restart main win linux #####
 
-# Filter out these walk_tab binds that are in danger, and return if found: Alt-leftright
-# Pass this: Alt-shift-left/right
-if self.os_type in ['windows', 'linux'] and test_event(event): return
-###########
+
+toggle input not done:
+remember check this when want toggle input to entry while searching:
+don't select when hit tab:
+c.entry.unbind_class('Entry', '<<TraverseIn>>'), done
+
+
+check mainloop etc: set_version_control_cmd() ###
+
+mainloop open files in argv ####
+
+
+btn_git disable enable ####
+done?
+setting_eval
+tab-completion, control-h help
+done
+help not done
+
+
+
+check replace \t #####
+
+
+
+if not self.is_fullscreen():
+	c.grab_set()
+	# Always on top. Locally on top would have been enough,
+	# but since don't know how to do that:
+	c.attributes('-topmost', 1)
+
+1 if self is fullsceen when open fdialog
+2 and while fdialog open fullsceen, alt tab to another window like terminal
+3 alt tab back to fdialog, open file and
+4 then esc to exit fullscreen
+--> wrong geometry
+fixed with: set_check_next_esc()
+done
+
+
+
+cmd-q when in debug --> normal exit
+done
+
+
+setting_eval when click btn_git
+has completion
+help not done
+no work nice when fullscreen
+--> to normal entry?
+
+
+
+
+####
+from concurrent import interpreters
+####
+import readline
+c = readline.get_completer()
+readline.set_completer(c)
+c('e.print', 0)	
+--> 'e.print_bookmarks()'
+c('e.print', 1)
+--> 'e.print_search_help()'
+c('e.print', 2)
+--> 'e.print_search_setting()'
+c('e.print', 3)
+--> None
+####
+
+
+#############
+to notes
+
+filter_keys_out/in(event, keys)
+
+modifier_dict = {
+Mask	Modifier
+0x0001	'Shift'
+0x0002	'CapsLock'
+0x0004	'Control'
+0x0008	'Left-Alt'
+0x0010	'NumLock'
+0x0080	'Right-Alt'
+0x0100	'Button1'
+0x0200	'Button2'
+0x0400	'Button3'
+
+
+in tkinter.Event:
+#####
+if event.state == 0: print('no modifiers')
+
+elif isinstance(event.state, int):
+	state = event.state
+
+	mods = ('Shift', 'Lock', 'Control',
+			'Mod1', 'Mod2', 'Mod3', 'Mod4', 'Mod5',
+			'Button1', 'Button2', 'Button3', 'Button4', 'Button5')
+
+	s = []
+
+	for i, n in enumerate(mods):
+		if state & (1 << i): s.append(n)
+
+
+	if len(s) > 0: print('had modifier')
+	state = state & ~((1<< len(mods)) - 1)
+	#print('state:', state)
+	if state or not s: s.append(hex(state))
+	mods = '|'.join(s)
+	print(mods)
+#######
+
+
+
+###################
 
 
 

@@ -231,7 +231,7 @@ class FDialog:
 
 
 	def quit_me(self, event=None):
-
+		self.top.grab_release()
 		self.top.destroy()
 		self.var.set('')
 

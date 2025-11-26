@@ -4,6 +4,7 @@
 		While searching:
 			Ctrl-n  Next match
 			Ctrl-p  Prev match
+			Ctrl-Tab   Insert Tab
 			-	Copying text to clipboard is possible with yank-line etc.
 			-	Add bookmark is possible, so is Goto def from which:
 				arrow-key or Ctrl-np -> back to matches
@@ -170,6 +171,7 @@
 
 		e.import_bookmarks() --> update (add not already existing),
 			update opened tabs bookmarks from file
+			Note: does not work while in fullscreen
 		e.unstash_bookmarks() --> restore hided bookmarks to tab
 		e.unstash_bookmarks(all_tabs=True) --> to all tabs
 
@@ -539,32 +541,43 @@
 		
 
 	Developing
-	  - To automate exit editor, check syntax, reopen python and editor
-		start editor with: e=henxel.Editor(debug=True)
-		
-		Then Cmd-q will do syntax checking on all open python-files
-		and test-launch. This can also be done from popup-menu: test
-	  
+	  - To automate check syntax, exit editor, reopen python and editor
+		start editor with: e=henxel.Editor(debug=True).
+		Then Cmd/Control-q will do syntax checking on all open python-files
+		regardless of check_syntax setting.
+			  
 	  - If wanting to start editor using new code, from popup-menu: restart
-		note: Test-launch is not done.
+		note: Test-launch is not done before this, only syntax check.
+		--> before this, to do test-launch, from popup-menu: test
+ 	
+ 	  - Do test-launch at least before restart or close. Preferably after any
+		such change, that makes one wonder.
 		
-	  - Editor can be closed (with save) by pressing close button
-	
 	  - If editor did not launch, error message and info about recovering is printed
 		See: help(henxel.stash_pop)
 	
-	  - Currently there is restart-script only for macOS, but test-launch
-		should be working on all platfroms.
+	  - Test-launch works on all platforms. If Editor was launched from
+		python-console, this is quite enough, if there is no need to often
+		restart editor. And closing editor and console and then restarting
+		them manually is matter of seconds anyway.
+	
+	  - If Editor was launched from terminal: python -m henxel --debug
+		Then restart works on all platforms. But this is not so great
+		option because of currently missing python-console when in mainloop.
+		
+	  - If Editor was launched from python-console, currently there is
+		restart-script only for macOS
 	
 	  - More info is in function: e.build_launch_test
 	
 	  - If using macOS and have issues with error messages, first read
 		section above about how to: Fix possible printing issue with macOS.
-		Then add @debug decorator on top of buggy callback, and now can
+		Then add @debug decorator on top of buggy callback, and then can
 		debug with print-lines also.
 		
-	  - If want that @debug-decorator uses its own error-messages, which
-		are more packed than normal (less scrolling):
+	  - @debug-decorator uses its own error-messages, which are more packed
+		than normal (less scrolling). But if editor is in mainloop, normal
+		spacy tracebacks are raised. If want still use packed ones:
 		e.debug_always_use_own_error_handler(1)
 	
 	

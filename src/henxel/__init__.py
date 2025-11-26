@@ -92,15 +92,50 @@ importflags.PRINTER['current'] = DEFAUL_PRINTER
 
 
 # Used on debugging
-from .decorators import do_twice, debug # reset_printer, use_fixed_printer
+from .decorators import do_twice, debug
 
 # From this package
 from . import wordexpand
 from . import changefont
 from . import fdialog
 
+
+##import logging
+##logger = logging.getLogger('henxel')
+##console_handler = logging.StreamHandler()
+##logger.addHandler(console_handler)
+##logger.warning(10* ' This is Warning! ')
+
 ############ Imports End
 ############ Module Utilities Begin
+
+modifier_dict = {
+# Modifier	Mask
+'Shift':	0x0001,
+'CapsLock':	0x0002,
+'Control':	0x0004,
+'Left-Alt':	0x0008,
+'NumLock':	0x0010,
+'Right-Alt':0x0080,
+'Button1':	0x0100,
+'Button2':	0x0200,
+'Button3':	0x0400
+}
+
+
+def filter_keys_out(event, keys):
+	for key in keys:
+		# At least one key in keys was pressed
+		if event.state & modifier_dict.get(key): return True
+	return False
+
+
+def filter_keys_in(event, keys):
+	for key in keys:
+		# At least one key in keys was missing
+		if not event.state & modifier_dict.get(key): return False
+	return True
+
 
 def get_font(want_list):
 	fontname = None
@@ -314,6 +349,7 @@ class Editor(tkinter.Toplevel):
 	# Normal stuff
 	alive = False
 	in_mainloop = False
+	pid_parent = False
 
 	pkg_contents = None
 	no_icon = True
@@ -488,13 +524,11 @@ class Editor(tkinter.Toplevel):
 			self.debug_decorator_always_use_own_error_handler = False
 			self.debug = debug
 			# Pass info to other modules
-			if self.in_mainloop:
-				importflags.IN_MAINLOOP = True
+			if self.in_mainloop: importflags.IN_MAINLOOP = True
 
 
 			super().__init__(self.root, *args, class_='Henxel', bd=4, **kwargs)
-			self.protocol("WM_DELETE_WINDOW",
-				lambda kwargs={'quit_debug':True}: self.quit_me(**kwargs))
+			self.protocol("WM_DELETE_WINDOW", self.quit_me)
 
 
 			# Dont map too early to prevent empty windows at startup
@@ -544,6 +578,7 @@ class Editor(tkinter.Toplevel):
 			self.geom = '+%d+0'
 			if self.os_type == 'windows': self.geom = '-0+0'
 			self.start_fullscreen = False
+			self.check_next_esc = False
 
 			self.textfont = self.__class__.textfont
 			self.menufont = self.__class__.menufont
@@ -642,7 +677,7 @@ class Editor(tkinter.Toplevel):
 			# Initiate widgets
 			####################################
 			self.btn_git = tkinter.Button(self, takefocus=0, relief='flat', compound='left', bd=0,
-										highlightthickness=0, padx=0)
+										highlightthickness=0, padx=0, command=self.setting_eval)
 
 			self.entry = tkinter.Entry(self, highlightthickness=0, takefocus=0)
 			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
@@ -675,7 +710,7 @@ class Editor(tkinter.Toplevel):
 
 
 			if self.debug:
-				self.popup.add_command(label="test", command=lambda: self.after_idle(self.quit_me))
+				self.popup.add_command(label="test", command=lambda: self.after_idle(self.do_test_launch))
 				self.popup.add_command(label="     restart",
 						command=lambda: self.after_idle(self.restart_editor))
 				self.popup.add_command(label="         run", command=self.run)
@@ -1227,6 +1262,20 @@ static unsigned char infopic_bits[] = {
 
 
 			self.__class__.alive = True
+
+
+			# Restarting from debug mode in mainloop --> kill old processs
+			if self.in_mainloop and self.pid_parent:
+				try:
+					tmp = ['kill', f'{self.pid_parent}']
+					if self.os_type == 'windows':
+						tmp = ['taskkill', '/f', '/pid', f'{self.pid_parent}']
+
+					subprocess.run(tmp)
+				except Exception as e:
+					print('Could not kill old process:\n', e)
+
+
 			self.state = 'normal'
 			self.update_title()
 
@@ -1366,6 +1415,190 @@ Error messages Begin
 		return 'break'
 
 
+	def setting_eval(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return 'break'
+
+
+		x = self.text_frame.winfo_rootx() + 20
+		y = self.text_frame.winfo_rooty() + 20
+
+		settingtop = c = tkinter.Toplevel()
+		c.title('Edit Settings')
+		c.geometry('+%d+%d' % (x,y))
+
+		c.entry = tkinter.Entry(c, width=50, highlightthickness=0, bd=4,
+							font=self.menufont)
+
+		if self.os_type != 'mac_os': c.entry.config(bg='#d9d9d9')
+
+
+		c.completions = []
+		c.compidx = 0
+		# last completed word
+		c.lastword = False
+		# last word(prefix) in entry before hitting Tab
+		c.lasttmp = False
+
+
+		def show_help():
+			if c.lastword:
+				try: eval( f'help({c.lastword})', globals={'e':self, 'print':print})
+				except Exception as err: print(err)
+			return 'break'
+
+
+		def do_eval(cmd_as_string):
+			res = False
+			try:
+				# debug-decorator doesn't catch these
+				res = eval(cmd_as_string, globals={'e':self, 'print':print})
+			except Exception as err: print(err)
+			return res
+
+
+		def do_cmd():
+			tmp = c.entry.get().strip()
+			if len(tmp) > 0:
+				res = do_eval(tmp)
+				if res not in [None, 'break', 'continue']:
+					print(res)
+
+			return 'break'
+
+
+		def do_complete():
+
+			tmp = c.entry.get().strip()
+
+			# Walking through options
+			if c.lasttmp and tmp.startswith(c.lasttmp):
+				if c.lastword and (tmp == c.lastword or tmp == c.lastword +'()'):
+					tmp = c.lasttmp
+			else:
+				c.lastword = False
+				c.compidx = 0
+
+
+			options = []
+			child = False
+
+
+			if '.' in tmp:
+				idx = tmp.rindex('.')
+				if idx == 0: return 'break'
+
+				parent = tmp[:idx]
+
+				# Child can be just dot: "e."
+				child = tmp[idx:]
+
+				# options includes whole namespace of parent, for now
+				if res := do_eval( 'dir(' +parent+ ')' ):
+					options = res
+
+			# Give something, not much though
+			elif res := do_eval('dir()'):
+				options = res
+
+
+
+			if len(options) > 0:
+
+				if child:
+					options = map(lambda item: (parent +'.'+ item), options)
+
+				# Filter down namespace of parent, unless child was only dot: "e."
+				completions = [ option for option in options if option.startswith(tmp) ]
+			else:
+				# When trying for example: "a."
+				return 'break'
+
+
+
+			if len(completions) > 0:
+				# tmp has changed, one already knows this?
+				if completions != c.completions:
+					c.completions = completions
+					c.lasttmp = tmp
+					c.compidx = 0
+					print('all:', completions)
+
+				# insert from completions-list to enable options-walking
+				c.lastword = word = c.completions[c.compidx]
+				c.entry.delete(0, 'end')
+				c.entry.insert(0, word)
+
+
+				# If word is function, add braces and put cursor in between
+				check_if_func = f"type({word}).__name__ in ('method', 'function')"
+
+				if is_func := do_eval(check_if_func):
+					c.entry.insert('end', '()')
+					# Put cursor in between braces
+					try:c.entry.icursor(len(word)+1)
+					except Exception as err: print(err)
+
+
+				c.compidx += 1
+				# This (c.compidx-1) was last/only one option
+				if c.compidx == len(c.completions):
+					c.compidx = 0
+					self.bell()
+
+
+			# Trying for example: "aa"
+			elif '.' not in tmp:
+				c.lasttmp = False
+
+				if res := do_eval('dir()'):
+					options = res
+					print('globals:', options)
+
+			# Should not happen
+			else: c.lasttmp = False
+
+			#### setting_eval.do_complete End ######
+
+
+		# Delay should already be in callbacks, so not adding any more
+		c.entry.bind("<Return>", lambda event: do_cmd())
+		# This new func has no delay, so add some
+		c.entry.bind("<Tab>", lambda event, args=[30, do_complete]: self.after(*args) )
+		# Get doc-strings
+		c.entry.unbind_class('Entry', "<Control-h>")
+		c.entry.bind("<Control-h>", lambda event, args=[30, show_help]: self.after(*args) )
+		# Don't select text in entry after hitting Tab
+		c.entry.unbind_class('Entry', '<<TraverseIn>>')
+
+		self.btn_git.config(state='disabled')
+		c.protocol("WM_DELETE_WINDOW", lambda: ( c.grab_release(), c.destroy(),
+				self.text_widget.focus_force(),
+				self.btn_git.config( state='normal') )
+				)
+		# self.text_widget.focus_set()
+		# c.attributes('-topmost', 0),
+		c.entry.pack()
+		c.entry.focus_set()
+
+		if not self.is_fullscreen():
+			c.grab_set()
+			# Always on top. Locally on top would have been enough,
+			# but since don't know how to do that:
+			c.attributes('-topmost', 1)
+		else:
+			c.bind("<FocusOut>", self.set_check_next_esc)
+
+
+
+		self.to_be_closed.append(c)
+
+		return 'break'
+
+		## setting_eval End #####
+
+
 	@debug
 	def test_bind(self, event=None, f=1):
 
@@ -1378,7 +1611,6 @@ Error messages Begin
 				print(l[10])
 			except IndexError:
 				print(bbb)
-
 
 
 ##			#######
@@ -1737,6 +1969,27 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return flag_cancel
 
 
+	def do_test_launch(self, event=None):
+
+		def delayed_break(delay):
+			self.wait_for(delay)
+			self.bell()
+			return 'break'
+
+		if (self.flags and self.flags.get('launch_test')) or not self.__class__.alive:
+			raise ValueError
+
+		elif not self.save_forced(): return delayed_break(33)
+
+		elif self.tab_has_syntax_error():
+			self.activate_terminal()
+			return delayed_break(33)
+
+		else: self.test_launch_is_ok()
+
+		return 'break'
+
+
 	def restart_editor(self, event=None):
 		self.quit_me(restart=True)
 		return 'break'
@@ -1812,7 +2065,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		del self.msgbox
 
 
-	def quit_me(self, event=None, quit_debug=False, restart=False):
+	def quit_me(self, event=None, restart=False):
 
 		def delayed_break(delay):
 			self.wait_for(delay)
@@ -1828,24 +2081,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not self.save_forced(): return delayed_break(33)
 
 
-		if self.debug:
-			if self.tab_has_syntax_error():
-				self.activate_terminal()
-				return delayed_break(33)
-			# Close-Button, quit_debug=True
-			# pass tests if closing editor or restarting
-			elif quit_debug or restart: pass
-			elif not self.test_launch_is_ok():
-				self.activate_terminal()
-				return delayed_break(33)
-			else: return 'break'
-
-		elif self.check_syntax and self.tab_has_syntax_error():
+		if (self.debug or self.check_syntax) and self.tab_has_syntax_error():
 			self.activate_terminal()
 			return delayed_break(33)
 
-		# Continue below if 1: debug=False (normal mode) or
-		# 2: quit_debug or restart
 
 		for tab in self.tabs: self.save_bookmarks(tab, also_stashed=True)
 
@@ -1866,9 +2105,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.__class__.alive = False
 
 
-		# quit_debug: Allow quitting debug-session without closing
-		# Python console, by clicking close-button.
-		tests = [not quit_debug, self.debug, restart, self.restart_script]
+		tests = [self.debug, restart, self.restart_script]
 
 		# In debug and want restart
 		if all(tests):
@@ -1876,20 +2113,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if not self.in_mainloop and self.os_type != 'mac_os':
 				print('''Restarting is not yet supported on this platform (when not in mainloop).\n
 If want to restart editor with new code, first exit Python console, then restart it and editor.''')
-				return
 
-
-			print('Restarting..')
-
-			# From macOS only
-			if not self.in_mainloop:
-				tmp = [self.restart_script]
-
-			# Restarting from mainloop works on every platform
 			else:
-				tmp = [sys.executable, '-m', 'henxel', '--debug']
+				print('Restarting..')
+				import os
+				pid = os.getpid()
 
-			subprocess.run(tmp)
+				# From macOS only
+				if not self.in_mainloop: tmp = [self.restart_script]
+
+				# Restarting from mainloop works on every platform
+				else: tmp = [sys.executable, '-m', 'henxel', '--debug', '--pid', f'{pid}']
+
+				subprocess.run(tmp)
 
 		#### quit_me End ##############
 
@@ -2450,6 +2686,10 @@ If want to restart editor with new code, first exit Python console, then restart
 		self.entry.bid_ret = self.entry.bind("<Return>", self.load)
 		# Binds with ID End
 
+		# While not in normal mode:
+		# Don't do: (select text in entry) after pressing Tab (in entry)
+		self.entry.unbind_class('Entry', '<<TraverseIn>>')
+		self.entry.bind( "<Control-Tab>", self.insert_tab)
 
 
 		self.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
@@ -2848,12 +3088,9 @@ If want to restart editor with new code, first exit Python console, then restart
 			self.bell()
 			return 'break'
 
-		def test_event(event_state):
-			# & 0x0008 : Also Left Alt was pressed, not Control, not Shift
-			tests = [event_state & 0x0008, not event_state & 0x0004, not event_state & 0x0001 ]
-			return all(tests)
 
-		if self.os_type in ['windows', 'linux'] and not test_event(event.state): return
+		if filter_keys_out(event, ['Control', 'Shift']): return
+
 
 		idx = old_idx = self.tabindex
 
@@ -4260,7 +4497,7 @@ If want to restart editor with new code, first exit Python console, then restart
 
 
 	def font_choose(self, event=None):
-		if self.state != 'normal':
+		if self.state != 'normal' or self.is_fullscreen():
 			self.bell()
 			return 'break'
 
@@ -4275,13 +4512,19 @@ If want to restart editor with new code, first exit Python console, then restart
 			shortcut = "<function>"
 
 
-		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.destroy(),
+		fonttop.protocol("WM_DELETE_WINDOW", lambda: ( fonttop.grab_release(),
+				fonttop.destroy(), self.text_widget.focus_force(),
 				self.text_widget.bind( shortcut, self.font_choose)) )
 
 		changefont.FontChooser( fonttop, [self.textfont, self.menufont, self.keyword_font, self.linenum_font], big,
 			sb_widths=(self.scrollbar_width, self.elementborderwidth),
 			on_fontchange=self.on_fontchange )
 		self.text_widget.bind( shortcut, self.do_nothing)
+
+
+		fonttop.grab_set()
+		fonttop.attributes('-topmost', 1)
+
 		self.to_be_closed.append(fonttop)
 
 		return 'break'
@@ -4526,7 +4769,7 @@ If want to restart editor with new code, first exit Python console, then restart
 
 
 	def color_choose(self, event=None):
-		if self.state != 'normal':
+		if self.state != 'normal' or self.is_fullscreen():
 			self.bell()
 			return 'break'
 
@@ -4545,9 +4788,10 @@ If want to restart editor with new code, first exit Python console, then restart
 			shortcut_toggl = "<dagger>"
 
 
-		c.protocol("WM_DELETE_WINDOW", lambda: ( c.destroy(),
+		c.protocol("WM_DELETE_WINDOW", lambda: ( c.grab_release(), c.destroy(),
 				self.text_widget.bind( shortcut_color, self.color_choose),
-				self.text_widget.bind( shortcut_toggl, self.toggle_color)) )
+				self.text_widget.bind( shortcut_toggl, self.toggle_color),
+				self.text_widget.focus_force()) )
 
 		self.text_widget.bind( shortcut_color, self.do_nothing)
 		self.text_widget.bind( shortcut_toggl, self.do_nothing)
@@ -4693,6 +4937,9 @@ If want to restart editor with new code, first exit Python console, then restart
 		t.state = 'disabled'
 		t.config(insertontime=0)
 
+
+		c.grab_set()
+		c.attributes('-topmost', 1)
 
 		self.to_be_closed.append(c)
 
@@ -5441,8 +5688,9 @@ If want to restart editor with new code, first exit Python console, then restart
 			self.bell()
 			return 'break'
 
+
 		# If pressed Control-Shift-j/u, move one line at time
-		if event.state in [5, 13]:
+		if filter_keys_in(event, ['Control', 'Shift']):
 			n=1
 			if up: n=-1
 			self.text_widget.yview_scroll(n, 'units')
@@ -6064,15 +6312,8 @@ If want to restart editor with new code, first exit Python console, then restart
 			self.bell()
 			return 'break'
 
-		def test_event(event):
-			# & 0x0008 : Also Left Alt was pressed, not Control, not Shift
-			tests = [event.state & 0x0008, not event.state & 0x0004, not event.state & 0x0001,
-					event.keysym in ['Left', 'Right'] ]
-			return all(tests)
 
-		# Filter out these walk_tab binds that are in danger, and return if found: Alt-left/right
-		# Pass this: Alt-shift-left/right
-		if self.os_type in ['windows', 'linux'] and test_event(event): return
+		if filter_keys_out(event, ['Control']): return
 
 
 		wid = event.widget
@@ -6084,7 +6325,6 @@ If want to restart editor with new code, first exit Python console, then restart
 			return 'break'
 
 
-		have_selection = False
 		want_selection = False
 
 		# win, linux
@@ -6102,57 +6342,22 @@ If want to restart editor with new code, first exit Python console, then restart
 
 		# If want selection:
 		# Pressed also shift, so adjust selection
-		if  event.state & 0x0001:
+		if filter_keys_in(event, ['Shift']):
 			want_selection = True
 
-			i = self.text_widget.index(tkinter.INSERT)
+			[ ins_old, have_selection, from_top, s, e ] = args = self.get_sel_info()
 
-			if len( self.text_widget.tag_ranges('sel') ) > 0:
-				# Need to know if selection started from top or bottom.
-
-
-				have_selection = True
-				s = self.text_widget.index(tkinter.SEL_FIRST)
-				e = self.text_widget.index(tkinter.SEL_LAST)
-
-				# Selection started from top
-				from_top = False
-				if self.text_widget.compare(s,'<',i):
-					from_top = True
-
-				# From bottom
-				# else:	from_top = False
+		# Alt/Cmd-a/e, Home/End
+		else: self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 
-		# Don't want selection, Alt/Cmd-a/e, Home/End
-		else:
-			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
-
-
-		self.ensure_idx_visibility('insert')
-
-		pos = self.idx_lineend()
-
-		self.text_widget.see(pos)
-		self.text_widget.mark_set('insert', pos)
+		ins_new = self.idx_lineend()
+		self.text_widget.mark_set('insert', ins_new)
 
 
 		if want_selection:
-			if have_selection:
-				self.text_widget.tag_remove('sel', '1.0', tkinter.END)
-
-				if from_top:
-					self.text_widget.mark_set(self.anchorname, s)
-					self.text_widget.tag_add('sel', s, 'insert')
-
-				# From bottom:
-				else:
-					self.text_widget.mark_set(self.anchorname, e)
-					self.text_widget.tag_add('sel', 'insert', e)
-
-			else:
-				self.text_widget.mark_set(self.anchorname, i)
-				self.text_widget.tag_add('sel', i, 'insert')
+			args.insert(0, ins_new)
+			self.set_selection(*args, direction='down')
 
 
 		return 'break'
@@ -6164,15 +6369,7 @@ If want to restart editor with new code, first exit Python console, then restart
 			return 'break'
 
 
-		def test_event(event):
-			# & 0x0008 : Also Left Alt was pressed, not Control, not Shift
-			tests = [event.state & 0x0008, not event.state & 0x0004, not event.state & 0x0001,
-					event.keysym in ['Left', 'Right'] ]
-			return all(tests)
-
-		# Filter out these walk_tab binds that are in danger, and return if found: Alt-left/right
-		# Pass this: Alt-shift-left/right
-		if self.os_type in ['windows', 'linux'] and test_event(event): return
+		if filter_keys_out(event, ['Control']): return
 
 
 		wid = event.widget
@@ -6188,7 +6385,6 @@ If want to restart editor with new code, first exit Python console, then restart
 			return 'break'
 
 
-		have_selection = False
 		want_selection = False
 
 		# win, linux
@@ -6206,17 +6402,13 @@ If want to restart editor with new code, first exit Python console, then restart
 
 		# If want selection:
 		# Pressed also shift, so adjust selection
-		if  event.state & 0x0001: want_selection = True
+		if filter_keys_in(event, ['Shift']):
+			want_selection = True
+
+			[ ins_old, have_selection, from_top, s, e ] = args = self.get_sel_info()
 
 		# Alt/Cmd-a/e, Home/End
-		else:
-			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
-
-
-		[ ins_old, have_selection, from_top, s, e ] = args = self.get_sel_info()
-
-
-		self.ensure_idx_visibility('insert')
+		else: self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 
 		if self.line_is_empty():
@@ -6224,12 +6416,11 @@ If want to restart editor with new code, first exit Python console, then restart
 		else:
 			ins_new = self.idx_linestart()[0]
 
-		self.text_widget.see(ins_new)
+
+
 		self.text_widget.mark_set('insert', ins_new)
 
-
 		if want_selection:
-
 			args.insert(0, ins_new)
 			self.set_selection(*args, direction='up')
 
@@ -6982,19 +7173,49 @@ If want to restart editor with new code, first exit Python console, then restart
 			didn't use to, so:
 		'''
 
-		if self.wm_attributes().count('-fullscreen') != 0:
-			self.wm_attributes('-fullscreen', want_maximize)
+		# See set_check_next_esc for explanation
+		if not self.check_next_esc:
 
-		elif self.wm_attributes().count('-zoomed') != 0:
-			self.wm_attributes('-zoomed', want_maximize)
+			if self.wm_attributes().count('-fullscreen') != 0:
+				self.wm_attributes('-fullscreen', want_maximize)
 
-		elif want_maximize:
-			width_screen = self.winfo_screenwidth()
-			height_screen = self.winfo_screenheight()
-			self.geometry('%dx%d+0+0' % (width_screen, height_screen) )
+			elif self.wm_attributes().count('-zoomed') != 0:
+				self.wm_attributes('-zoomed', want_maximize)
+
+			elif want_maximize:
+				width_screen = self.winfo_screenwidth()
+				height_screen = self.winfo_screenheight()
+				self.geometry('%dx%d+0+0' % (width_screen, height_screen) )
+
+			else:
+				self.geometry(self.geom)
 
 		else:
-			self.geometry(self.geom)
+			if self.wm_attributes().count('-fullscreen') != 0:
+				self.wm_attributes('-fullscreen', 0)
+
+			elif self.wm_attributes().count('-zoomed') != 0:
+				self.wm_attributes('-zoomed', 0)
+
+			self.check_next_esc = False
+			args = [self.geom]
+			self.after(100, lambda args=[self.geom]: self.geometry(*args) )
+
+
+	def set_check_next_esc(self, event=None):
+		'''
+		1 if self is fullsceen when open fdialog etc Toplevel-widget
+		2 and while fdialog is open fullsceen, alt-tab to another window
+			like terminal, then
+		3 alt tab back to fdialog, open file and
+		4 esc to exit fullscreen
+		--> wrong geometry
+
+		To fix this there is a flag-check in esc_override
+
+		'''
+
+		self.check_next_esc = True
 
 
 	def esc_override(self, event):
@@ -7076,13 +7297,18 @@ If want to restart editor with new code, first exit Python console, then restart
 
 
 	def insert_tab(self, event):
-		'''	Used to insert tab
+		'''	Used to insert tab in self.text_widget or self.entry
 		'''
 
-		if self.state in [ 'search', 'replace', 'replace_all', 'goto_def' ]:
-			return 'break'
+		w = event.widget
+		tests = ( w is self.text_widget,
+				self.state in ['search', 'replace', 'replace_all', 'goto_def']
+				)
+		if all(tests): return 'break'
 
-		self.text_widget.insert(tkinter.INSERT, '\t')
+
+		# self.text_widget / self.entry
+		w.insert(tkinter.INSERT, '\t')
 
 		return 'break'
 
@@ -7672,6 +7898,7 @@ If want to restart editor with new code, first exit Python console, then restart
 		# event.keysym == Caps_Lock
 		# Check if CapsLock -state changes when focus is in editor
 		else:
+
 			# CapsLock is being turned off
 			# macOS -state
 			event_state = 0
@@ -7686,7 +7913,6 @@ If want to restart editor with new code, first exit Python console, then restart
 				for item in self.to_be_cancelled[:]:
 					self.after_cancel(item)
 					self.to_be_cancelled.remove(item)
-
 
 				# Put Git-branch name back if on one
 				self.restore_btn_git()
@@ -8864,8 +9090,11 @@ If want to restart editor with new code, first exit Python console, then restart
 		self.state = 'normal'
 
 
-		for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
+		for widget in [self.entry, self.btn_git, self.btn_open, self.btn_save, self.text_widget]:
 			widget.config(state='normal')
+
+
+		self.text_widget.focus_force()
 
 		return 'break'
 
@@ -8881,7 +9110,7 @@ If want to restart editor with new code, first exit Python console, then restart
 		openfiles = [tab.filepath for tab in self.tabs]
 		curtab = self.tabs[self.tabindex]
 
-		for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
+		for widget in [self.entry, self.btn_git, self.btn_open, self.btn_save, self.text_widget]:
 			widget.config(state='normal')
 
 
@@ -9014,7 +9243,7 @@ If want to restart editor with new code, first exit Python console, then restart
 
 			self.text_widget.bind( shortcut, self.do_nothing_without_bell)
 
-			for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
+			for widget in [self.entry, self.btn_git, self.btn_open, self.btn_save, self.text_widget]:
 				widget.config(state='disabled')
 
 			self.tracevar_filename.set('empty')
@@ -9027,8 +9256,14 @@ If want to restart editor with new code, first exit Python console, then restart
 
 			filetop = tkinter.Toplevel()
 			filetop.title('Select File')
-			self.to_be_closed.append(filetop)
 
+			if not self.is_fullscreen():
+				filetop.grab_set()
+				filetop.attributes('-topmost', 1)
+			else:
+				filetop.bind("<FocusOut>", self.set_check_next_esc)
+
+			self.to_be_closed.append(filetop)
 
 			fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.textfont, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type, dir_reverse=self.dir_reverse, file_reverse=self.file_reverse)
 
@@ -9549,13 +9784,13 @@ If want to restart editor with new code, first exit Python console, then restart
 			Also stashed bookmarks
 		'''
 
-		if self.state != 'normal':
+		if self.state != 'normal' or self.is_fullscreen():
 			self.bell()
 			return 'break'
 
 		self.state = 'filedialog'
 
-		for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
+		for widget in [self.entry, self.btn_git, self.btn_open, self.btn_save, self.text_widget]:
 			widget.config(state='disabled')
 
 		self.tracevar_filename.set('empty')
@@ -9564,7 +9799,13 @@ If want to restart editor with new code, first exit Python console, then restart
 
 		filetop = tkinter.Toplevel()
 		filetop.title('Select File')
+
+
+		filetop.grab_set()
+		filetop.attributes('-topmost', 1)
+
 		self.to_be_closed.append(filetop)
+
 
 		fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.textfont, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
 
@@ -9615,7 +9856,7 @@ If want to restart editor with new code, first exit Python console, then restart
 
 
 		self.state = 'normal'
-		for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
+		for widget in [self.entry, self.btn_git, self.btn_open, self.btn_save, self.text_widget]:
 			widget.config(state='normal')
 
 
@@ -11335,6 +11576,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		'''
 
 		self.wait_for(30)
+		if event.widget != self.text_widget: return
+
 		bg, fg = self.themes[self.curtheme]['sel'][:]
 		self.cursor_frame.config(bg=bg)
 		self.cursor_frame.place_forget()
@@ -11438,6 +11681,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.entry.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
+		self.btn_git.config(state='normal')
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 
@@ -11581,6 +11825,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.state = 'search'
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
+		self.btn_git.config(state='disabled')
 
 		##
 		self.bidup = self.entry.bind("<Up>", func=lambda event: self.walk_search_history(event, **{'direction':'up'}), add=True )

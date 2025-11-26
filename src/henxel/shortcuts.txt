@@ -43,7 +43,7 @@
 		
 		Shift-Tab  Unindent
 		Tab        Indent or walk complete-word expansions
-		Ctrl-Tab   Insert Tab
+		Ctrl-Tab   Insert Tab (in Text-window or in Entry)
 		
 		Alt-BackSpace	Delete backwards from cursor until dot
 
@@ -61,8 +61,8 @@
 		Alt-x   Toggle syntax highlight
 		
 		
-		Alt-f   Font setting
-		Alt-s   Color setting
+		Alt-f   Font setting, Note: does not work while in fullscreen
+		Alt-s   Color setting, also does not work while in fullscreen
 			Note, to change background color of editor:
 			choose background, then: normal text
 		
