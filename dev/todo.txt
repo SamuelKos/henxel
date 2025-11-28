@@ -29,6 +29,13 @@ is conf
 
 
 
+macos printing issue is partly because of using shell installed from brew
+--> don't install from brew
+even when using builtin shell, there was no word wrap for long single lines,
+or for tracabacks from tkinter callbacks
+--> not dumping printer fix, yet
+
+
 module docstring ######
 e.edit_search_set no need dash like: -regexp ###
 

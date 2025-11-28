@@ -349,7 +349,6 @@ class Editor(tkinter.Toplevel):
 	# Normal stuff
 	alive = False
 	in_mainloop = False
-	pid_parent = False
 
 	pkg_contents = None
 	no_icon = True
@@ -1270,18 +1269,6 @@ static unsigned char infopic_bits[] = {
 			self.__class__.alive = True
 
 
-			# Restarting from debug mode in mainloop --> kill old processs
-			if self.in_mainloop and self.pid_parent:
-				try:
-					tmp = ['kill', f'{self.pid_parent}']
-					if self.os_type == 'windows':
-						tmp = ['taskkill', '/f', '/pid', f'{self.pid_parent}']
-
-					subprocess.run(tmp)
-				except Exception as e:
-					print('Could not kill old process:\n', e)
-
-
 			self.state = 'normal'
 			self.update_title()
 
@@ -2145,31 +2132,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.__class__.alive = False
 
 
-		tests = [self.debug, restart, self.restart_script]
-
-		# In debug and want restart
-		if all(tests):
-			# Sadly this is true
-			if not self.in_mainloop and self.os_type != 'mac_os':
-				print('''Restarting is not yet supported on this platform (when not in mainloop).\n
-If want to restart editor with new code, first exit Python console, then restart it and editor.''')
-
-			else:
-				print('Restarting..')
-				import os
-				pid = os.getpid()
-
-				# From macOS only
-				if not self.in_mainloop: tmp = [self.restart_script]
-
-				# Restarting from mainloop works on every platform
-				else:
-					# works(removes extra editor but with kill parent process killing setting console help dont work)
-					#tmp = [sys.executable, '-m', 'henxel', '--debug'] #, '--pid', f'{pid}']
-
-					os.execl(sys.executable, sys.executable, '-m', 'henxel', '--debug')
-
-				subprocess.run(tmp)
+		# In debug and want restart, restart-scripts are in: dev/
+		# Debug-session should be started using those scripts
+		if restart:
+			sys.exit(1)
 
 		#### quit_me End ##############
 
