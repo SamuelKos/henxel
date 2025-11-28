@@ -626,6 +626,9 @@ class Editor(tkinter.Toplevel):
 			# Used for showing insertion cursor when text is disabled
 			self.cursor_frame = None
 
+			# Used for showing setting-console
+			self.setting_frame = None
+
 			# When clicked with mouse button 1 while searching
 			# to set cursor position to that position clicked.
 			self.save_pos = ''
@@ -1249,6 +1252,9 @@ static unsigned char infopic_bits[] = {
 			# Used to show cursor when text is disabled
 			self.cursor_frame_init()
 
+			# Used for showing setting-console
+			self.setting_frame_init()
+
 
 			if self.start_fullscreen:
 				delay = 300
@@ -1415,18 +1421,169 @@ Error messages Begin
 		return 'break'
 
 
-	def setting_eval(self, event=None):
-		if self.state != 'normal':
-			self.bell()
+	def do_after_proxy(self, delay, callbacks, event=None):
+		''' Enable adding delay to callback without
+			'slipping event' to parents
+			(This is maybe because of using after in binding)
+
+
+			Example, instead of, This will slip:
+			entry.bind("<Control-h>", lambda event,
+					args=[30, self.show_help]: self.after(*args) )
+
+			Do this instead:
+			entry.bind("<Control-h>", lambda event,
+					args=[30, self.show_help]: self.do_after_proxy(*args) )
+
+
+			Note: In general delays should be/are in callbacks already
+
+		'''
+		for callback  in callbacks:
+			self.after(delay, callback)
+
+		return 'break'
+
+
+	def show_help(self, event=None):
+		self.wait_for(30)
+
+		c = self.setting_frame
+		print(c.lastword)
+
+		if c.lastword:
+			try: eval( f'help({c.lastword})', globals={'e':self, 'print':print})
+			except Exception as err: print(err)
+		return 'break'
+
+
+	def do_eval(self, cmd_as_string, event=None):
+		res = False
+		try:
+			# debug-decorator doesn't catch these
+			res = eval(cmd_as_string, globals={'e':self, 'print':print})
+		except Exception as err: print(err)
+		return res
+
+
+	def do_cmd(self, event=None):
+		c = self.setting_frame
+
+		tmp = c.entry.get().strip()
+		if len(tmp) > 0:
+			res = self.do_eval(tmp)
+			if res not in [None, 'break', 'continue']:
+				print(res)
+
+		return 'break'
+
+
+	def do_complete(self, event=None):
+		self.wait_for(30)
+
+		c = self.setting_frame
+
+		tmp = c.entry.get().strip()
+
+		# Walking through options
+		if c.lasttmp and tmp.startswith(c.lasttmp):
+			if c.lastword and (tmp == c.lastword or tmp == c.lastword +'()'):
+				tmp = c.lasttmp
+		else:
+			c.lastword = False
+			c.compidx = 0
+
+
+		options = []
+		child = False
+
+
+		if '.' in tmp:
+			idx = tmp.rindex('.')
+			if idx == 0: return 'break'
+
+			parent = tmp[:idx]
+
+			# Child can be just dot: "e."
+			child = tmp[idx:]
+
+			# options includes whole namespace of parent, for now
+			if res := self.do_eval( 'dir(' +parent+ ')' ):
+				options = res
+
+		# Give something, not much though
+		elif res := self.do_eval('dir()'):
+			options = res
+
+
+
+		if len(options) > 0:
+
+			if child:
+				options = map(lambda item: (parent +'.'+ item), options)
+
+			# Filter down namespace of parent, unless child was only dot: "e."
+			completions = [ option for option in options if option.startswith(tmp) ]
+		else:
+			# When trying for example: "a."
 			return 'break'
 
 
-		x = self.text_frame.winfo_rootx() + 20
-		y = self.text_frame.winfo_rooty() + 20
 
-		settingtop = c = tkinter.Toplevel()
-		c.title('Edit Settings')
-		c.geometry('+%d+%d' % (x,y))
+		if len(completions) > 0:
+			# tmp has changed, one already knows this?
+			if completions != c.completions:
+				c.completions = completions
+				c.lasttmp = tmp
+				c.compidx = 0
+				print('all:', completions)
+
+			# insert from completions-list to enable options-walking
+			c.lastword = word = c.completions[c.compidx]
+			c.entry.delete(0, 'end')
+			c.entry.insert(0, word)
+
+
+			# If word is function, add braces and put cursor in between
+			check_if_func = f"type({word}).__name__ in ('method', 'function')"
+
+			if is_func := self.do_eval(check_if_func):
+				c.entry.insert('end', '()')
+				# Put cursor in between braces
+				try:c.entry.icursor(len(word)+1)
+				except Exception as err: print(err)
+
+
+			c.compidx += 1
+			# This (c.compidx-1) was last/only one option
+			if c.compidx == len(c.completions):
+				c.compidx = 0
+				self.bell()
+
+
+		# Trying for example: "aa"
+		elif '.' not in tmp:
+			c.lasttmp = False
+
+			if res := self.do_eval('dir()'):
+				options = res
+				print('globals:', options)
+
+		# Should not happen
+		else: c.lasttmp = False
+
+
+		return 'break'
+
+		#### do_complete End ######
+
+
+	def setting_frame_init(self):
+		''' Mark insertion cursor while text_widget is disabled
+		'''
+
+		self.setting_frame = c = tkinter.LabelFrame(self.text_frame,
+			text='Edit Settings', width=1, height=1, takefocus=1)
 
 		c.entry = tkinter.Entry(c, width=50, highlightthickness=0, bd=4,
 							font=self.menufont)
@@ -1442,161 +1599,44 @@ Error messages Begin
 		c.lasttmp = False
 
 
-		def show_help():
-			if c.lastword:
-				try: eval( f'help({c.lastword})', globals={'e':self, 'print':print})
-				except Exception as err: print(err)
-			return 'break'
+		c.entry.bind("<Escape>", self.setting_eval)
+		c.entry.bind("<Return>", self.do_cmd)
+		c.entry.bind("<Tab>",  self.do_complete)
 
-
-		def do_eval(cmd_as_string):
-			res = False
-			try:
-				# debug-decorator doesn't catch these
-				res = eval(cmd_as_string, globals={'e':self, 'print':print})
-			except Exception as err: print(err)
-			return res
-
-
-		def do_cmd():
-			tmp = c.entry.get().strip()
-			if len(tmp) > 0:
-				res = do_eval(tmp)
-				if res not in [None, 'break', 'continue']:
-					print(res)
-
-			return 'break'
-
-
-		def do_complete():
-
-			tmp = c.entry.get().strip()
-
-			# Walking through options
-			if c.lasttmp and tmp.startswith(c.lasttmp):
-				if c.lastword and (tmp == c.lastword or tmp == c.lastword +'()'):
-					tmp = c.lasttmp
-			else:
-				c.lastword = False
-				c.compidx = 0
-
-
-			options = []
-			child = False
-
-
-			if '.' in tmp:
-				idx = tmp.rindex('.')
-				if idx == 0: return 'break'
-
-				parent = tmp[:idx]
-
-				# Child can be just dot: "e."
-				child = tmp[idx:]
-
-				# options includes whole namespace of parent, for now
-				if res := do_eval( 'dir(' +parent+ ')' ):
-					options = res
-
-			# Give something, not much though
-			elif res := do_eval('dir()'):
-				options = res
-
-
-
-			if len(options) > 0:
-
-				if child:
-					options = map(lambda item: (parent +'.'+ item), options)
-
-				# Filter down namespace of parent, unless child was only dot: "e."
-				completions = [ option for option in options if option.startswith(tmp) ]
-			else:
-				# When trying for example: "a."
-				return 'break'
-
-
-
-			if len(completions) > 0:
-				# tmp has changed, one already knows this?
-				if completions != c.completions:
-					c.completions = completions
-					c.lasttmp = tmp
-					c.compidx = 0
-					print('all:', completions)
-
-				# insert from completions-list to enable options-walking
-				c.lastword = word = c.completions[c.compidx]
-				c.entry.delete(0, 'end')
-				c.entry.insert(0, word)
-
-
-				# If word is function, add braces and put cursor in between
-				check_if_func = f"type({word}).__name__ in ('method', 'function')"
-
-				if is_func := do_eval(check_if_func):
-					c.entry.insert('end', '()')
-					# Put cursor in between braces
-					try:c.entry.icursor(len(word)+1)
-					except Exception as err: print(err)
-
-
-				c.compidx += 1
-				# This (c.compidx-1) was last/only one option
-				if c.compidx == len(c.completions):
-					c.compidx = 0
-					self.bell()
-
-
-			# Trying for example: "aa"
-			elif '.' not in tmp:
-				c.lasttmp = False
-
-				if res := do_eval('dir()'):
-					options = res
-					print('globals:', options)
-
-			# Should not happen
-			else: c.lasttmp = False
-
-			#### setting_eval.do_complete End ######
-
-
-		# Delay should already be in callbacks, so not adding any more
-		c.entry.bind("<Return>", lambda event: do_cmd())
-		# This new func has no delay, so add some
-		c.entry.bind("<Tab>", lambda event, args=[30, do_complete]: self.after(*args) )
 		# Get doc-strings
 		c.entry.unbind_class('Entry', "<Control-h>")
-		c.entry.bind("<Control-h>", lambda event, args=[30, show_help]: self.after(*args) )
+		c.entry.bind("<Control-h>", self.show_help )
+
 		# Don't select text in entry after hitting Tab
 		c.entry.unbind_class('Entry', '<<TraverseIn>>')
-
-		self.btn_git.config(state='disabled')
-		c.protocol("WM_DELETE_WINDOW", lambda: ( c.grab_release(), c.destroy(),
-				self.text_widget.focus_force(),
-				self.btn_git.config( state='normal') )
-				)
-		# self.text_widget.focus_set()
-		# c.attributes('-topmost', 0),
 		c.entry.pack()
-		c.entry.focus_set()
-
-		if not self.is_fullscreen():
-			c.grab_set()
-			# Always on top. Locally on top would have been enough,
-			# but since don't know how to do that:
-			c.attributes('-topmost', 1)
-		else:
-			c.bind("<FocusOut>", self.set_check_next_esc)
 
 
+		c.place_configure(x=20, y=20, width=1, height=1)
+		c.place_forget()
 
 		self.to_be_closed.append(c)
 
-		return 'break'
 
-		## setting_eval End #####
+	def setting_eval(self, event=None):
+		''' Toggle: show setting-console
+		'''
+
+		if self.state == 'filedialog':
+			self.bell()
+			return 'break'
+
+		self.wait_for(30)
+
+		if self.setting_frame.winfo_ismapped():
+			self.setting_frame.place_forget()
+			self.text_widget.focus_set()
+		else:
+			x = y = self.pad *2
+			self.setting_frame.place_configure(x=x, y=y)
+			self.setting_frame.entry.focus_set()
+
+		return 'break'
 
 
 	@debug
@@ -2123,7 +2163,11 @@ If want to restart editor with new code, first exit Python console, then restart
 				if not self.in_mainloop: tmp = [self.restart_script]
 
 				# Restarting from mainloop works on every platform
-				else: tmp = [sys.executable, '-m', 'henxel', '--debug', '--pid', f'{pid}']
+				else:
+					# works(removes extra editor but with kill parent process killing setting console help dont work)
+					#tmp = [sys.executable, '-m', 'henxel', '--debug'] #, '--pid', f'{pid}']
+
+					os.execl(sys.executable, sys.executable, '-m', 'henxel', '--debug')
 
 				subprocess.run(tmp)
 

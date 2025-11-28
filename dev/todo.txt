@@ -54,6 +54,17 @@ check mainloop etc: set_version_control_cmd() ###
 mainloop open files in argv ####
 
 
+##
+# This, quite hard to guess, line does it
+os.execl(sys.executable, sys.executable, '-m', 'henxel', '--debug')
+		
+		'-i', '-c', 'import henxel; e=henxel.Editor()')
+
+
+##
+
+
+
 btn_git disable enable ####
 done?
 setting_eval
