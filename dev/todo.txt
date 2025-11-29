@@ -36,6 +36,14 @@ or for tracabacks from tkinter callbacks
 --> not dumping printer fix, yet
 
 
+
+check spaces in indentation #####
+
+
+fdialog: toplevel --> labelframe
+setting console labelframe
+
+
 module docstring ######
 e.edit_search_set no need dash like: -regexp ###
 

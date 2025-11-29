@@ -295,8 +295,8 @@ HELPPATH = 'help.txt'
 KEYS_HLP = 'shortcuts.txt'
 KEYS_MAC = 'shortcuts_mac.txt'
 START_MAC = 'restart_editor.scpt'
-START_WIN = 'restart_editor_todo.bat'
-START_NIX = 'restart_editor_todo.sh'
+##START_WIN = 'restart_editor_todo.bat'
+##START_NIX = 'restart_editor_todo.sh'
 
 
 VERSION = importlib.metadata.version('henxel')
@@ -447,8 +447,8 @@ class Editor(tkinter.Toplevel):
 			if debug and not cls.restart_script:
 				startfile = False
 				if cls.os_type == 'mac_os': startfile = START_MAC
-				elif cls.os_type == 'windows': startfile = START_WIN
-				else: startfile = START_NIX
+##				elif cls.os_type == 'windows': startfile = START_WIN
+##				else: startfile = START_NIX
 
 				if not startfile: pass
 				else:
@@ -622,11 +622,16 @@ class Editor(tkinter.Toplevel):
 			self.errlines = list()
 			self.err = False
 
+
 			# Used for showing insertion cursor when text is disabled
 			self.cursor_frame = None
 
 			# Used for showing setting-console
 			self.setting_frame = None
+
+			# Used for showing Openfile-dialog
+			self.fdialog_frame = None
+
 
 			# When clicked with mouse button 1 while searching
 			# to set cursor position to that position clicked.
@@ -679,7 +684,7 @@ class Editor(tkinter.Toplevel):
 			# Initiate widgets
 			####################################
 			self.btn_git = tkinter.Button(self, takefocus=0, relief='flat', compound='left', bd=0,
-										highlightthickness=0, padx=0, command=self.setting_eval)
+										highlightthickness=0, padx=0, command=self.setting_console)
 
 			self.entry = tkinter.Entry(self, highlightthickness=0, takefocus=0)
 			if self.os_type != 'mac_os': self.entry.config(bg='#d9d9d9')
@@ -1254,6 +1259,9 @@ static unsigned char infopic_bits[] = {
 			# Used for showing setting-console
 			self.setting_frame_init()
 
+			# Filedialog
+			self.fdialog_frame_init()
+
 
 			if self.start_fullscreen:
 				delay = 300
@@ -1439,7 +1447,7 @@ Error messages Begin
 		print(c.lastword)
 
 		if c.lastword:
-			try: eval( f'help({c.lastword})', globals={'e':self, 'print':print})
+			try: eval( f'help({c.lastword})', {'print':print}, {'e':self} )
 			except Exception as err: print(err)
 		return 'break'
 
@@ -1448,7 +1456,7 @@ Error messages Begin
 		res = False
 		try:
 			# debug-decorator doesn't catch these
-			res = eval(cmd_as_string, globals={'e':self, 'print':print})
+			res = eval(cmd_as_string, {'print':print}, {'e':self})
 		except Exception as err: print(err)
 		return res
 
@@ -1565,11 +1573,56 @@ Error messages Begin
 		#### do_complete End ######
 
 
+	def stop_fdialog(self, event=None):
+		self.fdialog_frame.place_forget()
+		self.tracevar_filename.set('')
+		self.bind( "<Escape>", self.esc_override )
+		return 'break'
+
+
+	def set_fdialog_widths(self):
+		f = self.fdialog_frame
+		f.dialog.scrollbar_width, f.dialog.elementborderwidth = self.scrollbar_width, self.elementborderwidth
+		f.dialog.dirsbar.configure(width=self.scrollbar_width, elementborderwidth=self.elementborderwidth)
+		f.dialog.filesbar.configure(width=self.scrollbar_width, elementborderwidth=self.elementborderwidth)
+
+
+	def fdialog_frame_init(self):
+		''' Initialize file-dialog-widget
+		'''
+		# Note about parent being self, if it would be self.text_frame, there would be
+		# bad geometry-handling after: new_tab(), open filedialog
+		# Same is true with setting_frame. Cursor frame manages being so small, or something.
+		self.fdialog_frame = f = tkinter.LabelFrame(self,
+			text='Select File', width=1, height=1, takefocus=1)
+
+		f.path = pathlib.Path().cwd()
+
+		if self.lastdir: f.path = f.path / self.lastdir
+
+		f.dialog = fdialog.FDialog(self.fdialog_frame, f.path, self.tracevar_filename,
+					font=self.textfont, menufont=self.menufont, os_type=self.os_type)
+
+
+		f.dialog.dir_reverse = self.dir_reverse
+		f.dialog.file_reverse = self.file_reverse
+		self.set_fdialog_widths()
+
+
+		f.old_x = f.old_y = self.pad
+		offset_y = self.entry.winfo_height()
+		f.old_y += offset_y
+		f.place_configure(x=f.old_x, y=f.old_y, width=1, height=1)
+		f.place_forget()
+
+		self.to_be_closed.append(f)
+
+
 	def setting_frame_init(self):
-		''' Mark insertion cursor while text_widget is disabled
+		''' Initialize setting-console, binded to btn_git
 		'''
 
-		self.setting_frame = c = tkinter.LabelFrame(self.text_frame,
+		self.setting_frame = c = tkinter.LabelFrame(self,
 			text='Edit Settings', width=1, height=1, takefocus=1)
 
 		c.entry = tkinter.Entry(c, width=50, highlightthickness=0, bd=4,
@@ -1585,10 +1638,15 @@ Error messages Begin
 		# last word(prefix) in entry before hitting Tab
 		c.lasttmp = False
 
+		# Used in move_setting_console
+		c.direction = ['down', 'right']
 
-		c.entry.bind("<Escape>", self.setting_eval)
+		c.entry.bind("<Escape>", self.setting_console)
 		c.entry.bind("<Return>", self.do_cmd)
 		c.entry.bind("<Tab>",  self.do_complete)
+
+		# Even more binding notes, Not ok: "<1-Motion>", "<Button-1-Motion>"
+		c.bind("<B1-Motion>",  self.move_setting_console)
 
 		# Get doc-strings
 		c.entry.unbind_class('Entry', "<Control-h>")
@@ -1598,30 +1656,82 @@ Error messages Begin
 		c.entry.unbind_class('Entry', '<<TraverseIn>>')
 		c.entry.pack()
 
+		offset_y = self.entry.winfo_height()
+		c.old_x = c.old_y = self.pad*2
+		c.old_y += offset_y
 
-		c.place_configure(x=20, y=20, width=1, height=1)
+		c.place_configure(x=c.old_x, y=c.old_y, width=1, height=1)
 		c.place_forget()
 
 		self.to_be_closed.append(c)
 
 
-	def setting_eval(self, event=None):
-		''' Toggle: show setting-console
+	def move_setting_console(self, event=None):
+		''' Move setting-console, bit wonky
 		'''
+		c = self.setting_frame
+		# Cursor
+		x = event.x
+		y = event.y
+		# Widget
+		old_x = c.old_x
+		old_y = c.old_y
 
-		if self.state == 'filedialog':
-			self.bell()
-			return 'break'
+		if x > 0:
+			new_x = old_x + self.pad
 
+			if c.direction[1] == 'right':
+				new_x += self.pad*3
+			c.direction[1] = 'right'
+
+		else:
+			new_x = old_x - self.pad*3
+
+			if c.direction[1] == 'left':
+				new_x -= self.pad*6
+			c.direction[1] = 'left'
+
+
+		if y > old_y:
+			new_y = old_y + self.pad * 4
+
+			if c.direction[0] == 'down':
+				new_y += self.pad*6
+			c.direction[0] = 'down'
+
+		else:
+			new_y = old_y - 1
+
+			if c.direction[0] == 'up':
+				new_y -= 1
+			c.direction[0] = 'up'
+
+
+		# This helps
+		new_y = old_y + y
+		new_x = old_x + x
+		c.old_x = new_x
+		c.old_y = new_y
+
+		kwargs = {'x':new_x, 'y':new_y}
+		#c.place_configure(**kwargs)
+		self.after(50, c.place_configure(**kwargs))
+		return 'break'
+
+
+	def setting_console(self, event=None):
+		''' Toggle: show setting-console, binded to btn_git
+		'''
 		self.wait_for(30)
 
-		if self.setting_frame.winfo_ismapped():
-			self.setting_frame.place_forget()
+		c = self.setting_frame
+
+		if c.winfo_ismapped():
+			c.place_forget()
 			self.text_widget.focus_set()
 		else:
-			x = y = self.pad *2
-			self.setting_frame.place_configure(x=x, y=y)
-			self.setting_frame.entry.focus_set()
+			c.place_configure(x=c.old_x, y=c.old_y)
+			c.entry.focus_set()
 
 		return 'break'
 
@@ -2119,7 +2229,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Assuming if user changed geometry, it was not satisfactory
 		# --> use current geometry
 		if self.flag_check_geom_at_exit and not self.is_fullscreen():
-			geom_current = self.geometry()
+			geom_current = self.get_geometry()
+			#geom_current = self.geometry()
 			if self.geom != geom_current: self.geom = geom_current
 
 		self.save_config()
@@ -2135,7 +2246,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# In debug and want restart, restart-scripts are in: dev/
 		# Debug-session should be started using those scripts
 		if restart:
-			sys.exit(1)
+			if self.restart_script:
+				tmp = [self.restart_script]
+				subprocess.run(tmp)
+			else:
+				sys.exit(1)
 
 		#### quit_me End ##############
 
@@ -4068,6 +4183,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		else: self.start_fullscreen = False
 
 
+	def get_geometry(self):
+		w = self.winfo_width()
+		h = self.winfo_height()
+		x = self.winfo_x()
+		y = self.winfo_y()
+
+		return f'{w}x{h}+{x}+{y}'
+
+
 	def use_geometry(self, geom_string):
 		'''
 			To let window-manager handle positioning and size of the editor,
@@ -4125,8 +4249,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Used at first launch
 		elif geom_string == 'current':
-			if not self.is_fullscreen(): self.geom = self.geometry()
-			else: give_info_fullscreen()
+			if not self.is_fullscreen():
+				self.geom = self.get_geometry()
+				# It seems like geometry does no longer return correct values
+				# --> using get_geometry
+				#self.geom = self.geometry()
+			else:
+				give_info_fullscreen()
 			return
 
 		# Actually wanting to set some size and position to be used at startup
@@ -4159,7 +4288,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def is_fullscreen(self):
 
 		# last fallback
-		width_editor = int(self.geometry().split('x')[0])
+		width_editor = self.winfo_width()
 		width_screen = self.winfo_screenwidth()
 		res = width_editor == width_screen
 
@@ -4274,6 +4403,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.scrollbar_width = width
 		self.elementborderwidth = elementborderwidth
+
+		self.set_fdialog_widths()
 
 		self.scrollbar.config(width=self.scrollbar_width,
 							elementborderwidth=self.elementborderwidth)
@@ -4476,6 +4607,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.elementborderwidth == 1: self.scrollbar_width = 9
 		self.scrollbar.config(width=self.scrollbar_width,
 							elementborderwidth=self.elementborderwidth)
+
+		self.set_fdialog_widths()
 
 
 		for tab in self.tabs + [self.help_tab, self.err_tab]:
@@ -7178,54 +7311,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.do_maximize(1)
 		self.after(delay, lambda args=(ln_kwargs, just_kwargs): self.apply_left_margin(*args) )
 
+
 	def do_maximize(self, want_maximize):
 		''' fullscreen option seems to exist now on all win/linux/mac
 			didn't use to, so:
 		'''
 
-		# See set_check_next_esc for explanation
-		if not self.check_next_esc:
+		if self.wm_attributes().count('-fullscreen') != 0:
+			self.wm_attributes('-fullscreen', want_maximize)
 
-			if self.wm_attributes().count('-fullscreen') != 0:
-				self.wm_attributes('-fullscreen', want_maximize)
+		elif self.wm_attributes().count('-zoomed') != 0:
+			self.wm_attributes('-zoomed', want_maximize)
 
-			elif self.wm_attributes().count('-zoomed') != 0:
-				self.wm_attributes('-zoomed', want_maximize)
-
-			elif want_maximize:
-				width_screen = self.winfo_screenwidth()
-				height_screen = self.winfo_screenheight()
-				self.geometry('%dx%d+0+0' % (width_screen, height_screen) )
-
-			else:
-				self.geometry(self.geom)
+		elif want_maximize:
+			width_screen = self.winfo_screenwidth()
+			height_screen = self.winfo_screenheight()
+			self.geometry('%dx%d+0+0' % (width_screen, height_screen) )
 
 		else:
-			if self.wm_attributes().count('-fullscreen') != 0:
-				self.wm_attributes('-fullscreen', 0)
-
-			elif self.wm_attributes().count('-zoomed') != 0:
-				self.wm_attributes('-zoomed', 0)
-
-			self.check_next_esc = False
-			args = [self.geom]
-			self.after(100, lambda args=[self.geom]: self.geometry(*args) )
-
-
-	def set_check_next_esc(self, event=None):
-		'''
-		1 if self is fullsceen when open fdialog etc Toplevel-widget
-		2 and while fdialog is open fullsceen, alt-tab to another window
-			like terminal, then
-		3 alt tab back to fdialog, open file and
-		4 esc to exit fullscreen
-		--> wrong geometry
-
-		To fix this there is a flag-check in esc_override
-
-		'''
-
-		self.check_next_esc = True
+			self.geometry(self.geom)
 
 
 	def esc_override(self, event):
@@ -9068,6 +9172,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if file_reverse: self.file_reverse = True
 			else: self.file_reverse = False
 
+			# See fdialog.py
+			f = self.fdialog_frame
+			f.dialog.dir_reverse = self.dir_reverse
+			f.dialog.file_reverse = self.file_reverse
+
+
 		print(self.dir_reverse, self.file_reverse)
 
 
@@ -9100,10 +9210,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.state = 'normal'
 
 
-		for widget in [self.entry, self.btn_git, self.btn_open, self.btn_save, self.text_widget]:
+		for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
 			widget.config(state='normal')
 
 
+		self.stop_fdialog()
 		self.text_widget.focus_force()
 
 		return 'break'
@@ -9120,7 +9231,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		openfiles = [tab.filepath for tab in self.tabs]
 		curtab = self.tabs[self.tabindex]
 
-		for widget in [self.entry, self.btn_git, self.btn_open, self.btn_save, self.text_widget]:
+		for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
 			widget.config(state='normal')
 
 
@@ -9199,6 +9310,33 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return
 
 
+	def map_filedialog(self, use_tracefunc=True):
+		self.state = 'filedialog'
+		self.bind("<Escape>", self.stop_fdialog)
+
+		for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
+			widget.config(state='disabled')
+
+
+		wid = self.fdialog_frame
+
+		# Give more lines when in fullscreen
+		if self.is_fullscreen():
+			wid.dialog.files.config(height=15)
+			wid.dialog.dirs.config(height=15)
+		else:
+			wid.dialog.files.config(height=10)
+			wid.dialog.dirs.config(height=10)
+
+
+		self.tracevar_filename.set('empty')
+		if use_tracefunc:
+			self.tracefunc_name = self.tracevar_filename.trace_add('write', self.trace_filename)
+
+		wid.place_configure(x=wid.old_x, y=wid.old_y)
+		wid.dialog.update_view()
+
+
 	def load(self, event=None):
 		'''	Get just the filename,
 			on success, pass it to loadfile()
@@ -9245,37 +9383,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Called by: Open-button(event==None) or keyboard-shortcut
 		if (not event) or (event.widget != self.entry):
 
-			self.state = 'filedialog'
-
 			shortcut = "<Mod1-Key-Return>"
 			if self.os_type != 'mac_os':
 				shortcut = "<Alt-Return>"
 
 			self.text_widget.bind( shortcut, self.do_nothing_without_bell)
 
-			for widget in [self.entry, self.btn_git, self.btn_open, self.btn_save, self.text_widget]:
-				widget.config(state='disabled')
 
-			self.tracevar_filename.set('empty')
-			self.tracefunc_name = self.tracevar_filename.trace_add('write', self.trace_filename)
-
-			p = pathlib.Path().cwd()
-
-			if self.lastdir:
-				p = p / self.lastdir
-
-			filetop = tkinter.Toplevel()
-			filetop.title('Select File')
-
-			if not self.is_fullscreen():
-				filetop.grab_set()
-				filetop.attributes('-topmost', 1)
-			else:
-				filetop.bind("<FocusOut>", self.set_check_next_esc)
-
-			self.to_be_closed.append(filetop)
-
-			fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.textfont, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type, dir_reverse=self.dir_reverse, file_reverse=self.file_reverse)
+			self.map_filedialog()
 
 			return 'break'
 
@@ -9794,30 +9909,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Also stashed bookmarks
 		'''
 
-		if self.state != 'normal' or self.is_fullscreen():
+		if self.state != 'normal':
 			self.bell()
 			return 'break'
 
-		self.state = 'filedialog'
-
-		for widget in [self.entry, self.btn_git, self.btn_open, self.btn_save, self.text_widget]:
-			widget.config(state='disabled')
-
-		self.tracevar_filename.set('empty')
-		p = pathlib.Path().cwd()
-		if self.lastdir: p = p / self.lastdir
-
-		filetop = tkinter.Toplevel()
-		filetop.title('Select File')
-
-
-		filetop.grab_set()
-		filetop.attributes('-topmost', 1)
-
-		self.to_be_closed.append(filetop)
-
-
-		fdialog.FDialog(filetop, p, self.tracevar_filename, font=self.textfont, menufont=self.menufont, sb_widths=(self.scrollbar_width, self.elementborderwidth), os_type=self.os_type)
+		# Just waiting
+		self.map_filedialog(use_tracefunc=False)
 
 		# Editor remains responsive while doing wait_variable()
 		# but widgets have been disabled
@@ -9865,8 +9962,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			print('\nImported total of %i new bookmarks and %i new hided bookmarks from:\n%s' % (total_books, total_stash, p))
 
 
+		# This has to be after tracevar_filename.get()
+		self.stop_fdialog()
+
 		self.state = 'normal'
-		for widget in [self.entry, self.btn_git, self.btn_open, self.btn_save, self.text_widget]:
+		for widget in [self.entry, self.btn_open, self.btn_save, self.text_widget]:
 			widget.config(state='normal')
 
 
@@ -11691,7 +11791,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.entry.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
-		self.btn_git.config(state='normal')
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
 
@@ -11835,7 +11934,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.state = 'search'
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
-		self.btn_git.config(state='disabled')
 
 		##
 		self.bidup = self.entry.bind("<Up>", func=lambda event: self.walk_search_history(event, **{'direction':'up'}), add=True )

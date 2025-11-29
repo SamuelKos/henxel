@@ -57,13 +57,11 @@ class FDialog:
 	'''
 
 
-	def __init__(self, master, path, stringvar, font=None, menufont=None, sb_widths=None,
-				os_type='linux', dir_reverse=True, file_reverse=False):
-		'''	master		tkinter.Toplevel
+	def __init__(self, master, path, stringvar, font=None, menufont=None, os_type='linux'):
+		'''	master		tkinter.LabelFrame
 			path		pathlib.Path
 			stringvar	tkinter.StringVar
 			fonts		tkinter.font.Font
-			sb_widths	Tuple containing scrollbar_width and elementborderwidth
 			os_type		'linux', 'mac_os', 'windows'
 		'''
 
@@ -72,9 +70,12 @@ class FDialog:
 		self.var = stringvar
 		self.font = font
 		self.menufont = menufont
-		self.scrollbar_width, self.elementborderwidth = sb_widths
-		self.dir_reverse = dir_reverse
-		self.file_reverse = file_reverse
+
+		self.scrollbar_width, self.elementborderwidth = 9,1
+
+		# Sorting orders, see: __init__.py: Editor.set_filedialog_sorting_order
+		self.dir_reverse = True
+		self.file_reverse = False
 
 
 		s0, s1 = 12, 10
@@ -101,14 +102,14 @@ class FDialog:
 		self.filesbar = tkinter.Scrollbar(self.top, takefocus=0)
 
 		# Choosed activestyle:underline because dotbox was almost invisible
-		self.files = tkinter.Listbox(self.top, exportselection=0, activestyle='underline',
-									setgrid=1)
+		self.files = tkinter.Listbox(self.top, exportselection=0, activestyle='underline')
 		self.files['yscrollcommand'] = self.filesbar.set
 		self.filesbar.config(command=self.files.yview)
 
 		self.dirsbar = tkinter.Scrollbar(self.top, takefocus=0)
-		self.dirs = tkinter.Listbox(self.top, exportselection=0, activestyle='underline',
-									setgrid=1)
+
+		# Note: if using: setgrid=1, it would mess up with setting height(num lines) in Editor.load
+		self.dirs = tkinter.Listbox(self.top, exportselection=0, activestyle='underline')
 		self.dirs['yscrollcommand'] = self.dirsbar.set
 		self.dirsbar.config(command=self.dirs.yview)
 
@@ -123,11 +124,6 @@ class FDialog:
 			self.files.config(bg='#d9d9d9', bd=4)
 			self.entry.config(bg='#d9d9d9', disabledbackground='#d9d9d9',
 							disabledforeground='black')
-
-		self.dirsbar.configure(width=self.scrollbar_width,
-							elementborderwidth=self.elementborderwidth)
-		self.filesbar.configure(width=self.scrollbar_width,
-							elementborderwidth=self.elementborderwidth)
 
 
 		self.dirs.bind('<Double-ButtonRelease-1>', self.chdir)
@@ -144,9 +140,6 @@ class FDialog:
 
 		#self.entry.bind('<Return>', self.selectfile)######################
 
-		self.top.bind('<Escape>', self.quit_me)
-		self.top.protocol("WM_DELETE_WINDOW", self.quit_me)
-
 		self.top.rowconfigure(1, weight=1)
 		self.top.columnconfigure(1, weight=1)
 
@@ -155,9 +148,6 @@ class FDialog:
 		self.dirs.grid_configure(row=1, column = 1, sticky='nsew')
 		self.files.grid_configure(row=1, column = 2, sticky='nsew')
 		self.filesbar.grid_configure(row=1, column = 3, sticky='nse')
-
-
-		self.update_view()
 
 		#################### init end ################
 
@@ -230,12 +220,6 @@ class FDialog:
 		return 'break'
 
 
-	def quit_me(self, event=None):
-		self.top.grab_release()
-		self.top.destroy()
-		self.var.set('')
-
-
 	def chdir(self, event=None):
 		try:
 			# pressed Return:
@@ -274,7 +258,6 @@ class FDialog:
 
 			filename = self.path.resolve() / f
 
-			self.top.destroy()
 			self.var.set(filename.__str__())
 
 		except tkinter.TclError as e:
