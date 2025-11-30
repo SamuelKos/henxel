@@ -612,6 +612,8 @@ class Editor(tkinter.Toplevel):
 			self.old_word = ''
 			self.new_word = ''
 			self.search_history = ([],[]) # old_words, new_words
+			self.search_history_index = 0
+			self.flag_use_replace_history = False
 
 			# Used for counting indentation
 			self.search_count_var = tkinter.IntVar()
@@ -2230,7 +2232,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# --> use current geometry
 		if self.flag_check_geom_at_exit and not self.is_fullscreen():
 			geom_current = self.get_geometry()
-			#geom_current = self.geometry()
 			if self.geom != geom_current: self.geom = geom_current
 
 		self.save_config()
@@ -4184,12 +4185,21 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def get_geometry(self):
-		w = self.winfo_width()
-		h = self.winfo_height()
-		x = self.winfo_x()
-		y = self.winfo_y()
+		''' Get geometry-string, trying geometry() first,
+			possibly falling back to winfos
+			and reporting failures, for possible later fixes.
+		'''
+		tmp = self.get_geometry()
+		# Not great check, better than nothing though
+		if len(tmp.split('x')[0]) < 3:
+			print('INFO: Geometry handling issue, got:', tmp)
+			w = self.winfo_width()
+			h = self.winfo_height()
+			x = self.winfo_x()
+			y = self.winfo_y()
+			tmp = f'{w}x{h}+{x}+{y}'
 
-		return f'{w}x{h}+{x}+{y}'
+		return tmp
 
 
 	def use_geometry(self, geom_string):
@@ -4249,13 +4259,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Used at first launch
 		elif geom_string == 'current':
-			if not self.is_fullscreen():
-				self.geom = self.get_geometry()
-				# It seems like geometry does no longer return correct values
-				# --> using get_geometry
-				#self.geom = self.geometry()
-			else:
-				give_info_fullscreen()
+			if not self.is_fullscreen(): self.geom = self.get_geometry()
+			else: give_info_fullscreen()
 			return
 
 		# Actually wanting to set some size and position to be used at startup
@@ -9324,16 +9329,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.is_fullscreen():
 			wid.dialog.files.config(height=15)
 			wid.dialog.dirs.config(height=15)
+			kwargs = {'relx':0.1, 'rely':0.1}
 		else:
 			wid.dialog.files.config(height=10)
 			wid.dialog.dirs.config(height=10)
+			kwargs = {'x':wid.old_x, 'y':wid.old_y}
 
 
 		self.tracevar_filename.set('empty')
 		if use_tracefunc:
 			self.tracefunc_name = self.tracevar_filename.trace_add('write', self.trace_filename)
 
-		wid.place_configure(x=wid.old_x, y=wid.old_y)
+		wid.place_configure(**kwargs)
 		wid.dialog.update_view()
 
 
@@ -11620,9 +11627,12 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		if self.search_matches > 0:
 
-			self.old_word = search_word
-			self.search_history[0].append(self.old_word)
 			self.search_index = -1
+			self.old_word = search_word
+
+			# walk_search_history
+			if self.old_word not in self.search_history[0]:
+				self.search_history[0].append(self.old_word)
 
 			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.entry.config(validate='none')
@@ -11633,6 +11643,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				self.bid_show_next = self.bind("<Control-n>", self.show_next )
 				self.bid_show_prev = self.bind("<Control-p>", self.show_prev )
 				self.entry.flag_start = True
+				self.search_history_index = len(self.search_history[0])
+				self.flag_use_replace_history = False
 
 				self.text_widget.focus_set()
 				self.wait_for(100)
@@ -11650,6 +11662,9 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				self.entry.select_to(tkinter.END)
 				self.entry.icursor(len(patt))
 				self.entry.xview_moveto(0)
+
+				self.search_history_index = len(self.search_history[1])
+				self.flag_use_replace_history = True
 
 
 				bg, fg = self.themes[self.curtheme]['match'][:]
@@ -11734,20 +11749,54 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		return 'break'
 
 
-	@debug
+	#@debug
 	def walk_search_history(self, event=None, direction='up'):
 		''' Walk search-history in entry with arrow up/down
 			while searching/replacing
 		'''
 
-		##
-		self.entry.config(validate='none')
+		is_replace_history = x = 0
+		if self.flag_use_replace_history:
+			x = 1
 
-		# Get stuff after prompt
-		tmp_orig = self.entry.get()
+		index = self.search_history_index
+		h = self.search_history
+
+		if len(h[x]) == 0: return 'break'
+
+
+		# Get history item
+		if direction == 'up':
+			index -= 1
+
+			if index < 0:
+				index += 1
+				return 'break'
+			elif index == 0:
+				self.bell()
+		else:
+			index += 1
+
+			if index > len(h[x]) -1:
+				index -= 1
+				return 'break'
+			elif index == len(h[x]) -1:
+				self.bell()
+
+
+		# Update self.search_history_index
+		self.search_history_index = index
+		history_item = h[x][index]
+
+
+		# Get prompt-lenght and remove text after it
+		self.entry.config(validate='none')
+		tmp_orig = self.entry.get().strip()
 		idx = tmp_orig.index(':') + 2
 		self.entry.delete(idx, 'end')
-		self.entry.insert('end', 'This is a test, jou')
+
+		# Insert and select history_item
+		self.entry.insert(idx, history_item)
 
 		self.entry.select_from(idx)
 		self.entry.select_to('end')
@@ -11755,22 +11804,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.entry.xview_moveto(0)
 
 		self.entry.config(validate='key')
-		##
-
-
-		#search_word = tmp
-
-
-		#if direction == 'up':
-		#	walk history 'normally'
-		#	clear entry
-		#	insert next item from history --> need self.search_history_index
-		#	self.search_history_index += 1
-		# else:
-		#	walk history 'backwards'
-		#	clear entry
-		#	insert prev item from history
-		#	self.search_history_index -= 1
 
 		return 'break'
 
@@ -11911,7 +11944,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		### stop_search End ######
 
-	#@debug
+
 	def search(self, event=None):
 		'''	Ctrl-f --> search --> start_search --> show_next / show_prev --> stop_search
 		'''
@@ -11935,10 +11968,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 
-		##
 		self.bidup = self.entry.bind("<Up>", func=lambda event: self.walk_search_history(event, **{'direction':'up'}), add=True )
 		self.biddown = self.entry.bind("<Down>", func=lambda event: self.walk_search_history(event, **{'direction':'down'}), add=True )
-		##
 
 		self.entry.unbind("<Return>", funcid=self.entry.bid_ret)
 		self.entry.bind("<Return>", self.start_search)
@@ -11987,6 +12018,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.entry.select_to(tkinter.END)
 			self.entry.icursor(tkinter.END)
 
+
+		# walk_search_history
+		self.search_history_index = len(self.search_history[0])
+		self.flag_use_replace_history = False
 
 		self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 		patt = 'Search: '
@@ -12051,11 +12086,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 
-		##
 		self.bidup = self.entry.bind("<Up>", func=lambda event: self.walk_search_history(event, **{'direction':'up'}), add=True )
 		self.biddown = self.entry.bind("<Down>", func=lambda event: self.walk_search_history(event, **{'direction':'down'}), add=True )
-		##
-
 
 		self.entry.unbind("<Return>", funcid=self.entry.bid_ret)
 		self.entry.bind("<Return>", self.start_search)
@@ -12086,10 +12118,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# Suggest selection as search_word if appropiate, else old_word.
 		try:
 			tmp = self.selection_get()
-
 			if not (80 > len(tmp) > 0):
 				tmp = False
-
 				raise tkinter.TclError
 
 		# No selection
@@ -12103,6 +12133,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.entry.select_to(tkinter.END)
 			self.entry.icursor(tkinter.END)
 
+
+		# walk_search_history, want search_words here
+		self.search_history_index = len(self.search_history[0])
+		self.flag_use_replace_history = False
 
 		patt = 'Replace this: '
 		self.entry.insert(0, patt)
@@ -12164,7 +12198,13 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 			else:
 				self.new_word = tmp
-				self.search_history[1].append(self.new_word)
+
+				# walk_search_history
+				if self.new_word not in self.search_history[1]:
+					self.search_history[1].append(self.new_word)
+				self.search_history_index = len(self.search_history[1])
+				self.flag_use_replace_history = True
+
 		# Enable changing newword between replaces End
 		#################
 
@@ -12307,13 +12347,18 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		idx = tmp_orig.index(':') + 2
 		tmp = tmp_orig[idx:].strip()
 		self.new_word = tmp
-		self.search_history[1].append(self.new_word)
 
 		# No check for empty newword to enable deletion.
 
 		if self.old_word == self.new_word:
 			self.bell()
 			return 'break'
+
+		# walk_search_history
+		if self.new_word not in self.search_history[1]:
+			self.search_history[1].append(self.new_word)
+		self.search_history_index = len(self.search_history[1])
+		self.flag_use_replace_history = True
 
 
 		self.entry.config(validate='none')

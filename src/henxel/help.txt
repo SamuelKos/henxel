@@ -5,6 +5,8 @@
 			Ctrl-n  Next match
 			Ctrl-p  Prev match
 			Ctrl-Tab   Insert Tab
+			Up/Down    Walk history
+			
 			-	Copying text to clipboard is possible with yank-line etc.
 			-	Add bookmark is possible, so is Goto def from which:
 				arrow-key or Ctrl-np -> back to matches

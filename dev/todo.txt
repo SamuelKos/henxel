@@ -38,10 +38,17 @@ or for tracabacks from tkinter callbacks
 
 
 check spaces in indentation #####
+search: insert tab ctrl-tab then space and search
+
+
+check_sel: if bbox insert --> none:
+ensure_idx_visi
 
 
 fdialog: toplevel --> labelframe
 setting console labelframe
+
+
 
 
 module docstring ######
