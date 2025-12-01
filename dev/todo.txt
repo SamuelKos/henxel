@@ -14,12 +14,6 @@ macos: open filebrowser from terminal to current folder: open .
 Below this: done ################################################
 
 
-export conf without filepaths, done
-
-
-use_mac_print_fix()
-is conf, default off, done
-help update done
 
 
 run_as_module(cmd_as_list):
@@ -37,32 +31,31 @@ or for tracabacks from tkinter callbacks
 
 
 
-check spaces in indentation #####
-search: insert tab ctrl-tab then space and search
-
-
-check_sel: if bbox insert --> none:
-ensure_idx_visi
-
-
-fdialog: toplevel --> labelframe
-setting console labelframe
-
-
-
 
 module docstring ######
+
 e.edit_search_set no need dash like: -regexp ###
+ctrl-r regexp
+ctrl-i insert
+no?
 
 
-check event.state ####
+###########################
+in tab_has_syntax_error
+when gotodef save_forced()
+and scroll end of save()
+and select activetab
+and gotodef
+--> could not find activetab
+#############################
+
 
 
 help mainloop vs console not done ############
 
 
-eval test_bind
-test restart main win linux #####
+
+
 
 
 toggle input not done:

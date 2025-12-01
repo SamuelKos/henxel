@@ -50,6 +50,7 @@
 		All tabs are saved to disk when:
 		  - closing program, also configurations
 		  - running file
+		  - doing test-launch
 		
 		Current tab is saved to disk when:
 		  - closing tab, if it had filename.
@@ -57,10 +58,12 @@
 		  
 		  - opening file from disk when there already was another file opened
 			in tab.
+			
+		  - choosing "chk syntax" from popup-menu
 		
-		Otherwise, changes are saved in memory
+		  - Pressing Save-button
 		
-		This means that if you want to cancel all changes:
+		This means that if you want to cancel recent changes:
 		  - do not run file
 		  - do not close editor
 		  - do not close tab with a filename
@@ -106,7 +109,11 @@
 		old file is first saved (but not to disk) and then new file with
 		same content is created in a new tab (its contents are not yet in disk).
 	  
-	  - Pressing save in tab which exists in disk does not do anything.
+	  - If, for example need current tabs content for external use, it is
+		possible to sync current tab to disk by pressing Save-button or by
+		choosing: "chk syntax" from popup-menu. It saves any file,
+		not just py-files.
+		
 	  - Contents of tabs without filename are not saved when closing tab,
 		or program, but tabs are still kept as placeholders.
 			
@@ -131,6 +138,15 @@
 	  - It is good practise to always: open newtab, open file
 
 	
+	i-button
+	  - Toggle setting-console in which can edit settings just like
+		in python-console: e.edit_search_setting() etc.
+	  - If wrote: e.prin and hit Tab --> get all possible completions.
+		Hit Tab again to walk options.
+	  - Press Control-h to open help on current item
+	  - Can be closed with Esc
+	
+	
 	Selection
 	  - Long selection: if cursor is not visible,
 		to show wanted side of selection, toggle left/right -keys
@@ -140,6 +156,10 @@
 	  - If highlighting looks wierd, choose 'draw syntax' from popup-menu.
 	  - Note that it might not get any better if there is some
 		syntax-error in the code. Fix the error then redraw.
+	  - To know where that error is, do: run
+		(if debugging do: test-launch)
+		or if not wanting to do run, to check syntax of current tab:
+		from popup: chk syntax
 	  - Single line syntax can be refreshed by adding space
 		and then deleting it. Multiline strings: fix string, redraw.
 
@@ -551,31 +571,63 @@
 	  - If wanting to start editor using new code, from popup-menu: restart
 		note: Test-launch is not done before this, only syntax check.
 		--> before this, to do test-launch, from popup-menu: test
- 	
- 	  - Do test-launch at least before restart or close. Preferably after any
-		such change, that makes one wonder.
+		
+ 	  - Do test-launch at least before restart or close. Or after any change,
+		that makes one wonder.
 		
 	  - If editor did not launch, error message and info about recovering is printed
 		See: help(henxel.stash_pop)
 	
-	  - Test-launch works on all platforms. If Editor was launched from
-		python-console, this is quite enough, if there is no need to often
-		restart editor. And closing editor and console and then restarting
-		them manually is matter of seconds anyway.
-	
-	  - If Editor was launched from terminal: python -m henxel --debug
-		Then restart works on all platforms. But this is not so great
-		option because of currently missing python-console when in mainloop.
+	  - Test-launch works on all platforms. This is quite enough, if there is no
+		need to often restart editor. And closing editor and console and then
+		restarting them manually is matter of seconds anyway.
 		
-	  - If Editor was launched from python-console, currently there is
-		restart-script only for macOS
-	
+		
+		Starting debug-session from
+		
+	  - All platforms:
+		in python-console:
+		import henxel
+		e=henxel.Editor(debug=True)
+		--> has python-console, test-launch works
+		--> restarting works in macOS (with osascript, needs some permissions)
+		
+	  - Windows: 1: activate python venv
+		in powershell
+		2a: dev/henxel_debug.bat
+		--> has python-console, restarting works
+		or
+		2b: dev/henxel_debug.bat mainloop
+		--> no python-console, restarting works, has mainloop
+		
+	  - Linux: 1: activate python venv
+		in terminal 
+		2: until python -m henxel --debug; do : ;done
+		--> no python-console, restarting works, has mainloop
+		
+	  - macOS: 1: activate python venv
+		in terminal
+		2a: until python -i -c "import henxel;e=henxel.Editor(debug=True)"; do : ;done
+		--> has python-console, restarting works
+		or
+		2b: until python -m henxel --debug; do : ;done
+		--> no python-console, restarting works, has mainloop
+		
+		
+		When to use mainloop
+		If having problems seeing tracebacks.
+		Sometimes, like errors from eval-lines, errors from nested callbacks
+		(callback was defined in callback), has to use try-block,
+		but can try @debug -decorator first(more info below)
+		
+		
 	  - More info is in function: e.build_launch_test
 	
 	  - If using macOS and have issues with error messages, first read
 		section above about how to: Fix possible printing issue with macOS.
 		Then add @debug decorator on top of buggy callback, and then can
-		debug with print-lines also.
+		debug with print-lines also. Or launch in mainloop
+		
 		
 	  - @debug-decorator uses its own error-messages, which are more packed
 		than normal (less scrolling). But if editor is in mainloop, normal

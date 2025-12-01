@@ -9,7 +9,7 @@ debug = False
 
 try:
 	first_arg = sys.argv[1]
-	# Note: debug-session should be started using script
+	# Note: debug-session in Windows should be started using script
 	# found under /dev
 	if first_arg == '--debug':
 		debug = True

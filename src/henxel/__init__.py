@@ -230,7 +230,7 @@ from dataclasses import dataclass, field
 from typing import Any, List
 
 
-@dataclass
+@dataclass(repr=False)
 class Tab:
 	'''	Represents a tab-page of an Editor-instance
 	'''
@@ -245,7 +245,6 @@ class Tab:
 
 	# False in creation, normally pathlib.Path
 	filepath: Any = None
-
 
 	chk_sum: int = 0
 	oldlinenum: int = 0
@@ -740,6 +739,9 @@ class Editor(tkinter.Toplevel):
 
 			self.popup.add_command(label="  select all", command=self.select_all)
 			self.popup.add_command(label=" draw syntax", command=self.redraw_syntax)
+			self.popup.add_command(label="  chk syntax",
+				command=lambda kwargs={'curtab':True}: self.tab_has_syntax_error(**kwargs) )
+
 			self.popup.add_command(label="   strip one", command=self.strip_first_char)
 			self.popup.add_command(label="    open mod", command=self.view_module)
 			self.popup.add_command(label="      errors", command=self.show_errors)
@@ -2088,15 +2090,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return
 
 
-	def tab_has_syntax_error(self):
+	def tab_has_syntax_error(self, curtab=False):
 		flag_cancel = False
 
-		for tab in self.tabs:
+		if curtab:
+			if not self.save_forced(curtab=curtab): return 'break'
+			tabs = [self.tabs[self.tabindex]]
+		else: tabs = self.tabs
+
+
+		for tab in tabs:
 			if tab.filepath:
 				if '.py' in tab.filepath.suffix:
 
-					try:
-						ast.parse(tab.contents, filename=tab.filepath.resolve())
+					try: ast.parse(tab.contents, filename=tab.filepath.resolve())
 
 					except Exception as e:
 						err = '\t' +  e.__str__()
@@ -2105,7 +2112,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						flag_cancel = True
 						continue
 
-		return flag_cancel
+		if curtab:
+			if not flag_cancel: print('\nOK')
+			return 'break'
+		else: return flag_cancel
 
 
 	def do_test_launch(self, event=None):
@@ -2247,9 +2257,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# In debug and want restart, restart-scripts are in: dev/
 		# Debug-session should be started using those scripts
 		if restart:
-			if self.restart_script:
+			# macOS
+			if self.restart_script and not self.in_mainloop:
 				tmp = [self.restart_script]
 				subprocess.run(tmp)
+
 			else:
 				sys.exit(1)
 
@@ -2852,12 +2864,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			self.bind( "<Alt-w>", self.walk_tabs)
 			self.bind( "<Alt-q>", lambda event: self.walk_tabs(event, **{'back':True}) )
-
-			##
 			self.bind( "<Alt-Right>", self.walk_tabs)
 			self.bind( "<Alt-Left>", lambda event: self.walk_tabs(event, **{'back':True}) )
 
-			##
 
 			self.entry.bind("<Left>", self.check_sel)
 			self.entry.bind("<Right>", self.check_sel)
@@ -6583,7 +6592,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			in macOS, which are difficult to bind.
 		'''
 
-
 		# Pressed Cmd + Shift + arrow left or right.
 		# Want: select line from cursor.
 
@@ -6595,8 +6603,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			wid = event.widget
 
 			# Enable select from in entry
-			if wid == self.entry:
-				return
+			if wid == self.entry: return
 
 			# Enable select from in contents
 			elif wid == self.text_widget:
@@ -6640,8 +6647,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						self.after(i*5, lambda args=['<<SelectNextLine>>']:
 							self.text_widget.event_generate(*args) )
 
-				else:
-					return
+				else: return
 
 			return 'break'
 
@@ -6671,8 +6677,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.after(i*7, lambda args=['<<NextLine>>']:
 						self.text_widget.event_generate(*args) )
 
-			else:
-				return
+			else: return
 
 			return 'break'
 
@@ -6693,8 +6698,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				elif event.keysym == 'Left':
 					self.entry.event_generate('<<PrevWord>>')
 
-				else:
-					return
+				else: return
 
 			else:
 				res = self.move_by_words(event=event)
@@ -6719,8 +6723,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				elif event.keysym == 'Left':
 					self.entry.event_generate('<<SelectPrevWord>>')
 
-				else:
-					return
+				else: return
 
 			else:
 				res = self.select_by_words(event=event)
@@ -6750,8 +6753,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			elif wid == self.text_widget:
 				have_selection = len(self.text_widget.tag_ranges('sel')) > 0
 
-			else:
-				return
+			else: return
 
 			if have_selection:
 				if event.keysym == 'Right':
@@ -6760,11 +6762,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				elif event.keysym == 'Left':
 					self.check_sel(event=event)
 
-				else:
-					return
+				else: return
 
-			else:
-				return
+			else: return
 
 			return 'break'
 
@@ -9521,7 +9521,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			print(e)
 
 
-	def save_forced(self):
+	def save_forced(self, curtab=False):
 		''' Called from run() or quit_me()
 
 			If python-file, convert indentation to tabs.
@@ -9545,8 +9545,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			last_state = self.state
 
 
+		if curtab: tabs = [self.tabs[self.tabindex]]
+		else: tabs = self.tabs
+
+
 		res = True
-		for tab in self.tabs:
+		for tab in tabs:
 			if tab.type == 'normal':
 
 				try:
@@ -9584,7 +9588,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tab.position = '1.0'
 
 
-		self.save_tags()
+		if not curtab: self.save_tags()
 		return res
 
 
@@ -9765,12 +9769,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Not creating a new file
 		else:
-			# Skip disk-writing
 			# Q: When this happens?
 			# A: Pressing Save and fpath_in_entry == oldtab.filepath
 			#    that is, file exist already on disk
 			if not activetab:
-				return True
+				# --> enable sync tab to disk (=='intuitive save-button behaviour')
+				res = self.save_forced(curtab=True)
+				if res: print('\nOK')
+				return res
 
 			# NOTE: oldtab.contents is updated at beginning.
 			# Closing tab or loading file
