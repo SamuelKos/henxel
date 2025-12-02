@@ -561,6 +561,14 @@
 		
 		and it will exit to python debugger after your breakpoint.
 		
+		
+	Select range
+	  - Start goto line and use comma "," to select range, like:
+	
+		10,30(normal) or ,33 (from ins, to 33) or 1, (from 1, to ins )
+		or ,+2 (from ins, to ins+2) or -2,end-2 (from ins-2, to end-2)
+		Empty means insert and -+ is counted from it.
+
 
 	Developing
 	  - To automate check syntax, exit editor, reopen python and editor

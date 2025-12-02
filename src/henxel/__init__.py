@@ -8809,7 +8809,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			### Stage 2 End ###
 
 
-		# Quick fix for: returning multiline string
+		# Quick fix for: Function could return multiline string
 		if pos == 'end': pos = scope_end_fallback
 
 		pos = self.text_widget.index('%s lineend' % pos)
@@ -8827,6 +8827,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.text_widget.config(state='normal')
 		self.state = 'normal'
+
+		# Don't leave selection --> esc_override works right away
+		if len(self.text_widget.tag_ranges('sel')) > 0:
+			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 		self.cursor_frame.place_forget()
 
@@ -9036,8 +9040,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			When given negative number between -1 - -tkinter.END or so,
 			start counting from tkinter.END towards beginning and
-			go to that line.
+			go to that line. -1 and empty: go to end.
 
+
+			If there is comma ",", then do select range, like:
+
+			1,3(normal) or ,33 (from ins, to 33) or 1, (from 1, to ins )
+			or ,+2 (from ins, to ins+2) or -2,end-2 (from ins-2, to end-2)
+			empty means then insert and -+ is counted from it
 		'''
 
 		try:
@@ -9046,6 +9056,32 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			idx = self.entry.len_prompt
 			tmp = tmp[idx:].strip()
 
+			# Enable select range Begin
+			def get_index(index_string):
+				s = index_string.strip()
+				if s == '': return 'insert'
+				elif 'end' in s:
+					if '-' in s:
+						s = s.split('-')[1]
+						return 'end -%s lines' % s
+					else: return 'end'
+
+				elif '-' in s: return 'insert -%s lines' % s[1:]
+				elif '+' in s: return 'insert +%s lines' % s[1:]
+				else: return s + '.0'
+
+
+			if ',' in tmp:
+				tmp = tmp.split(',')
+				s,e = tmp[:2]
+				if s == e == '': return self.stop_gotoline()
+				s,e = map(get_index, [s,e])
+
+				self.text_widget.tag_remove('sel', '1.0', 'end')
+				self.text_widget.tag_add('sel', s, e)
+				self.tabs[self.tabindex].position = e
+				return self.stop_gotoline(select=True)
+			## Enable select range End
 
 			if tmp in ['-1', '']:
 				line = tkinter.END
@@ -9057,10 +9093,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if int(tmp[1:]) < int(self.entry.endline):
 					line = self.entry.endline + '.0 -%s lines' % tmp[1:]
-				else:
-					line = tkinter.END
-			else:
-				line = tkinter.INSERT
+				else: line = tkinter.END
+			else: line = tkinter.INSERT
 
 			self.tabs[self.tabindex].position = line
 
@@ -9072,7 +9106,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
-	def stop_gotoline(self, event=None):
+	def stop_gotoline(self, event=None, select=False):
 		self.state = 'normal'
 		self.bind("<Escape>", self.esc_override)
 
@@ -9095,8 +9129,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.wait_for(100)
 			self.ensure_idx_visibility(line)
 
-			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
-
+			if not select:
+				self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 		except tkinter.TclError:
 			curtab.position = '1.0'
@@ -9105,6 +9139,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def gotoline(self, event=None):
+		''' Go or select lines
+		'''
 		if self.state not in ['normal']:
 			self.bell()
 			return 'break'
@@ -9142,7 +9178,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 
 		#print(i,S,P)
-		max_idx = self.entry.len_prompt + len(self.entry.endline) + 1
+		max_idx = self.entry.len_prompt + 2*len(self.entry.endline) + 9
+		# if lastline = 1234 --> 2*4
+		# end-1234,end-1232 --> 2*end- == 2*4
+		# ',' == 1
 
 		if int(i) < self.entry.len_prompt:
 			self.entry.selection_clear()
@@ -9153,7 +9192,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		elif len(P) > max_idx:
 			return S == ''
 
-		elif S.isdigit() or S == '-':
+		elif S.isdigit() or S in '-+,end':
 			return True
 
 		else:
