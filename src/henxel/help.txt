@@ -1,7 +1,7 @@
 		------------------------------------------------------
 		
 		
-		While searching:
+	[2] While searching:
 			Ctrl-n  Next match
 			Ctrl-p  Prev match
 			Ctrl-Tab   Insert Tab
@@ -45,7 +45,7 @@
 	*----------------------------------------------------*
 	
 	
-	When is my file Saved to Disk?
+[3] When is my file Saved to Disk?
 	
 		All tabs are saved to disk when:
 		  - closing program, also configurations
@@ -91,7 +91,7 @@
 		of some function.
 		
 	  
-	Save-button
+[4] Save-button
 	  - To create a new file, add filename to entry and press save.
 	  	This creates an empty file like 'touch'. This is done to
 		ensure filepath is ok. Contents will be saved to disk in
@@ -151,8 +151,32 @@
 	  - Long selection: if cursor is not visible,
 		to show wanted side of selection, toggle left/right -keys
 
-
-	Refreshing syntax-highlighting
+	
+[5] Execute part of code in Python-console
+	  - Remember to put import-lines before the desired code-blocks. Then
+		just select whole thing, copy and paste to console. You may have
+		to press Return before last block executes. This is very useful,
+		compared to writing all that in console is much more difficult.
+		You might need to reduce indentation.
+	
+	
+[6] Running file
+	  - input from stdin does not work, so use test-data for that.
+	  
+	  - Editor freezes when running a program. So if you are testing
+		for possible runtime-errors, keep that in mind. You should
+		be able to terminate your program with ctrl-c from python-console.
+	
+	  - If you know where in your code that runtime-error occurs, put
+		breakpoint() there, exit editor and python-console and run
+		from terminal:
+		
+		python program_with_error.py
+		
+		and it will exit to python debugger after your breakpoint.
+		
+	
+[7] Refreshing syntax-highlighting
 	  - If highlighting looks wierd, choose 'draw syntax' from popup-menu.
 	  - Note that it might not get any better if there is some
 		syntax-error in the code. Fix the error then redraw.
@@ -164,7 +188,22 @@
 		and then deleting it. Multiline strings: fix string, redraw.
 
 	
-	Bookmarks
+[8] Check syntax
+	  - Of current tab: from popup-menu: "chk syntax"
+	  - Of all open py-files: popup: run or test-launch
+		or, if don't want run:
+		e.save_forced() --> True if no saving errors, then:
+		e.tab_has_syntax_error() --> False if no syntax errors
+	  
+	  Should syntax of open py-files be checked at exit?
+	  e.check_syntax_on_exit()
+	
+	  - Without arguments, return current setting
+	  - 1: do check (default)
+	  - 0: no check
+	
+	
+[9] Bookmarks
 	  - Are very useful
 	  - Create/remove bookmark with Cmd/Alt-p
 	  - Hide bookmarks with Cmd/Alt-u (if have too many, so it is easier
@@ -204,7 +243,7 @@
 		4: and if not want leave this new bookmark, again: Cmd/Alt-p
 		
 
-	Goto definition
+[10] Goto definition
 	  - Of function in current tab with Cmd/Alt-g
 		when cursor is at or in between: self.w<INS>alk_scope<INS>
 		(or if there is selection, uses it)
@@ -225,7 +264,7 @@
 		again, ctrl-np is a safe choise while searching.
 		
 	
-	Set editor size and position
+[11] Set editor size and position
 	  - help(e.use_geometry)
 	  - Editor is normally using default size and positioned on top-right corner
 	  - One can choose to let window manager do everything with:
@@ -262,26 +301,13 @@
 	  Then call: e.use_geometry('current')
 
 	
-	Set editor to launch fullscreen
+[12] Set editor to launch fullscreen
 	  e.editor_starts_fullscreen()  --> current value
 	  e.editor_starts_fullscreen(1) --> start fullscreen
 	  e.editor_starts_fullscreen(0) --> normal start
 	
 	
-	Check syntax at exit
-	  Should syntax of open py-files be checked at exit?
-	  e.check_syntax_on_exit()
-	
-	  - Without arguments, return current setting
-	  - 1: do check (default)
-	  - 0: no check
-		  
-	  If just want to check syntax of open py-files, independent of setting:
-	  e.save_forced() --> True if no saving errors
-	  e.tab_has_syntax_error() --> False if no syntax errors
-
-	
-	Set command to fetch current version control branch
+[13] Set command to fetch current version control branch
 	  - By default if using git, nothing needs to be done	
 	  - Command must be given as list. Command is tried before
 		setting. You can split command string to list with split,
@@ -295,7 +321,7 @@
 	  - On success, the new command is saved in configuration
 	
 	
-	Tab-completion
+[14] Tab-completion
 	  - When starting to write object-name that has already been used
 		somewhere in contents like:
 		
@@ -315,12 +341,12 @@
 	  - Only single 's' is needed to expand to: self. 
 
 	
-	Inspecting modules
+[15] Inspecting modules
 	  - Just write the name of the module, like tkinter.font in the editor,
 		select it and choose 'open mod' from popup-menu. Then search.
 				
 	
-	Pasting diff output to editor
+[16] Pasting diff output to editor
 	  - When want to paste diff output lines, they must be cleaned from
 		indicator characters, like "+" in git diff.
 		1: Paste lines 
@@ -331,7 +357,7 @@
 		4: Done
 		
 	
-	Fix possible printing issue with macOS
+[17] Fix possible printing issue with macOS
 	  - When using macOS, printing from editor might not work when not in
 		mainloop(Editor is not in mainloop when launched with e=henxel.Editor
 		from Python-console)
@@ -351,7 +377,16 @@
 	  - When in mainloop, normal printing is used even if this setting is on.
 		
 	
-	Guiding
+[18] Selecting range of lines
+	  - Start goto line and use comma "," to select range, like:
+	
+		1: "10,30" (normal) 2: ",33" (from ins, to 33) 3: "1," (from 1, to ins )
+		4: ",+2" (from ins, to ins+2) 5: "-2,end-2" (from ins-2, to end-2)
+	 
+	  - Empty means insert and -+ is counted from it.
+
+
+[19] Guiding
 	  - There are no guides, but cursor can be used as a poor mans guide.
 		Except that normal cursor is not very good guide, so:
 		Enter search, but don't actually search anything. Now put cursor
@@ -360,13 +395,13 @@
 		making it an excellent guide. Make check and esc away search afterwards.
 
 
-	Elide
+[20] Elide
 	  - Eliding is work-in-progress, it works but is not fully implemented:
 		For example, searching, gotoing is not done. Nested eliding, not done.
 		And is not preserved.
 	
 	
-	Search and Replace
+[21] Search and Replace
 		
 		Resources:
 			e.print_search_help()
@@ -389,7 +424,7 @@
 		If that won't help, below is couple more examples
 	
 	
-	SUBSTITUTION WITH REGEXP
+[22] Substitution with Regexp
 		
 	  - Example 1 Begin
 		If contents of tab is
@@ -444,7 +479,7 @@
 			Concatenate lines: "\n+"
 
 	
-	Set left margin
+[23] Set left margin
 	  A: Set total distance from left edge of editor window to start of text
 	  for normal window, and possible separate width for fullscreen.
 	  Recommended to use same margin for both, but they can be different
@@ -490,18 +525,18 @@
 	  Example: set_left_margin_gap(10, '2c')
 
 	
-	Set scrollbar width
+[24] Set scrollbar width
 	  - e.set_scrollbar_widths(width, elementborderwidth)
 	
 	
-	Set filedialog sorting order (directories, files)
+[25] Set filedialog sorting order (directories, files)
 	  - e.set_filedialog_sorting_order()	--> current values
 	  - e.set_filedialog_sorting_order(0,0)	--> both 'normal'
 	  - e.set_filedialog_sorting_order(1,1)	--> both reversed
 	  - default is (1,0) (directories with capital first letter last)
 	
 	
-	Change tabsize
+[26] Change tabsize
 		Size can be 1-8, default is 4
 		
 		Change size for all files:
@@ -524,7 +559,7 @@
 		and saved with tabbed indentation after you for example close it.)
 	
 	
-	Export configuration	
+[27] Export configuration
 	  - If wanting to use current configuration on many environments,
 		it can be exported with e.export_config(). It sets e.geom to False
 		so one must do: e.use_geometry('default') after first launch with
@@ -537,40 +572,8 @@
 		2: Start new project 3: cd mynew_project/my_python_venv_folder
 		4: cp path_to_exported_conf . 5: launch henxel
 	
-	
-	Execute part of the code from editor in Python-console
-	  - Remember to put import-lines before the desired code-blocks. Then
-		just select whole thing, copy and paste to console. You may have
-		to press Return before last block executes. This is very useful,
-		compared to writing all that in console is much more difficult.
-		You might need to reduce indentation.
-	
-	
-	Running file
-	  - input from stdin does not work, so use test-data for that.
-	  
-	  - Editor freezes when running a program. So if you are testing
-		for possible runtime-errors, keep that in mind. You should
-		be able to terminate your program with ctrl-c from python-console.
-	
-	  - If you know where in your code that runtime-error occurs, put
-		breakpoint() there, exit editor and python-console and run
-		from terminal:
-		
-		python program_with_error.py
-		
-		and it will exit to python debugger after your breakpoint.
-		
-		
-	Select range
-	  - Start goto line and use comma "," to select range, like:
-	
-		10,30(normal) or ,33 (from ins, to 33) or 1, (from 1, to ins )
-		or ,+2 (from ins, to ins+2) or -2,end-2 (from ins-2, to end-2)
-		Empty means insert and -+ is counted from it.
 
-
-	Developing
+[28] Developing
 	  - To automate check syntax, exit editor, reopen python and editor
 		start editor with: e=henxel.Editor(debug=True).
 		Then Cmd/Control-q will do syntax checking on all open python-files

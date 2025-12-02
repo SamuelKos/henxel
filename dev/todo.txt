@@ -34,6 +34,9 @@ no?
 
 
 
+one time conf
+
+
 help mainloop vs console not done ############
 
 
@@ -56,6 +59,15 @@ is conf
 
 
 
+######################
+Help taglinks
+done
+
+to top button frame?
+##############
+
+
+goto_def no work with new def lines ##
 
 
 check replace \t #####

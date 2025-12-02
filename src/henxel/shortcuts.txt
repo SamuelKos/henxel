@@ -1,4 +1,16 @@
-		Keyboard shortcuts:
+	
+	------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+	[1] Keyboard shortcuts:
 		
 		
 		Alt-p	Toggle bookmark

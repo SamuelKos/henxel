@@ -1,4 +1,15 @@
-		Keyboard shortcuts:
+
+	------------------------------------------------------
+
+
+
+
+
+
+
+
+
+	[1] Keyboard shortcuts:
 		
 		
 		Cmd-p	Toggle bookmark

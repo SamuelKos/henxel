@@ -1091,6 +1091,7 @@ static unsigned char infopic_bits[] = {
 			self.help_tab = newtab
 			self.help_tab.type = 'help'
 			self.help_tab.text_widget.insert('insert', self.helptxt)
+			self.init_help_tags()
 			self.help_tab.text_widget.mark_set('insert', newtab.position)
 			self.help_tab.text_widget.see(newtab.position)
 			self.set_bindings(newtab)
@@ -10354,6 +10355,109 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.unbind( "<Button-1>", funcid=self.bid_mouse)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
+
+
+	def enter_help(self, tagname, event=None):
+		''' Used in help-page, when mousecursor enters hyperlink tagname.
+		'''
+		self.text_widget.config(cursor="hand2")
+		self.text_widget.tag_config(tagname, underline=1)
+
+
+	def leave_help(self, tagname, event=None):
+		''' Used in help-page, when mousecursor leaves hyperlink tagname.
+		'''
+		self.text_widget.config(cursor=self.name_of_cursor_in_text_widget)
+		self.text_widget.tag_config(tagname, underline=0)
+
+
+	def lclick_help(self, tagname, event=None):
+		'''	Used in help-page, when hyperlink tagname is clicked.
+		'''
+		self.goto_help_title(tagname)
+
+
+	def goto_help_title(self, tagname):
+		title_idx = int(tagname.split('-')[1])
+
+		# = "help_tag-%d" % i
+		w = self.help_tab.text_widget
+		patt = '[%d]' % title_idx
+		pos = '1.0'
+		try: pos = w.search(patt, pos, stopindex='end')
+		except tkinter.TclError: pos = 'insert'
+
+		w.see(pos)
+
+		return 'break'
+
+
+	def init_help_tags(self):
+		help_title_string = '''
+	Shortcuts
+
+
+	Searching in general
+	General about editor
+	About buttons
+
+	Execute part of code in Python-console
+	Running file
+	Fix syntax-highlighting
+	Check syntax
+
+	Bookmarks
+	Goto definition
+
+	Set editor size and position
+	Set editor to launch fullscreen
+	Set command to fetch current version control branch
+
+	Tab-completion
+	Inspecting modules
+	Pasting diff output to editor
+	Fix possible printing issue with macOS
+	Selecting range of lines
+	Guides
+	Elide(folding)
+
+	Search and Replace in more detail
+	Substitution with Regexp
+
+	Set left margin
+	Set scrollbar width
+	Set filedialog sorting order (directories, files)
+	Change tabsize
+	Export configuration
+
+
+	Developing
+'''
+
+		w = self.help_tab.text_widget
+
+		w.mark_set('insert', '1.0')
+
+		i = 1
+		for line in help_title_string.splitlines(keepends=True):
+			if line.isspace():
+				w.insert('insert', '\n')
+				continue
+
+			tagname = "help_tag-%d" % i
+			w.tag_config(tagname)
+
+			w.tag_bind(tagname, "<ButtonRelease-1>",
+				lambda event, arg=tagname: self.lclick_help(arg, event))
+
+			w.tag_bind(tagname, "<Enter>",
+				lambda event, arg=tagname: self.enter_help(arg, event))
+
+			w.tag_bind(tagname, "<Leave>",
+				lambda event, arg=tagname: self.leave_help(arg, event))
+
+			w.insert('insert', line, tagname)
+			i += 1
 
 
 	def help(self, event=None):
