@@ -27,6 +27,8 @@ or for tracabacks from tkinter callbacks
 
 module docstring ######
 
+
+
 e.edit_search_set no need dash like: -regexp ###
 ctrl-r regexp
 ctrl-i insert
@@ -34,7 +36,16 @@ no?
 
 
 
-one time conf
+#######
+one time conf:
+when started from terminal with filapaths:
+python -m henxel filepath1 filepath2
+Use one time conf(original conf remains untouched) to enable
+'adhoc behaviour' editor, like normal editor: 
+######
+
+
+
 
 
 help mainloop vs console not done ############
@@ -43,7 +54,6 @@ help mainloop vs console not done ############
 
 check mainloop etc: set_version_control_cmd() ###
 
-mainloop open files in argv ####
 
 run(
 print(Program run start)
@@ -54,8 +64,51 @@ default is False
 added to: [sys.executable, -m] ######
 is conf
 
+
+
 run timeout
 is conf
+####################
+max_time = self.timeout
+flag_success = True
+tmp = self.build_launch_test() # bytes
+d = dict(capture_output=True, timeout=max_time)
+
+# This try block catches only timeouts
+try:
+	p = subprocess.run([sys.executable, '-'], input=tmp, **d)
+
+except subprocess.TimeoutExpired as e:
+	print('TIMED OUT')
+	print(e)
+	return False
+
+# Now, get real Errors
+try: p.check_returncode()
+
+except subprocess.CalledProcessError:
+	print('\n' + p.stderr.decode().strip())
+	print('\nLAUNCHTEST:  FAIL')
+	print(30*'-')
+	flag_success = False
+
+out = p.stdout.decode().strip()
+if len(out) > 0: print(out)
+if flag_success:
+	print('LAUNCHTEST:  OK')
+	print(30*'-')
+
+########################
+
+debug:
+File '/Users/samuel/pyyttoni/hub/henxel/src/henxel/decorators.py', line 111
+normal
+File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/decorators.py", line 89, in wrapper_debug
+
+
+
+
+
 
 
 

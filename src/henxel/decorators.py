@@ -121,7 +121,7 @@ def debug(func):
 					e = e[1:-1]
 
 					# Add '()' to indicate scope and
-					# indent of one spaces
+					# indent of one space
 					e = ' ' + e0 + e + '()'
 
 					# Put scope in own line

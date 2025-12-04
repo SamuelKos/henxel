@@ -348,6 +348,7 @@ class Editor(tkinter.Toplevel):
 	# Normal stuff
 	alive = False
 	in_mainloop = False
+	files_to_be_opened = False
 
 	pkg_contents = None
 	no_icon = True
@@ -546,6 +547,13 @@ class Editor(tkinter.Toplevel):
 
 			# Used in check_caps
 			self.to_be_cancelled = list()
+
+			# Used to bypass conf in such a way it enables use of editor adhoc(normally)
+			# like: python -m henxel file1 file2
+			self.one_time_conf = False
+			if self.files_to_be_opened:
+				self.one_time_conf = True
+
 
 			self.flag_check_lineheights = False
 			self.ln_string = ''
@@ -748,7 +756,8 @@ class Editor(tkinter.Toplevel):
 			self.popup.add_command(label="        help", command=self.help)
 
 
-			# Get conf
+			# Get conf #####################
+			conf_load_success = False
 			string_representation = None
 			data, p = None, None
 
@@ -768,7 +777,24 @@ class Editor(tkinter.Toplevel):
 
 			if data:
 				self.oldconf = string_representation
-				self.load_config(data)
+				conf_load_success = self.load_config(data)
+
+			###############################################
+			# But not a great success
+			if conf_load_success and self.tabindex == None:
+
+				if len(self.tabs) == 0:
+					newtab = Tab(self.create_textwidget())
+					newtab.active = True
+					self.tabindex = 0
+					self.tabs.insert(self.tabindex, newtab)
+
+				# Recently active normal tab is gone
+				else:
+					self.tabindex = 0
+					self.tabs[self.tabindex].active = True
+			## Get conf End ################################
+
 
 
 			# pass info to decorators-module
@@ -856,8 +882,9 @@ class Editor(tkinter.Toplevel):
 			n['sel'] = ['#c3c3c3', black]
 
 
+
 			## No conf Begin ########
-			if self.tabindex == None:
+			if not conf_load_success:
 
 				self.curtheme = 'night'
 				self.themes = copy.deepcopy(self.default_themes)
@@ -906,7 +933,7 @@ class Editor(tkinter.Toplevel):
 			#################
 			self.text_frame.config(bg=self.bgcolor)
 
-			# Configure Text-widgets of tabs and find active tab
+			# Configure Text-widgets of tabs
 			self.config_tabs()
 
 			#################################
@@ -1146,7 +1173,7 @@ static unsigned char infopic_bits[] = {
 
 						# if length of file has changed
 						# count tokens from scratch
-						if p.exists() and tab.chk_sum == len(tab.contents):
+						if not self.one_time_conf and p.exists() and tab.chk_sum == len(tab.contents):
 							tags_from_cache.append(tab)
 						else:
 							if not p.exists(): print('Missing cache-file')
@@ -1168,9 +1195,9 @@ static unsigned char infopic_bits[] = {
 			# under 20 years old. Still, init takes much less time if using
 			# really slow computer like rpi1.
 			if len(tags_from_cache) > 0:
-				t1 = int(self.root.tk.eval('clock milliseconds'))
+				#t1 = int(self.root.tk.eval('clock milliseconds'))
 				success = self.load_tags(tags_from_cache)
-				t2 = int(self.root.tk.eval('clock milliseconds'))
+				#t2 = int(self.root.tk.eval('clock milliseconds'))
 				#print(t2-t1, 'ms')
 
 				if not success:
@@ -2245,7 +2272,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			geom_current = self.get_geometry()
 			if self.geom != geom_current: self.geom = geom_current
 
-		self.save_config()
+
+		if not self.one_time_conf: self.save_config()
 
 		self.config(bg='') # Prevent flashing if slow machine
 		self.update_idletasks()
@@ -3168,8 +3196,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tag_link
 			stop_help
 			stop_show_errors
-			loadfile	also calls remove_bookmarks() before this
-
 		'''
 
 		tab.active = True
@@ -3294,7 +3320,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def load_config(self, data):
 
 		textfont, menufont, keyword_font, linenum_font = self.fonts_exists(data)
-		self.set_config(data, textfont, menufont, keyword_font, linenum_font)
+		return self.set_config(data, textfont, menufont, keyword_font, linenum_font)
 
 
 	def fonts_exists(self, data):
@@ -3475,7 +3501,32 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if not self.lastdir.exists():
 				self.lastdir = None
 
-		self.tabs = [ Tab(self.create_textwidget(), **items) for items in d['tabs'] ]
+
+		if self.one_time_conf:
+			# Started editor from terminal: python -m henxel file1 file2..
+			# --> skip messing original tabs and bookmarks by using:
+			# One time conf begin
+
+			# Intention: enable use of editor as adhoc(normal) editor
+
+			tmppath = pathlib.Path().cwd()
+
+			# Create tab for: 'to be opened' -file
+			for fname in self.files_to_be_opened:
+				newtab = Tab(self.create_textwidget())
+				newtab.filepath = tmppath / fname
+				newtab.filepath = newtab.filepath.resolve().__str__()
+				newtab.type = 'normal'
+				self.tabs.append(newtab)
+
+			self.tabs[0].active = True
+			### One time conf End ###
+
+
+		# Load tabs from conf
+		else:
+			self.tabs = [ Tab(self.create_textwidget(), **items) for items in d['tabs'] ]
+
 
 		# To avoid for-loop breaking, while removing items from the container being iterated,
 		# one can iterate over container[:], that is: self.tabs[:],
@@ -3509,6 +3560,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if tab.active == True:
 				self.tabindex = i
 				break
+
+
+		return True
+
+		## set_config End #########
 
 
 	def create_textwidget(self):
@@ -3545,21 +3601,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def config_tabs(self):
-
-		if self.tabindex == None:
-
-			if len(self.tabs) == 0:
-				newtab = Tab(self.create_textwidget())
-				newtab.active = True
-				self.tabindex = 0
-				self.tabs.insert(self.tabindex, newtab)
-
-			# Recently active normal tab is gone
-			else:
-				self.tabindex = 0
-				self.tabs[self.tabindex].active = True
-
-
 		for tab in self.tabs: self.set_textwidget(tab)
 
 
@@ -9289,7 +9330,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.entry.insert(0, curtab.filepath)
 				self.entry.xview_moveto(1.0)
 
-			return
+			return False
 
 
 		self.auto_update_syntax_stop()
@@ -9349,10 +9390,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.entry.insert(0, curtab.filepath)
 				self.entry.xview_moveto(1.0)
 
+			self.text_widget.focus_set()
+			self.auto_update_syntax_continue()
+			return False
+
 
 		self.text_widget.focus_set()
 		self.auto_update_syntax_continue()
-		return
+		return True
 
 
 	def map_filedialog(self, use_tracefunc=True):
@@ -9628,7 +9673,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tab.position = '1.0'
 
 
-		if not curtab: self.save_tags()
+		if not curtab and not self.one_time_conf: self.save_tags()
 		return res
 
 
