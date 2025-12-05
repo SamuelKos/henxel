@@ -92,13 +92,14 @@ importflags.PRINTER['current'] = DEFAUL_PRINTER
 
 
 # Used on debugging
-from .decorators import do_twice, debug
+from .decorators import do_twice, debug, print_traceback
 
 # From this package
 from . import wordexpand
 from . import changefont
 from . import fdialog
 
+import traceback
 
 ##import logging
 ##logger = logging.getLogger('henxel')
@@ -628,6 +629,12 @@ class Editor(tkinter.Toplevel):
 			##### Search related variables End
 
 
+			self.timeout = 2
+			self.popup_run_action = 0 # use == in place of = to test init err in mainloop etc
+			# Used in set_popup_run_action
+			self.popup_run_action_idx = 2
+			self.module_run_name = None
+			self.custom_run_cmd = None
 			self.errlines = list()
 			self.err = False
 
@@ -724,13 +731,10 @@ class Editor(tkinter.Toplevel):
 
 			self.popup = tkinter.Menu(self, tearoff=0, bd=0, activeborderwidth=0)
 
-
 			if self.debug:
 				self.popup.add_command(label="test", command=lambda: self.after_idle(self.do_test_launch))
 				self.popup.add_command(label="     restart",
 						command=lambda: self.after_idle(self.restart_editor))
-				self.popup.add_command(label="         run", command=self.run)
-
 				# Next lines left as example of what does not work if doing restart in quit_me
 				#self.popup.add_command(label="test", command=self.quit_me)
 				#self.popup.add_command(label="     restart", command=self.restart_editor)
@@ -741,7 +745,6 @@ class Editor(tkinter.Toplevel):
 			else:
 				self.popup.add_command(label="        copy", command=self.copy)
 				self.popup.add_command(label="       paste", command=self.paste)
-				self.popup.add_command(label="         run", command=self.run)
 				self.popup.add_command(label="##   comment", command=self.comment)
 				self.popup.add_command(label="   uncomment", command=self.uncomment)
 
@@ -754,6 +757,8 @@ class Editor(tkinter.Toplevel):
 			self.popup.add_command(label="    open mod", command=self.view_module)
 			self.popup.add_command(label="      errors", command=self.show_errors)
 			self.popup.add_command(label="        help", command=self.help)
+
+			self.update_popup_run_action()
 
 
 			# Get conf #####################
@@ -831,7 +836,7 @@ class Editor(tkinter.Toplevel):
 			orange = r'#e95b38'
 			yellow = r'#d0d101'
 			gray = r'#508490'
-			#plain_blackk = r'#000000'
+			#plain_black = r'#000000' # Should not be used unless there is 'hardware tint'(old/'bad' screen)
 			black = r'#221247' # blue tint
 			white = r'#d3d7cf'
 
@@ -1337,8 +1342,9 @@ static unsigned char infopic_bits[] = {
 					# did not yet had been created.
 					print(err)
 
-				# Give info about recovering from unlaunchable state
-				msg = '''
+				if self.debug:
+					# Give info about recovering from unlaunchable state
+					info_start = '''
 ################################################
 Editor did not Launch!
 
@@ -1348,14 +1354,37 @@ help(henxel.stash_pop) Begin
 
 '''
 
-				ending = '''
+				else:
+					info_start = '''
+################################################
+Editor did not Launch!
+
+Maybe upgraded henxel, and using old conf?
+
+Try deleting your conf-file from venv-folder:
+henxel.cnf and henxel.cache
+Then restart python-console and editor
+'''
+
+
+				info_end = '''
 ################################################
 Error messages Begin
 '''
 
-				print(msg + stash_pop.__doc__.replace('\t', '  ') + ending)
+				if self.debug:
+					info = info_start + stash_pop.__doc__.replace('\t', '  ') + info_end
+					print(info)
+					#print_traceback(init_err)
+					# This seems to work
+					traceback.print_exception(init_err)
+					# This is used to break debug-restart-loop
+					sys.exit(0)
 
-			raise init_err
+				else:
+					info = info_start + info_end
+					print(info)
+					raise init_err
 
 			############################# init End ##########################
 
@@ -1983,7 +2012,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			flag_success = True
 			print('LAUNCHTEST, %s, START' % mode)
 
-			max_time = 5
+			max_time = 4
 			tmp = self.build_launch_test(mode)
 			d = dict(capture_output=True, timeout=max_time)
 
@@ -2033,12 +2062,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		if cmd_as_list == None:
 			print(self.version_control_cmd)
-
-		elif type(cmd_as_list) != list: return
+			return
+		elif type(cmd_as_list) != list:
+			self.bell()
+			return
 
 
 		d = dict(stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		if self.os_type == 'mac_os': d = dict(capture_output=True)
+		d['timeout'] = 3
 		has_err = False
 		out = ''
 
@@ -2051,6 +2083,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				except subprocess.CalledProcessError:
 					has_err = True
 
+			# Note: catches also subprocess.TimeoutExpired
 			except Exception as ee:
 				print(ee.__str__())
 				return
@@ -2064,15 +2097,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			out = p.stdout.decode().strip()
 
 		else:
-			# https://docs.python.org/3/library/subprocess.html
-			p = subprocess.run(cmd_as_list, **d)
+			try:
+				p = subprocess.run(cmd_as_list, **d)
+			except subprocess.TimeoutExpired:
+				print('TIMED OUT')
+				return
+
 			err = p.stderr.decode()
 			if len(err) > 0:
 				print(err)
 				return
 
-			else:
-				out = p.stdout.decode().strip()
+			else: out = p.stdout.decode().strip()
+
 
 		if len(out) > 0:
 			branch = out
@@ -2080,6 +2117,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.branch = branch
 			self.version_control_cmd = cmd_as_list
 			self.restore_btn_git()
+
 
 
 	def debug_always_use_own_error_handler(self, setting=None):
@@ -2112,9 +2150,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			0: no check
 		'''
 
-		if setting is None: print(self.check_syntax)
+		if setting is None: pass
 		elif setting: self.check_syntax = True
 		else: self.check_syntax = False
+		print(self.check_syntax)
 		return
 
 
@@ -3381,6 +3420,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['spacing_linenums'] = self.spacing_linenums
 		d['start_fullscreen'] = self.start_fullscreen
 		d['fdialog_sorting'] = self.dir_reverse, self.file_reverse
+		d['popup_run_action'] = self.popup_run_action
+		d['run_timeout'] = self.timeout
+		d['run_module'] = self.module_run_name
+		d['run_custom'] = self.custom_run_cmd
 		d['check_syntax'] = self.check_syntax
 		d['fix_mac_print'] = self.fix_mac_print
 		d['want_ln'] = self.want_ln
@@ -3475,8 +3518,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.dir_reverse, self.file_reverse = d['fdialog_sorting']
 		self.version_control_cmd = d['version_control_cmd']
 		self.start_fullscreen = d['start_fullscreen']
+		self.popup_run_action = d['popup_run_action']
 		self.check_syntax = d['check_syntax']
 		self.fix_mac_print = d['fix_mac_print']
+		self.module_run_name = d['run_module']
+		self.custom_run_cmd = d['run_custom']
+		self.timeout = d['run_timeout']
 		self.want_ln = d['want_ln']
 		self.syntax = d['syntax']
 		self.geom = d['geom']
@@ -4230,9 +4277,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Theme Related Begin
 
 	def editor_starts_fullscreen(self, value=None):
-		if value == None: print(self.start_fullscreen)
+		if value == None: pass
 		elif value: self.start_fullscreen = True
 		else: self.start_fullscreen = False
+		print(self.start_fullscreen)
 
 
 	def get_geometry(self):
@@ -4293,10 +4341,15 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if geom_string in (False, 0, ''):
 			self.geom = False
+			print('Use geometry:', False)
 			print('Geometry changes are applied at next restart')
 			return
-		elif type(geom_string) != str: return
-		elif geom_string == self.geom: return
+		elif type(geom_string) != str:
+			self.bell()
+			return
+		elif geom_string == self.geom:
+			self.bell()
+			return
 		elif geom_string == 'default':
 			geom_string = self.geom = '+%d+0'
 			if self.os_type == 'windows':
@@ -4305,6 +4358,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tests = (self.os_type != 'windows', self.geom == '+%d+0', diff > 0)
 			if all(tests): self.geometry('+%d+0' % diff )
 			else: self.geometry(self.geom)
+			print('Resetting to default geometry:', self.geom)
 			print('Possible size change is reset to default at next restart')
 			return
 
@@ -4330,15 +4384,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		''' width is integer between 1-8
 		'''
 
-		if type(width) != int: return
-		elif width == self.ind_depth: return
-		elif not 0 < width <= 8: return
+		if type(width) != int:
+			self.bell()
+			return
+		elif width == self.ind_depth:
+			self.bell()
+			return
+		elif not 0 < width <= 8:
+			self.bell()
+			return
 
 
 		self.ind_depth = width
 		self.tab_width = self.textfont.measure(self.ind_depth * self.tab_char)
 		for tab in self.tabs + [self.help_tab, self.err_tab]:
 			tab.text_widget.config(tabs=(self.tab_width, ))
+		print(self.ind_depth)
 
 
 	def is_fullscreen(self):
@@ -4395,6 +4456,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.is_fullscreen(): kwargs={'width':self.margin_fullscreen}
 		else: kwargs={'width':self.margin}
 
+		print('normal:', self.margin, 'fullscreen:', self.margin_fullscreen)
 		self.ln_widget.config(**kwargs)
 
 
@@ -4447,16 +4509,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				print(e)
 				return
 
+		print('normal:', self.gap, 'fullscreen:', self.gap_fullscreen)
 
 		gap = self.gap
 		if self.is_fullscreen(): gap = self.gap_fullscreen
 		self.ln_widget.tag_config('justright', rmargin=gap)
 
 
-	def set_scrollbar_widths(self, width, elementborderwidth):
+	def set_scrollbar_widths(self, width=None, elementborderwidth=None):
 		'''	Change widths of scrollbar
 		'''
 
+		if width is None and elementborderwidth is None: pass
+		elif type(width) != int or type(elementborderwidth) != int:
+			self.bell()
+			return
+
+		print(width, elementborderwidth)
 		self.scrollbar_width = width
 		self.elementborderwidth = elementborderwidth
 
@@ -5284,7 +5353,89 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		### tag_link End ######
 
 
-	def run(self):
+	def update_popup_run_action(self):
+
+		options = dict()
+		options['label'] = "         run"
+		options['command'] = self.run
+
+		if self.popup_run_action == 0: pass
+
+		elif self.popup_run_action == 1:
+			options['label'] = "  run module"
+			options['command'] = lambda kwargs={'module':True}: self.run(**kwargs)
+
+		elif self.popup_run_action == 2:
+			options['label'] = "  run custom"
+			options['command'] = lambda kwargs={'custom':True}: self.run(**kwargs)
+
+		self.popup.delete(self.popup_run_action_idx)
+		self.popup.insert_command(self.popup_run_action_idx, **options)
+
+
+	def set_popup_run_action(self, choice=None):
+		'''	Set run-action to be executed from popup-menu.
+			Choices are: False: default run-file
+			1: run-module
+			2: run-custom
+		'''
+		if choice is None: pass
+		elif not choice: self.popup_run_action = 0
+		elif type(cmd) != int:
+			self.bell()
+			return
+		elif choice == 1: self.popup_run_action = 1
+		else: self.popup_run_action = 2
+
+		self.update_popup_run_action()
+		print(self.custom_run_cmd)
+		return
+
+
+	def set_custom_run_cmd(self, cmd=None):
+		'''	Set command to be executed from popup-menu.
+			Command must be list.
+			Setting doesn't do test-run to verify cmd.
+		'''
+		if cmd is None: pass
+		elif not cmd: self.custom_run_cmd = None
+		elif type(cmd) != list:
+			self.bell()
+			return
+		else: self.custom_run_cmd = cmd
+		print(self.custom_run_cmd)
+		return
+
+
+	def set_run_module(self, name=None):
+		'''	Set name of module, to be used on test-runs.
+			Setting doesn't do test-import to verify module.
+		'''
+		if name is None: pass
+		elif not name: self.module_run_name = None
+		elif type(name) != str:
+			self.bell()
+			return
+		else: self.module_run_name = name
+		print(self.module_run_name)
+		return
+
+
+	def set_timeout(self, timeout=None):
+		'''	Set timeout for test-runs,
+			default is 2 (seconds)
+		'''
+		if timeout is None: pass
+		elif not timeout: self.timeout = None
+		elif type(timeout) != int:
+			self.bell()
+			return
+		else: self.timeout = timeout
+		print(self.timeout)
+		return
+
+
+	def run(self, module=False, custom=False):
 		'''	Run file currently being edited.
 		'''
 		curtab = self.tabs[self.tabindex]
@@ -5309,14 +5460,45 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			d['input'] = tmp
 			source = '-'
 
+		d['timeout'] = self.timeout
+
+
+
+		# Normal
+		cmd = [sys.executable, source]
+
+		# Run module
+		if module:
+			if self.module_run_name:
+				cmd = [sys.executable, '-m', self.module_run_name]
+			else:
+				self.bell()
+				return
+
+		# Run custom
+		elif custom:
+			if self.custom_run_cmd:
+				cmd = self.custom_run_cmd
+			else:
+				self.bell()
+				return
+
+
 
 		err = ''
+
 
 		# fix for macos printing issue
 		if self.os_type == 'mac_os' and not self.in_mainloop and self.fix_mac_print:
 			has_err = False
-			p = subprocess.run([sys.executable, source], **d)
 
+			# First check for timeout
+			try: p = subprocess.run(cmd, **d)
+			except subprocess.TimeoutExpired as e:
+				print('TIMED OUT after %ds' % self.timeout)
+				return
+
+			# Check for errors
 			try: p.check_returncode()
 
 			except subprocess.CalledProcessError:
@@ -5327,13 +5509,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if has_err: err = p.stderr.decode()
 
 		else:
-			# https://docs.python.org/3/library/subprocess.html
-			err = subprocess.run([sys.executable, source], **d).stderr.decode()
+			#err = subprocess.run([sys.executable, source], **d).stderr.decode()
+
+			try:	p = subprocess.run(cmd, **d)
+			except subprocess.TimeoutExpired as e:
+				print('TIMED OUT after %ds' % self.timeout)
+				return
+
+			try: p.check_returncode()
+			except subprocess.CalledProcessError:
+				has_err = True
+
+			if has_err: err = p.stderr.decode()
 
 
 		self.err = False
-		if len(err) != 0:
-			self.err = err.splitlines()
+		if len(err) != 0: self.err = err.splitlines()
 
 		self.show_errors()
 
@@ -7681,7 +7872,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			to fix possible printing issue when using macOS.
 			default is False
 		'''
-		if self.os_type != 'mac_os': return
+		if self.os_type != 'mac_os':
+			print('This is for macOS only')
+			self.bell()
+			return
 		if use == None: print(self.fix_mac_print)
 		elif use:
 			if self.fix_mac_print != True:
@@ -10423,16 +10617,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def goto_help_title(self, tagname):
+		# "help_tag-%d"
 		title_idx = int(tagname.split('-')[1])
-
-		# = "help_tag-%d" % i
 		w = self.help_tab.text_widget
 		patt = '[%d]' % title_idx
 		pos = '1.0'
 		try: pos = w.search(patt, pos, stopindex='end')
 		except tkinter.TclError: pos = 'insert'
 
+		self.wait_for(100)
 		w.see(pos)
+		self.wait_for(120)
+		self.flash_line(pos=pos)
 
 		return 'break'
 

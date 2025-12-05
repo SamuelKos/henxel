@@ -55,6 +55,44 @@ help mainloop vs console not done ############
 check mainloop etc: set_version_control_cmd() ###
 
 
+e.set_somesetting(somevalue) ########
+should print always current value
+
+highlight thickness
+
+
+setting console bind
+cmd-e?
+ctrl-a ctrl-k
+help
+
+
+
+
+
+
+########################
+self.popup_run_action = 0 # use == in place of = to test init err in mainloop etc   
+#########################
+
+debug.print_traceback(err) --> traceback.print_exception(err)?
+
+
+# This is lacking code lines
+decorators.py: print_traceback(err)
+
+
+
+
+
+help arrow left right --> back to top  ######
+
+
+search
+regexp insert
+fast toggle
+
+
 run(
 print(Program run start)
 print(Program run end)
@@ -102,7 +140,7 @@ if flag_success:
 
 debug:
 File '/Users/samuel/pyyttoni/hub/henxel/src/henxel/decorators.py', line 111
-normal
+normal:
 File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/decorators.py", line 89, in wrapper_debug
 
 

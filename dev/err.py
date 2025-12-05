@@ -6,7 +6,7 @@ import time
 print('before')
 time.sleep(2)
 print('before2')
-#time.sleep(2)
+time.sleep(2)
 
 # Not sure if prompt works
 #prompt='Enter: '
@@ -14,10 +14,10 @@ print('before2')
 # This dont work:
 #a=input('jou')
 # This works somehow, but not as much that it is recommended
-a=input()
-print('input was:', a)
+#a=input()
+#print('input was:', a)
 
 # Uncomment to test error-view
-#aa.f1()
+aa.f1()
 
 print('after')
