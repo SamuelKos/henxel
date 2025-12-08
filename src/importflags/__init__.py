@@ -60,14 +60,43 @@ Example use in module henxel with MyClass and my_func:
 		do something else with or without flags etc
 
 
-Currently this is used in debugging, for test-launching Editor,
-to set visibility of test-launch and to fix macOS printing issue.
+Currently this is used in debugging, test-launching Editor
+and for passing data to other modules
 '''
 
 FLAGS = False
 PRINTER = {'default':1, 'fixed':2, 'current':3}
 IN_MAINLOOP = False
-debug_use_own_error_handler = False
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

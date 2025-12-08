@@ -15,6 +15,9 @@ Below this: done ################################################
 
 
 
+walk_search_history
+currently initial offset of one  ###
+
 
 macos printing issue is partly because of using shell installed from brew
 --> don't install from brew
@@ -55,37 +58,35 @@ help mainloop vs console not done ############
 check mainloop etc: set_version_control_cmd() ###
 
 
-e.set_somesetting(somevalue) ########
-should print always current value
 
-highlight thickness
-
-
-setting console bind
-cmd-e?
-ctrl-a ctrl-k
-help
-
-
-
-
-
-
-########################
-self.popup_run_action = 0 # use == in place of = to test init err in mainloop etc   
-#########################
-
-debug.print_traceback(err) --> traceback.print_exception(err)?
 
 
 # This is lacking code lines
-decorators.py: print_traceback(err)
+decorators.py: print_traceback(err)  ############
+use module: traceback
 
 
 
 
+#######
+all: ['e.set_bindings', 'e.set_bindings_other', 'e.set_config',
+'e.set_custom_run_cmd', 'e.set_fdialog_widths',
+'e.set_filedialog_sorting_order', 'e.set_left_margin', 'e.set_left_margin_gap',
+'e.set_ln_widget_colors', 'e.set_popup_run_action', 'e.set_run_module',
+'e.set_scrollbar_widths', 'e.set_selection', 'e.set_syntags',
+'e.set_text_widget_colors', 'e.set_textwidget', 'e.set_timeout',
+'e.set_version_control_cmd']
+all: ['e.set_custom_run_cmd']
 
-help arrow left right --> back to top  ######
+######
+--> do eval:
+self.setting = Setting
+e = self.setting
+ee = self
+
+
+
+
 
 
 search
@@ -93,50 +94,18 @@ regexp insert
 fast toggle
 
 
-run(
-print(Program run start)
-print(Program run end)
 
-run_as_module(cmd_as_list):
+
+
+run_as_module()
 default is False
-added to: [sys.executable, -m] ######
-is conf
+check with some project with __main__.py ###
+done ok
+test with linux win
+run as module, macos if printing issue, use mainloop
 
 
 
-run timeout
-is conf
-####################
-max_time = self.timeout
-flag_success = True
-tmp = self.build_launch_test() # bytes
-d = dict(capture_output=True, timeout=max_time)
-
-# This try block catches only timeouts
-try:
-	p = subprocess.run([sys.executable, '-'], input=tmp, **d)
-
-except subprocess.TimeoutExpired as e:
-	print('TIMED OUT')
-	print(e)
-	return False
-
-# Now, get real Errors
-try: p.check_returncode()
-
-except subprocess.CalledProcessError:
-	print('\n' + p.stderr.decode().strip())
-	print('\nLAUNCHTEST:  FAIL')
-	print(30*'-')
-	flag_success = False
-
-out = p.stdout.decode().strip()
-if len(out) > 0: print(out)
-if flag_success:
-	print('LAUNCHTEST:  OK')
-	print(30*'-')
-
-########################
 
 debug:
 File '/Users/samuel/pyyttoni/hub/henxel/src/henxel/decorators.py', line 111
@@ -148,20 +117,16 @@ File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/decorators.py", line 89, in w
 
 
 
-
-
-######################
-Help taglinks
-done
-
-to top button frame?
-##############
-
-
 goto_def no work with new def lines ##
 
 
 check replace \t #####
+
+
+##################
+show_errors rework
+tmp = traceback.extract_tb(err.__traceback__)))
+##################
 
 
 

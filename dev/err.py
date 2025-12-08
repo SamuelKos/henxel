@@ -4,9 +4,9 @@ import aa
 import time
 #time.sleep(2)
 print('before')
-time.sleep(2)
+#time.sleep(2)
 print('before2')
-time.sleep(2)
+#time.sleep(2)
 
 # Not sure if prompt works
 #prompt='Enter: '

@@ -48,6 +48,7 @@
 import tkinter.messagebox
 import tkinter.font
 import tkinter
+import traceback
 import pathlib
 import inspect
 import json
@@ -72,14 +73,13 @@ import threading
 
 
 # https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
-# These are currently used only when debugging, and even then only when doing test-launch.
-# Look in: build_launch_test()
+# Pass data to/from other modules and is used also in debugging, Look in: build_launch_test()
 import importflags
 FLAGS = importflags.FLAGS
 
 
-# MacOS printing fix related Begin ############
-from . import printer
+# MacOS printing fix related Begin ###########
+from .printer import get_fixed_printer, print_traceback
 
 # Pass printer to other modules
 DEFAUL_PRINTER = print
@@ -92,14 +92,13 @@ importflags.PRINTER['current'] = DEFAUL_PRINTER
 
 
 # Used on debugging
-from .decorators import do_twice, debug, print_traceback
+from .decorators import do_twice, debug
 
 # From this package
 from . import wordexpand
 from . import changefont
 from . import fdialog
 
-import traceback
 
 ##import logging
 ##logger = logging.getLogger('henxel')
@@ -521,7 +520,6 @@ class Editor(tkinter.Toplevel):
 			self.root = self.__class__.root
 			self.flags = self.__class__.flags
 			self.restart_script = self.__class__.restart_script
-			self.debug_decorator_always_use_own_error_handler = False
 			self.debug = debug
 			# Pass info to other modules
 			if self.in_mainloop: importflags.IN_MAINLOOP = True
@@ -629,8 +627,8 @@ class Editor(tkinter.Toplevel):
 			##### Search related variables End
 
 
-			self.timeout = 2
-			self.popup_run_action = 0 # use == in place of = to test init err in mainloop etc
+			self.timeout = 1
+			self.popup_run_action = 0
 			# Used in set_popup_run_action
 			self.popup_run_action_idx = 2
 			self.module_run_name = None
@@ -758,7 +756,6 @@ class Editor(tkinter.Toplevel):
 			self.popup.add_command(label="      errors", command=self.show_errors)
 			self.popup.add_command(label="        help", command=self.help)
 
-			self.update_popup_run_action()
 
 
 			# Get conf #####################
@@ -785,8 +782,8 @@ class Editor(tkinter.Toplevel):
 				conf_load_success = self.load_config(data)
 
 			###############################################
-			# But not a great success
-			if conf_load_success and self.tabindex == None:
+			# Could not load files from conf, err-msg is already printed out from set_config
+			if self.tabindex == None:
 
 				if len(self.tabs) == 0:
 					newtab = Tab(self.create_textwidget())
@@ -801,11 +798,8 @@ class Editor(tkinter.Toplevel):
 			## Get conf End ################################
 
 
+			self.update_popup_run_action()
 
-			# pass info to decorators-module
-			# can be set with: debug_always_use_own_error_handler
-			value = self.debug_decorator_always_use_own_error_handler
-			importflags.debug_use_own_error_handler = value
 
 			## Fix for macos printing issue starting from about Python 3.13 Begin
 			# Can be set with: use_mac_print_fix
@@ -1477,6 +1471,7 @@ Error messages Begin
 		return 'break'
 
 
+	# Not used, move this to notes or something?
 	def do_after_proxy(self, delay, callbacks, event=None):
 		''' Enable adding delay to callback without
 			'slipping event' to parents
@@ -1528,6 +1523,7 @@ Error messages Begin
 		tmp = c.entry.get().strip()
 		if len(tmp) > 0:
 			res = self.do_eval(tmp)
+			# If some setting is None, it should be printed out from callback
 			if res not in [None, 'break', 'continue']:
 				print(res)
 
@@ -1808,8 +1804,7 @@ Error messages Begin
 			try:
 				print(l[10])
 			except IndexError:
-				print(bbb)
-
+				eval('print("s"')
 
 ##			#######
 ##			keys = ('ascent', 'descent', 'linespace')
@@ -2119,30 +2114,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.restore_btn_git()
 
 
-
-	def debug_always_use_own_error_handler(self, setting=None):
-		''' Should @debug -decorator use its own error-messages, which
-			are more packed than normal (less scrolling):
-
-			Without arguments, return current setting
-			1: yes
-			0: no (default)
-		'''
-		cur_value = self.debug_decorator_always_use_own_error_handler
-		if setting is None:
-			print(cur_value)
-			return
-		elif setting:
-			self.debug_decorator_always_use_own_error_handler = True
-			cur_value = True
-		else:
-			self.debug_decorator_always_use_own_error_handler = False
-			cur_value = False
-
-		importflags.debug_use_own_error_handler = cur_value
-		return
-
-
 	def check_syntax_on_exit(self, setting=None):
 		''' Should syntax of open py-files be checked at exit
 			Without arguments, return current setting
@@ -2185,7 +2156,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		else: return flag_cancel
 
 
-	def do_test_launch(self, event=None):
+	def do_test_launch(self, event=None, checking_before_quit=False):
 
 		def delayed_break(delay):
 			self.wait_for(delay)
@@ -2200,6 +2171,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		elif self.tab_has_syntax_error():
 			self.activate_terminal()
 			return delayed_break(33)
+
+		elif checking_before_quit: return self.test_launch_is_ok()
 
 		else: self.test_launch_is_ok()
 
@@ -2294,14 +2267,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			raise ValueError
 
 
-		if not self.save_forced(): return delayed_break(33)
+		if self.debug:
+			# One does not remember to do this --> forced launch-test at exit
+			if not self.do_test_launch(checking_before_quit=True):
+				self.activate_terminal()
+				return delayed_break(33)
+
+		else:
+			if not self.save_forced(): return delayed_break(33)
+			elif self.check_syntax and self.tab_has_syntax_error():
+				self.activate_terminal()
+				return delayed_break(33)
 
 
-		if (self.debug or self.check_syntax) and self.tab_has_syntax_error():
-			self.activate_terminal()
-			return delayed_break(33)
-
-
+		# Prepare for quit
 		for tab in self.tabs: self.save_bookmarks(tab, also_stashed=True)
 
 		# Closing after: first launch, no conf or geometry reset to 'default'
@@ -3413,7 +3392,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['fonts'] = fonts
 		####################
 
-		d['debug_handler'] = self.debug_decorator_always_use_own_error_handler
 		d['scrollbar_widths'] = self.scrollbar_width, self.elementborderwidth
 		d['version_control_cmd'] = self.version_control_cmd
 		d['marginals'] = self.margin, self.margin_fullscreen, self.gap, self.gap_fullscreen
@@ -3513,7 +3491,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.keyword_font.config(**d['fonts']['keyword_font'])
 		self.linenum_font.config(**d['fonts']['linenum_font'])
 		self.scrollbar_width, self.elementborderwidth = d['scrollbar_widths']
-		self.debug_decorator_always_use_own_error_handler = d['debug_handler']
 		self.margin, self.margin_fullscreen, self.gap, self.gap_fullscreen = d['marginals']
 		self.dir_reverse, self.file_reverse = d['fdialog_sorting']
 		self.version_control_cmd = d['version_control_cmd']
@@ -4288,7 +4265,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			possibly falling back to winfos
 			and reporting failures, for possible later fixes.
 		'''
-		tmp = self.get_geometry()
+		tmp = self.geometry()
 		# Not great check, better than nothing though
 		if len(tmp.split('x')[0]) < 3:
 			print('INFO: Geometry handling issue, got:', tmp)
@@ -5233,14 +5210,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def lclick(self, tagname, event=None):
 		'''	Used in error-page, when hyperlink tagname is clicked.
-
-			self.taglinks is dict with tagname as key
-			and function (self.taglink) as value.
 		'''
-
-		# Passing tagname-string as argument to function self.taglink()
-		# which in turn is a value of tagname-key in dictionary taglinks:
-		self.taglinks[tagname](tagname)
+		self.tag_link(tagname)
+		return 'break'
 
 
 	def tag_link(self, tagname, event=None):
@@ -5381,14 +5353,21 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 		if choice is None: pass
 		elif not choice: self.popup_run_action = 0
-		elif type(cmd) != int:
+		elif type(choice) != int:
 			self.bell()
 			return
 		elif choice == 1: self.popup_run_action = 1
 		else: self.popup_run_action = 2
-
 		self.update_popup_run_action()
-		print(self.custom_run_cmd)
+
+		if not self.popup_run_action: print('run file')
+		elif self.popup_run_action == 1:
+			print('run module')
+			print('currently: ', self.module_run_name )
+		else:
+			print('run custom')
+			print('currently: ', self.custom_run_cmd )
+
 		return
 
 
@@ -5407,16 +5386,20 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return
 
 
-	def set_run_module(self, name=None):
-		'''	Set name of module, to be used on test-runs.
-			Setting doesn't do test-import to verify module.
+	def set_run_module(self, cmd=None):
+		'''	Set name of module (and possible arguments), to be used on test-runs.
+			Command must be list: ['modulename', 'arg1', 'arg2'..]
+			This is then added after: [sys.executable, '-m']
+			Setting doesn't do test-run to verify cmd
 		'''
-		if name is None: pass
-		elif not name: self.module_run_name = None
-		elif type(name) != str:
+		if cmd is None: pass
+		elif not cmd: self.module_run_name = None
+		elif type(cmd) != list:
 			self.bell()
 			return
-		else: self.module_run_name = name
+		else:
+			self.module_run_name = [sys.executable, '-m']
+			self.module_run_name.extend(cmd)
 		print(self.module_run_name)
 		return
 
@@ -5436,7 +5419,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def run(self, module=False, custom=False):
-		'''	Run file currently being edited.
+		'''	Do Test-run with timeout
 		'''
 		curtab = self.tabs[self.tabindex]
 		if (self.state != 'normal'):
@@ -5470,7 +5453,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Run module
 		if module:
 			if self.module_run_name:
-				cmd = [sys.executable, '-m', self.module_run_name]
+				cmd = self.module_run_name
 			else:
 				self.bell()
 				return
@@ -5483,48 +5466,57 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.bell()
 				return
 
+		self.wait_for(200)
+		print('TESTRUN, START')
+		self.wait_for(800)
 
 
+
+		has_err = False
 		err = ''
+
+
+
+		# First check for timeout
+		try: p = subprocess.run(cmd, **d)
+		except subprocess.TimeoutExpired as e:
+			print('TIMED OUT after %ds' % self.timeout)
+			return
+
+		# For example: executable does not exist
+		except Exception as e:
+			print(e)
+			return
+
+		# Real errors
+		try: p.check_returncode()
+
+		except subprocess.CalledProcessError:
+			has_err = True
+
+
 
 
 		# fix for macos printing issue
 		if self.os_type == 'mac_os' and not self.in_mainloop and self.fix_mac_print:
-			has_err = False
-
-			# First check for timeout
-			try: p = subprocess.run(cmd, **d)
-			except subprocess.TimeoutExpired as e:
-				print('TIMED OUT after %ds' % self.timeout)
-				return
-
-			# Check for errors
-			try: p.check_returncode()
-
-			except subprocess.CalledProcessError:
-				has_err = True
-
 			out = p.stdout.decode()
 			if len(out) > 0: print(out)
-			if has_err: err = p.stderr.decode()
 
+		if has_err:
+			# Error
+			err = p.stderr.decode()
 		else:
-			#err = subprocess.run([sys.executable, source], **d).stderr.decode()
-
-			try:	p = subprocess.run(cmd, **d)
-			except subprocess.TimeoutExpired as e:
-				print('TIMED OUT after %ds' % self.timeout)
-				return
-
-			try: p.check_returncode()
-			except subprocess.CalledProcessError:
-				has_err = True
-
-			if has_err: err = p.stderr.decode()
+			# Stuff possibly put to stderr
+			print(p.stderr.decode())
 
 
 		self.err = False
-		if len(err) != 0: self.err = err.splitlines()
+		self.wait_for(500)
+		if len(err) != 0:
+			self.err = err.splitlines()
+			print('\nTESTRUN, FAIL')
+		else: print('\nTESTRUN, OK')
+		print(30*'-')
 
 		self.show_errors()
 
@@ -5547,7 +5539,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tab_open(self.err_tab)
 
 
-		self.taglinks = dict()
 		self.errlines = list()
 		openfiles = [tab.filepath for tab in self.tabs]
 
@@ -5576,8 +5567,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			self.text_widget.tag_bind(tagname, "<Leave>",
 				lambda event, arg=tagname: self.leave(arg, event))
-
-			self.taglinks[tagname] = self.tag_link
 
 			# Parse filepath and linenums from errors
 			if 'File ' in line and 'line ' in line:
@@ -5629,15 +5618,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					self.update_tokens(start=start, end=end, line=line,
 										tab=self.err_tab)
 
+
 		self.err_tab.position = '1.0'
 		self.err_tab.text_widget.mark_set('insert', self.err_tab.position)
 		self.err_tab.text_widget.see(self.err_tab.position)
+		self.err_tab.text_widget.focus_set()
+		self.text_widget.config(state='disabled')
 
 		# Show 'insertion cursor' while text_widget is disabled
 		self.bid_mouse = self.bind( "<ButtonRelease-1>", func=self.cursor_frame_set, add=True)
 
-
-		self.err_tab.text_widget.focus_set()
 		self.text_widget.edit_reset()
 		self.text_widget.edit_modified(0)
 
@@ -5646,7 +5636,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def stop_show_errors(self, event=None):
 		self.state = 'normal'
-
+		self.text_widget.config(state='normal')
 		self.cursor_frame.place_forget()
 
 		self.tab_close(self.tabs[self.tabindex])
@@ -6078,7 +6068,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-
+		self.wait_for(60)
 		# If pressed Control-Shift-j/u, move one line at time
 		if filter_keys_in(event, ['Control', 'Shift']):
 			n=1
@@ -10613,7 +10603,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def lclick_help(self, tagname, event=None):
 		'''	Used in help-page, when hyperlink tagname is clicked.
 		'''
-		self.goto_help_title(tagname)
+		return self.goto_help_title(tagname)
 
 
 	def goto_help_title(self, tagname):
@@ -10643,7 +10633,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	About buttons
 
 	Execute part of code in Python-console
-	Running file
+	Doing Test-run
 	Fix syntax-highlighting
 	Check syntax
 

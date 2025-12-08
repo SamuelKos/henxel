@@ -1,3 +1,4 @@
+import traceback
 import builtins
 import os
 
@@ -10,6 +11,55 @@ import os
 ##		return
 ##
 ##	return print
+
+
+def print_traceback(err):
+
+	errors = list()
+	errors.append(err)
+	cur_err = err
+
+	# Get whole error-chain
+	while cur_err.__context__ is not None:
+		cur_err = cur_err.__context__
+		errors.append(cur_err)
+
+
+	print('\nTraceback (most recent call last):')
+	error = errors.pop()
+
+
+	while error:
+
+		exception_list = traceback.format_exception_only(error)
+
+		tb = error.__traceback__
+		while tb is not None:
+
+			# Using traceback-attributes instead of parsing error-string
+			stack_summary = traceback.extract_tb(tb, limit=1)
+			cur_frame = stack_summary[0]
+			filename,lineno,name,line = [cur_frame.filename, cur_frame.lineno, cur_frame.name, cur_frame.line]
+
+			e = f' File "{filename}", line {lineno}, in {name}\n'
+			line = f'    {line}\n'
+
+			#print(traceback.format_tb(tb, limit=1)[0])
+
+			print(e+line)
+			print()
+			tb = tb.tb_next
+
+		for item in exception_list: print(item)
+
+
+		try:
+			# Get next error from chain
+			error = errors.pop()
+			print('\nDuring handling of the above exception, another exception occurred:\n')
+
+		except IndexError:
+			error = None
 
 
 def get_fixed_printer():

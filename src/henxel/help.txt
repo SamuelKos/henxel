@@ -1,6 +1,12 @@
 		------------------------------------------------------
 		
-		
+	
+	[?] Using Help:
+		Back to Top
+		  - After clicking hyperlink, reading and wanting to go back to top,
+			Press arrow left or right --> back to top (if not clicked anywhere)
+			
+			
 	[2] While searching:
 			Ctrl-n  Next match
 			Ctrl-p  Prev match
@@ -43,6 +49,16 @@
 	|This is then referenced like:						 |
 	|	e.print_bookmarks()								 |
 	*----------------------------------------------------*
+	
+	
+	Using as normal editor
+		Editor can be launched from terminal and with arguments, for example:
+		python -m henxel ../../dir1/dir2/*.txt *.py
+		
+		1: Editor is launched using 'one time conf': setting is same
+		but original tabs are not opened, and nothing is saved in conf.
+		2: Do something, close editor. When restarting normally(no arguments)
+		--> original tabs are opened
 	
 	
 [3] When is my file Saved to Disk?
@@ -144,7 +160,12 @@
 	  - If wrote: e.prin and hit Tab --> get all possible completions.
 		Hit Tab again to walk options.
 	  - Press Control-h to open help on current item
-	  - Can be closed with Esc
+	  - Nice to know:
+	  	Control-a move cursor to linestart
+	  	Control-k kill from cursor to lineend
+	  - Sometimes, if output from command is missing, activating terminal
+		might help.
+	  - Close console with Esc
 	
 	
 	Selection
@@ -154,28 +175,30 @@
 	
 [5] Execute part of code in Python-console
 	  - Remember to put import-lines before the desired code-blocks. Then
-		just select whole thing, copy and paste to console. You may have
+		just select whole thing, copy and paste to console. May have
 		to press Return before last block executes. This is very useful,
 		compared to writing all that in console is much more difficult.
 		You might need to reduce indentation.
 	
 	
-[6] Running file
+[6] Doing Test-run
 	  - input from stdin does not work, so use test-data for that.
 	  
-	  - Editor freezes when running a program. So if you are testing
-		for possible runtime-errors, keep that in mind. You should
-		be able to terminate your program with ctrl-c from python-console.
+	  - Editor freezes when running a program, but it should be possible
+		to terminate program with ctrl-c from python-console.
 	
-	  - If you know where in your code that runtime-error occurs, put
-		breakpoint() there, exit editor and python-console and run
-		from terminal:
-		
-		python program_with_error.py
-		
-		and it will exit to python debugger after your breakpoint.
-		
+	  - Settings involved in short, see help for more info
+		e.set_timeout		default:1 (plus 1 sec delays)
+		e.set_run_module	For example, projects with __main__.py
+							and to set possible arguments
+							
+		e.set_custom_run_cmd	Just in case
+		e.set_popup_run_action	default(False) is to run current tab with:
+								sys.executable filepath/tabcontents
+								1: run module (choose this)
+								2: run custom
 	
+		
 [7] Refreshing syntax-highlighting
 	  - If highlighting looks wierd, choose 'draw syntax' from popup-menu.
 	  - Note that it might not get any better if there is some
@@ -574,26 +597,25 @@
 	
 
 [28] Developing
-	  - To automate check syntax, exit editor, reopen python and editor
+	  - To automate check syntax, test-launch, exit editor, re-open python and editor
 		start editor with: e=henxel.Editor(debug=True).
-		Then Cmd/Control-q will do syntax checking on all open python-files
-		regardless of check_syntax setting.
-			  
-	  - If wanting to start editor using new code, from popup-menu: restart
-		note: Test-launch is not done before this, only syntax check.
-		--> before this, to do test-launch, from popup-menu: test
 		
- 	  - Do test-launch at least before restart or close. Or after any change,
-		that makes one wonder.
+		Then Cmd/Control-q will do syntax checking on all open python-files
+		regardless of check_syntax setting and if that passes, test-launch.
+		After succesful test-launch editor exits.
+	  
+	  - Test-launch works on all platforms. This is quite enough, if there is no
+		need to often restart editor. And closing editor and console, then
+		restarting is matter of seconds anyway.
 		
 	  - If editor did not launch, error message and info about recovering is printed
 		See: help(henxel.stash_pop)
 	
-	  - Test-launch works on all platforms. This is quite enough, if there is no
-		need to often restart editor. And closing editor and console and then
-		restarting them manually is matter of seconds anyway.
+	  - If wanting to start editor using new code, from popup-menu: restart
+		If want to be able to restart from popup-menu, see
+		Starting debug-session below
 		
-		
+	
 		Starting debug-session from
 		
 	  - All platforms:
@@ -625,11 +647,15 @@
 		--> no python-console, restarting works, has mainloop
 		
 		
-		When to use mainloop
-		If having problems seeing tracebacks.
+		Q: When to use mainloop?
+		A: If having problems seeing tracebacks.
 		Sometimes, like errors from eval-lines, errors from nested callbacks
-		(callback was defined in callback), has to use try-block,
-		but can try @debug -decorator first(more info below)
+		(callback was defined in callback), has to use try-block, but
+		
+		try @debug -decorator first: place '@debug' above buggy callback, like
+			
+			@debug
+			def bugs_here(): return 1/0
 		
 		
 	  - More info is in function: e.build_launch_test
@@ -639,11 +665,6 @@
 		Then add @debug decorator on top of buggy callback, and then can
 		debug with print-lines also. Or launch in mainloop
 		
-		
-	  - @debug-decorator uses its own error-messages, which are more packed
-		than normal (less scrolling). But if editor is in mainloop, normal
-		spacy tracebacks are raised. If want still use packed ones:
-		e.debug_always_use_own_error_handler(1)
 	
 	
 	Homepage: https://github.com/SamuelKos/henxel
