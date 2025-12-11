@@ -15,6 +15,25 @@ Below this: done ################################################
 
 
 
+## To Notes: ##########################
+########################################################################
+Remember that, wait_for()  A: changes state to 'waiting' B: is non-blocking!
+--> be *extra* careful when checking self.state
+	(in code after calls to wait_for )
+				
+Example: in callback1:
+	do_something
+	wait_for(some_time) --> state is now: 'waiting' (until some_time passes)
+	callback2()
+				
+	in callback2:
+		if self.state not in (list of states but not 'waiting'):
+			return 'break'
+				
+	--> FAIL
+########################################################################
+
+
 walk_search_history
 currently initial offset of one  ###
 
@@ -59,11 +78,39 @@ check mainloop etc: set_version_control_cmd() ###
 
 
 
+use module: traceback to fix show error ####
 
 
-# This is lacking code lines
-decorators.py: print_traceback(err)  ############
-use module: traceback
+###################
+setting.py
+
+
+defaults = dict()
+
+
+check_for_deleted_old_key():
+	list_of_old_keys = data.keys()
+	
+	for key in list_of_old_keys:
+		try: _ = defaults[key]
+		
+		# old conf-data has extra key --> is not loaded and not saved --> ok
+		except KeyError:
+			print('Old configuration had key(likely old) that is not used', key)
+		
+		
+class Setting
+
+for key in list_of_new_keys:
+	try:
+		Setting.key = data[key]
+	
+	# old conf-data has no new key --> ok
+	except KeyError:
+		print('Old configuration did not have key', key)
+		Setting.key = defaults[key]
+
+###################
 
 
 

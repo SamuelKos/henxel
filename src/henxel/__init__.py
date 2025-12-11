@@ -79,7 +79,7 @@ FLAGS = importflags.FLAGS
 
 
 # MacOS printing fix related Begin ###########
-from .printer import get_fixed_printer, print_traceback
+from .printer import get_fixed_printer
 
 # Pass printer to other modules
 DEFAUL_PRINTER = print
@@ -1006,11 +1006,11 @@ class Editor(tkinter.Toplevel):
 				# Need for some reason generate event: <<NextWord>> before this,
 				# because array ::tcl::WordBreakRE does not exist yet,
 				# but after this event it does. This was done above.
-
-				self.tk.eval(r'set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
-				self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
-				self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
-
+				try:
+					self.tk.eval(r'set l3 [list previous {\W*(\w+)\W*$} after {\w\W|\W\w} next {\w*\W+\w} end {\W*\w+\W} before {^.*(\w\W|\W\w)}] ')
+					self.tk.eval('array set ::tcl::WordBreakRE $l3 ')
+					self.tk.eval('proc tk::TextNextWord {w start} {TextNextPos $w $start tcl_endOfWord} ')
+				except tkinter.TclError as err: print(err)
 
 			# Configure btn_git Begin
 			# Create bitmap-image to show on btn_git
@@ -1024,8 +1024,8 @@ static unsigned char infopic_bits[] = {
 0xd7, 0xab, 0x55
 }}]
 '''
-
-			self.img_name = self.tk.eval(create_pic_cmd)
+			try: self.img_name = self.tk.eval(create_pic_cmd)
+			except tkinter.TclError as err: print(err)
 
 			width_text = self.menufont.measure('123456')
 			width_img = 8
@@ -1369,8 +1369,6 @@ Error messages Begin
 				if self.debug:
 					info = info_start + stash_pop.__doc__.replace('\t', '  ') + info_end
 					print(info)
-					#print_traceback(init_err)
-					# This seems to work
 					traceback.print_exception(init_err)
 					# This is used to break debug-restart-loop
 					sys.exit(0)
@@ -1446,6 +1444,23 @@ Error messages Begin
 
 			NOTE: 'cancel' all bindings, which checks the state,
 			for waiting time duration. It may be what one wants.
+
+			########################################################################
+			Remember that, wait_for()  A: changes state to 'waiting' B: is non-blocking!
+			--> be *extra* careful when checking self.state
+				(in code after calls to wait_for )
+
+			Example: in callback1:
+				do_something
+				wait_for(some_time) --> state is now: 'waiting' (until some_time passes)
+				callback2()
+
+				in callback2:
+					if self.state not in (list of states but not 'waiting'):
+						return 'break'
+
+				--> FAIL
+			########################################################################
 		'''
 		state = self.state
 		self.state = 'waiting'
@@ -1803,8 +1818,11 @@ Error messages Begin
 			l = [i for i in range(6)]
 			try:
 				print(l[10])
+
 			except IndexError:
 				eval('print("s"')
+
+
 
 ##			#######
 ##			keys = ('ascent', 'descent', 'linespace')
@@ -1855,6 +1873,8 @@ Error messages Begin
 		''' Ensures index is visible on screen.
 
 			Does not set insert-mark to index.
+
+			May not work on tab if it is not open.
 		'''
 
 		b = 2
@@ -2163,17 +2183,24 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
+
 		if (self.flags and self.flags.get('launch_test')) or not self.__class__.alive:
 			raise ValueError
 
-		elif not self.save_forced(): return delayed_break(33)
+		# checking_before_quit: ensure quit_me gets False (when some check fails)
+		# --> cancel exit (when debugging)
+		elif not self.save_forced():
+			if checking_before_quit: return False
+			return delayed_break(33)
 
 		elif self.tab_has_syntax_error():
 			self.activate_terminal()
+			if checking_before_quit: return False
 			return delayed_break(33)
 
 		elif checking_before_quit: return self.test_launch_is_ok()
 
+		# Doing test_launch volunteerily, great!
 		else: self.test_launch_is_ok()
 
 		return 'break'
@@ -2261,6 +2288,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
+
 		# For example, called from incomplete, or zombie Editor.
 		# And for preventing recursion if doing test-launch
 		if (self.flags and self.flags.get('launch_test')) or not self.__class__.alive:
@@ -2268,7 +2296,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		if self.debug:
-			# One does not remember to do this --> forced launch-test at exit
+			# Forced launch-test at exit
 			if not self.do_test_launch(checking_before_quit=True):
 				self.activate_terminal()
 				return delayed_break(33)
@@ -2280,7 +2308,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return delayed_break(33)
 
 
-		# Prepare for quit
+		# Prepare for quit (save bookmarks and configuration)
 		for tab in self.tabs: self.save_bookmarks(tab, also_stashed=True)
 
 		# Closing after: first launch, no conf or geometry reset to 'default'
@@ -3209,11 +3237,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		''' Called from:
 
 			del_tab
-			new_tab		also calls tab_close() before this
-			walk_tabs	also calls tab_close() before this
+			new_tab
+			walk_tabs
 			tag_link
 			stop_help
 			stop_show_errors
+
+			Important side effect: changes where self.text_widget references
 		'''
 
 		tab.active = True
@@ -3225,7 +3255,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.entry.insert(0, tab.filepath)
 			self.entry.xview_moveto(1.0)
 
+		#########################################
 		self.text_widget = tab.text_widget
+		#########################################
+
 		self.scrollbar.config(command=self.text_widget.yview)
 		self.scrollbar.set(*self.text_widget.yview())
 		if self.want_ln == 2: self.update_linenums()
@@ -3245,14 +3278,18 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 	def tab_close(self, tab):
 		''' Called from:
-			new_tab		also calls tab_open() after this
-			walk_tabs	also calls tab_open() after this
+			new_tab
+			walk_tabs
 			show_errors
 			run
 			help
 		'''
 
 		tab.active = False
+
+		if tab.type in ('normal', 'newtab'):
+			# Return view to cursor in closed tab
+			self.ensure_idx_visibility('insert', tab=tab)
 
 		self.entry.delete(0, tkinter.END)
 		self.scrollbar.config(command='')
@@ -3915,7 +3952,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				for ((s0,s1), (e0,e1)) in self.tags[tag]:
 					tk_command += f' {s0}.{s1} {e0}.{e1}'
 
-				self.tk.eval(tk_command)
+				try: self.tk.eval(tk_command)
+				except tkinter.TclError as err: print(err)
 
 		#t2 = int(self.root.tk.eval('clock milliseconds'))
 		#print(t2-t1, t1-t0, 'ms')
@@ -4074,8 +4112,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				for ((s0,s1), (e0,e1)) in self.tags[tag]:
 					tk_command += f' {s0 +linenum -1}.{s1} {e0 +linenum -1}.{e1}'
 
-				self.tk.eval(tk_command)
-
+				try: self.tk.eval(tk_command)
+				except tkinter.TclError as err: print(err)
 
 		##### Check parentheses ####
 		if check_pars:
@@ -4867,7 +4905,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				initcolor = self.text_widget.tag_cget(tagname, 'background')
 				patt = 'Choose bgcolor for: %s' % tagname
 
-			res = self.tk.call('tk_chooseColor', '-initialcolor', initcolor, '-title', patt)
+			try:
+				res = self.tk.call('tk_chooseColor', '-initialcolor', initcolor, '-title', patt)
+
+			except tkinter.TclError as e:
+				self.bell()
+				print(e)
+				return 'break'
+
 
 			tmpcolor = str(res)
 
@@ -5300,6 +5345,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 
+		# Rest of here should be as close to stop_show_errors as possible
+		self.state = 'normal'
+		self.text_widget.config(state='normal')
 		self.cursor_frame.place_forget()
 
 		self.tab_close(self.tabs[err_tab_index])
@@ -5312,14 +5360,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tab_open(self.tabs[new_index])
 		self.tabindex = new_index
 
-
 		self.err_tab.text_widget.delete('1.0', 'end')
 
 		self.bind("<Escape>", self.esc_override)
 		self.unbind( "<ButtonRelease-1>", funcid=self.bid_mouse)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
 			lambda event: self.raise_popup(event))
-		self.state = 'normal'
 		self.update_title()
 
 		### tag_link End ######
@@ -5446,7 +5492,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['timeout'] = self.timeout
 
 
-
 		# Normal
 		cmd = [sys.executable, source]
 
@@ -5471,10 +5516,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.wait_for(800)
 
 
-
 		has_err = False
 		err = ''
-
 
 
 		# First check for timeout
@@ -5495,8 +5538,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			has_err = True
 
 
-
-
 		# fix for macos printing issue
 		if self.os_type == 'mac_os' and not self.in_mainloop and self.fix_mac_print:
 			out = p.stdout.decode()
@@ -5512,6 +5553,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.err = False
 		self.wait_for(500)
+
 		if len(err) != 0:
 			self.err = err.splitlines()
 			print('\nTESTRUN, FAIL')
@@ -6037,8 +6079,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			scroll_direction = '-1'
 			update_idle = '$ww update idletasks'
 			if 'Select' in e: wait_time = '5'
-			self.tk.eval( cmd % ( w, e, scroll_direction, near, wait_time, wait_time ) )
-
+			try:	self.tk.eval( cmd % ( w, e, scroll_direction, near, wait_time, wait_time ) )
+			except tkinter.TclError as err: print(err)
 			return 'break'
 
 
@@ -6053,10 +6095,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			wait_time = '[expr 17*$n]'
 			scroll_direction = '+1'
 			if 'Select' in e: wait_time = '5'
-			self.tk.eval( cmd % ( w, e, scroll_direction, near, wait_time, wait_time ) )
-
+			try:	self.tk.eval( cmd % ( w, e, scroll_direction, near, wait_time, wait_time ) )
+			except tkinter.TclError as err: print(err)
 			return 'break'
-
 		else:
 			return
 
@@ -6118,7 +6159,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		patt = r'%s get -displaychars {%s} {%s}' % (self.tcl_name_of_contents, s, e )
 
-		line = self.text_widget.tk.eval(patt)
+		try:	line = self.text_widget.tk.eval(patt)
+		except tkinter.TclError as err:
+			print('INFO: line_is_empty:\n', err, 'index:', index, 'safe_index:', safe_index,
+			's:', s, 'e:', e, 'patt:', patt,'tcl_name_of_contents:', self.tcl_name_of_contents )
+			self.bell()
+			# or False?
+			return True
 
 		return line.strip() == ''
 
@@ -6161,9 +6208,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			s = '%s linestart' % safe_index
 			e = '%s lineend' % safe_index
 
-			patt = r'%s get -displaychars {%s} {%s}' % (self.tcl_name_of_contents, s, e )
-
-			line_contents = self.text_widget.tk.eval(patt)
+##			patt = r'%s get -displaychars {%s} {%s}' % (self.tcl_name_of_contents, s, e )
+##			try: line_contents = self.text_widget.tk.eval(patt)
+##			except tkinter.TclError as err:
+##				print('INFO: idx_linestart:' , err)
 
 			stop = '%s lineend' % safe_index
 			if r := self.line_is_elided(safe_index): stop = r[0]
@@ -8280,7 +8328,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''
 
 		if self.state not in [
-					'normal', 'help', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
+					'normal', 'waiting', 'help', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
 			self.bell()
 			return 'break'
 
@@ -11175,7 +11223,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			patt = r'%s get {%s linestart} {%s lineend}' \
 					% (self.tcl_name_of_contents, idx, idx)
 
-			line = self.text_widget.tk.eval(patt)
+			try: line = self.text_widget.tk.eval(patt)
+			except tkinter.TclError as err:
+				print('INFO: elide_scope: ', err)
+
 			if not self.line_is_defline(line):
 				return 'break'
 
@@ -11290,7 +11341,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Note: '-all' is needed in counting position among all matches
 		search_args = [ self.tcl_name_of_contents, 'search', '-all',
 						search_word, '1.0' ]
-		res = self.tk.call(tuple(search_args))
+		try:
+			res = self.tk.call(tuple(search_args))
+
+		except tkinter.TclError as e:
+			print(e)
+			self.bell()
+			return 'break'
+
 
 		# If no match, res == '' --> False
 		if not res:
@@ -11920,8 +11978,13 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		s.append(search_word)
 		s.append( handle_search_start() )
 		if self.search_ends_at: s.append(self.search_ends_at)
+		try:
+			res = self.tk.call(tuple(s))
+		except tkinter.TclError as e:
+			self.bell()
+			print('INFO: do_search:', e)
+			return False
 
-		res = self.tk.call(tuple(s))
 		if not res: return False
 
 		start_indexes = [ str(x) for x in res ]
@@ -12011,8 +12074,12 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.old_word = search_word
 
 			# walk_search_history
-			if self.old_word not in self.search_history[0]:
-				self.search_history[0].append(self.old_word)
+			if not self.flag_appended_tmp_word_to_search_history:
+				if self.old_word not in self.search_history[0]:
+					self.search_history[0].append(self.old_word)
+
+			self.flag_appended_tmp_word_to_search_history = False
+
 
 			self.bind("<Button-%i>" % self.right_mousebutton_num, self.do_nothing)
 			self.entry.config(validate='none')
@@ -12163,6 +12230,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			elif index == len(h[x]) -1:
 				self.bell()
 
+		#print(index, len(self.search_history[0]))
+
 
 		# Update self.search_history_index
 		self.search_history_index = index
@@ -12305,10 +12374,12 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.entry.bind("<Control-n>", self.do_nothing_without_bell)
 		self.entry.bind("<Control-p>", self.do_nothing_without_bell)
 
-		#
+
 		self.entry.unbind("<Up>", funcid=self.bidup )
 		self.entry.unbind("<Down>", funcid=self.biddown )
-		#
+		if self.flag_appended_tmp_word_to_search_history:
+			self.flag_appended_tmp_word_to_search_history = False
+			self.search_history[0].pop()
 
 		self.bind( "<Return>", self.do_nothing_without_bell)
 
@@ -12376,7 +12447,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		tmp = False
-
+		self.flag_appended_tmp_word_to_search_history = False
 		# Suggest selection as search_word if appropiate, else old_word.
 		try:
 			tmp = self.selection_get()
@@ -12384,8 +12455,11 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			# Allow one linebreak
 			if not (80 > len(tmp) > 0 and len(tmp.splitlines()) < 3):
 				tmp = False
-
 				raise tkinter.TclError
+
+			self.search_history[0].append(tmp) ####
+			self.flag_appended_tmp_word_to_search_history = True
+
 
 		# No selection
 		except tkinter.TclError:
@@ -12400,7 +12474,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		# walk_search_history
-		self.search_history_index = len(self.search_history[0])
+		self.search_history_index = len(self.search_history[0]) -1 ###
 		self.flag_use_replace_history = False
 
 		self.text_widget.tag_remove('sel', '1.0', tkinter.END)
@@ -12495,12 +12569,17 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		tmp = False
+		self.flag_appended_tmp_word_to_search_history = False
 		# Suggest selection as search_word if appropiate, else old_word.
 		try:
 			tmp = self.selection_get()
 			if not (80 > len(tmp) > 0):
 				tmp = False
 				raise tkinter.TclError
+
+			self.search_history[0].append(tmp) ####
+			self.flag_appended_tmp_word_to_search_history = True
+
 
 		# No selection
 		except tkinter.TclError:
@@ -12623,7 +12702,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			search_re = self.old_word
 			substit = r'{%s}' % self.new_word
 			patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit)
-			new_word = self.text_widget.tk.eval(patt)
+			try: new_word = self.text_widget.tk.eval(patt)
+			except tkinter.TclError as err:
+				print('INFO: do_single_replace:', err)
+
 			len_new_word = len(new_word)
 			end_new = "%s +%dc" % ( start, len_new_word )
 
@@ -12687,7 +12769,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				search_re = self.old_word
 				substit = r'{%s}' % self.new_word
 				patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit)
-				new_word = self.text_widget.tk.eval(patt)
+				try:	new_word = self.text_widget.tk.eval(patt)
+				except tkinter.TclError as err:
+					print('INFO: do_replace_all:', err)
+
 				len_new_word = len(new_word)
 				end_new = "%s +%dc" % ( start, len_new_word )
 

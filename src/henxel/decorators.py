@@ -25,7 +25,6 @@ def print(*args, **kwargs): return
 # Update printer, when necessary, End
 
 
-
 # Most of this is taken from realpython-page about decorations
 
 def do_twice(func):
@@ -70,6 +69,7 @@ def debug(func):
 			# Apply possible printer fix to traceback
 			tb = traceback.format_exception(err)
 			for line in tb: print(line)
+
 
 	return wrapper_debug
 
