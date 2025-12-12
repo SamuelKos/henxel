@@ -16,14 +16,14 @@
 			-	Copying text to clipboard is possible with yank-line etc.
 			-	Add bookmark is possible, so is Goto def from which:
 				arrow-key or Ctrl-np -> back to matches
-			-	Changing the replacement string is possible while replacing.
+			-	Changing replacement string is possible while replacing.
 			-	1: Press Space to exit search to focus.
 				2: Double-click to exit to cursor.
 				3: Press Esc to exit to cursor position at the start of the search.
 				Press arrow-key to refresh view back to cursor, if necessary.
 		
-		Also, after searching, show and select next/prev occurence of last search
-		(if no selection, else uses selection)
+		After searching, show and select next/prev occurence of last search
+		(if no selection, else uses selection) Also known as: search again
 			Ctrl-n  Next match
 			Ctrl-p  Prev match
 
@@ -32,6 +32,10 @@
 			(pressing again does not yet replace that next match)
 			
 			Matches can be skipped with Ctrl-np
+			
+			
+		Cmd/Alt-r	Toggle regexp
+		Cmd/Alt-i	Toggle search starts at insert/filestart
 		
 		
 		

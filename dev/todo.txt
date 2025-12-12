@@ -34,8 +34,38 @@ Example: in callback1:
 ########################################################################
 
 
+
+###############
+__main__
+toml
+youtube_dl
+check
+################
+
+
+
+show_scope in message needs bind
+
+
+################
+check toml script entry -->
+1: pip uninstall henxel
+2: pip install --no-cache-dir -e .
+
+3: $ henxel *.txt
+################
+
+
+
+after_cancel remove frame vs remove caps  ######
+
+
+
 walk_search_history
-currently initial offset of one  ###
+currently if added temp word, could be duplicates in history
+remove duplicates in stop_search
+############
+
 
 
 macos printing issue is partly because of using shell installed from brew

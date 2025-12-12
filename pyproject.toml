@@ -21,6 +21,9 @@ classifiers = [
 	"Topic :: Text Editors"
 ]
 
+[project.scripts]
+henxel = "__main__:main"
+
 [project.urls]
 Homepage = "https://github.com/SamuelKos/henxel"
 Changelog = "https://github.com/SamuelKos/henxel/blob/main/CHANGELOG"

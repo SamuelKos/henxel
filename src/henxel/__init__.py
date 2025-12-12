@@ -79,7 +79,7 @@ FLAGS = importflags.FLAGS
 
 
 # MacOS printing fix related Begin ###########
-from .printer import get_fixed_printer
+from . import printer
 
 # Pass printer to other modules
 DEFAUL_PRINTER = print
@@ -575,6 +575,7 @@ class Editor(tkinter.Toplevel):
 
 
 			self.tabs = list()
+			self.title_string = ''
 			self.tabindex = None
 			self.branch = None
 			self.version = VERSION
@@ -645,6 +646,9 @@ class Editor(tkinter.Toplevel):
 
 			# Used for showing Openfile-dialog
 			self.fdialog_frame = None
+
+			# Used for showing short-lived messages
+			self.message_frame = None
 
 
 			# When clicked with mouse button 1 while searching
@@ -1293,6 +1297,9 @@ static unsigned char infopic_bits[] = {
 			# Filedialog
 			self.fdialog_frame_init()
 
+			# MessageFrame
+			self.message_frame_init()
+
 
 			if self.start_fullscreen:
 				delay = 300
@@ -1383,7 +1390,8 @@ Error messages Begin
 
 	def update_title(self, event=None):
 		tail = len(self.tabs) - self.tabindex - 1
-		self.title( f'Henxel {"0"*self.tabindex}@{"0"*(tail)}' )
+		self.title_string = f'{"0"*self.tabindex}@{"0"*(tail)}'
+		self.title( f'Henxel {self.title_string}' )
 
 
 	def handle_window_resize(self, event=None):
@@ -1806,6 +1814,52 @@ Error messages Begin
 			c.entry.focus_set()
 
 		return 'break'
+
+
+	def show_message(self, message, delay):
+		''' show message for time delay
+		'''
+		self.wait_for(30)
+
+		m = self.message_frame
+		l = m.label
+		l.config(text=message, width=len(message)+2)
+
+		# Remove possible old m.place_forgets
+		for item in self.to_be_cancelled[:]:
+			self.after_cancel(item)
+			self.to_be_cancelled.remove(item)
+
+		# Keep message closer to entry when in fullscreen
+		if not m.winfo_ismapped():
+			kwargs = {'relx':0.1, 'rely':0.1}
+			if self.is_fullscreen():
+				x = self.ln_widget.winfo_width()*2
+				kwargs = {'x':x, 'y':self.pad*17}
+
+			m.place_configure(**kwargs)
+			# This, for same reason, is necessary
+			# Otherwise, sometimes in fullscreen, text is not immediately shown
+			m.update_idletasks()
+
+		c = self.after(delay, m.place_forget)
+		self.to_be_cancelled.append(c)
+		return 'break'
+
+
+	def message_frame_init(self):
+		''' Initialize message-frame
+		'''
+		self.message_frame = f = tkinter.LabelFrame(self, width=1, height=1)
+		self.message_frame.label = tkinter.Label(self.message_frame, width=50,
+							highlightthickness=0, bd=4, font=self.textfont)
+		self.message_frame.configure(labelwidget=self.message_frame.label)
+		self.message_frame.label.pack()
+
+		f.place_configure(relx=0.1, rely=0.1, width=1, height=1)
+		f.place_forget()
+
+		self.to_be_closed.append(f)
 
 
 	@debug
@@ -2923,11 +2977,25 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
 			self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
 
+			if self.os_type == 'mac_os':
+				self.entry.bind("<registered>", func=self.toggle_search_setting_regexp )
+				self.entry.bind("<idotless>", func=self.toggle_search_setting_starts_from_insert )
+				self.bind("<registered>", func=self.toggle_search_setting_regexp )
+				self.bind("<idotless>", func=self.toggle_search_setting_starts_from_insert )
+			else:
+				self.entry.bind("<Alt-r>", func=self.self.toggle_search_setting_regexp )
+				self.entry.bind("<Alt-i>", func=self.toggle_search_setting_starts_from_insert )
+				self.bind("<Alt-r>", func=self.self.toggle_search_setting_regexp )
+				self.bind("<Alt-i>", func=self.toggle_search_setting_starts_from_insert )
+
+
+			#######################################
 			# Default cmd-q does not trigger quit_me
-			# Override Cmd-Q:
+			# Override Cmd-Q (can cancel quit app when necessary)
 			# https://www.tcl.tk/man/tcl8.6/TkCmd/tk_mac.html
 			self.root.createcommand("tk::mac::Quit", self.quit_me)
 			#self.root.createcommand("tk::mac::OnHide", self.test_hide)
+			#########################################
 
 
 		else:
@@ -3323,10 +3391,34 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.tabindex = new_idx = idx
 
+
+		# Build info-string (same as in window-title, with filaname)
+		# to clarify current tabs content on tab-change.
+		# Useful especially when in fullscreen.
+		maxlen_msg = 0
+		for tab in self.tabs:
+			if filepath := tab.filepath:
+				lenght = len(filepath.stem + filepath.suffix)
+				if lenght > maxlen_msg: maxlen_msg = lenght
+
+		maxlen_msg += 2 # two spaces after title_string
+
+		msg1 =msg2= self.title_string + maxlen_msg*' '
+		num_spaces = 0
+		tail = False
+		if filepath := self.tabs[new_idx].filepath:
+			tail = '  ' +filepath.stem +filepath.suffix
+			num_spaces = maxlen_msg - len(tail)
+
 		self.wait_for(30)
+		self.show_message(msg1, 1000)
 		self.tab_close(self.tabs[old_idx])
 		self.tab_open(self.tabs[new_idx])
 		self.update_title()
+		if tail:
+			msg2 = self.title_string + tail + num_spaces*' '
+		self.show_message(msg2, 1100)
+
 
 		return 'break'
 
@@ -5345,6 +5437,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 
+		line = errline + '.0'
+		self.tabs[new_index].position = line
+		self.tabs[new_index].text_widget.mark_set('insert', line)
+
 		# Rest of here should be as close to stop_show_errors as possible
 		self.state = 'normal'
 		self.text_widget.config(state='normal')
@@ -5352,11 +5448,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.tab_close(self.tabs[err_tab_index])
 		self.tabs.pop(err_tab_index)
-
-		line = errline + '.0'
-		self.tabs[new_index].position = line
-		self.tabs[new_index].text_widget.mark_set('insert', line)
-
 		self.tab_open(self.tabs[new_index])
 		self.tabindex = new_index
 
@@ -8229,8 +8320,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			l1 = lambda kwargs={'text': 6*' ', 'disabledforeground': 'brown1'}: self.btn_git.config(**kwargs)
 			l2 = lambda kwargs={'text': ' CAPS '}: self.btn_git.config(**kwargs)
 
-
-			###
 			l3 = lambda kwargs={'bg':fg, 'fg':bg}: self.text_widget.config(**kwargs)
 			l4 = lambda kwargs={'bg':bg, 'fg':fg}: self.text_widget.config(**kwargs)
 
@@ -8238,8 +8327,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			c4 = self.after(t2, l4)
 			self.to_be_cancelled.append(c3)
 			self.to_be_cancelled.append(c4)
-			###
-
 
 			c1 = self.after(t1, l1)
 			c2 = self.after(t2, l2)
@@ -9273,7 +9360,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				mark_name = markfunc(mark_name)
 
-			return pos
+			return pos, mark_name
 
 		# Start
 		mark_func = self.text_widget.mark_next
@@ -9281,13 +9368,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if back:
 			mark_func = self.text_widget.mark_previous
 
-		pos = get_mark('insert', mark_func)
+		pos, mark = get_mark('insert', mark_func)
 
 		# At file_startend, try again from beginning of other end
 		if not pos:
 			start = '1.0'
 			if back: start = tkinter.END
-			pos = get_mark(start, mark_func)
+			pos, mark = get_mark(start, mark_func)
 
 		# No bookmarks in this tab
 		if not pos:
@@ -9296,9 +9383,27 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 
+		# get position among bookmarks and build info message
+		marks = self.text_widget.mark_names()
+		bookmarks = marks[:]
+		l = sorted([ (mark, self.text_widget.index(mark)) for mark in bookmarks if 'bookmark' in mark], key=lambda x:float(x[1]) )
+		for i,item in enumerate(l):
+			if item[0] == mark: break
+
+		a = len(str(i+1))
+		b = len(str(len(l)))
+		diff = b - a
+		head = diff*' ' + f'{i+1}/{len(l)} '
+
+		scope = self.get_scope_path(pos)
+		msg = head + scope
+		######################
+
+
 		try:
 			self.text_widget.mark_set('insert', pos)
 			self.wait_for(100)
+			self.show_message(msg, 1000)
 			self.ensure_idx_visibility(pos)
 
 		except tkinter.TclError as e:
@@ -10092,7 +10197,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if not activetab:
 				# --> enable sync tab to disk (=='intuitive save-button behaviour')
 				res = self.save_forced(curtab=True)
-				if res: print('\nOK')
+				if res: self.show_message(' OK ', 1100)
+
 				return res
 
 			# NOTE: oldtab.contents is updated at beginning.
@@ -11364,12 +11470,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-
-
-		# Get current index among search matches, this
-		# concerns more when using_selection.
-		# This is mainly for the possible future use,
-		# showing info same way when doing real search.
+		# Get current index among search matches
 		if using_selection:
 			start = self.text_widget.index(tkinter.SEL_FIRST)
 
@@ -11398,9 +11499,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				idx += 1
 
 
-		# Now one could show info: "match idx/len(m)" etc.
-		# This is start_index of search_word of next/previous match
+		# Start-index of search_word of next/previous match
 		pos = m[idx]
+
+
+		# Build info-message: "match idx/len(m)" etc.
+		a = len(str(idx+1))
+		b = len(str(len(m)))
+		diff = b - a
+		head = diff*' ' + f'{idx+1}/{len(m)} '
+
+		scope = self.get_scope_path(pos)
+		msg = head + scope
+		######################
 
 
 		wordlen = len(search_word)
@@ -11417,6 +11528,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if not self.text_widget.bbox(pos):
 			self.wait_for(100)
 			self.ensure_idx_visibility(pos)
+
+		self.show_message(msg, 1000)
 
 		return 'break'
 
@@ -11754,7 +11867,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 	def edit_search_setting(self, search_setting):
-		''' search_setting is string consisting of options below separated by spaces.
+		''' search_setting is string of options below separated by spaces.
 
 			If also setting -start and -end:
 			-start and -end must be last, and -start before -end.
@@ -11794,7 +11907,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				edit_search_setting( my_settings )
 
 
-			Example4, exact (default) search, backwards from cursor to 50 lines up:
+			Example4, exact(==default==not regexp) search, backwards from cursor to 50 lines up:
 
 				my_settings = "-backwards -start insert -end insert -50 lines"
 
@@ -12396,6 +12509,38 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		### stop_search End ######
 
 
+	def toggle_search_setting_regexp(self, event=None):
+		''' self.search_settings is a list
+		'''
+		if self.state not in ['search', 'replace_all', 'replace']: return 'break'
+
+		my_settings = "-regexp"
+		if my_settings not in self.search_settings:
+			self.search_settings.insert(4, my_settings)
+			self.show_message('Regexp ON', 1000)
+		else:
+			idx = self.search_settings.index(my_settings)
+			self.search_settings.pop(idx)
+			self.show_message('Regexp OFF', 1000)
+
+		return 'break'
+
+
+	def toggle_search_setting_starts_from_insert(self, event=None):
+		if self.state not in ['search', 'replace_all', 'replace']: return 'break'
+
+		if self.search_starts_at == 'insert':
+			self.search_starts_at = '1.0'
+			self.show_message('From: INSERT', 1000)
+		else:
+			self.search_starts_at = 'insert'
+			self.show_message('From: START', 1000)
+
+		self.search_ends_at = False
+
+		return 'break'
+
+
 	def search(self, event=None):
 		'''	Ctrl-f --> search --> start_search --> show_next / show_prev --> stop_search
 		'''
@@ -12552,7 +12697,6 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.entry.bind("<Control-p>", self.skip_bindlevel)
 		self.bid_show_next = None
 		self.bid_show_prev = None
-
 
 		# Show 'insertion cursor' while text_widget is disabled
 		self.bid_mouse = self.bind( "<Button-1>", func=self.cursor_frame_set, add=True)
