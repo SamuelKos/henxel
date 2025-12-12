@@ -51,7 +51,7 @@
 	|	e=henxel.Editor()								 |
 	|													 |
 	|This is then referenced like:						 |
-	|	e.print_bookmarks()								 |
+	|	e.bookmarks_print()								 |
 	*----------------------------------------------------*
 	
 	
@@ -160,13 +160,15 @@
 	
 	i-button
 	  - Toggle setting-console in which can edit settings just like
-		in python-console: e.edit_search_setting() etc.
+		in python-console: e.search_setting_edit() etc.
 	  - If wrote: e.prin and hit Tab --> get all possible completions.
 		Hit Tab again to walk options.
-	  - Press Control-h to open help on current item
+	  - Press Control-h to open help on current item.
+	  - If using ee instead of e --> get whole namespace of editor-instance
+		anf if using just single e --> get only settings
 	  - Nice to know:
-	  	Control-a move cursor to linestart
-	  	Control-k kill from cursor to lineend
+	  	Control-a  Move cursor to linestart
+	  	Control-k  Kill from cursor to lineend
 	  - Sometimes, if output from command is missing, activating terminal
 		might help.
 	  - Close console with Esc
@@ -192,12 +194,12 @@
 		to terminate program with ctrl-c from python-console.
 	
 	  - Settings involved in short, see help for more info
-		e.set_timeout		default:1 (plus 1 sec delays)
-		e.set_run_module	For example, projects with __main__.py
+		e.timeout_set		default:1 (plus 1 sec delays)
+		e.run_module_set	For example, projects with __main__.py
 							and to set possible arguments
 							
-		e.set_custom_run_cmd	Just in case
-		e.set_popup_run_action	default(False) is to run current tab with:
+		e.custom_run_cmd_set	Just in case
+		e.popup_run_action_set	default(False) is to run current tab with:
 								sys.executable filepath/tabcontents
 								1: run module (choose this)
 								2: run custom
@@ -212,7 +214,9 @@
 		or if not wanting to do run, to check syntax of current tab:
 		from popup: chk syntax
 	  - Single line syntax can be refreshed by adding space
-		and then deleting it. Multiline strings: fix string, redraw.
+		and then deleting it. Multiline strings: If string has correct
+		triples, then again: just insert and delete space inside string.
+		Else, fix quotation-marks then redraw.
 
 	
 [8] Check syntax
@@ -247,24 +251,24 @@
 		ask for confirmation before you close tab with bookmarks
 		
 	  - There is no shortcuts for:
-		e.remove_bookmarks() --> from current tab
-		e.remove_bookmarks(all_tabs=True) --> from all tabs
-		e.print_bookmarks() of current tab
+		e.bookmarks_remove() --> from current tab
+		e.bookmarks_remove(all_tabs=True) --> from all tabs
+		e.bookmarks_print() of current tab
 		
 		With this one can save bookmarks if need for example; close tab
 		but want to keep record of its bookmarks, just note that
 		overwriting to same file multiple times will delete old bookmarks
 		in that file. This will save also stashed bookmarks
-		e.export_bookmarks()
+		e.bookmarks_export()
 
-		e.import_bookmarks() --> update (add not already existing),
+		e.bookmarks_import() --> update (add not already existing),
 			update opened tabs bookmarks from file
 			Note: does not work while in fullscreen
-		e.unstash_bookmarks() --> restore hided bookmarks to tab
-		e.unstash_bookmarks(all_tabs=True) --> to all tabs
+		e.bookmarks_unstash() --> restore hided bookmarks to tab
+		e.bookmarks_unstash(all_tabs=True) --> to all tabs
 
 		To remove just one hided bookmark, first check linenumber with:
-		1: e.print_bookmarks()
+		1: e.bookmarks_print()
 		2: Goto that line with stashed bookmark
 		3: bookmark: Cmd/Alt-p on that line, this removes hided bookmark
 		4: and if not want leave this new bookmark, again: Cmd/Alt-p
@@ -343,7 +347,7 @@
 		Example, default commands splitting:
 		  cmd_as_list = 'git branch --show-current'.split()
 		Then:
-		  e.set_version_control_cmd(cmd_as_list)
+		  e.version_control_cmd_set(cmd_as_list)
 
 	  - On success, the new command is saved in configuration
 	
@@ -394,9 +398,9 @@
 		This change came in about Python 3.13, but printing might work
 		in newer macOS versions than 12.
 		
-	  --> If having issues with printing: e.use_mac_print_fix(1)
+	  --> If having issues with printing: e.mac_print_fix_use(1)
 		Without arguments, it returns current setting.
-		e.use_mac_print_fix(1): Use fix,  0: Use normal print
+		e.mac_print_fix_use(1): Use fix,  0: Use normal print
 		
 		This is then saved in configuration
 	  
@@ -431,11 +435,11 @@
 [21] Search and Replace
 		
 		Resources:
-			e.print_search_help()
-			e.print_search_setting()
-			e.reset_search_setting()
-			help(e.edit_search_setting)
-			e.edit_search_setting()
+			e.search_help_print()
+			e.search_setting_print()
+			e.search_setting_reset()
+			help(e.search_setting_edit)
+			
 			https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			https://www.tcl.tk/man/tcl9.0/TclCmd/re_syntax.html
 			https://www.tcl.tk/man/tcl9.0/TclCmd/regexp.html
@@ -444,7 +448,7 @@
 	  - Good news is, most of the time these are not needed.
 	  - When are, it most likely is:
 			
-			e.edit_search_setting('-start insert')
+			e.search_setting_edit('-start insert')
 		
 		This changes searching to start from insertion cursor
 		
@@ -514,52 +518,52 @@
 	  Without arguments, prints current setting.
 
 	  - reset both to defaults
-		e.set_left_margin(0)
+		e.left_margin_set(0)
 
 	  - reset only margin of normal window
-		e.set_left_margin(0, e.margin_fullscreen)
+		e.left_margin_set(0, e.margin_fullscreen)
 		
 	  Examples
 	  - set different margin for normal window and fullscreen
-		e.set_left_margin(10, 20)
+		e.left_margin_set(10, 20)
 		
 	  - set same margin for normal window and fullscreen
-		e.set_left_margin(10)
+		e.left_margin_set(10)
 		
 	  - change only margin for normal window (to 10)
-		e.set_left_margin(10, e.margin_fullscreen)
+		e.left_margin_set(10, e.margin_fullscreen)
 		
 	  - change only margin for fullscreen window (to 20)
-		e.set_left_margin(e.margin, 20)
+		e.left_margin_set(e.margin, 20)
 		
 		
 	  B: Set distance(length of empty space) from linenumbers to start of text,
 	  for normal window, and possible separate width for fullscreen.
 
 	  This does not change total distance of left_margin. After using this, one
-	  can increase lenght of total margin, with set_left_margin, if necessary.
+	  can increase lenght of total margin, with left_margin_set, if necessary.
 	  Without arguments, prints current setting.
 
 	  - Reset both to defaults:
-	    set_left_margin_gap(0)
+	    left_margin_gap_set(0)
 
 	  - Reset only gap of normal window:
-	    set_left_margin_gap(0, self.gap_fullscreen)
+	    left_margin_gap_set(0, self.gap_fullscreen)
 
 	  distance can be int --> pixels
 	  or string like 1c --> note, this adds much space
 
-	  Example: set_left_margin_gap(10, '2c')
+	  Example: left_margin_gap_set(10, '2c')
 
 	
 [24] Set scrollbar width
-	  - e.set_scrollbar_widths(width, elementborderwidth)
+	  - e.scrollbar_widths_set(width, elementborderwidth)
 	
 	
 [25] Set filedialog sorting order (directories, files)
-	  - e.set_filedialog_sorting_order()	--> current values
-	  - e.set_filedialog_sorting_order(0,0)	--> both 'normal'
-	  - e.set_filedialog_sorting_order(1,1)	--> both reversed
+	  - e.filedialog_sorting_order_set()	--> current values
+	  - e.filedialog_sorting_order_set(0,0)	--> both 'normal'
+	  - e.filedialog_sorting_order_set(1,1)	--> both reversed
 	  - default is (1,0) (directories with capital first letter last)
 	
 	
@@ -567,7 +571,7 @@
 		Size can be 1-8, default is 4
 		
 		Change size for all files:
-	  - e.change_tabsize(8)
+	  - e.tabsize_change(8)
 		
 		For code-snippet:
 	  - If you copied something to your editor that has different indentation

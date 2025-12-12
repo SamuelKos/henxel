@@ -57,16 +57,6 @@ check toml script entry -->
 
 
 
-after_cancel remove frame vs remove caps  ######
-
-
-
-walk_search_history
-currently if added temp word, could be duplicates in history
-remove duplicates in stop_search
-############
-
-
 
 macos printing issue is partly because of using shell installed from brew
 --> don't install from brew
@@ -78,13 +68,6 @@ or for tracabacks from tkinter callbacks
 
 
 module docstring ######
-
-
-
-e.edit_search_set no need dash like: -regexp ###
-ctrl-r regexp
-ctrl-i insert
-no?
 
 
 
@@ -145,32 +128,7 @@ for key in list_of_new_keys:
 
 
 
-#######
-all: ['e.set_bindings', 'e.set_bindings_other', 'e.set_config',
-'e.set_custom_run_cmd', 'e.set_fdialog_widths',
-'e.set_filedialog_sorting_order', 'e.set_left_margin', 'e.set_left_margin_gap',
-'e.set_ln_widget_colors', 'e.set_popup_run_action', 'e.set_run_module',
-'e.set_scrollbar_widths', 'e.set_selection', 'e.set_syntags',
-'e.set_text_widget_colors', 'e.set_textwidget', 'e.set_timeout',
-'e.set_version_control_cmd']
-all: ['e.set_custom_run_cmd']
-
-######
---> do eval:
-self.setting = Setting
-e = self.setting
-ee = self
-
-
-
-
-
-
-search
-regexp insert
-fast toggle
-
-
+test_bind check is wait_for blocking #######
 
 
 
@@ -184,28 +142,10 @@ run as module, macos if printing issue, use mainloop
 
 
 
-debug:
-File '/Users/samuel/pyyttoni/hub/henxel/src/henxel/decorators.py', line 111
-normal:
-File "/Users/samuel/pyyttoni/hub/henxel/src/henxel/decorators.py", line 89, in wrapper_debug
-
-
-
-
-
-
 goto_def no work with new def lines ##
 
 
 check replace \t #####
-
-
-##################
-show_errors rework
-tmp = traceback.extract_tb(err.__traceback__)))
-##################
-
-
 
 
 

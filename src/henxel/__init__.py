@@ -166,7 +166,7 @@ def get_info():
 			'check_sel',
 			'checkpars',
 			'cursor_is_in_multiline_string',
-			'edit_search_setting',
+			'search_setting_edit',
 			'ensure_idx_visibility',
 			'find_empty_lines',
 			'fonts_exists',
@@ -186,9 +186,9 @@ def get_info():
 			'line_is_elided',
 			'line_is_empty',
 			'package_has_syntax_error',
-			'print_bookmarks',
-			'print_search_help',
-			'print_search_setting',
+			'bookmarks_print',
+			'search_help_print',
+			'search_setting_print',
 			'test_launch_is_ok',
 			'update_lineinfo',
 			'update_linenums',
@@ -544,8 +544,10 @@ class Editor(tkinter.Toplevel):
 			# Other widgets
 			self.to_be_closed = list()
 
-			# Used in check_caps
-			self.to_be_cancelled = list()
+			# Used for cancelling pending tasks
+			self.to_be_cancelled = dict()
+			self.to_be_cancelled['message'] = list()
+			self.to_be_cancelled['flash_btn_git'] = list()
 
 			# Used to bypass conf in such a way it enables use of editor adhoc(normally)
 			# like: python -m henxel file1 file2
@@ -595,10 +597,10 @@ class Editor(tkinter.Toplevel):
 			for font in [self.textfont, self.menufont, self.keyword_font, self.linenum_font]:
 				self.fonts[font.name] = font
 
-			# Can be changed with: set_version_control_cmd
+			# Can be changed with: version_control_cmd_set
 			self.version_control_cmd = 'git branch --show-current'.split()
 
-			# Used in filedialog, can be changed with: set_filedialog_sorting_order
+			# Used in filedialog, can be changed with: filedialog_sorting_order_set
 			self.dir_reverse = True
 			self.file_reverse = False
 
@@ -630,7 +632,7 @@ class Editor(tkinter.Toplevel):
 
 			self.timeout = 1
 			self.popup_run_action = 0
-			# Used in set_popup_run_action
+			# Used in popup_run_action_set
 			self.popup_run_action_idx = 2
 			self.module_run_name = None
 			self.custom_run_cmd = None
@@ -675,13 +677,13 @@ class Editor(tkinter.Toplevel):
 			self.waitvar = tkinter.IntVar()
 
 			# distance from left screen edge to text
-			# can be set with: set_left_margin(width_normal, width_fullscreen)
-			# and: set_left_margin_gap(gap_normal, gap_fullscreen)
+			# can be set with: left_margin_set(width_normal, width_fullscreen)
+			# and: left_margin_gap_set(gap_normal, gap_fullscreen)
 			self.default_margin, self.margin, self.margin_fullscreen = 4, 5, 5
 			self.gap, self.gap_fullscreen = 0, 0
 
 			## Fix for macos printing issue starting from about Python 3.13
-			self.fix_mac_print = False
+			self.mac_print_fix = False
 
 			# Just in case, set to normal at end of init
 			self.state = 'init'
@@ -806,8 +808,8 @@ class Editor(tkinter.Toplevel):
 
 
 			## Fix for macos printing issue starting from about Python 3.13 Begin
-			# Can be set with: use_mac_print_fix
-			tests = (not self.in_mainloop, self.fix_mac_print, self.os_type == 'mac_os')
+			# Can be set with: mac_print_fix_use
+			tests = (not self.in_mainloop, self.mac_print_fix, self.os_type == 'mac_os')
 			if all(tests):
 				self.change_printer_to(FIIXED_PRINTER)
 				print('using fixed printer')
@@ -1293,11 +1295,12 @@ static unsigned char infopic_bits[] = {
 
 			# Used for showing setting-console
 			self.setting_frame_init()
+			self.setting_console_namespace_init()
 
 			# Filedialog
 			self.fdialog_frame_init()
 
-			# MessageFrame
+			# Show info-messages like scope while goto_bookmark etc
 			self.message_frame_init()
 
 
@@ -1526,20 +1529,58 @@ Error messages Begin
 		print(c.lastword)
 
 		if c.lastword:
-			try: eval( f'help({c.lastword})', {'print':print}, {'e':self} )
+			try: eval( f'help({c.lastword})', {'print':print}, {'e':self, 'ee':self} )
 			except Exception as err: print(err)
 		return 'break'
 
 
+	def setting_console_namespace_init(self):
+		# Define settings to be used in setting_console like: e.timeout_set
+		settables = [
+		self.custom_run_cmd_set,
+		self.popup_run_action_set,
+		self.run_module_set,
+		self.timeout_set,
+		self.version_control_cmd_set,
+		self.check_syntax_on_exit,
+		self.filedialog_sorting_order_set,
+		self.left_margin_set,
+		self.left_margin_gap_set,
+		self.scrollbar_widths_set,
+		self.tabsize_change,
+		self.export_config,
+		self.bookmarks_remove,
+		self.bookmarks_print,
+		self.bookmarks_export,
+		self.bookmarks_import,
+		self.bookmarks_unstash,
+		self.use_geometry,
+		self.geometry,
+		self.wm_geometry,
+		self.editor_starts_fullscreen,
+		self.mac_print_fix_use,
+		self.search_help_print,
+		self.search_setting_print,
+		self.search_setting_reset,
+		self.search_setting_edit,
+		self.font_choose,
+		self.color_choose,
+		self.save_forced,
+		self.tab_has_syntax_error
+		]
+
+		self.setting_frame.namespace = [ f'{func.__name__}' for func in settables ]
+
+	#@debug
 	def do_eval(self, cmd_as_string, event=None):
 		res = False
 		try:
 			# debug-decorator doesn't catch these
-			res = eval(cmd_as_string, {'print':print}, {'e':self})
+			res = eval(cmd_as_string, {'print':print}, {'e':self, 'ee':self})
 		except Exception as err: print(err)
 		return res
 
-
+	#@debug
 	def do_cmd(self, event=None):
 		c = self.setting_frame
 
@@ -1552,7 +1593,7 @@ Error messages Begin
 
 		return 'break'
 
-
+	#@debug
 	def do_complete(self, event=None):
 		self.wait_for(30)
 
@@ -1570,6 +1611,7 @@ Error messages Begin
 
 
 		options = []
+		options_minus_parent = []
 		child = False
 
 
@@ -1584,7 +1626,12 @@ Error messages Begin
 
 			# options includes whole namespace of parent, for now
 			if res := self.do_eval( 'dir(' +parent+ ')' ):
-				options = res
+				# Give whole namespace
+				if tmp.startswith('ee.'):
+					options = res
+				# Give just settings
+				else:
+					options = [option for option in res if option in self.setting_frame.namespace]
 
 		# Give something, not much though
 		elif res := self.do_eval('dir()'):
@@ -1599,10 +1646,12 @@ Error messages Begin
 
 			# Filter down namespace of parent, unless child was only dot: "e."
 			completions = [ option for option in options if option.startswith(tmp) ]
+			if child:
+				# Most of time, show only childs in prints
+				options_minus_parent = list(map(lambda item: item.split('.')[1], completions))
 		else:
 			# When trying for example: "a."
 			return 'break'
-
 
 
 		if len(completions) > 0:
@@ -1611,7 +1660,8 @@ Error messages Begin
 				c.completions = completions
 				c.lasttmp = tmp
 				c.compidx = 0
-				print('all:', completions)
+				if child: print('all:', options_minus_parent)
+				else: print('all:', completions)
 
 			# insert from completions-list to enable options-walking
 			c.lastword = word = c.completions[c.compidx]
@@ -1642,7 +1692,7 @@ Error messages Begin
 
 			if res := self.do_eval('dir()'):
 				options = res
-				print('globals:', options)
+				print('locals:', options)
 
 		# Should not happen
 		else: c.lasttmp = False
@@ -1817,7 +1867,7 @@ Error messages Begin
 
 
 	def show_message(self, message, delay):
-		''' show message for time delay
+		''' Show message for time delay
 		'''
 		self.wait_for(30)
 
@@ -1826,9 +1876,9 @@ Error messages Begin
 		l.config(text=message, width=len(message)+2)
 
 		# Remove possible old m.place_forgets
-		for item in self.to_be_cancelled[:]:
+		for item in self.to_be_cancelled['message'][:]:
 			self.after_cancel(item)
-			self.to_be_cancelled.remove(item)
+			self.to_be_cancelled['message'].remove(item)
 
 		# Keep message closer to entry when in fullscreen
 		if not m.winfo_ismapped():
@@ -1843,7 +1893,7 @@ Error messages Begin
 			m.update_idletasks()
 
 		c = self.after(delay, m.place_forget)
-		self.to_be_cancelled.append(c)
+		self.to_be_cancelled['message'].append(c)
 		return 'break'
 
 
@@ -2112,7 +2162,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return success_all
 
 
-	def set_version_control_cmd(self, cmd_as_list=None):
+	def version_control_cmd_set(self, cmd_as_list=None):
 		''' Set command to fetch current version control branch.
 			Command must be given as list. Command is tried before
 			setting. You can split command string to list with split,
@@ -2121,13 +2171,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Default commands splitting:
 			  cmd_as_list = 'git branch --show-current'.split()
 			Then:
-			  e.set_version_control_cmd(cmd_as_list)
+			  e.version_control_cmd_set(cmd_as_list)
 
 			Likely not needed, but in tricky cases, make
 			shell-script to get branch and then use path to that script as command.
 			Just remember to put: #!/usr/bin/env bash  or whatever to first line of script.
 			And likely the script has to be runnable by user: chmod u+x my_script.sh
-			Then: s = ['/path/to/my_script.sh'] and: e.set_version_control_cmd(s)
+			Then: s = ['/path/to/my_script.sh'] and: e.version_control_cmd_set(s)
 		'''
 		if cmd_as_list == None:
 			print(self.version_control_cmd)
@@ -3532,7 +3582,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['run_module'] = self.module_run_name
 		d['run_custom'] = self.custom_run_cmd
 		d['check_syntax'] = self.check_syntax
-		d['fix_mac_print'] = self.fix_mac_print
+		d['fix_mac_print'] = self.mac_print_fix
 		d['want_ln'] = self.want_ln
 		d['syntax'] = self.syntax
 		d['ind_depth'] = self.ind_depth
@@ -3626,7 +3676,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.start_fullscreen = d['start_fullscreen']
 		self.popup_run_action = d['popup_run_action']
 		self.check_syntax = d['check_syntax']
-		self.fix_mac_print = d['fix_mac_print']
+		self.mac_print_fix = d['fix_mac_print']
 		self.module_run_name = d['run_module']
 		self.custom_run_cmd = d['run_custom']
 		self.timeout = d['run_timeout']
@@ -4487,7 +4537,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			print(e)
 
 
-	def change_tabsize(self, width):
+	def tabsize_change(self, width):
 		''' width is integer between 1-8
 		'''
 
@@ -4533,19 +4583,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.ln_widget.tag_config('justright', **just_kwargs)
 
 
-	def set_left_margin(self, width_normal=None, width_fullscreen=None):
+	def left_margin_set(self, width_normal=None, width_fullscreen=None):
 		'''	Set total distance from left edge of editor window to start of text,
 			for normal window, and possible separate width for fullscreen.
 
 			Without arguments, print current setting.
 
 			to reset both to defaults:
-			set_left_margin(0)
+			left_margin_set(0)
 
 			reset only margin of normal window:
-			set_left_margin(0, self.margin_fullscreen)
+			left_margin_set(0, self.margin_fullscreen)
 
-			see also: set_left_margin_gap
+			see also: left_margin_gap_set
 		'''
 
 		if type(width_normal) != int:
@@ -4567,26 +4617,26 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.ln_widget.config(**kwargs)
 
 
-	def set_left_margin_gap(self, gap_normal=None, gap_fullscreen=None):
+	def left_margin_gap_set(self, gap_normal=None, gap_fullscreen=None):
 		'''	Set distance(length of empty space) from linenumbers to start of text,
 			for normal window, and possible separate width for fullscreen.
 
 			This does not change total distance of left_margin, which can
-			be done with set_left_margin. After using this, one can increase
-			lenght of total margin, with set_left_margin, if necessary.
+			be done with left_margin_set. After using this, one can increase
+			lenght of total margin, with left_margin_set, if necessary.
 
 			Without arguments, print current setting.
 
 			Reset both to defaults:
-			set_left_margin_gap(0)
+			left_margin_gap_set(0)
 
 			Reset only gap of normal window:
-			set_left_margin_gap(0, self.gap_fullscreen)
+			left_margin_gap_set(0, self.gap_fullscreen)
 
 			distance can be int --> pixels
 			or string like 1c --> note, this adds much space
 
-			Example: set_left_margin_gap(10, '2c')
+			Example: left_margin_gap_set(10, '2c')
 
 		'''
 
@@ -4623,7 +4673,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.ln_widget.tag_config('justright', rmargin=gap)
 
 
-	def set_scrollbar_widths(self, width=None, elementborderwidth=None):
+	def scrollbar_widths_set(self, width=None, elementborderwidth=None):
 		'''	Change widths of scrollbar
 		'''
 
@@ -5482,7 +5532,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.popup.insert_command(self.popup_run_action_idx, **options)
 
 
-	def set_popup_run_action(self, choice=None):
+	def popup_run_action_set(self, choice=None):
 		'''	Set run-action to be executed from popup-menu.
 			Choices are: False: default run-file
 			1: run-module
@@ -5508,7 +5558,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return
 
 
-	def set_custom_run_cmd(self, cmd=None):
+	def custom_run_cmd_set(self, cmd=None):
 		'''	Set command to be executed from popup-menu.
 			Command must be list.
 			Setting doesn't do test-run to verify cmd.
@@ -5523,7 +5573,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return
 
 
-	def set_run_module(self, cmd=None):
+	def run_module_set(self, cmd=None):
 		'''	Set name of module (and possible arguments), to be used on test-runs.
 			Command must be list: ['modulename', 'arg1', 'arg2'..]
 			This is then added after: [sys.executable, '-m']
@@ -5541,7 +5591,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return
 
 
-	def set_timeout(self, timeout=None):
+	def timeout_set(self, timeout=None):
 		'''	Set timeout for test-runs,
 			default is 2 (seconds)
 		'''
@@ -5570,7 +5620,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		source = curtab.filepath
 		d = dict(stderr=subprocess.PIPE)
-		if self.os_type == 'mac_os' and not self.in_mainloop and self.fix_mac_print:
+		if self.os_type == 'mac_os' and not self.in_mainloop and self.mac_print_fix:
 			d = dict(capture_output=True)
 
 		# Enable running code without filename
@@ -5630,7 +5680,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# fix for macos printing issue
-		if self.os_type == 'mac_os' and not self.in_mainloop and self.fix_mac_print:
+		if self.os_type == 'mac_os' and not self.in_mainloop and self.mac_print_fix:
 			out = p.stdout.decode()
 			if len(out) > 0: print(out)
 
@@ -7744,6 +7794,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.do_maximize(want_maximize)
+		# Show cursor when back to normal window
+		if not want_maximize and self.tabs[self.tabindex].type != 'help':
+			self.ensure_idx_visibility('insert')
 
 		self.after(delay, lambda args=(ln_kwargs, just_kwargs): self.apply_left_margin(*args) )
 
@@ -7996,7 +8049,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Overrides End
 ########## Utilities Begin
 
-	def use_mac_print_fix(self, use=None):
+	def mac_print_fix_use(self, use=None):
 		''' Setting, should alternative print-function be used
 			to fix possible printing issue when using macOS.
 			default is False
@@ -8005,17 +8058,17 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			print('This is for macOS only')
 			self.bell()
 			return
-		if use == None: print(self.fix_mac_print)
+		if use == None: print(self.mac_print_fix)
 		elif use:
-			if self.fix_mac_print != True:
-				self.fix_mac_print = True
+			if self.mac_print_fix != True:
+				self.mac_print_fix = True
 				self.change_printer_to(FIIXED_PRINTER)
 				print('Using mac_print_fix now')
 			else:
 				print('Using mac_print_fix already')
 		else:
-			if self.fix_mac_print != False:
-				self.fix_mac_print = False
+			if self.mac_print_fix != False:
+				self.mac_print_fix = False
 				self.change_printer_to(DEFAUL_PRINTER)
 				print('Using normal print now')
 			else:
@@ -8325,13 +8378,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			c3 = self.after(t1, l3)
 			c4 = self.after(t2, l4)
-			self.to_be_cancelled.append(c3)
-			self.to_be_cancelled.append(c4)
+			self.to_be_cancelled['flash_btn_git'].append(c3)
+			self.to_be_cancelled['flash_btn_git'].append(c4)
 
 			c1 = self.after(t1, l1)
 			c2 = self.after(t2, l2)
-			self.to_be_cancelled.append(c1)
-			self.to_be_cancelled.append(c2)
+			self.to_be_cancelled['flash_btn_git'].append(c1)
+			self.to_be_cancelled['flash_btn_git'].append(c2)
 
 
 	def check_caps(self, event=None):
@@ -8365,9 +8418,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				# If quickly pressed CapsLock off,
 				# cancel flashing started at the end of this callback.
-				for item in self.to_be_cancelled[:]:
+				for item in self.to_be_cancelled['flash_btn_git'][:]:
 					self.after_cancel(item)
-					self.to_be_cancelled.remove(item)
+					self.to_be_cancelled['flash_btn_git'].remove(item)
 
 
 				# Put Git-branch name back if on one
@@ -8390,9 +8443,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				# If quickly pressed CapsLock off,
 				# cancel flashing started at the end of this callback.
-				for item in self.to_be_cancelled[:]:
+				for item in self.to_be_cancelled['flash_btn_git'][:]:
 					self.after_cancel(item)
-					self.to_be_cancelled.remove(item)
+					self.to_be_cancelled['flash_btn_git'].remove(item)
 
 				# Put Git-branch name back if on one
 				self.restore_btn_git()
@@ -8682,7 +8735,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			#	which 'ends' at pos, when searching backwards.
 			#
 			# For more info about searching, backwards, and indexes:
-			#	print_search_help()
+			#	search_help_print()
 			#
 			#### END OF WHILE #########
 
@@ -9581,11 +9634,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Gotoline etc End
 ########## Save and Load Begin
 
-	def set_filedialog_sorting_order(self, dir_reverse=None, file_reverse=None):
+	def filedialog_sorting_order_set(self, dir_reverse=None, file_reverse=None):
 		''' Set sorting order of both "normal" directories and files
 			True means: use reversed order.
 			Default uses reverse for dirs and normal for files.
-			Example, set both to normal: set_filedialog_sorting_order(1,1)
+			Example, set both to normal: filedialog_sorting_order_set(1,1)
 		'''
 
 		if dir_reverse is None and file_reverse is None: pass
@@ -9697,7 +9750,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				curtab.filepath = filename
 				curtab.type = 'normal'
 				curtab.position = '1.0'
-				self.remove_bookmarks(all_tabs=False)
+				self.bookmarks_remove(all_tabs=False)
 
 
 				self.entry.delete(0, tkinter.END)
@@ -10235,7 +10288,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 ##	Note: goto_bookmark() is in Gotoline etc -section
 
-	def print_bookmarks(self):
+	def bookmarks_print(self):
 
 		self.wait_for(100)
 
@@ -10338,7 +10391,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			[ tab.bookmarks_stash.append(mark) for mark in tab.text_widget.mark_names() if 'stashed' in mark ]
 
 
-	def import_bookmarks(self):
+	def bookmarks_import(self):
 		''' update (add not already existing bookmarks),
 			update opened tabs bookmarks from file
 
@@ -10406,7 +10459,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			widget.config(state='normal')
 
 
-	def export_bookmarks(self):
+	def bookmarks_export(self):
 		''' Also stashed bookmarks are saved
 		'''
 		import tkinter.filedialog
@@ -10434,7 +10487,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			print('\nCould not export bookmarks')
 
 
-	def unstash_bookmarks(self, all_tabs=False):
+	def bookmarks_unstash(self, all_tabs=False):
 		''' Restore hided bookmarks
 		'''
 		if self.state != 'normal': return
@@ -10484,7 +10537,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
-	def remove_bookmarks(self, all_tabs=False):
+	def bookmarks_remove(self, all_tabs=False):
 		''' Removes bookmarks from current tab/all tabs
 		'''
 
@@ -10509,7 +10562,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			# Keeping right naming of bookmarks in tab.bookmarks is quite tricky
 			# when removing and adding bookmarks in the same tab, without changing view.
 			# Seems like the line: self.clear_bookmarks solves the issue.
-			# Bookmarks where working right, but if doing self.print_bookmarks
+			# Bookmarks where working right, but if doing self.bookmarks_print
 			# after removing and adding bookmarks, it would look odd with ghost duplicates.
 			self.save_bookmarks(tab)
 			self.clear_bookmarks()
@@ -11770,7 +11823,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
-	def reset_search_setting(self):
+	def search_setting_reset(self):
 
 		defaults = [
 				'search',
@@ -11784,10 +11837,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.search_ends_at = False
 
 
-	def print_search_setting(self):
+	def search_setting_print(self):
 
 		if not self.search_settings:
-			self.reset_search_setting()
+			self.search_setting_reset()
 
 		print(
 			self.search_settings[4:],
@@ -11798,7 +11851,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			)
 
 
-	def print_search_help(self):
+	def search_help_print(self):
 
 		helptxt = r'''
 Search-options
@@ -11866,7 +11919,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		print(helptxt)
 
 
-	def edit_search_setting(self, search_setting):
+	def search_setting_edit(self, search_setting):
 		''' search_setting is string of options below separated by spaces.
 
 			If also setting -start and -end:
@@ -11892,19 +11945,19 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 			Example1, use regexp and old indexes:
 
-				edit_search_setting( '-regexp' )
+				search_setting_edit( '-regexp' )
 
 
 			Example2, search backwards, give start-index if not sure what were old ones:
 
-				edit_search_setting( '-backwards -start end' )
+				search_setting_edit( '-backwards -start end' )
 
 
 			Example3, use regexp, include elided text, search only from cursor to fileend:
 
 				my_settings = "-regexp -elide -start insert -end end"
 
-				edit_search_setting( my_settings )
+				search_setting_edit( my_settings )
 
 
 			Example4, exact(==default==not regexp) search, backwards from cursor to 50 lines up:
@@ -11927,19 +11980,19 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			Replacing does not work while -overlap -setting is on. Searching works.
 
 			More help about these options:
-			print_search_help()
+			search_help_print()
 
 			Print current search settings:
-			print_search_setting()
+			search_setting_print()
 
 			Reset search settings:
-			reset_search_setting()
+			search_setting_reset()
 
 			https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		'''
 
 		if not self.search_settings:
-			self.reset_search_setting()
+			self.search_setting_reset()
 
 
 		defaults = [
@@ -12045,9 +12098,9 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		if flag: self.text_widget.delete('1.0', '1.1')
 
-		#### edit_search_setting End ##############
+		#### search_setting_edit End ##############
 
-
+	#@debug
 	def do_search(self, search_word):
 		''' Search contents for search_word
 			with self.search_settings and tk text search
@@ -12186,7 +12239,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.search_index = -1
 			self.old_word = search_word
 
-			# walk_search_history
+			# search_history_walk
 			if not self.flag_appended_tmp_word_to_search_history:
 				if self.old_word not in self.search_history[0]:
 					self.search_history[0].append(self.old_word)
@@ -12309,8 +12362,19 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		return 'break'
 
 
+	def search_history_remove_duplicates(self):
+		for i in (0,1):
+			for item in self.search_history[i][:]:
+				num_items = self.search_history[i].count(item)
+				while num_items > 1:
+					# Leave first item
+					idx0 = self.search_history[i].index(item)
+					idx = self.search_history[i].index(item, idx0+1)
+					self.search_history[i].pop(idx)
+					num_items = self.search_history[i].count(item)
+
 	#@debug
-	def walk_search_history(self, event=None, direction='up'):
+	def search_history_walk(self, event=None, direction='up'):
 		''' Walk search-history in entry with arrow up/down
 			while searching/replacing
 		'''
@@ -12501,6 +12565,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		# Release space
 		self.wait_for(200)
+		self.search_history_remove_duplicates()
 		self.text_widget.unbind( "<space>", funcid=bid_tmp )
 		curtab.bid_space = self.text_widget.bind( "<space>", self.space_override)
 
@@ -12550,7 +12615,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			return 'break'
 
 		if not self.search_settings:
-			self.reset_search_setting()
+			self.search_setting_reset()
 
 		# Save cursor pos
 		try:
@@ -12564,8 +12629,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 
-		self.bidup = self.entry.bind("<Up>", func=lambda event: self.walk_search_history(event, **{'direction':'up'}), add=True )
-		self.biddown = self.entry.bind("<Down>", func=lambda event: self.walk_search_history(event, **{'direction':'down'}), add=True )
+		self.bidup = self.entry.bind("<Up>", func=lambda event: self.search_history_walk(event, **{'direction':'up'}), add=True )
+		self.biddown = self.entry.bind("<Down>", func=lambda event: self.search_history_walk(event, **{'direction':'down'}), add=True )
 
 		self.entry.unbind("<Return>", funcid=self.entry.bid_ret)
 		self.entry.bind("<Return>", self.start_search)
@@ -12618,7 +12683,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.entry.icursor(tkinter.END)
 
 
-		# walk_search_history
+		# search_history_walk
 		self.search_history_index = len(self.search_history[0]) -1 ###
 		self.flag_use_replace_history = False
 
@@ -12659,7 +12724,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		'''
 
 		if not self.search_settings:
-			self.reset_search_setting()
+			self.search_setting_reset()
 
 		if self.state != 'normal':
 			self.bell()
@@ -12685,8 +12750,8 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 
-		self.bidup = self.entry.bind("<Up>", func=lambda event: self.walk_search_history(event, **{'direction':'up'}), add=True )
-		self.biddown = self.entry.bind("<Down>", func=lambda event: self.walk_search_history(event, **{'direction':'down'}), add=True )
+		self.bidup = self.entry.bind("<Up>", func=lambda event: self.search_history_walk(event, **{'direction':'up'}), add=True )
+		self.biddown = self.entry.bind("<Down>", func=lambda event: self.search_history_walk(event, **{'direction':'down'}), add=True )
 
 		self.entry.unbind("<Return>", funcid=self.entry.bid_ret)
 		self.entry.bind("<Return>", self.start_search)
@@ -12737,7 +12802,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.entry.icursor(tkinter.END)
 
 
-		# walk_search_history, want search_words here
+		# search_history_walk, want search_words here
 		self.search_history_index = len(self.search_history[0])
 		self.flag_use_replace_history = False
 
@@ -12756,7 +12821,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 	def replace_all(self, event=None):
 
 		if not self.search_settings:
-			self.reset_search_setting()
+			self.search_setting_reset()
 
 		if self.state != 'normal':
 			self.bell()
@@ -12802,7 +12867,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			else:
 				self.new_word = tmp
 
-				# walk_search_history
+				# search_history_walk
 				if self.new_word not in self.search_history[1]:
 					self.search_history[1].append(self.new_word)
 				self.search_history_index = len(self.search_history[1])
@@ -12880,7 +12945,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.search_matches -= 1
 
 		if self.search_matches == 0:
-			self.wait_for(100)
+			self.wait_for(700)
 			self.stop_search()
 
 
@@ -12963,7 +13028,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			self.bell()
 			return 'break'
 
-		# walk_search_history
+		# search_history_walk
 		if self.new_word not in self.search_history[1]:
 			self.search_history[1].append(self.new_word)
 		self.search_history_index = len(self.search_history[1])
