@@ -10,7 +10,7 @@ print('before2')
 
 # Not sure if prompt works
 #prompt='Enter: '
-# Comment these tow lines if running from Python console:
+# Comment these two lines if running from Python console:
 # This dont work:
 #a=input('jou')
 # This works somehow, but not as much that it is recommended

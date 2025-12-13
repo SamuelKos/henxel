@@ -128,7 +128,11 @@ for key in list_of_new_keys:
 
 
 
-test_bind check is wait_for blocking #######
+#########################################################
+To notes
+wait_for is blocking, BUT in some rare occasions can be non-blocking
+--> see wait_for, see lclick_help as example of that rare occasion
+#########################################################
 
 
 
@@ -143,9 +147,6 @@ run as module, macos if printing issue, use mainloop
 
 
 goto_def no work with new def lines ##
-
-
-check replace \t #####
 
 
 

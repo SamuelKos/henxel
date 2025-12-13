@@ -1296,6 +1296,8 @@ static unsigned char infopic_bits[] = {
 			# Used for showing setting-console
 			self.setting_frame_init()
 			self.setting_console_namespace_init()
+			self.setting_console_history = list()
+			self.setting_console_history_index = 0
 
 			# Filedialog
 			self.fdialog_frame_init()
@@ -1456,23 +1458,20 @@ Error messages Begin
 			NOTE: 'cancel' all bindings, which checks the state,
 			for waiting time duration. It may be what one wants.
 
-			########################################################################
-			Remember that, wait_for()  A: changes state to 'waiting' B: is non-blocking!
-			--> be *extra* careful when checking self.state
-				(in code after calls to wait_for )
+			Remember that, wait_for()  A: changes state to 'waiting' B: is usually blocking
+			BUT in same quite rare occasions can be non-blocking!
 
-			Example: in callback1:
-				do_something
-				wait_for(some_time) --> state is now: 'waiting' (until some_time passes)
-				callback2()
+			--> One should debug self.state before and after every call to wait_for
+				to be 100% sure, before making decission of the blockiness of wait_for
+				in callback in case.
 
-				in callback2:
-					if self.state not in (list of states but not 'waiting'):
-						return 'break'
-
-				--> FAIL
-			########################################################################
+				This is easy: just print out state before and after wait_for and see result:
+				if state after is 'waiting'
+					--> non-blocking, take necessary actions (like check if state is 'waiting' because IT IS)
+				if state after is not 'waiting':
+					--> all is good, nothing needs to be done
 		'''
+
 		state = self.state
 		self.state = 'waiting'
 
@@ -1577,7 +1576,10 @@ Error messages Begin
 		try:
 			# debug-decorator doesn't catch these
 			res = eval(cmd_as_string, {'print':print}, {'e':self, 'ee':self})
-		except Exception as err: print(err)
+			self.setting_frame.last_eval_raised_error = False
+		except Exception as err:
+			self.setting_frame.last_eval_raised_error = True
+			print(err)
 		return res
 
 	#@debug
@@ -1587,11 +1589,78 @@ Error messages Begin
 		tmp = c.entry.get().strip()
 		if len(tmp) > 0:
 			res = self.do_eval(tmp)
+			if not self.setting_frame.last_eval_raised_error:
+				if tmp not in self.setting_console_history:
+					self.setting_console_history.append(tmp)
+					self.setting_console_history_index = len(self.setting_console_history) -1
+					# show position among history items
+					c.config(text='Edit Settings  %d/%d' % (self.setting_console_history_index+1, len(self.setting_console_history)) )
 			# If some setting is None, it should be printed out from callback
 			if res not in [None, 'break', 'continue']:
 				print(res)
 
 		return 'break'
+
+	#@debug
+	def setting_console_history_walk(self, event=None, direction='up'):
+		''' Walk history in entry with arrow up/down
+		'''
+		index = self.setting_console_history_index
+		h = self.setting_console_history
+		if len(h) == 0: return 'break'
+
+		# Get history item
+		if direction == 'up':
+			index -= 1
+
+			if index < 0:
+				index += 1
+				return 'break'
+##			elif index == 0:
+##				self.bell()
+		else:
+			index += 1
+
+			if index > len(h) -1:
+				index -= 1
+				return 'break'
+##			elif index == len(h) -1:
+##				self.bell()
+
+		# Update self.setting_console_history_index
+		self.setting_console_history_index = index
+		history_item = h[index]
+
+		e = self.setting_frame.entry
+		e.delete(0, 'end')
+		e.insert(0, history_item)
+		e.icursor('end')
+		e.xview_moveto(1)
+		self.setting_frame.config(text='Edit Settings  %d/%d' % (self.setting_console_history_index+1, len(self.setting_console_history)) )
+
+	#@debug
+	def complete_print(self, completions):
+		''' Print completions in two colums
+		'''
+		num = len(completions)
+		half = num // 2
+
+		even = True
+		# not even
+		if num % 2:
+			half += 1
+			even = False
+
+		col1 = completions[:half]
+		col2 = completions[half:]
+
+		max_len = max(map(len, completions))
+		patt = '{0:%s}\t{1}' % max_len
+		num = half
+		if not even: num -= 1
+		print('\nall:\n')
+		for i in range(num): print(patt.format(col1[i], col2[i]))
+		if not even: print(col1[-1])
 
 	#@debug
 	def do_complete(self, event=None):
@@ -1660,8 +1729,8 @@ Error messages Begin
 				c.completions = completions
 				c.lasttmp = tmp
 				c.compidx = 0
-				if child: print('all:', options_minus_parent)
-				else: print('all:', completions)
+				if child: self.complete_print(options_minus_parent)
+				else: self.complete_print(completions)
 
 			# insert from completions-list to enable options-walking
 			c.lastword = word = c.completions[c.compidx]
@@ -1767,6 +1836,7 @@ Error messages Begin
 		c.lastword = False
 		# last word(prefix) in entry before hitting Tab
 		c.lasttmp = False
+		c.last_eval_raised_error = False
 
 		# Used in move_setting_console
 		c.direction = ['down', 'right']
@@ -1774,6 +1844,9 @@ Error messages Begin
 		c.entry.bind("<Escape>", self.setting_console)
 		c.entry.bind("<Return>", self.do_cmd)
 		c.entry.bind("<Tab>",  self.do_complete)
+		c.entry.bind("<Up>", func=lambda event: self.setting_console_history_walk(event, **{'direction':'up'}) )
+		c.entry.bind("<Down>", func=lambda event: self.setting_console_history_walk(event, **{'direction':'down'}) )
+
 
 		# Even more binding notes, Not ok: "<1-Motion>", "<Button-1-Motion>"
 		c.bind("<B1-Motion>",  self.move_setting_console)
@@ -1853,7 +1926,6 @@ Error messages Begin
 		''' Toggle: show setting-console, binded to btn_git
 		'''
 		self.wait_for(30)
-
 		c = self.setting_frame
 
 		if c.winfo_ismapped():
@@ -12396,16 +12468,16 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			if index < 0:
 				index += 1
 				return 'break'
-			elif index == 0:
-				self.bell()
+##			elif index == 0:
+##				self.bell()
 		else:
 			index += 1
 
 			if index > len(h[x]) -1:
 				index -= 1
 				return 'break'
-			elif index == len(h[x]) -1:
-				self.bell()
+##			elif index == len(h[x]) -1:
+##				self.bell()
 
 		#print(index, len(self.search_history[0]))
 
@@ -12596,10 +12668,10 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		if self.search_starts_at == 'insert':
 			self.search_starts_at = '1.0'
-			self.show_message('From: INSERT', 1000)
+			self.show_message('From: START', 1000)
 		else:
 			self.search_starts_at = 'insert'
-			self.show_message('From: START', 1000)
+			self.show_message('From: INSERT', 1000)
 
 		self.search_ends_at = False
 
@@ -12844,7 +12916,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# Get stuff after prompt
 		tmp_orig = self.entry.get()
 		idx = tmp_orig.index(':') + 2
-		tmp = tmp_orig[idx:].strip()
+		tmp = tmp_orig[idx:]
 
 		# Replacement-string has changed
 		if tmp != self.new_word:
@@ -13019,7 +13091,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		# Get stuff after prompt
 		tmp_orig = self.entry.get()
 		idx = tmp_orig.index(':') + 2
-		tmp = tmp_orig[idx:].strip()
+		tmp = tmp_orig[idx:]
 		self.new_word = tmp
 
 		# No check for empty newword to enable deletion.

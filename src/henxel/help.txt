@@ -169,6 +169,7 @@
 	  - Nice to know:
 	  	Control-a  Move cursor to linestart
 	  	Control-k  Kill from cursor to lineend
+		Up/Down    Walk history
 	  - Sometimes, if output from command is missing, activating terminal
 		might help.
 	  - Close console with Esc
@@ -457,7 +458,7 @@
 	
 [22] Substitution with Regexp
 		
-	  - Example 1 Begin
+	  - Example 1 Begin (moving/copying columns)
 		If contents of tab is
 		
 		Example: 121 212
@@ -474,33 +475,28 @@
 		And if substitution(new_word) would be
 		"\2 \1"
 		
-		Result after replacing would then be
+		Result after replacing would then be (moving colums)
 		Example: 212 121
 		
 		Example: 212 121
 		
 		Example: 212 121
 		
+		And if substitution(new_word) would be
+		"\2 \1 \1 \2" --> copying colums
 		Example 1 End
 
 
-	  - Example 2 Begin
-		Adding space to end of substitution using:
-		search_word + () ==empty string
+	  - Example 2 Begin (about nested capture order)
 		
-		If search_word(old_word) is "A", add empty string after it:
-			"A()"
+		line in tab before: "123ABCDEF321"
 		
-		If want to add for example: " BB " after search_word,
-		Then use as substitution(new_word): 
-			"\0 BB \1"
-			
-		where \0 is whole matched string and \1 is the empty string.
-		"&" can be used inplace of "\0"
+		search_word: "3(A(B)(C))(D(E)(F))3"
 		
-		Result
-		--> "A BB "
+		new_word: " \1 \2 \3 \4 \5 \6 \0 "
 		
+		line in tab after: "12 ABC B C DEF E F 3ABCDEF3 21"
+		(\0 is whole match)
 		Example 2 End
 
 		
