@@ -547,6 +547,7 @@ class Editor(tkinter.Toplevel):
 			# Used for cancelling pending tasks
 			self.to_be_cancelled = dict()
 			self.to_be_cancelled['message'] = list()
+			self.to_be_cancelled['completions'] = list()
 			self.to_be_cancelled['flash_btn_git'] = list()
 
 			# Used to bypass conf in such a way it enables use of editor adhoc(normally)
@@ -1305,6 +1306,9 @@ static unsigned char infopic_bits[] = {
 			# Show info-messages like scope while goto_bookmark etc
 			self.message_frame_init()
 
+			# Show Tab-completion -windows
+			self.completion_frame_init()
+
 
 			if self.start_fullscreen:
 				delay = 300
@@ -1934,41 +1938,14 @@ Error messages Begin
 		return 'break'
 
 	#@debug
-	def show_message(self, message, delay, completions=False, max_len=False, update_pos=False):
+	def show_message(self, message, delay):
 		''' Show message for time delay
 		'''
 		self.wait_for(30)
 
 		m = self.message_frame
 		l = m.label
-		kwargs = False
-
-		# From wordexpand.py
-		if completions:
-			# Binding to index==1 keeps box still.
-			# Otherwise x,y would get updated and box would 'walk away'
-			if update_pos:
-				x, y, _, h = self.text_widget.bbox('insert')
-
-				# These are offsets of text_widget, relative to root.
-				# They have to be added, because frame is in root
-				offset_x = self.ln_widget.winfo_width()
-				if self.want_ln == 0: offset_x = 0
-				offset_y = self.entry.winfo_height()
-
-				x = x + offset_x
-				y = y + offset_y -h # one line above
-
-				m.comp_x = x
-				m.comp_y = y
-
-
-			kwargs = {'x':m.comp_x, 'y':m.comp_y, 'anchor':'sw'}
-			#print(max_len, x, y, offset_y, 2*h)
-			l.config(text=message, width=max_len, justify='left')
-
-		# Normal messages
-		else: l.config(text=message, width=len(message)+2)
+		l.config(text=message, width=len(message)+2)
 
 		# Remove possible old m.place_forgets
 		for item in self.to_be_cancelled['message'][:]:
@@ -1977,12 +1954,10 @@ Error messages Begin
 
 		# Keep message closer to entry when in fullscreen
 		if not m.winfo_ismapped():
-			if completions: pass
-			else:
-				kwargs = {'relx':0.1, 'rely':0.1}
-				if self.is_fullscreen():
-					x = self.ln_widget.winfo_width()*2
-					kwargs = {'x':x, 'y':self.pad*17}
+			kwargs = {'relx':0.1, 'rely':0.1}
+			if self.is_fullscreen():
+				x = self.ln_widget.winfo_width()*2
+				kwargs = {'x':x, 'y':self.pad*17}
 
 			m.place_configure(**kwargs)
 			# This, for same reason, is necessary
@@ -2003,8 +1978,72 @@ Error messages Begin
 		self.message_frame.configure(labelwidget=self.message_frame.label)
 		self.message_frame.label.pack()
 
-		self.message_frame.comp_x = 0
-		self.message_frame.comp_y = 0
+		f.place_configure(relx=0.1, rely=0.1, width=1, height=1)
+		f.place_forget()
+
+		self.to_be_closed.append(f)
+
+
+	def show_completions(self, completions, max_len=False, update_pos=False):
+		''' Show completions-window for time delay
+		'''
+		self.wait_for(30)
+
+		m = self.message_frame
+		l = m.label
+
+		# Binding to index==1 keeps box still.
+		# Otherwise x,y would get updated and box would 'walk away'
+		# In effect, if update_pos, it means: Tab-completing first time
+		if update_pos:
+			x, y, _, h = self.text_widget.bbox('insert')
+
+			# These are offsets of text_widget, relative to root.
+			# They have to be added, because frame is in root
+			offset_x = self.ln_widget.winfo_width()
+			if self.want_ln == 0: offset_x = 0
+			offset_y = self.entry.winfo_height()
+
+			x = x + offset_x
+			y = y + offset_y -h # one line above
+
+			m.comp_x = x
+			m.comp_y = y
+			#print(max_len, x, y, offset_y, 2*h)
+
+
+		l.config(text=completions, width=max_len, justify='left')
+		kwargs = {'x':m.comp_x, 'y':m.comp_y, 'anchor':'sw'}
+
+		# Rest of below is only mapping related
+
+		# Remove possible old m.place_forgets
+		for item in self.to_be_cancelled['completions'][:]:
+			self.after_cancel(item)
+			self.to_be_cancelled['completions'].remove(item)
+
+		if not m.winfo_ismapped():
+			m.place_configure(**kwargs)
+			# This, for same reason, is necessary
+			# Otherwise, sometimes in fullscreen, text is not immediately shown
+			m.update_idletasks()
+
+		c = self.after(2000, m.place_forget)
+		self.to_be_cancelled['completions'].append(c)
+		return 'break'
+
+
+	def completion_frame_init(self):
+		''' Initialize completions-frame
+		'''
+		self.comp_frame = f = tkinter.LabelFrame(self, width=1, height=1)
+		self.comp_frame.label = tkinter.Label(self.comp_frame, width=50,
+							highlightthickness=0, bd=4, font=self.textfont)
+		self.comp_frame.configure(labelwidget=self.comp_frame.label)
+		self.comp_frame.label.pack()
+
+		self.comp_frame.comp_x = 0
+		self.comp_frame.comp_y = 0
 
 		f.place_configure(relx=0.1, rely=0.1, width=1, height=1)
 		f.place_forget()

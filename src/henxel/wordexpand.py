@@ -97,7 +97,9 @@ class ExpandWord:
 			if index == 1: update_message_frame_position = True
 
 			# Can 'over'-slice without index-error
+			# index -1 is newword
 			short_list = words[index-1:index+10]
+
 			# Remove stub
 			if short_list.count(word): short_list.remove(word)
 
@@ -113,7 +115,7 @@ class ExpandWord:
 
 			short_list = '\n'.join(short_list)
 
-			self.editor.show_message(short_list, 2000, completions=True, max_len=max_len, update_pos=update_message_frame_position)
+			self.editor.show_completions(short_list, max_len=max_len, update_pos=update_message_frame_position)
 			################################################
 			# Build completions for the message-frame End
 

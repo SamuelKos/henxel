@@ -50,24 +50,22 @@ show_scope in message needs bind ##
 help adding decorator regep
 
 
+################################################
+To notes
+replace
+new_word capture references need double backslashes
+like \\1 instead of just \1
 
-old_word:
-(^[[:blank:]]*)def.*$
-new_word:
-\\1@mydecorator\n\\0
+This is because of not protecting substitution with curlies{}
 
-
-do_single_rep
-
-do_rep_all
-
-
-tkinter._tkinter
-
+Reason for not protecting is that if doing that, one
+could indeed use \1 without problem, but, for example
+\n \t etc would not translate to newline tab etc
+################################################
 
 
 goto_def sometimes no work with new def lines?
-
+no?
 
 
 ################
