@@ -1616,16 +1616,12 @@ Error messages Begin
 			if index < 0:
 				index += 1
 				return 'break'
-##			elif index == 0:
-##				self.bell()
 		else:
 			index += 1
 
 			if index > len(h) -1:
 				index -= 1
 				return 'break'
-##			elif index == len(h) -1:
-##				self.bell()
 
 		# Update self.setting_console_history_index
 		self.setting_console_history_index = index
@@ -1937,15 +1933,42 @@ Error messages Begin
 
 		return 'break'
 
-
-	def show_message(self, message, delay):
+	#@debug
+	def show_message(self, message, delay, completions=False, max_len=False, update_pos=False):
 		''' Show message for time delay
 		'''
 		self.wait_for(30)
 
 		m = self.message_frame
 		l = m.label
-		l.config(text=message, width=len(message)+2)
+		kwargs = False
+
+		# From wordexpand.py
+		if completions:
+			# Binding to index==1 keeps box still.
+			# Otherwise x,y would get updated and box would 'walk away'
+			if update_pos:
+				x, y, _, h = self.text_widget.bbox('insert')
+
+				# These are offsets of text_widget, relative to root.
+				# They have to be added, because frame is in root
+				offset_x = self.ln_widget.winfo_width()
+				if self.want_ln == 0: offset_x = 0
+				offset_y = self.entry.winfo_height()
+
+				x = x + offset_x
+				y = y + offset_y -h # one line above
+
+				m.comp_x = x
+				m.comp_y = y
+
+
+			kwargs = {'x':m.comp_x, 'y':m.comp_y, 'anchor':'sw'}
+			#print(max_len, x, y, offset_y, 2*h)
+			l.config(text=message, width=max_len, justify='left')
+
+		# Normal messages
+		else: l.config(text=message, width=len(message)+2)
 
 		# Remove possible old m.place_forgets
 		for item in self.to_be_cancelled['message'][:]:
@@ -1954,10 +1977,12 @@ Error messages Begin
 
 		# Keep message closer to entry when in fullscreen
 		if not m.winfo_ismapped():
-			kwargs = {'relx':0.1, 'rely':0.1}
-			if self.is_fullscreen():
-				x = self.ln_widget.winfo_width()*2
-				kwargs = {'x':x, 'y':self.pad*17}
+			if completions: pass
+			else:
+				kwargs = {'relx':0.1, 'rely':0.1}
+				if self.is_fullscreen():
+					x = self.ln_widget.winfo_width()*2
+					kwargs = {'x':x, 'y':self.pad*17}
 
 			m.place_configure(**kwargs)
 			# This, for same reason, is necessary
@@ -1977,6 +2002,9 @@ Error messages Begin
 							highlightthickness=0, bd=4, font=self.textfont)
 		self.message_frame.configure(labelwidget=self.message_frame.label)
 		self.message_frame.label.pack()
+
+		self.message_frame.comp_x = 0
+		self.message_frame.comp_y = 0
 
 		f.place_configure(relx=0.1, rely=0.1, width=1, height=1)
 		f.place_forget()
@@ -2347,7 +2375,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						continue
 
 		if curtab:
-			if not flag_cancel: print('\nOK')
+			if not flag_cancel: self.show_message(' OK ', 1100)
 			return 'break'
 		else: return flag_cancel
 
@@ -3081,7 +3109,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.entry.bind( "<Control-Tab>", self.insert_tab)
 
 
-		self.bind( "<Button-%i>" % self.right_mousebutton_num, self.raise_popup)
+		self.bind( "<Button-%i>" % self.right_mousebutton_num, self.popup_raise)
 		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
 
 		# Disable popup in other than Text-widget
@@ -5578,7 +5606,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.bind("<Escape>", self.esc_override)
 		self.unbind( "<ButtonRelease-1>", funcid=self.bid_mouse)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
-			lambda event: self.raise_popup(event))
+			lambda event: self.popup_raise(event))
 		self.update_title()
 
 		### tag_link End ######
@@ -5903,7 +5931,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.bind("<Escape>", self.esc_override)
 		self.unbind( "<ButtonRelease-1>", funcid=self.bid_mouse)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
-			lambda event: self.raise_popup(event))
+			lambda event: self.popup_raise(event))
 
 		return 'break'
 
@@ -5956,7 +5984,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			That would mean there is definition line in line 1234 and it has
 			indentation level 1, and name of the function is 'some_func'.
 
-			Called from: get_absolutely_next_defline
+			Called from: get_absolutely_next_defline, goto_def
 		'''
 
 		# Get non empty ranges
@@ -5984,6 +6012,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					linenums.append(defline_info)
 
 			else: break
+
+		#print(linenums)
 
 		return linenums
 
@@ -7271,7 +7301,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		######### mac_cmd_overrides End #################
 
 
-	def raise_popup(self, event=None):
+	def popup_raise(self, event=None):
 		if self.state != 'normal':
 			self.bell()
 			return 'break'
@@ -10359,28 +10389,33 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ########## Bookmarks and Help Begin
 
 ##	Note: goto_bookmark() is in Gotoline etc -section
-
+	#@debug
 	def bookmarks_print(self):
+
+		def get_and_print_books(book_list, filter_word):
+			book_list = sorted([ self.text_widget.index(mark) for mark in book_list if filter_word in mark], key=float )
+			book_list = [ (self.get_scope_path(pos), pos) for pos in book_list ]
+
+			max_len = max( map(lambda item: len(str(item[1])), book_list) )
+			patt = '{0:%s}\t{1}' % max_len
+			for (path, pos) in book_list:
+				print(patt.format(pos, path))
+
 
 		self.wait_for(100)
 
 		marks = self.text_widget.mark_names()
 		bookmarks = marks[:]
-		l = sorted([ (mark, self.text_widget.index(mark)) for mark in bookmarks if 'bookmark' in mark], key=lambda x:float(x[1]) )
-
-		for (mark, pos) in l: print(mark, pos)
-
+		print('\nBookmarks:')
+		get_and_print_books(bookmarks, 'bookmark')
 
 		stashed = marks[:]
 		for mark in stashed:
 			if 'stashed' in mark: break
 		else: return
 
-
 		print('\nHided bookmarks:')
-		l = sorted([ (mark, self.text_widget.index(mark)) for mark in stashed if 'stashed' in mark], key=lambda x:float(x[1]) )
-
-		for (mark, pos) in l: print(mark, pos)
+		get_and_print_books(stashed, 'stashed')
 
 
 	def line_is_bookmarked(self, index, tab=None, mark_patt='bookmark'):
@@ -10862,7 +10897,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.bind("<Escape>", self.esc_override)
 		self.unbind( "<Button-1>", funcid=self.bid_mouse)
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
-			lambda event: self.raise_popup(event))
+			lambda event: self.popup_raise(event))
 
 
 	def enter_help(self, tagname, event=None):
@@ -11104,7 +11139,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		return False
 
-
+	#@debug
 	def indent(self, event=None):
 		if self.state in [ 'search', 'replace', 'replace_all', 'goto_def' ]:
 			return 'break'
@@ -11115,6 +11150,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if len(self.text_widget.tag_ranges('sel')) == 0:
 
 			if self.can_expand_word():
+
 				self.expander.expand_word(event=event)
 
 				# can_expand_word called before indent and unindent
@@ -12468,18 +12504,12 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 			if index < 0:
 				index += 1
 				return 'break'
-##			elif index == 0:
-##				self.bell()
 		else:
 			index += 1
 
 			if index > len(h[x]) -1:
 				index -= 1
 				return 'break'
-##			elif index == len(h[x]) -1:
-##				self.bell()
-
-		#print(index, len(self.search_history[0]))
 
 
 		# Update self.search_history_index
@@ -12489,7 +12519,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		# Get prompt-lenght and remove text after it
 		self.entry.config(validate='none')
-		tmp_orig = self.entry.get().strip()
+		tmp_orig = self.entry.get()
 		idx = tmp_orig.index(':') + 2
 		self.entry.delete(idx, 'end')
 
@@ -12523,7 +12553,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 		self.bind("<Button-%i>" % self.right_mousebutton_num,
-			lambda event: self.raise_popup(event))
+			lambda event: self.popup_raise(event))
 
 		#self.wait_for(200)
 		self.text_widget.tag_remove('focus', '1.0', tkinter.END)
@@ -12908,7 +12938,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 		self.replace(event, state='replace_all')
 
-
+	#@debug
 	def do_single_replace(self, event=None):
 
 		# Enable changing newword between replaces Begin
@@ -12980,9 +13010,11 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 		if ('-regexp' in self.search_settings):
 			cont = r'[%s get {%s} {%s}]' \
 					% (self.tcl_name_of_contents, start, end_old)
+
 			search_re = self.old_word
-			substit = r'{%s}' % self.new_word
+			substit = r'"%s"' % self.new_word
 			patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit)
+
 			try: new_word = self.text_widget.tk.eval(patt)
 			except tkinter.TclError as err:
 				print('INFO: do_single_replace:', err)
@@ -13048,7 +13080,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 				cont = r'[%s get {%s} {%s}]' \
 						% (self.tcl_name_of_contents, start, end_old)
 				search_re = self.old_word
-				substit = r'{%s}' % self.new_word
+				substit = r'"%s"' % self.new_word
 				patt = r'regsub -line {%s} %s %s' % (search_re, cont, substit)
 				try:	new_word = self.text_widget.tk.eval(patt)
 				except tkinter.TclError as err:

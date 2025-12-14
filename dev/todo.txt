@@ -44,7 +44,30 @@ check
 
 
 
-show_scope in message needs bind
+show_scope in message needs bind ##
+
+
+help adding decorator regep
+
+
+
+old_word:
+(^[[:blank:]]*)def.*$
+new_word:
+\\1@mydecorator\n\\0
+
+
+do_single_rep
+
+do_rep_all
+
+
+tkinter._tkinter
+
+
+
+goto_def sometimes no work with new def lines?
+
 
 
 ################
@@ -144,9 +167,6 @@ test with linux win
 run as module, macos if printing issue, use mainloop
 
 
-
-
-goto_def no work with new def lines ##
 
 
 

@@ -87,10 +87,43 @@ class ExpandWord:
 		newword = words[index]
 		index += 1
 
+		# 2: there is stub also with unique
+		if len(words) > 2:
+			# Build completions for the message-frame Begin
+			################################################
+			# if index is 1, walking completions has just started
+			# --> anchor completions-window to this position
+			update_message_frame_position = False
+			if index == 1: update_message_frame_position = True
+
+			# Can 'over'-slice without index-error
+			short_list = words[index-1:index+10]
+			# Remove stub
+			if short_list.count(word): short_list.remove(word)
+
+			short_list.reverse()
+
+			# Mark current proposition
+			last = short_list.pop()
+			last = f'{last} <---'
+			short_list.append(last)
+
+
+			max_len = max(map(len, short_list))
+
+			short_list = '\n'.join(short_list)
+
+			self.editor.show_message(short_list, 2000, completions=True, max_len=max_len, update_pos=update_message_frame_position)
+			################################################
+			# Build completions for the message-frame End
+
+
 		# Gone through all words once
 		if index == len(words):
 			index = 0
-			self.text_widget.bell()
+			# 2: there is stub also with unique
+			if len(words) != 2:
+				self.text_widget.bell()
 
 
 		#######################
@@ -134,7 +167,7 @@ class ExpandWord:
 		all_words = False
 		word = self.getprevword()
 		words = []
-
+		#print(word)
 		if not word: return words
 
 

@@ -457,6 +457,8 @@
 	
 	
 [22] Substitution with Regexp
+		NOTE: One has to use double backlash for capture group references
+		in new_word, like: \\1 instead of just \1 
 		
 	  - Example 1 Begin (moving/copying columns)
 		If contents of tab is
@@ -473,7 +475,7 @@
 		Then if search_word(old_word) would be
 		"(\d+) (\d+)"
 		And if substitution(new_word) would be
-		"\2 \1"
+		"\\2 \\1"
 		
 		Result after replacing would then be (moving colums)
 		Example: 212 121
@@ -483,7 +485,7 @@
 		Example: 212 121
 		
 		And if substitution(new_word) would be
-		"\2 \1 \1 \2" --> copying colums
+		"\\2 \\1 \\1 \\2" --> copying colums
 		Example 1 End
 
 
@@ -493,11 +495,21 @@
 		
 		search_word: "3(A(B)(C))(D(E)(F))3"
 		
-		new_word: " \1 \2 \3 \4 \5 \6 \0 "
+		new_word: " \\1 \\2 \\3 \\4 \\5 \\6 \\0 "
 		
 		line in tab after: "12 ABC B C DEF E F 3ABCDEF3 21"
-		(\0 is whole match)
+		(\\0 is whole match)
 		Example 2 End
+		
+	
+	- Example 3 Begin (Add decorator to function definition)
+		note, capture group 1 gets indentation
+		
+		search_word: (^[[:blank:]]*)def.*$
+		
+		new_word: \\1@mydecorator\n\\0
+		
+		Example 3 End
 
 		
 		Some more info, examples below are search_word(old_word)
