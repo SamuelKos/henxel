@@ -196,7 +196,6 @@ class FDialog:
 						event.widget.see(idx_end + 1)
 
 
-
 	def nogoto_emptylist(self, event=None):
 		'''	Prevent tabbing into empty file-box.
 		'''

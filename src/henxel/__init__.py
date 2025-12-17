@@ -730,9 +730,6 @@ class Editor(tkinter.Toplevel):
 			self.scrollbar = tkinter.Scrollbar(self, orient=tkinter.VERTICAL,
 											highlightthickness=0, bd=0, takefocus=0)
 
-			# Tab-completion, used in indent() and unindent()
-			self.expander = wordexpand.ExpandWord(self)
-
 
 			self.popup = tkinter.Menu(self, tearoff=0, bd=0, activeborderwidth=0)
 
@@ -1308,6 +1305,10 @@ static unsigned char infopic_bits[] = {
 
 			# Show Tab-completion -windows
 			self.completion_frame_init()
+
+			# Tab-completion, used in indent() and unindent()
+			# Has to be after self.completion_frame_init()
+			self.expander = wordexpand.ExpandWord(self)
 
 
 			if self.start_fullscreen:
@@ -1984,19 +1985,49 @@ Error messages Begin
 		self.to_be_closed.append(f)
 
 
-	def show_completions(self, completions, max_len=False, update_pos=False):
+	def show_completions(self, event=None, back=False):
 		''' Show completions-window for time delay
 		'''
 		self.wait_for(30)
 
-		m = self.message_frame
-		l = m.label
+		f = self.comp_frame
+		l = f.listbox
+		l.selection_clear(0, 'end')
 
-		# Binding to index==1 keeps box still.
-		# Otherwise x,y would get updated and box would 'walk away'
-		# In effect, if update_pos, it means: Tab-completing first time
-		if update_pos:
-			x, y, _, h = self.text_widget.bbox('insert')
+		# Note: update is the prefix-string
+		update, word_list, pos = self.expander.expand_word(event=event, back=back)
+		# No completions or unique
+		if pos in [None, -1, 'unique']:
+			#print('jou')
+			f.place_forget()
+			if pos != 'unique': self.bell()
+			return 'break'
+
+
+		# New word_list
+		if update:
+			f.completions = word_list
+			l.delete(0, 'end')
+			for item in word_list: l.insert('end', item)
+
+			height = len(word_list)
+			if  height > 10: height = 10
+
+			l.config(width=30, height=height)
+			l.update_idletasks()
+
+		max_len = 30 ##########
+
+
+		# update_pos: Tab-completing first time
+		if update:
+			self.update_idletasks()
+
+			# Count prefix len
+			len_stub = len(update)
+			x0 = self.text_widget.bbox('insert -%dc -1c wordstart' % len_stub)[0]
+
+			x, y, _, h = self.text_widget.bbox('insert' )
 
 			# These are offsets of text_widget, relative to root.
 			# They have to be added, because frame is in root
@@ -2004,32 +2035,77 @@ Error messages Begin
 			if self.want_ln == 0: offset_x = 0
 			offset_y = self.entry.winfo_height()
 
-			x = x + offset_x
-			y = y + offset_y -h # one line above
+			pad = self.pad*5
 
-			m.comp_x = x
-			m.comp_y = y
-			#print(max_len, x, y, offset_y, 2*h)
+			# Make border-check
+			# Near top
+			if y -f.height -pad < 0:
+				anchor = 'nw'
+				y = y +h +2*self.pad # one line below
+
+				# Near ne
+				tmp = self.text_widget.winfo_width()
+				if x +f.width +pad > tmp:
+					anchor = 'ne'
+					x = tmp -pad
+			else:
+				anchor = 'sw'
+				y = y -2*self.pad
+
+				# Near se
+				tmp = self.text_widget.winfo_width()
+				if x +f.width +pad > tmp:
+					anchor = 'se'
+					x = tmp -pad
+
+			# Move completions-window len_stub to left
+			x -= len_stub
+
+			# Update some stats
+			f.cur_anchor = anchor
+			f.comp_x = x0 + offset_x
+			f.comp_y = y + offset_y
+			f.char_width = self.menufont.measure('A')
 
 
-		l.config(text=completions, width=max_len, justify='left')
-		kwargs = {'x':m.comp_x, 'y':m.comp_y, 'anchor':'sw'}
+		# Don't shrink width while completing
+		w = max_len
+		if update: f.last_width = w
+		elif max_len < f.last_width: w = f.last_width
+		elif max_len > f.last_width: f.last_width = w
 
-		# Rest of below is only mapping related
+		w = f.char_width * w
+
+
+		l.select_set(pos)
+
+
+
+		kwargs = {'x':f.comp_x, 'y':f.comp_y, 'width':w, 'anchor':f.cur_anchor}
+
+		#print(kwargs)
+		#e.comp_frame.place_configure(relx=0.1, rely=0.1)
+
+
 
 		# Remove possible old m.place_forgets
 		for item in self.to_be_cancelled['completions'][:]:
 			self.after_cancel(item)
 			self.to_be_cancelled['completions'].remove(item)
 
-		if not m.winfo_ismapped():
-			m.place_configure(**kwargs)
+		if not f.winfo_ismapped():
+			f.place_configure(**kwargs)
 			# This, for same reason, is necessary
 			# Otherwise, sometimes in fullscreen, text is not immediately shown
-			m.update_idletasks()
+			f.update_idletasks()
+##			if update:
+##				f.height = f.winfo_height()
+##				f.width = f.winfo_width()
 
-		c = self.after(2000, m.place_forget)
+
+		c = self.after(2000, f.place_forget)
 		self.to_be_cancelled['completions'].append(c)
+
 		return 'break'
 
 
@@ -2037,13 +2113,74 @@ Error messages Begin
 		''' Initialize completions-frame
 		'''
 		self.comp_frame = f = tkinter.LabelFrame(self, width=1, height=1)
-		self.comp_frame.label = tkinter.Label(self.comp_frame, width=50,
-							highlightthickness=0, bd=4, font=self.textfont)
-		self.comp_frame.configure(labelwidget=self.comp_frame.label)
-		self.comp_frame.label.pack()
 
-		self.comp_frame.comp_x = 0
-		self.comp_frame.comp_y = 0
+		# test for init error
+		#bg, fg = self.themes[self.curtheme]['comments'][:]
+
+		# bind up down to expand
+		# unindent to backwards
+		# remove head if dot in stub
+
+		f.completions = list()
+
+		bg = self.bgcolor
+		fg = self.fgcolor
+		kwargs = {
+		'highlightthickness':0,
+		'selectborderwidth':0,
+		'selectmode':'single',
+		'exportselection':0,
+		'height':10,
+		'bd':0,
+		'bg':bg,
+		'fg':fg,
+		'font':self.menufont,
+		'disabledforeground':fg,
+		'highlightbackground':'white',
+		'highlightcolor':bg,
+		'justify':'left',
+		'relief':'flat'
+		}
+
+		f.listbox = tkinter.Listbox(self.comp_frame, **kwargs)
+		f.listbox.pack()
+
+##		self.files.bind('<Up>', self.carousel)
+##		self.files.bind('<Down>', self.carousel)
+##		self.files.bind('<Return>', self.selectfile)
+##		self.files.bind('<Double-ButtonRelease-1>', self.selectfile)
+
+### pressed Return:
+##if event.num != 1:
+##	files.selection_clear(0, tkinter.END)
+##	files.selection_set(self.files.index('active'))
+##	f = files.get('active')
+##
+### button-1:
+##else:
+##	f = files.get( files.curselection() )
+##
+### button-1:
+##else:
+##	dirs.activate( self.dirs.curselection() )
+##	d = dirs.get('active')
+##
+##if files.size() == 0: pass
+##else:
+##	files.focus_set()
+##	files.activate(0)
+##	files.see(0)
+##
+##carousel
+
+
+		f.comp_x = 1
+		f.comp_y = 1
+		f.height = 1
+		f.width = 1
+		f.cur_anchor = 'sw'
+		f.char_width = self.menufont.measure('A')
+		f.last_width = 1
 
 		f.place_configure(relx=0.1, rely=0.1, width=1, height=1)
 		f.place_forget()
@@ -11166,6 +11303,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		ins = tkinter.INSERT
 		# There should not be selection, checked before call in caller.
 
+		if not self.text_widget.bbox('insert'):
+			self.bell()
+			return 'break'
+
 		# Check previous char
 		idx = self.text_widget.index(ins)
 		col = int(idx.split(sep='.')[1])
@@ -11190,7 +11331,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if self.can_expand_word():
 
-				self.expander.expand_word(event=event)
+				self.show_completions(event=event)
 
 				# can_expand_word called before indent and unindent
 
@@ -11273,7 +11414,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if len(self.text_widget.tag_ranges('sel')) == 0:
 
 			if self.can_expand_word():
-				self.expander.expand_word(event=event)
+
+				self.show_completions(event=event, back=True)
 
 				# can_expand_word called before indent and unindent
 

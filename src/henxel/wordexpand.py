@@ -47,85 +47,81 @@ class ExpandWord:
 	def __init__(self, editor):
 		# text_widget is tkinter.Text -widget
 		self.text_widget = None
+		self.flag_unique = False
 		self.state = None
 		self.editor = editor
+		self.stub = ''
 
 
-	def expand_word(self, event=None):
+	def expand_word(self, event=None, back=False):
 		''' Replace the current word with the next expansion.
 		'''
 
 		curinsert = event.widget.index("insert")
 		curline = event.widget.get("insert linestart", "insert lineend")
 
+		update_completions = False
 
 		# Tab changed
 		if event.widget != self.text_widget:
 			self.text_widget = event.widget
 			self.tcl_name_of_contents = str( self.text_widget.nametowidget(self.text_widget) )
+			update_completions = True
+			self.flag_unique = False
 			words = self.getwords()
-			index = 0
+			# Filter out some non-sense, that comes when completing after dot
+			for item in words[:]:
+				for char in '()[]{}':
+					if char in item: words.remove(item)
 
+			index = -1
 
 		else:
-
 			words, index, insert, line = self.state
-
+			# Something else changed
 			if insert != curinsert or line != curline:
+				update_completions = True
+				self.flag_unique = False
 				words = self.getwords()
+				# Filter out some non-sense, that comes when completing after dot
+				for item in words[:]:
+					for char in '()[]{}':
+						if char in item: words.remove(item)
+
 				#print(words)
-				index = 0
+				index = -1
 
 
-		if not words:
-			self.text_widget.bell()
-			return "break"
+		if not words: return False, False, None
+		# Remove stub from completions
+		if update_completions:
+			self.stub = update_completions = words.pop(0)
+			if len(words) == 1:
+				self.flag_unique = True
 
 
 
 		word = self.getprevword()
+
+
+		if back:
+			index -= 1
+			if index == -1: index = len(words) -1
+
+		else:
+			index += 1
+			# Gone through all words once
+			if index == len(words): index = -1
+
+
 		newword = words[index]
-		index += 1
-
-		# 2: there is stub also with unique
-		if len(words) > 2:
-			# Build completions for the message-frame Begin
-			################################################
-			# if index is 1, walking completions has just started
-			# --> anchor completions-window to this position
-			update_message_frame_position = False
-			if index == 1: update_message_frame_position = True
-
-			# Can 'over'-slice without index-error
-			# index -1 is newword
-			short_list = words[index-1:index+10]
-
-			# Remove stub
-			if short_list.count(word): short_list.remove(word)
-
-			short_list.reverse()
-
-			# Mark current proposition
-			last = short_list.pop()
-			last = f'{last} <---'
-			short_list.append(last)
+		if index == -1 and not update_completions:
+			newword = self.stub
+			if not self.flag_unique:
+				self.editor.bell()
 
 
-			max_len = max(map(len, short_list))
-
-			short_list = '\n'.join(short_list)
-
-			self.editor.show_completions(short_list, max_len=max_len, update_pos=update_message_frame_position)
-			################################################
-			# Build completions for the message-frame End
-
-
-		# Gone through all words once
-		if index == len(words):
-			index = 0
-			# 2: there is stub also with unique
-			if len(words) != 2:
-				self.text_widget.bell()
+		pos = index
 
 
 		#######################
@@ -153,7 +149,12 @@ class ExpandWord:
 		curline = self.text_widget.get("insert linestart", "insert lineend")
 		self.state = words, index, curinsert, curline
 
-		return "break"
+
+		if self.flag_unique: pos = 'unique'
+		if update_completions:
+			return update_completions, words, pos
+		else:
+			return update_completions, False, pos
 
 
 	def getwords(self):
@@ -171,6 +172,8 @@ class ExpandWord:
 		words = []
 		#print(word)
 		if not word: return words
+
+		words.append(word)
 
 
 		patt_end = ' get %s %s]'
@@ -252,8 +255,6 @@ class ExpandWord:
 
 			words.append(w)
 			dictionary[w] = w
-
-		words.append(word)
 
 		return words
 

@@ -10,28 +10,12 @@ git config --global core.pager 'less -x1,5'
 echo '*.py diff=python' >> .git/info/attributes
 
 git diff -w == no space diffs
+git diff -b --ignore-blank-lines
+pip install build setuptools
+python -m build -nx
 macos: open filebrowser from terminal to current folder: open .
-Below this: done ################################################
-
-
-
-## To Notes: ##########################
-########################################################################
-Remember that, wait_for()  A: changes state to 'waiting' B: is non-blocking!
---> be *extra* careful when checking self.state
-	(in code after calls to wait_for )
-				
-Example: in callback1:
-	do_something
-	wait_for(some_time) --> state is now: 'waiting' (until some_time passes)
-	callback2()
-				
-	in callback2:
-		if self.state not in (list of states but not 'waiting'):
-			return 'break'
-				
-	--> FAIL
-########################################################################
+############################################################
+##########################################################
 
 
 
@@ -46,22 +30,13 @@ check
 
 show_scope in message needs bind ##
 
+colors frames check
 
-help adding decorator regep
+use self.text_widget.replace  #####
+instead of regsub?
+can use \1 instead of \\1 ?
 
 
-################################################
-To notes
-replace
-new_word capture references need double backslashes
-like \\1 instead of just \1
-
-This is because of not protecting substitution with curlies{}
-
-Reason for not protecting is that if doing that, one
-could indeed use \1 without problem, but, for example
-\n \t etc would not translate to newline tab etc
-################################################
 
 
 goto_def sometimes no work with new def lines?
@@ -78,7 +53,6 @@ check toml script entry -->
 
 
 
-
 macos printing issue is partly because of using shell installed from brew
 --> don't install from brew
 even when using builtin shell, there was no word wrap for long single lines,
@@ -87,20 +61,7 @@ or for tracabacks from tkinter callbacks
 
 
 
-
 module docstring ######
-
-
-
-#######
-one time conf:
-when started from terminal with filapaths:
-python -m henxel filepath1 filepath2
-Use one time conf(original conf remains untouched) to enable
-'adhoc behaviour' editor, like normal editor: 
-######
-
-
 
 
 
@@ -148,90 +109,12 @@ for key in list_of_new_keys:
 
 
 
-
-#########################################################
-To notes
-wait_for is blocking, BUT in some rare occasions can be non-blocking
---> see wait_for, see lclick_help as example of that rare occasion
-#########################################################
-
-
-
 run_as_module()
 default is False
 check with some project with __main__.py ###
 done ok
 test with linux win
 run as module, macos if printing issue, use mainloop
-
-
-
-
-
-#################
-to notes
-
-filter_keys_out/in(event, keys)
-
-modifier_dict = {
-Mask	Modifier
-0x0001	'Shift'
-0x0002	'CapsLock'
-0x0004	'Control'
-0x0008	'Left-Alt'
-0x0010	'NumLock'
-0x0080	'Right-Alt'
-0x0100	'Button1'
-0x0200	'Button2'
-0x0400	'Button3'
-
-
-in tkinter.Event:
-#####
-if event.state == 0: print('no modifiers')
-
-elif isinstance(event.state, int):
-	state = event.state
-
-	mods = ('Shift', 'Lock', 'Control',
-			'Mod1', 'Mod2', 'Mod3', 'Mod4', 'Mod5',
-			'Button1', 'Button2', 'Button3', 'Button4', 'Button5')
-
-	s = []
-
-	for i, n in enumerate(mods):
-		if state & (1 << i): s.append(n)
-
-
-	if len(s) > 0: print('had modifier')
-	state = state & ~((1<< len(mods)) - 1)
-	#print('state:', state)
-	if state or not s: s.append(hex(state))
-	mods = '|'.join(s)
-	print(mods)
-#######
-
-###################
-
-
-
-
-
-#### Really strange bug
-when cursor is on: comment line, that starts from indent0, at index:
-indent0, lineend or lineend -1c
-
-then, walk to next tab, close editor and reopen editor, don't change tab
-
-then, in python console:
-e.tabs[e.tabindex].text_widget.bbox('@0,0') --> normal
-
-#idx_err = (index of closed tab where cursor is on comment line):
-idx_err = e.tabindex-1
-
-e.tabs[idx_err].text_widget.bbox('@0,0') --> None!
-########
-
 
 
 
@@ -517,58 +400,6 @@ check import bookmarks
 
 
 
-
-###############################
-To Notes:
-
-
-#######
-printing works also in macos when in mainloop
-#######
-
-
-#######
-e.tk.eval('chan configure stdout')
-'-blocking 1 -buffering line -buffersize 4096 -encoding utf-8 -eofchar {} -translation crlf -mode 9600,n,8,1 -xchar {\x11 \x13}'
-#######
-
-
-#######
-newtab seems to have syntax on by default 
-#######
-
-
-#######
-it seems that when doing long multiline paste,
-after paste, when pasted lines are still selected,
-paste can be adjusted down with return if insert
-is at sel start
-#######
-
-
-#######
-# Crazy fix (stuff goes to stdin)
-self.clipboard_clear()
-[self.clipboard_append( str(arg) + ' ' ) for arg in args ]
-self.clipboard_append( chr(13)) # + chr(10) )
-
-mac_term = self.__class__.mac_term
-triple = r"'''"
-tmp = ['osascript', '-e', 'tell app "%s" to activate' % mac_term,
-'-e', 'tell application "System Events" to keystroke "%s"' % triple,
-'-e', 'tell application "System Events" to keystroke "v" using command down',
-'-e', 'tell application "System Events" to keystroke "%s"' % triple,
-'-e', 'tell application "System Events" to key down {return}',
-'-e', 'tell application "System Events" to key up {return}'
-]
-
-subprocess.run(tmp)
-#######
-################################
-
-
-
-
 done, this should be user settable bitmap: set_bitmap(bitmap_as_string) ########
 #####################################
 tk.BitmapImage(file=f[, background=b][, foreground=c])
@@ -610,7 +441,6 @@ print(width_total)
 e.btn_git.config(width=width_total)
 
 #####################################
-
 
 
 
@@ -657,17 +487,7 @@ help no can search ##########################
 searching etc with slow tagging(wait_fors) --> can goto_def and esc too fast
 
 
-not unique, tab wordexpand, give list?
-
-
 move_many_lines check win11, done?
-
-
-count and keep cache of all py files, even if closed?
-
-
-check why:
-home/end/gotolineend does see() or ensure_idx()
 
 
 check breakpoint usage
@@ -705,12 +525,6 @@ check paste token update
 
 
 split __init__.py to smaller files/modules
-
-
-
-Add Settings section in help?
-Add Settings widget
-
 
 
 
@@ -790,13 +604,7 @@ NameError: name 'helptxt' is not defined
 
 
 
-print_bookmarks show scope
-
-
 list tree of deflines
-
-
-ctrl-(shift)-,. --> instead of ctrl-1234?
 
 
 Control-(Shift)-Home/End no work
@@ -1051,11 +859,6 @@ display it
 	readline.redisplay()
 ####
 ###########################################################
-
-
-git diff -b --ignore-blank-lines
-pip install build setuptools
-python -m build -nx
 
 
 tab complete at end of:
@@ -1436,6 +1239,135 @@ in init apply conf and update fonts
 
 ##########################################################
 TO NOTES START
+
+
+########################################################################
+Remember that, wait_for()  A: changes state to 'waiting' B: is non-blocking!
+--> be *extra* careful when checking self.state
+	(in code after calls to wait_for )
+				
+Example: in callback1:
+	do_something
+	wait_for(some_time) --> state is now: 'waiting' (until some_time passes)
+	callback2()
+				
+	in callback2:
+		if self.state not in (list of states but not 'waiting'):
+			return 'break'
+				
+	--> FAIL
+########################################################################
+
+
+###################
+filter_keys_out/in(event, keys)
+
+modifier_dict = {
+Mask	Modifier
+0x0001	'Shift'
+0x0002	'CapsLock'
+0x0004	'Control'
+0x0008	'Left-Alt'
+0x0010	'NumLock'
+0x0080	'Right-Alt'
+0x0100	'Button1'
+0x0200	'Button2'
+0x0400	'Button3'
+
+
+in tkinter.Event:
+#####
+if event.state == 0: print('no modifiers')
+
+elif isinstance(event.state, int):
+	state = event.state
+
+	mods = ('Shift', 'Lock', 'Control',
+			'Mod1', 'Mod2', 'Mod3', 'Mod4', 'Mod5',
+			'Button1', 'Button2', 'Button3', 'Button4', 'Button5')
+
+	s = []
+
+	for i, n in enumerate(mods):
+		if state & (1 << i): s.append(n)
+
+
+	if len(s) > 0: print('had modifier')
+	state = state & ~((1<< len(mods)) - 1)
+	#print('state:', state)
+	if state or not s: s.append(hex(state))
+	mods = '|'.join(s)
+	print(mods)
+#######
+###################
+
+
+#########################################################
+wait_for is blocking, BUT in some rare occasions can be non-blocking
+--> see wait_for, see lclick_help as example of that rare occasion
+#########################################################
+
+
+#######
+one time conf:
+when started from terminal with filapaths:
+python -m henxel filepath1 filepath2
+Use one time conf(original conf remains untouched) to enable
+'adhoc behaviour' editor, like normal editor: 
+######
+
+
+################################################
+replace
+new_word capture references need double backslashes
+like \\1 instead of just \1
+
+This is because of not protecting substitution with curlies{}
+
+Reason for not protecting is that if doing that, one
+could indeed use \1 without problem, but, for example
+\n \t etc would not translate to newline tab etc
+################################################
+
+
+#### Really strange bug
+when cursor is on: comment line, that starts from indent0, at index:
+indent0, lineend or lineend -1c
+
+then, walk to next tab, close editor and reopen editor, don't change tab
+
+then, in python console:
+e.tabs[e.tabindex].text_widget.bbox('@0,0') --> normal
+
+#idx_err = (index of closed tab where cursor is on comment line):
+idx_err = e.tabindex-1
+
+e.tabs[idx_err].text_widget.bbox('@0,0') --> None!
+########
+
+
+#######
+printing works also in macos when in mainloop
+#######
+
+
+#######
+e.tk.eval('chan configure stdout')
+'-blocking 1 -buffering line -buffersize 4096 -encoding utf-8 -eofchar {} -translation crlf -mode 9600,n,8,1 -xchar {\x11 \x13}'
+#######
+
+
+#######
+newtab seems to have syntax on by default 
+#######
+
+
+#######
+it seems that when doing long multiline paste,
+after paste, when pasted lines are still selected,
+paste can be adjusted down with return if insert
+is at sel start
+#######
 
 
 ####
