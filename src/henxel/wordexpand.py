@@ -68,18 +68,30 @@ class ExpandWord:
 			if len(word_list) == 1:
 				self.flag_unique = True
 
-			# Filter out some non-sense, that comes when completing after dot
-			for item in word_list[:]:
-				for char in '()[]{}':
-					if char in item: word_list.remove(item)
+
+			words_to_be_returned = list()
 
 
 			self.stub_has_dot = False
 			if '.' in self.stub:
 				self.stub_has_dot = idx_dot = self.stub.rindex('.')
-				word_list = list(map(lambda item: item[idx_dot:], word_list))
 
-			return word_list
+				for item in word_list:
+					for char in '{}':
+						if char not in item:
+							words_to_be_returned.append(item[idx_dot:])
+							break # needs break to prevent duplicates
+
+			else:
+				patt = self.stub + '.'
+
+				for item in word_list:
+					if not item.startswith(patt):
+						words_to_be_returned.append(item)
+
+
+			return words_to_be_returned
+
 
 
 		update_completions = False
@@ -200,13 +212,15 @@ class ExpandWord:
 		all_words = False
 		word = self.getprevword()
 		words = []
-		#print(word)
+
 		if not word: return words
 
 
+		word_with_escaped_dots = word.replace('.', '\\.')
+
 		patt_end = ' get %s %s]'
 		patt_start = r'regexp -all -line -inline {\m%s[[:alnum:]_.]+} [%s' \
-				% (word, self.tcl_name_of_contents)
+				% (word_with_escaped_dots, self.tcl_name_of_contents)
 
 
 		if self.editor.can_do_syntax():
