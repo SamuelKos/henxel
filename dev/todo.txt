@@ -36,7 +36,9 @@ use self.text_widget.replace  #####
 instead of regsub?
 can use \1 instead of \\1 ?
 
-
+expander
+f.
+no work
 
 
 goto_def sometimes no work with new def lines?

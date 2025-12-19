@@ -51,6 +51,7 @@ class ExpandWord:
 		self.state = None
 		self.editor = editor
 		self.stub = ''
+		self.stub_has_dot = False
 
 
 	def expand_word(self, event=None, back=False):
@@ -60,44 +61,55 @@ class ExpandWord:
 		curinsert = event.widget.index("insert")
 		curline = event.widget.get("insert linestart", "insert lineend")
 
+
+		def filter_words(word_list):
+
+			self.stub = word_list.pop()
+			if len(word_list) == 1:
+				self.flag_unique = True
+
+			# Filter out some non-sense, that comes when completing after dot
+			for item in word_list[:]:
+				for char in '()[]{}':
+					if char in item: word_list.remove(item)
+
+
+			self.stub_has_dot = False
+			if '.' in self.stub:
+				self.stub_has_dot = idx_dot = self.stub.rindex('.')
+				word_list = list(map(lambda item: item[idx_dot:], word_list))
+
+			return word_list
+
+
 		update_completions = False
+
 
 		# Tab changed
 		if event.widget != self.text_widget:
 			self.text_widget = event.widget
 			self.tcl_name_of_contents = str( self.text_widget.nametowidget(self.text_widget) )
+
 			update_completions = True
 			self.flag_unique = False
-			words = self.getwords()
-			# Filter out some non-sense, that comes when completing after dot
-			for item in words[:]:
-				for char in '()[]{}':
-					if char in item: words.remove(item)
+			word_list = self.getwords()
+			if not word_list: return False, False, None
 
+			words = filter_words(word_list)
 			index = -1
 
 		else:
 			words, index, insert, line = self.state
 			# Something else changed
 			if insert != curinsert or line != curline:
+
 				update_completions = True
 				self.flag_unique = False
-				words = self.getwords()
-				# Filter out some non-sense, that comes when completing after dot
-				for item in words[:]:
-					for char in '()[]{}':
-						if char in item: words.remove(item)
+				word_list = self.getwords()
+				if not word_list: return False, False, None
 
-				#print(words)
+				words = filter_words(word_list)
 				index = -1
-
-
-		if not words: return False, False, None
-		# Remove stub from completions
-		if update_completions:
-			self.stub = update_completions = words.pop(0)
-			if len(words) == 1:
-				self.flag_unique = True
 
 
 
@@ -106,19 +118,18 @@ class ExpandWord:
 
 		if back:
 			index -= 1
-			if index == -1: index = len(words) -1
+			# Wrap to end
+			if index == -2: index = len(words) -1
 
 		else:
 			index += 1
-			# Gone through all words once
+			# Wrap to start
 			if index == len(words): index = -1
 
 
 		newword = words[index]
 		if index == -1 and not update_completions:
 			newword = self.stub
-			if not self.flag_unique:
-				self.editor.bell()
 
 
 		pos = index
@@ -140,8 +151,27 @@ class ExpandWord:
 		###########################
 
 
-		#print(word, len(word), newword)
-		self.text_widget.delete("insert - %d chars" % len(word), "insert")
+		# First remove old completion
+		if self.stub_has_dot:
+			dots = self.stub_has_dot
+
+			# 'rstrip' to first dot (-1c) when starting completion
+			if index == 0 and update_completions:
+				tail = len(self.stub) - dots
+				self.text_widget.delete("insert -%d chars" % tail, "insert")
+
+			# wrapped back to stub
+			elif newword == self.stub:
+				self.text_widget.delete("insert -%d chars" % len(word), "insert")
+
+			# must 'add' head of stub because of not so wise self.getprevword()
+			else:
+				self.text_widget.delete("insert -%d chars +%d chars" % (len(word), dots), "insert")
+
+		else:
+			self.text_widget.delete("insert -%d chars" % len(word), "insert")
+
+		# Then add newword/completion
 		self.text_widget.insert("insert", newword)
 
 
@@ -152,9 +182,9 @@ class ExpandWord:
 
 		if self.flag_unique: pos = 'unique'
 		if update_completions:
-			return update_completions, words, pos
+			return self.stub, words, pos, newword
 		else:
-			return update_completions, False, pos
+			return False, False, pos, False
 
 
 	def getwords(self):
@@ -172,8 +202,6 @@ class ExpandWord:
 		words = []
 		#print(word)
 		if not word: return words
-
-		words.append(word)
 
 
 		patt_end = ' get %s %s]'
@@ -255,6 +283,9 @@ class ExpandWord:
 
 			words.append(w)
 			dictionary[w] = w
+
+		# Add stub
+		words.append(word)
 
 		return words
 

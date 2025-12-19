@@ -1985,49 +1985,123 @@ Error messages Begin
 		self.to_be_closed.append(f)
 
 
+	def carousel(self, frame, idx, back):
+		''' Handle highlight and scrolling of completions-window
+			Called from show_completions
+		'''
+
+		widget = frame.listbox
+		needs_scroll = False
+		one_fifth = 4 # more like one third
+		num_items = widget.size()
+
+		start = idx_start = widget.index('@0,0')
+		end = idx_end = widget.index('@0,65535')
+
+		idx_last = num_items - 1
+		num_items_onscreen = idx_end - idx_start +1
+		if num_items > num_items_onscreen:
+			needs_scroll = True
+
+
+		def get_max_len(start):
+			end = start + num_items_onscreen
+			items = frame.completions[start:end]
+			return max(map(len,items))
+
+
+		widget.select_set(idx)
+
+
+		if back:
+			if idx == idx_last:
+				widget.see(idx_last)
+				start = num_items - num_items_onscreen
+
+
+			# if all items does not fit to listbox
+			elif needs_scroll:
+				idx_new = idx_start + one_fifth
+
+				if idx < idx_new:
+					# scroll up one line
+					if not idx_start-1 < 0:
+						widget.see(idx_start - 1)
+						start = idx_start - 1
+
+		else:
+			if idx == 0:
+				widget.see(0)
+				start = 0
+
+
+			# if all items does not fit to listbox
+			elif needs_scroll:
+				idx_new = idx_end - one_fifth
+
+				if idx > idx_new:
+					# scroll down one line
+					if not idx_end+1 > idx_last:
+						widget.see(idx_end + 1)
+						start = idx_start + 1
+
+
+		return get_max_len(start)
+
+
 	def show_completions(self, event=None, back=False):
 		''' Show completions-window for time delay
 		'''
 		self.wait_for(30)
 
 		f = self.comp_frame
-		l = f.listbox
-		l.selection_clear(0, 'end')
+		lb = f.listbox
+		lb.selection_clear(0, 'end')
 
 		# Note: update is the prefix-string
-		update, word_list, pos = self.expander.expand_word(event=event, back=back)
-		# No completions or unique
+		update, word_list, pos, first_word = self.expander.expand_word(event=event, back=back)
+		# No completions, wrap around or unique
 		if pos in [None, -1, 'unique']:
-			#print('jou')
 			f.place_forget()
-			if pos != 'unique': self.bell()
+			if pos is None: self.bell()
 			return 'break'
 
 
 		# New word_list
 		if update:
+			f.place_forget()
+
 			f.completions = word_list
-			l.delete(0, 'end')
-			for item in word_list: l.insert('end', item)
-
+			lb.delete(0, 'end')
+			for item in word_list: lb.insert('end', item)
+			lb.see(0)
 			height = len(word_list)
-			if  height > 10: height = 10
+			if  height > 11: height = 11
 
-			l.config(width=30, height=height)
-			l.update_idletasks()
+			lb.config(width=30, height=height)
+			f.max_len = 30
 
-		max_len = 30 ##########
+
+		flag_update_width = False
+		# Handle highlight, scrolling and width
+		tmp_max = self.carousel(f, pos, back)
+		if tmp_max > f.max_len:
+			f.max_len = tmp_max
+			lb.config(width=tmp_max+2)
+			flag_update_width = True
 
 
 		# update_pos: Tab-completing first time
 		if update:
-			self.update_idletasks()
+			# Count adjust len
+			# Explanation: If prefix does not have dot --> adjust would be len(newword)
+			# If prefix does have dot --> adjust would also be len(newword)
+			# (because words have been rstripped to last dot by expander)
+			len_first = len(first_word)
 
-			# Count prefix len
-			len_stub = len(update)
-			x0 = self.text_widget.bbox('insert -%dc -1c wordstart' % len_stub)[0]
-
-			x, y, _, h = self.text_widget.bbox('insert' )
+			# First completion has already been inserted by expander,
+			# need to adjust window position accordingly
+			x, y, _, h = self.text_widget.bbox('insert -%dc' % len_first)
 
 			# These are offsets of text_widget, relative to root.
 			# They have to be added, because frame is in root
@@ -2043,7 +2117,7 @@ Error messages Begin
 				anchor = 'nw'
 				y = y +h +2*self.pad # one line below
 
-				# Near ne
+				# Near ne-corner
 				tmp = self.text_widget.winfo_width()
 				if x +f.width +pad > tmp:
 					anchor = 'ne'
@@ -2052,40 +2126,26 @@ Error messages Begin
 				anchor = 'sw'
 				y = y -2*self.pad
 
-				# Near se
+				# Near se-corner
 				tmp = self.text_widget.winfo_width()
 				if x +f.width +pad > tmp:
 					anchor = 'se'
 					x = tmp -pad
 
-			# Move completions-window len_stub to left
-			x -= len_stub
-
-			# Update some stats
+			# kwargs for f.place_configure
 			f.cur_anchor = anchor
-			f.comp_x = x0 + offset_x
+			f.comp_x = x + offset_x
 			f.comp_y = y + offset_y
-			f.char_width = self.menufont.measure('A')
+			############################
 
 
-		# Don't shrink width while completing
-		w = max_len
-		if update: f.last_width = w
-		elif max_len < f.last_width: w = f.last_width
-		elif max_len > f.last_width: f.last_width = w
-
-		w = f.char_width * w
-
-
-		l.select_set(pos)
-
+		# Adjust width while completing
+		w = f.char_width * f.max_len
+		if flag_update_width:
+			w = f.char_width * (f.max_len +2)
 
 
 		kwargs = {'x':f.comp_x, 'y':f.comp_y, 'width':w, 'anchor':f.cur_anchor}
-
-		#print(kwargs)
-		#e.comp_frame.place_configure(relx=0.1, rely=0.1)
-
 
 
 		# Remove possible old m.place_forgets
@@ -2098,9 +2158,13 @@ Error messages Begin
 			# This, for same reason, is necessary
 			# Otherwise, sometimes in fullscreen, text is not immediately shown
 			f.update_idletasks()
-##			if update:
-##				f.height = f.winfo_height()
-##				f.width = f.winfo_width()
+			if update:
+				f.height = f.winfo_height()
+				f.width = f.winfo_width()
+
+		elif flag_update_width:
+			f.place_configure(**kwargs)
+			flag_update_width = False
 
 
 		c = self.after(2000, f.place_forget)
@@ -2125,6 +2189,12 @@ Error messages Begin
 
 		bg = self.bgcolor
 		fg = self.fgcolor
+		gray = 'gray'
+		black = 'black'
+		if self.curtheme == 'day':
+			gray = 'gray'
+			black = 'black'
+
 		kwargs = {
 		'highlightthickness':0,
 		'selectborderwidth':0,
@@ -2132,12 +2202,12 @@ Error messages Begin
 		'exportselection':0,
 		'height':10,
 		'bd':0,
-		'bg':bg,
-		'fg':fg,
+		'bg':gray,
+		'fg':black,
 		'font':self.menufont,
 		'disabledforeground':fg,
-		'highlightbackground':'white',
-		'highlightcolor':bg,
+		'selectbackground':fg,
+		'selectforeground':bg,
 		'justify':'left',
 		'relief':'flat'
 		}
@@ -2145,42 +2215,13 @@ Error messages Begin
 		f.listbox = tkinter.Listbox(self.comp_frame, **kwargs)
 		f.listbox.pack()
 
-##		self.files.bind('<Up>', self.carousel)
-##		self.files.bind('<Down>', self.carousel)
-##		self.files.bind('<Return>', self.selectfile)
-##		self.files.bind('<Double-ButtonRelease-1>', self.selectfile)
-
-### pressed Return:
-##if event.num != 1:
-##	files.selection_clear(0, tkinter.END)
-##	files.selection_set(self.files.index('active'))
-##	f = files.get('active')
-##
-### button-1:
-##else:
-##	f = files.get( files.curselection() )
-##
-### button-1:
-##else:
-##	dirs.activate( self.dirs.curselection() )
-##	d = dirs.get('active')
-##
-##if files.size() == 0: pass
-##else:
-##	files.focus_set()
-##	files.activate(0)
-##	files.see(0)
-##
-##carousel
-
-
+		f.max_len = 30
 		f.comp_x = 1
 		f.comp_y = 1
 		f.height = 1
 		f.width = 1
 		f.cur_anchor = 'sw'
 		f.char_width = self.menufont.measure('A')
-		f.last_width = 1
 
 		f.place_configure(relx=0.1, rely=0.1, width=1, height=1)
 		f.place_forget()
@@ -5010,6 +5051,28 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 							insertbackground=self.fgcolor)
 
 
+	def set_other_frame_colors(self):
+		bg = self.bgcolor
+		fg = self.fgcolor
+
+		gray = 'gray'
+		black = 'black'
+		if self.curtheme == 'day':
+			gray = 'gray'
+			black = 'black'
+
+		kwargs = {
+		'bg':gray,
+		'fg':black,
+		'disabledforeground':fg,
+		'selectbackground':fg,
+		'selectforeground':bg,
+		}
+
+		self.comp_frame.listbox.config(**kwargs)
+
+
+
 	def set_ln_widget_colors(self):
 		# Linenumbers use same color with comments
 		bg, fg = self.themes[self.curtheme]['comments'][:]
@@ -5034,6 +5097,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.text_frame.config(bg=self.bgcolor)
 		self.set_ln_widget_colors()
+		self.set_other_frame_colors()
 
 		return 'break'
 
@@ -5178,6 +5242,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		width_img = 8
 		width_total = width_text + width_img + self.pad*4
 		self.btn_git.config(image=self.img_name, width=width_total)
+
+		# used in show_completions
+		self.comp_frame.char_width = width_text//6
+
 
 
 		self.ln_widget.config(padx=self.pad, pady=self.pad)
@@ -5353,6 +5421,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.text_frame.config(bg=self.bgcolor)
 				self.set_ln_widget_colors()
+				self.set_other_frame_colors()
 
 			# if closed editor and still pressing ok in colorchooser:
 			except (tkinter.TclError, AttributeError) as e:
@@ -5458,6 +5527,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.text_frame.config(bg=self.bgcolor)
 				self.set_ln_widget_colors()
+				self.set_other_frame_colors()
 
 
 		wid.focus_set()
