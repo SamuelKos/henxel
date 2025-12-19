@@ -38,6 +38,7 @@
 		
 		Alt-e  Move cursor to lineend (or use End-key)
 		Alt-a  to linestart (or use Home-key)
+		Alt-i  Show cursor and path
 		
 		
 		Ctrl-f  Search

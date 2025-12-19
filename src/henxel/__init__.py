@@ -1307,7 +1307,6 @@ static unsigned char infopic_bits[] = {
 			self.completion_frame_init()
 
 			# Tab-completion, used in indent() and unindent()
-			# Has to be after self.completion_frame_init()
 			self.expander = wordexpand.ExpandWord(self)
 
 
@@ -1345,17 +1344,17 @@ static unsigned char infopic_bits[] = {
 			doing_launchtest = False
 			if self.flags and self.flags.get('launch_test'): doing_launchtest = True
 
-			if doing_launchtest: pass
-			else:
-				try: self.cleanup()
-				except Exception as err:
-					# Some object, that cleanup tried to delete,
-					# did not yet had been created.
-					print(err)
+			if doing_launchtest: raise init_err
 
-				if self.debug:
-					# Give info about recovering from unlaunchable state
-					info_start = '''
+			try: self.cleanup()
+			except Exception as err:
+				# Some object, that cleanup tried to delete,
+				# did not yet had been created.
+				print(err)
+
+			if self.debug:
+				# Give info about recovering from unlaunchable state
+				info_start = '''
 ################################################
 Editor did not Launch!
 
@@ -1365,8 +1364,8 @@ help(henxel.stash_pop) Begin
 
 '''
 
-				else:
-					info_start = '''
+			else:
+				info_start = '''
 ################################################
 Editor did not Launch!
 
@@ -1378,22 +1377,22 @@ Then restart python-console and editor
 '''
 
 
-				info_end = '''
+			info_end = '''
 ################################################
 Error messages Begin
 '''
 
-				if self.debug:
-					info = info_start + stash_pop.__doc__.replace('\t', '  ') + info_end
-					print(info)
-					traceback.print_exception(init_err)
-					# This is used to break debug-restart-loop
-					sys.exit(0)
+			if self.debug:
+				info = info_start + stash_pop.__doc__.replace('\t', '  ') + info_end
+				print(info)
+				traceback.print_exception(init_err)
+				# This is used to break debug-restart-loop
+				sys.exit(0)
 
-				else:
-					info = info_start + info_end
-					print(info)
-					raise init_err
+			else:
+				info = info_start + info_end
+				print(info)
+				raise init_err
 
 			############################# init End ##########################
 
@@ -1985,6 +1984,43 @@ Error messages Begin
 		self.to_be_closed.append(f)
 
 
+	def show_info_message(self, event=None):
+		''' Show informatic message
+		'''
+		self.wait_for(30)
+		m = self.message_frame
+		l = m.label
+		l.config(anchor='w', justify='left')
+
+		# Build info-string (same as in window-title, with filaname)
+		# to clarify current tabs content on tab-change.
+		# Useful especially when in fullscreen.
+		maxlen_msg = 0
+		for tab in self.tabs:
+			if filepath := tab.filepath:
+				lenght = len(filepath.stem + filepath.suffix)
+				if lenght > maxlen_msg: maxlen_msg = lenght
+
+		maxlen_msg += 2 # two spaces after title_string
+
+		msg = ' ' +self.title_string +maxlen_msg*' '
+		num_spaces = 0
+		tail = False
+		if filepath := self.tabs[self.tabindex].filepath:
+			tail = '  ' +filepath.stem +filepath.suffix
+			num_spaces = maxlen_msg - len(tail)
+
+		if tail:
+			msg = self.title_string + tail + num_spaces*' '
+
+		msg += ' \n\n' + self.get_scope_path('insert')
+
+		self.show_message(msg, 2000)
+		self.flash_line(delay=800)
+		# return original justify-setting
+		self.after(2100, lambda kwargs={'anchor':'center', 'justify':'center'}: l.config(**kwargs))
+
+
 	def carousel(self, frame, idx, back):
 		''' Handle highlight and scrolling of completions-window
 			Called from show_completions
@@ -2044,7 +2080,6 @@ Error messages Begin
 					if not idx_end+1 > idx_last:
 						widget.see(idx_end + 1)
 						start = idx_start + 1
-
 
 		return get_max_len(start)
 
@@ -2178,12 +2213,6 @@ Error messages Begin
 		'''
 		self.comp_frame = f = tkinter.LabelFrame(self, width=1, height=1)
 
-		# test for init error
-		#bg, fg = self.themes[self.curtheme]['comments'][:]
-
-		# bind up down to expand
-		# unindent to backwards
-		# remove head if dot in stub
 
 		f.completions = list()
 
@@ -2235,6 +2264,7 @@ Error messages Begin
 		#@do_twice
 		#@debug
 		def f1():
+
 			print(60*'  BBB  ')
 			l = [i for i in range(6)]
 			try:
@@ -3082,6 +3112,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind( "<Alt-p>", self.toggle_bookmark)
 			w.bind( "<Alt-u>", self.stash_bookmark)
 
+			w.bind( "<Alt-i>", self.show_info_message)
+
 			w.bind( "<Alt-s>", self.color_choose)
 			w.bind( "<Alt-t>", self.toggle_color)
 
@@ -3159,6 +3191,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			w.bind( "<Mod1-Key-y>", self.yank_line)
 			w.bind( "<Mod1-Key-n>", self.new_tab)
+
+			w.bind( "<Mod1-Key-i>", self.show_info_message)
 
 			w.bind( "<Mod1-Key-f>", self.search)
 			w.bind( "<Mod1-Key-r>", self.replace)
@@ -8810,7 +8844,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
-	def flash_line(self, pos='insert'):
+	def flash_line(self, pos='insert', delay=600):
 		'''	Flash line for 600ms
 			Called from goto_def()
 		'''
@@ -8834,7 +8868,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.text_widget.tag_remove('animate', '1.0', tkinter.END)
 		self.text_widget.tag_add('animate', s, e)
 
-		self.after(600, lambda args=['animate', '1.0', tkinter.END]:
+		self.after(delay, lambda args=['animate', '1.0', tkinter.END]:
 				self.text_widget.tag_remove(*args) )
 
 		return 'break'
@@ -9804,7 +9838,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		try:
 			self.text_widget.mark_set('insert', pos)
 			self.wait_for(100)
-			self.show_message(msg, 1000)
+			self.show_message(msg, 1200)
 			self.ensure_idx_visibility(pos)
 
 		except tkinter.TclError as e:

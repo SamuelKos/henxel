@@ -28,10 +28,6 @@ check
 
 
 
-show_scope in message needs bind ##
-
-
-
 
 
 ################

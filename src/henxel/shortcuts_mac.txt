@@ -37,6 +37,7 @@
 		
 		Cmd-e  Move cursor to lineend (or use End-key)
 		Cmd-a  to linestart (or use Home-key)
+		Cmd-i  Show cursor and path
 		
 		
 		Cmd-f  Search
