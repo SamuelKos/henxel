@@ -1992,9 +1992,7 @@ Error messages Begin
 		l = m.label
 		l.config(anchor='w', justify='left')
 
-		# Build info-string (same as in window-title, with filaname)
-		# to clarify current tabs content on tab-change.
-		# Useful especially when in fullscreen.
+		# Build info-string msg
 		maxlen_msg = 0
 		for tab in self.tabs:
 			if filepath := tab.filepath:
@@ -2017,7 +2015,7 @@ Error messages Begin
 
 		self.show_message(msg, 2000)
 		self.flash_line(delay=800)
-		# return original justify-setting
+		# Return original setting after window has been forget
 		self.after(2100, lambda kwargs={'anchor':'center', 'justify':'center'}: l.config(**kwargs))
 
 
@@ -2110,20 +2108,40 @@ Error messages Begin
 			lb.delete(0, 'end')
 			for item in word_list: lb.insert('end', item)
 			lb.see(0)
+
+			# figuring out the geometry of listbox etc
 			height = len(word_list)
 			if  height > 11: height = 11
+			lb.height = height
 
-			lb.config(width=30, height=height)
-			f.max_len = 30
+			f.max_len = width = 30
+			flag_update_width = False
+			# carousel: Handle highlight, scrolling and width
+			tmp_max = self.carousel(f, pos, back)
+
+			if tmp_max > f.max_len:
+				f.max_len = tmp_max
+				width = tmp_max +2
+				flag_update_width = True
+
+			lb.config(width=width, height=height)
+			# These are important info about geometry
+			f.height = lb.winfo_reqheight()
+			f.width = width * f.char_width
 
 
-		flag_update_width = False
-		# Handle highlight, scrolling and width
-		tmp_max = self.carousel(f, pos, back)
-		if tmp_max > f.max_len:
-			f.max_len = tmp_max
-			lb.config(width=tmp_max+2)
-			flag_update_width = True
+		# Handling of f.width here should be better (== only here and nowhere else)
+		if not update:
+			flag_update_width = False
+
+			# carousel: Handle highlight, scrolling and width
+			# returns max item length
+			tmp_max = self.carousel(f, pos, back)
+
+			if tmp_max > f.max_len:
+				f.max_len = tmp_max
+				lb.config(width=tmp_max+2)
+				flag_update_width = True
 
 
 		# update_pos: Tab-completing first time
@@ -2133,8 +2151,20 @@ Error messages Begin
 			# If prefix does have dot --> adjust would also be len(newword)
 			# (because words have been rstripped to last dot by expander)
 			len_first = len(first_word)
+			if first_word == self.expander.scope_separator:
 
-			# First completion has already been inserted by expander,
+				if self.expander.stub_has_dot:
+					line_contents = self.expander.state[3]
+					_, col = self.get_line_col_as_int()
+					line_contents = line_contents[:col]
+					idx_dot = line_contents.rindex('.')
+					len_first = col - idx_dot
+					#print(line_contents, len_first)
+				else:
+					len_first = len(update)
+
+
+			# First completion has already been inserted by expander,(except if no matches in cur_scope)
 			# need to adjust window position accordingly
 			x, y, _, h = self.text_widget.bbox('insert -%dc' % len_first)
 
@@ -2145,6 +2175,7 @@ Error messages Begin
 			offset_y = self.entry.winfo_height()
 
 			pad = self.pad*5
+
 
 			# Make border-check
 			# Near top
@@ -2167,6 +2198,7 @@ Error messages Begin
 					anchor = 'se'
 					x = tmp -pad
 
+			#print(offset_x, offset_y, f.width, f.height)
 			# kwargs for f.place_configure
 			f.cur_anchor = anchor
 			f.comp_x = x + offset_x
@@ -2192,10 +2224,8 @@ Error messages Begin
 			f.place_configure(**kwargs)
 			# This, for same reason, is necessary
 			# Otherwise, sometimes in fullscreen, text is not immediately shown
-			f.update_idletasks()
-			if update:
-				f.height = f.winfo_height()
-				f.width = f.winfo_width()
+			#f.update_idletasks()
+
 
 		elif flag_update_width:
 			f.place_configure(**kwargs)
@@ -2243,6 +2273,7 @@ Error messages Begin
 
 		f.listbox = tkinter.Listbox(self.comp_frame, **kwargs)
 		f.listbox.pack()
+		f.listbox.height = 11
 
 		f.max_len = 30
 		f.comp_x = 1
@@ -8960,7 +8991,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		return scope_path
 
-
+	#@debug
 	def get_scope_path(self, index):
 		''' Get info about function or class where insertion-cursor is in.
 
@@ -9013,6 +9044,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if 'strings' in self.text_widget.tag_names(pos):
 					#print('strings1', pos)
+					if pos == '1.0':
+						# It seems that stopindex is sometimes not stopping,
+						# when searching in linenumber 1 in multiline string,
+						# for word that ends first displayline of this string
+						# See wordexpand.py for example
+						scope_path = '__main__()'
+						return scope_path
+
 					pos = self.text_widget.tag_prevrange('strings', pos)[0] + ' linestart'
 					continue
 
@@ -9339,7 +9378,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 ##		# FAIL
 ##		return '__main__()', 0, '1.0'
 
-
+	#@debug
 	def get_scope_start(self, index='insert'):
 		''' Find next(up) function or class definition
 
@@ -9388,6 +9427,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if 'strings' in self.text_widget.tag_names(pos):
 				#print('strings3', pos)
+				if pos == '1.0':
+					return '__main__()', 0, '1.0'
 				pos = self.text_widget.tag_prevrange('strings', pos)[0]
 				continue
 
@@ -12654,7 +12695,7 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 				self.text_widget.focus_set()
 				self.wait_for(100)
-
+				#print(self.search_matches)
 				self.show_next()
 
 

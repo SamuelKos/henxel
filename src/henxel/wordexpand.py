@@ -20,6 +20,15 @@ These methods of Editor are being used in getwords():
 
 '''
 
+##	Explanation of error mentioned in __init__.py in get_scope_path
+##	search this here:
+##	editor.
+
+# Related line in get_scope_path:
+# pos = self.text_widget.tag_prevrange('strings', pos)[0] + ' linestart'
+
+
+
 # Update printer, when necessary, Begin
 import functools
 # Get reference to printer set in henxel
@@ -52,6 +61,9 @@ class ExpandWord:
 		self.editor = editor
 		self.stub = ''
 		self.stub_has_dot = False
+		self.flag_scope_separator = False
+		self.scope_separator = 28 * '~'
+		self.no_words = False, False, None, False
 
 
 	def expand_word(self, event=None, back=False):
@@ -71,23 +83,49 @@ class ExpandWord:
 
 			words_to_be_returned = list()
 
+			all_matches_are_in_cur_scope = False
+			try:
+				idx_sep = word_list.index(self.scope_separator)
+			except ValueError:
+				all_matches_are_in_cur_scope = True
+
 
 			self.stub_has_dot = False
 			if '.' in self.stub:
 				self.stub_has_dot = idx_dot = self.stub.rindex('.')
 
-				for item in word_list:
-					for char in '{}':
-						if char not in item:
-							words_to_be_returned.append(item[idx_dot:])
-							break # needs break to prevent duplicates
+				if all_matches_are_in_cur_scope:
+					for i in range(0, len(word_list)):
+						words_to_be_returned.append(word_list[i][idx_dot:])
+				else:
+					for i in range(0, idx_sep):
+						words_to_be_returned.append(word_list[i][idx_dot:])
+
+					words_to_be_returned.append(self.scope_separator)
+
+					for i in range(idx_sep+1, len(word_list)):
+						words_to_be_returned.append(word_list[i][idx_dot:])
+
 
 			else:
 				patt = self.stub + '.'
 
-				for item in word_list:
-					if not item.startswith(patt):
-						words_to_be_returned.append(item)
+				if all_matches_are_in_cur_scope:
+					for item in word_list:
+						if not item.startswith(patt):
+							words_to_be_returned.append(item)
+				else:
+					for i in range(0, idx_sep):
+						item = word_list[i]
+						if not item.startswith(patt):
+							words_to_be_returned.append(item)
+
+					words_to_be_returned.append(self.scope_separator)
+
+					for i in range(idx_sep+1, len(word_list)):
+						item = word_list[i]
+						if not item.startswith(patt):
+							words_to_be_returned.append(item)
 
 
 			return words_to_be_returned
@@ -105,10 +143,14 @@ class ExpandWord:
 			update_completions = True
 			self.flag_unique = False
 			word_list = self.getwords()
-			if not word_list: return False, False, None
 
+			# Not sure if this first check is necessary
+			if not word_list: return self.no_words
 			words = filter_words(word_list)
+			if not words: return self.no_words
+
 			index = -1
+
 
 		else:
 			words, index, insert, line = self.state
@@ -118,14 +160,18 @@ class ExpandWord:
 				update_completions = True
 				self.flag_unique = False
 				word_list = self.getwords()
-				if not word_list: return False, False, None
 
+				# Not sure if this first check is necessary
+				if not word_list: return self.no_words
 				words = filter_words(word_list)
+				if not words: return self.no_words
+
 				index = -1
 
 
 
 		word = self.getprevword()
+
 
 
 		if back:
@@ -138,7 +184,6 @@ class ExpandWord:
 			# Wrap to start
 			if index == len(words): index = -1
 
-
 		newword = words[index]
 		if index == -1 and not update_completions:
 			newword = self.stub
@@ -146,6 +191,10 @@ class ExpandWord:
 
 		pos = index
 
+		if newword == self.scope_separator:
+			self.flag_scope_separator = True
+		else:
+			self.flag_scope_separator = False
 
 		#######################
 		# Test-area
@@ -162,29 +211,37 @@ class ExpandWord:
 		# self.text_widget.insert(as,ads)
 		###########################
 
+##		.someword1
+##		.someword2
+##		.someword3
+##		# Note: this wont expand to those above
+##		.some
 
-		# First remove old completion
-		if self.stub_has_dot:
-			dots = self.stub_has_dot
 
-			# 'rstrip' to first dot (-1c) when starting completion
-			if index == 0 and update_completions:
-				tail = len(self.stub) - dots
-				self.text_widget.delete("insert -%d chars" % tail, "insert")
+		if not self.flag_scope_separator:
 
-			# wrapped back to stub
-			elif newword == self.stub:
+			# First remove old completion
+			if self.stub_has_dot:
+				dots = self.stub_has_dot
+
+				# 'rstrip' to first dot (-1c) when starting completion
+				if index == 0 and update_completions:
+					tail = len(self.stub) - dots
+					self.text_widget.delete("insert -%d chars" % tail, "insert")
+
+				# wrapped back to stub
+				elif newword == self.stub:
+					self.text_widget.delete("insert -%d chars" % len(word), "insert")
+
+				# must 'add' head of stub because of not so wise self.getprevword()
+				else:
+					self.text_widget.delete("insert -%d chars +%d chars" % (len(word), dots), "insert")
+
+			else:
 				self.text_widget.delete("insert -%d chars" % len(word), "insert")
 
-			# must 'add' head of stub because of not so wise self.getprevword()
-			else:
-				self.text_widget.delete("insert -%d chars +%d chars" % (len(word), dots), "insert")
-
-		else:
-			self.text_widget.delete("insert -%d chars" % len(word), "insert")
-
-		# Then add newword/completion
-		self.text_widget.insert("insert", newword)
+			# Then add newword/completion
+			self.text_widget.insert("insert", newword)
 
 
 		curinsert = self.text_widget.index("insert")
@@ -211,6 +268,7 @@ class ExpandWord:
 
 		all_words = False
 		word = self.getprevword()
+		#print(word)
 		words = []
 
 		if not word: return words
@@ -272,6 +330,7 @@ class ExpandWord:
 
 
 				all_words = l1 + l2
+				all_words.append(self.scope_separator)
 				if l3: all_words += l3
 				if l4: all_words += l4
 
@@ -297,6 +356,12 @@ class ExpandWord:
 
 			words.append(w)
 			dictionary[w] = w
+
+
+		# Remove trailing separator
+		if self.scope_separator in words:
+			if len(words) == 1 or words.index(self.scope_separator) == len(words) -1:
+				words.remove(self.scope_separator)
 
 		# Add stub
 		words.append(word)
