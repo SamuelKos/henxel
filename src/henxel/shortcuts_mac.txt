@@ -80,6 +80,8 @@
 			choose background, then: normal text
 
 		Alt-t   Toggle color setting
+		Alt-c	Start new console, only in mainloop
+		
 		
 		
 		Cmd-shift-right  Select from cursor to lineend (or Shift-End)

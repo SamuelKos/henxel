@@ -74,7 +74,7 @@ class ExpandWord:
 		curline = event.widget.get("insert linestart", "insert lineend")
 
 
-		def filter_words(word_list):
+		def handle_words(word_list):
 
 			self.stub = word_list.pop()
 			if len(word_list) == 1:
@@ -90,8 +90,14 @@ class ExpandWord:
 				all_matches_are_in_cur_scope = True
 
 
+
+			# Below, two cases, stub has dot or not,
+			# if all matches are in cur_scope, for loop is normal
+			# else, for loop is splitted in half at idx_sep, to possibly save some time
+
 			self.stub_has_dot = False
 			if '.' in self.stub:
+				# Rstrip to last dot for aligning completions with insertion-line, and to save some space
 				self.stub_has_dot = idx_dot = self.stub.rindex('.')
 
 				if all_matches_are_in_cur_scope:
@@ -108,24 +114,19 @@ class ExpandWord:
 
 
 			else:
-				patt = self.stub + '.'
 
 				if all_matches_are_in_cur_scope:
-					for item in word_list:
-						if not item.startswith(patt):
-							words_to_be_returned.append(item)
+					words_to_be_returned = word_list[:]
 				else:
 					for i in range(0, idx_sep):
 						item = word_list[i]
-						if not item.startswith(patt):
-							words_to_be_returned.append(item)
+						words_to_be_returned.append(item)
 
 					words_to_be_returned.append(self.scope_separator)
 
 					for i in range(idx_sep+1, len(word_list)):
 						item = word_list[i]
-						if not item.startswith(patt):
-							words_to_be_returned.append(item)
+						words_to_be_returned.append(item)
 
 
 			return words_to_be_returned
@@ -146,7 +147,7 @@ class ExpandWord:
 
 			# Not sure if this first check is necessary
 			if not word_list: return self.no_words
-			words = filter_words(word_list)
+			words = handle_words(word_list)
 			if not words: return self.no_words
 
 			index = -1
@@ -163,7 +164,7 @@ class ExpandWord:
 
 				# Not sure if this first check is necessary
 				if not word_list: return self.no_words
-				words = filter_words(word_list)
+				words = handle_words(word_list)
 				if not words: return self.no_words
 
 				index = -1
@@ -358,12 +359,21 @@ class ExpandWord:
 			dictionary[w] = w
 
 
-		# Remove trailing separator
+		# Remove non-sense separators
 		if self.scope_separator in words:
-			if len(words) == 1 or words.index(self.scope_separator) == len(words) -1:
+
+			if len(words) == 1: return []
+
+			elif 'self.' in words:
+				# Self. and possibly one real match (and separator)
+				if len(words) in (2,3):
+					words.remove(self.scope_separator)
+
+			# Separator and one match
+			elif len(words) == 2:
 				words.remove(self.scope_separator)
 
-		# Add stub
+		# Add stub (wich will be removed soon)
 		words.append(word)
 
 		return words

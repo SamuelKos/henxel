@@ -71,6 +71,8 @@ import subprocess
 # For making paste to work in Windows
 import threading
 
+# Only to sometimes get console, used in start_new_console
+import code
 
 # https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
 # Pass data to/from other modules and is used also in debugging, Look in: build_launch_test()
@@ -1525,14 +1527,28 @@ Error messages Begin
 		return 'break'
 
 
+	def start_new_console(self, event=None):
+		if not self.in_mainloop:
+			self.wait_for(30)
+			self.bell()
+			print('Already should have Python-console')
+		else:
+			code.interact(local={'print':print})
+		return 'break'
+
+
 	def show_help(self, event=None):
 		self.wait_for(30)
 
 		c = self.setting_frame
-		print(c.lastword)
+		#print(c.lastword)
+		tmp = c.entry.get().strip()
+		if '(' in tmp:
+			idx = tmp.index('(')
+			tmp = tmp[:idx]
 
-		if c.lastword:
-			try: eval( f'help({c.lastword})', {'print':print}, {'e':self, 'ee':self} )
+		if tmp:
+			try: eval( f'help({tmp})', {'print':print}, {'e':self, 'ee':self} )
 			except Exception as err: print(err)
 		return 'break'
 
@@ -2145,14 +2161,22 @@ Error messages Begin
 
 
 		# update_pos: Tab-completing first time
+		# First completion has *already been inserted* by expander,(except if no matches in cur_scope)
+		# --> affects insertion position
 		if update:
 			# Count adjust len
 			# Explanation: If prefix does not have dot --> adjust would be len(newword)
 			# If prefix does have dot --> adjust would also be len(newword)
 			# (because words have been rstripped to last dot by expander)
 			len_first = len(first_word)
-			if first_word == self.expander.scope_separator:
 
+			if first_word == self.expander.scope_separator:
+				# All matches are out of cur_scope, needs handling because
+				# there is no inserted newword
+				#
+				# (side-Note: if there is no update_idletasks in the very end,
+				# this(all matches are out of cur_scope) is one reason that
+				# would trigger 'slow start')
 				if self.expander.stub_has_dot:
 					line_contents = self.expander.state[3]
 					_, col = self.get_line_col_as_int()
@@ -2206,7 +2230,8 @@ Error messages Begin
 			############################
 
 
-		# Adjust width while completing
+		# Adjust width while completing, again
+		# Handling of width should be done in one place (== not here)
 		w = f.char_width * f.max_len
 		if flag_update_width:
 			w = f.char_width * (f.max_len +2)
@@ -2222,9 +2247,9 @@ Error messages Begin
 
 		if not f.winfo_ismapped():
 			f.place_configure(**kwargs)
-			# This, for same reason, is necessary
-			# Otherwise, sometimes in fullscreen, text is not immediately shown
-			#f.update_idletasks()
+			# This, for some reason, is necessary
+			# Otherwise, sometimes text is not immediately shown
+			f.update_idletasks()
 
 
 		elif flag_update_width:
@@ -2236,10 +2261,11 @@ Error messages Begin
 		self.to_be_cancelled['completions'].append(c)
 
 		return 'break'
+		# show_completions End #######
 
 
 	def completion_frame_init(self):
-		''' Initialize completions-frame
+		''' Initialize Tab-completions-frame
 		'''
 		self.comp_frame = f = tkinter.LabelFrame(self, width=1, height=1)
 
@@ -2291,6 +2317,7 @@ Error messages Begin
 
 	@debug
 	def test_bind(self, event=None, f=1):
+
 
 		#@do_twice
 		#@debug
@@ -2858,7 +2885,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			except ValueError:
 				pass
 
-			return False
+		return False
 
 
 	def check_line(self, oldline=None, newline=None, on_oldline=True, tab=None):
@@ -3144,6 +3171,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind( "<Alt-u>", self.stash_bookmark)
 
 			w.bind( "<Alt-i>", self.show_info_message)
+			w.bind( "<Alt-c>", self.start_new_console)
 
 			w.bind( "<Alt-s>", self.color_choose)
 			w.bind( "<Alt-t>", self.toggle_color)
@@ -3257,6 +3285,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind( "<function>", self.font_choose)		# Alt-f
 			w.bind( "<dagger>", self.toggle_color)		# Alt-t
 			w.bind( "<ssharp>", self.color_choose)		# Alt-s
+			w.bind( "<ccedilla>", self.start_new_console) # Alt-c
 
 
 			w.bind( "<Mod1-Key-BackSpace>", self.del_to_dot)
@@ -3409,16 +3438,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.entry.bind( "<Mod1-Key-a>", self.goto_linestart)
 			self.entry.bind( "<Mod1-Key-e>", self.goto_lineend)
 
-			if self.os_type == 'mac_os':
-				self.entry.bind("<registered>", func=self.toggle_search_setting_regexp )
-				self.entry.bind("<idotless>", func=self.toggle_search_setting_starts_from_insert )
-				self.bind("<registered>", func=self.toggle_search_setting_regexp )
-				self.bind("<idotless>", func=self.toggle_search_setting_starts_from_insert )
-			else:
-				self.entry.bind("<Alt-r>", func=self.self.toggle_search_setting_regexp )
-				self.entry.bind("<Alt-i>", func=self.toggle_search_setting_starts_from_insert )
-				self.bind("<Alt-r>", func=self.self.toggle_search_setting_regexp )
-				self.bind("<Alt-i>", func=self.toggle_search_setting_starts_from_insert )
+			self.entry.bind("<registered>", func=self.toggle_search_setting_regexp )
+			self.entry.bind("<idotless>", func=self.toggle_search_setting_starts_from_insert )
+			self.bind("<registered>", func=self.toggle_search_setting_regexp )
+			self.bind("<idotless>", func=self.toggle_search_setting_starts_from_insert )
 
 
 			#######################################
@@ -3429,8 +3452,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			#self.root.createcommand("tk::mac::OnHide", self.test_hide)
 			#########################################
 
-
 		else:
+
+			self.entry.bind("<Alt-r>", func=self.self.toggle_search_setting_regexp )
+			self.entry.bind("<Alt-i>", func=self.toggle_search_setting_starts_from_insert )
+			self.bind("<Alt-r>", func=self.self.toggle_search_setting_regexp )
+			self.bind("<Alt-i>", func=self.toggle_search_setting_starts_from_insert )
+
 			self.bind( "<Alt-n>", self.new_tab)
 			self.bind( "<Control-q>", self.quit_me)
 
@@ -6470,6 +6498,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				if 'strings' in self.text_widget.tag_names(pos):
 					#print('strings3', pos)
+					if pos == 'end':
+						self.bell()
+						return 'break'
 					pos = self.text_widget.tag_prevrange('strings', pos)[1] + ' +1 lines linestart'
 					continue
 
@@ -8956,6 +8987,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.entry.insert(0, patt)
 
 
+		# 4. Show as banner also
+		patt2 = tmp +' @@' +scope_name
+		self.show_message(patt2, 1700)
+
+
 	def get_scope_path_using_defline_tag(self, index, ind_depth, scope_path='', get_idx_linestart=False):
 		''' Speed up getting scope path by using defline -tag
 			Called from get_scope_path, get_scope_start
@@ -9114,6 +9150,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			elif 'strings' in self.text_widget.tag_names(pos):
 				#print('strings2', pos)
+				if pos == '1.0':
+					return '__main__()'
 				pos = self.text_widget.tag_prevrange('strings', pos)[0] + ' linestart'
 				continue
 
@@ -9491,6 +9529,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			elif 'strings' in self.text_widget.tag_names(pos):
 				#print('strings4', pos)
+				if pos == '1.0':
+					return '__main__()', 0, '1.0'
 				pos = self.text_widget.tag_prevrange('strings', pos)[0]
 				continue
 
@@ -9588,6 +9628,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if 'strings' in self.text_widget.tag_names(pos):
 				#print('strings5', pos)
+				if pos == 'end':
+					break
 				pos = self.text_widget.tag_prevrange('strings', pos)[1] + ' +1 lines linestart'
 				continue
 
@@ -9636,6 +9678,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			if 'strings' in self.text_widget.tag_names(pos):
 				#print('strings4', pos)
+				if pos == 'end':
+					break
 				# This won't work if for example returning
 				# multiline string
 				pos = self.text_widget.tag_prevrange('strings', pos)[0]

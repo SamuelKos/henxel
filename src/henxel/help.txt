@@ -170,6 +170,11 @@
 	  	Control-a  Move cursor to linestart
 	  	Control-k  Kill from cursor to lineend
 		Up/Down    Walk history
+		
+	  - Getting help on very common stuff, help(str), list, dict etc:
+		For example, to look help on string-methods, enter 'str' to entry
+		and press Control-h
+		
 	  - Sometimes, if output from command is missing, activating terminal
 		might help.
 	  - Close console with Esc
