@@ -549,6 +549,7 @@ class Editor(tkinter.Toplevel):
 			# Used for cancelling pending tasks
 			self.to_be_cancelled = dict()
 			self.to_be_cancelled['message'] = list()
+			self.to_be_cancelled['message2'] = list()
 			self.to_be_cancelled['completions'] = list()
 			self.to_be_cancelled['flash_btn_git'] = list()
 
@@ -1111,6 +1112,13 @@ static unsigned char infopic_bits[] = {
 
 			self.init_syntags()
 
+			# Show Tab-completion -windows
+			# This is here, before first call to set_bindings, since there is a reference to self.comp_frame
+			self.completion_frame_init()
+
+			# Tab-completion, used in indent() and unindent()
+			self.expander = wordexpand.ExpandWord(self)
+
 
 			################
 			# Tabs Begin
@@ -1305,11 +1313,12 @@ static unsigned char infopic_bits[] = {
 			# Show info-messages like scope while goto_bookmark etc
 			self.message_frame_init()
 
-			# Show Tab-completion -windows
-			self.completion_frame_init()
+			# Show info-messages when other frame is already in use
+			self.message_frame2_init()
 
-			# Tab-completion, used in indent() and unindent()
-			self.expander = wordexpand.ExpandWord(self)
+			# Used in on_fontchange, handle_diff_lineheights
+			self.measure_frame_init()
+
 
 
 			if self.start_fullscreen:
@@ -1533,7 +1542,7 @@ Error messages Begin
 			self.bell()
 			print('Already should have Python-console')
 		else:
-			code.interact(local={'print':print})
+			code.interact(local={'print':print, 'e':self})
 		return 'break'
 
 
@@ -1985,9 +1994,33 @@ Error messages Begin
 		return 'break'
 
 
-	def message_frame_init(self):
-		''' Initialize message-frame
+	def show_message2(self, message, delay):
+		''' Show message for time delay
+			when self.message_frame is already in use
 		'''
+		self.wait_for(30)
+
+		m = self.message_frame2
+		l = m.label
+		l.config(text=message, width=len(message)+2)
+
+		# Remove possible old m.place_forgets
+		for item in self.to_be_cancelled['message2'][:]:
+			self.after_cancel(item)
+			self.to_be_cancelled['message2'].remove(item)
+
+
+		m.place_configure(relx=0.8, rely=0.1)
+		# This, for same reason, is necessary
+		# Otherwise, sometimes in fullscreen, text is not immediately shown
+		m.update_idletasks()
+
+		c = self.after(delay, m.place_forget)
+		self.to_be_cancelled['message2'].append(c)
+		return 'break'
+
+
+	def message_frame_init(self):
 		self.message_frame = f = tkinter.LabelFrame(self, width=1, height=1)
 		self.message_frame.label = tkinter.Label(self.message_frame, width=50,
 							highlightthickness=0, bd=4, font=self.textfont)
@@ -1997,6 +2030,87 @@ Error messages Begin
 		f.place_configure(relx=0.1, rely=0.1, width=1, height=1)
 		f.place_forget()
 
+		self.to_be_closed.append(f)
+
+
+	def message_frame2_init(self):
+		self.message_frame2 = f = tkinter.LabelFrame(self, width=1, height=1)
+		f.label = tkinter.Label(self.message_frame2, width=50,
+							highlightthickness=0, bd=4, font=self.textfont)
+		f.configure(labelwidget=self.message_frame2.label)
+		f.label.pack()
+
+		f.place_configure(relx=0.9, rely=0.1, width=1, height=1)
+		f.place_forget()
+
+		self.to_be_closed.append(f)
+
+
+	def find_balancing_offset(self, get_normal_lineheight=False):
+		''' Try to find balancing offset for: comments only -lines in text-window
+			and linenumbers.
+
+			Called from handle_diff_lineheights and on_fontchange
+		'''
+
+		# About lineheights
+		# If using same and only one font in text-window and ln_widget, things are quite easy, just figure out offset of top-most line
+		# in text-window and scroll that amount line-numbers up.
+		# If using more fonts, it seems that in somefont_instance.metrics() -values, 'descent' is important.
+		# In this editor case, now that lines behave correctly, all three fonts, textfont, keyword_font and linenum_font have the same descent-value
+
+
+		f = self.measure_frame
+		# It needs to be mapped during measuring
+		f.place_configure(relx=0.1, rely=0.1)
+
+		def same_heights():
+			a = self.ln_widget.dlineinfo('@0,0')[3]
+			b = f.t.dlineinfo('insert')[3]
+			print(a,b)
+			return a == b
+
+		i = 0
+		offset = 0
+		f.t.tag_config('measure', offset=offset)
+		f.t.update_idletasks()
+
+		while not same_heights():
+			offset += 1
+			i += 1
+			f.t.tag_config('measure', offset=offset)
+			f.t.update_idletasks()
+			if i > 10:
+				print('INFO: Could not balance lineheights')
+				f.place_forget()
+				return 0
+
+		f.place_forget()
+		return offset
+
+
+	def measure_frame_init(self):
+		''' Used in find_balancing_offset
+		'''
+		self.measure_frame = f = tkinter.Frame(self, width=1, height=1)
+		f.t = tkinter.Text(f)
+
+		# Not sure does these matter anything
+		bg = self.bgcolor
+		f.t.config(font=self.textfont, foreground=bg, background=bg, selectbackground=bg,
+					selectforeground=bg, inactiveselectbackground=bg, width=100)
+
+		f.t.tag_config('measure', font=self.linenum_font)
+		f.t.insert('1.0', 'BBB\nBBB\n')
+
+		# Line *has to be* comments only starting from indent0
+		f.t.mark_set('insert', '1.0')
+		#########################################
+		f.t.tag_add('measure', '1.0', '1.3')
+		f.t.pack()
+
+		f.place_configure(relx=0.1, rely=0.1, width=1, height=1)
+		f.place_forget()
 		self.to_be_closed.append(f)
 
 
@@ -2099,7 +2213,7 @@ Error messages Begin
 
 
 	def show_completions(self, event=None, back=False):
-		''' Show completions-window for time delay
+		''' Show completions-window
 		'''
 		self.wait_for(30)
 
@@ -2161,7 +2275,7 @@ Error messages Begin
 
 
 		# update_pos: Tab-completing first time
-		# First completion has *already been inserted* by expander,(except if no matches in cur_scope)
+		# First completion has *already been inserted* by expander (except if no matches in cur_scope)
 		# --> affects insertion position
 		if update:
 			# Count adjust len
@@ -2170,25 +2284,7 @@ Error messages Begin
 			# (because words have been rstripped to last dot by expander)
 			len_first = len(first_word)
 
-			if first_word == self.expander.scope_separator:
-				# All matches are out of cur_scope, needs handling because
-				# there is no inserted newword
-				#
-				# (side-Note: if there is no update_idletasks in the very end,
-				# this(all matches are out of cur_scope) is one reason that
-				# would trigger 'slow start')
-				if self.expander.stub_has_dot:
-					line_contents = self.expander.state[3]
-					_, col = self.get_line_col_as_int()
-					line_contents = line_contents[:col]
-					idx_dot = line_contents.rindex('.')
-					len_first = col - idx_dot
-					#print(line_contents, len_first)
-				else:
-					len_first = len(update)
-
-
-			# First completion has already been inserted by expander,(except if no matches in cur_scope)
+			# First completion has already been inserted by expander (except if no matches in cur_scope)
 			# need to adjust window position accordingly
 			x, y, _, h = self.text_widget.bbox('insert -%dc' % len_first)
 
@@ -2330,25 +2426,6 @@ Error messages Begin
 
 			except IndexError:
 				eval('print("s"')
-
-
-
-##			#######
-##			keys = ('ascent', 'descent', 'linespace')
-##
-##			print()
-##			for fontname in ('textfont', 'linenum_font'):
-##				font = self.fonts.get(fontname)
-##				metrics = font.metrics()
-##				metrics.pop('fixed')
-##
-##				print(font.name[:7], metrics, 'size:', font.cget('size'))
-##
-##			lineheight, baseline = self.text_widget.dlineinfo('insert')[-2:]
-##			print('textfont:', 'lineheight:', lineheight, 'baseline:', baseline)
-##			lineheight, baseline = self.ln_widget.dlineinfo('@0,0')[-2:]
-##			print('linefont:', 'lineheight:', lineheight, 'baseline:', baseline)
-##			#######
 
 ##			t1 = int(self.root.tk.eval('clock milliseconds'))
 ##			self.get_scope_start()
@@ -3217,11 +3294,16 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind("<Left>", self.check_sel)
 			w.bind("<Right>", self.check_sel)
 
+			# Hide completions-window with arrow updown
+			w.bind("<Up>", func=lambda event: self.comp_frame.place_forget, add=True)
+			w.bind("<Down>", func=lambda event: self.comp_frame.place_forget, add=True)
+
 			w.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
 
 
 		# self.os_type == 'mac_os':
 		else:
+
 			w.bind( "<Left>", self.mac_cmd_overrides)
 			w.bind( "<Right>", self.mac_cmd_overrides)
 			w.bind( "<Up>", self.mac_cmd_overrides)
@@ -3386,7 +3468,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		w.event_delete('<<PrevLine>>')
 		w.event_add('<<PrevLine>>', *tmp)
-
 
 		w.bind( "<<WidgetViewSync>>", self.auto_update_syntax)
 		# Viewsync-event does not trigger at window size changes,
@@ -3875,8 +3956,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.tab_close(self.tabs[old_idx])
 		self.tab_open(self.tabs[new_idx])
 		self.update_title()
+
 		if tail:
 			msg2 = self.title_string + tail + num_spaces*' '
+		else:
+			# For example, tab without filepath
+			msg2 = self.title_string + maxlen_msg*' '
 		self.show_message(msg2, 1100)
 
 
@@ -4294,7 +4379,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.tag_config('keywords', font=self.keyword_font)
 		#w.tag_config('tests', font=self.keyword_font)
 		w.tag_config('numbers', font=self.boldfont)
-		w.tag_config('comments', font=self.linenum_font, spacing1=self.spacing_linenums)
+		w.tag_config('comments', font=self.linenum_font)
 		w.tag_config('breaks', font=self.boldfont)
 		w.tag_config('calls', font=self.boldfont)
 
@@ -5236,8 +5321,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		self.ln_widget.tag_config('justright', spacing1=spacing)
 
-		for tab in self.tabs + [self.help_tab, self.err_tab]:
-			tab.text_widget.tag_config('comments', spacing1=spacing)
+		if offset := self.find_balancing_offset():
+			for tab in self.tabs + [self.help_tab, self.err_tab]:
+				tab.text_widget.tag_config('comments', offset=offset)
 
 		self.spacing_linenums = spacing
 
@@ -5297,8 +5383,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if not diff == 0:
 				self.ln_widget.tag_config('justright', spacing1=spacing)
 
+			if offset := self.find_balancing_offset():
 				for tab in self.tabs + [self.help_tab, self.err_tab]:
-					tab.text_widget.tag_config('comments', spacing1=spacing)
+					tab.text_widget.tag_config('comments', offset=offset)
 
 
 			if spacing != old_spacing:
@@ -5336,7 +5423,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		width_total = width_text + width_img + self.pad*4
 		self.btn_git.config(image=self.img_name, width=width_total)
 
-		# used in show_completions
+		# Used in show_completions
 		self.comp_frame.char_width = width_text//6
 
 
@@ -7186,6 +7273,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
+		self.message_frame2.place_forget()
 
 		# self.text_widget or self.entry
 		wid = event.widget
@@ -7447,196 +7535,202 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''	Used to catch key-combinations like Alt-shift-Right
 			in macOS, which are difficult to bind.
 		'''
+		match event.state:
+			# Pressed Cmd + Shift + arrow left or right.
+			# Want: select line from cursor.
 
-		# Pressed Cmd + Shift + arrow left or right.
-		# Want: select line from cursor.
+			# Pressed Cmd + Shift + arrow up or down.
+			# Want: select 10 lines from cursor.
+			case 105:
 
-		# Pressed Cmd + Shift + arrow up or down.
-		# Want: select 10 lines from cursor.
-		if event.state == 105:
+				# self.text_widget or self.entry
+				wid = event.widget
 
-			# self.text_widget or self.entry
-			wid = event.widget
+				# Enable select from in entry
+				if wid == self.entry: return
 
-			# Enable select from in entry
-			if wid == self.entry: return
+				# Enable select from in contents
+				elif wid == self.text_widget:
 
-			# Enable select from in contents
-			elif wid == self.text_widget:
+					if event.keysym == 'Right':
+						self.goto_lineend(event=event)
+
+					elif event.keysym == 'Left':
+
+						# Want Cmd-Shift-left to:
+						# Select indentation on line that has indentation
+						# When: at idx_linestart
+						# same way than Alt-Shift-Left
+
+						# At idx_linestart of line that has indentation?
+						idx = self.idx_linestart()[0]
+						tests = [not self.line_is_empty(),
+								self.text_widget.compare(idx, '==', 'insert' ),
+								self.get_line_col_as_int(index=idx)[1] != 0,
+								not len(self.text_widget.tag_ranges('sel')) > 0
+								]
+
+						if all(tests):
+							pos = self.text_widget.index('%s linestart' % idx )
+							self.text_widget.mark_set(self.anchorname, 'insert')
+							self.text_widget.tag_add('sel', pos, 'insert')
+
+						else:
+							self.goto_linestart(event=event)
+
+
+					elif event.keysym == 'Up':
+						# As in move_many_lines()
+						# Add some delay to get visual feedback
+						for i in range(10):
+							self.after(i*5, lambda args=['<<SelectPrevLine>>']:
+								self.text_widget.event_generate(*args) )
+
+					elif event.keysym == 'Down':
+						for i in range(10):
+							self.after(i*5, lambda args=['<<SelectNextLine>>']:
+								self.text_widget.event_generate(*args) )
+
+					else: return
+
+				return 'break'
+
+
+			# Pressed Cmd + arrow left or right.
+			# Want: walk tabs.
+
+			# Pressed Cmd + arrow up or down.
+			# Want: move cursor 10 lines from cursor.
+			case 104:
 
 				if event.keysym == 'Right':
-					self.goto_lineend(event=event)
+					self.walk_tabs(event=event)
 
 				elif event.keysym == 'Left':
-
-					# Want Cmd-Shift-left to:
-					# Select indentation on line that has indentation
-					# When: at idx_linestart
-					# same way than Alt-Shift-Left
-
-					# At idx_linestart of line that has indentation?
-					idx = self.idx_linestart()[0]
-					tests = [not self.line_is_empty(),
-							self.text_widget.compare(idx, '==', 'insert' ),
-							self.get_line_col_as_int(index=idx)[1] != 0,
-							not len(self.text_widget.tag_ranges('sel')) > 0
-							]
-
-					if all(tests):
-						pos = self.text_widget.index('%s linestart' % idx )
-						self.text_widget.mark_set(self.anchorname, 'insert')
-						self.text_widget.tag_add('sel', pos, 'insert')
-
-					else:
-						self.goto_linestart(event=event)
-
+					self.walk_tabs(event=event, **{'back':True})
 
 				elif event.keysym == 'Up':
 					# As in move_many_lines()
 					# Add some delay to get visual feedback
 					for i in range(10):
-						self.after(i*5, lambda args=['<<SelectPrevLine>>']:
+						self.after(i*7, lambda args=['<<PrevLine>>']:
 							self.text_widget.event_generate(*args) )
 
 				elif event.keysym == 'Down':
 					for i in range(10):
-						self.after(i*5, lambda args=['<<SelectNextLine>>']:
+						self.after(i*7, lambda args=['<<NextLine>>']:
 							self.text_widget.event_generate(*args) )
 
 				else: return
 
-			return 'break'
-
-
-		# Pressed Cmd + arrow left or right.
-		# Want: walk tabs.
-
-		# Pressed Cmd + arrow up or down.
-		# Want: move cursor 10 lines from cursor.
-		elif event.state == 104:
-
-			if event.keysym == 'Right':
-				self.walk_tabs(event=event)
-
-			elif event.keysym == 'Left':
-				self.walk_tabs(event=event, **{'back':True})
-
-			elif event.keysym == 'Up':
-				# As in move_many_lines()
-				# Add some delay to get visual feedback
-				for i in range(10):
-					self.after(i*7, lambda args=['<<PrevLine>>']:
-						self.text_widget.event_generate(*args) )
-
-			elif event.keysym == 'Down':
-				for i in range(10):
-					self.after(i*7, lambda args=['<<NextLine>>']:
-						self.text_widget.event_generate(*args) )
-
-			else: return
-
-			return 'break'
-
-
-		# Pressed Alt + arrow left or right.
-		elif event.state == 112:
-
-			if event.keysym in ['Up', 'Down']: return
-
-			# self.text_widget or self.entry
-			wid = event.widget
-
-			if wid == self.entry:
-
-				if event.keysym == 'Right':
-					self.entry.event_generate('<<NextWord>>')
-
-				elif event.keysym == 'Left':
-					self.entry.event_generate('<<PrevWord>>')
-
-				else: return
-
-			else:
-				res = self.move_by_words(event=event)
-				return res
-
-			return 'break'
-
-
-		# Pressed Alt + Shift + arrow left or right.
-		elif event.state == 113:
-
-			if event.keysym in ['Up', 'Down']: return
-
-			# self.text_widget or self.entry
-			wid = event.widget
-
-			if wid == self.entry:
-
-				if event.keysym == 'Right':
-					self.entry.event_generate('<<SelectNextWord>>')
-
-				elif event.keysym == 'Left':
-					self.entry.event_generate('<<SelectPrevWord>>')
-
-				else: return
-
-			else:
-				res = self.select_by_words(event=event)
-				return res
-
-			return 'break'
-
-
-		# Pressed arrow left or right.
-		# If have selection, put cursor on the wanted side of selection.
-
-		# Pressed arrow up or down: return event.
-		# +shift: 97: return event.
-		elif event.state == 97: return
-
-		elif event.state == 96:
-
-			if event.keysym in ['Up', 'Down']: return
-
-			# self.text_widget or self.entry
-			wid = event.widget
-			have_selection = False
-
-			if wid == self.entry:
-				have_selection = self.entry.selection_present()
-
-			elif wid == self.text_widget:
-				have_selection = len(self.text_widget.tag_ranges('sel')) > 0
-
-			else: return
-
-			if have_selection:
-				if event.keysym == 'Right':
-					self.check_sel(event=event)
-
-				elif event.keysym == 'Left':
-					self.check_sel(event=event)
-
-				else: return
-
-			else: return
-
-			return 'break'
-
-
-		# Pressed Fn
-		elif event.state == 64:
-
-			# fullscreen
-			if event.keysym == 'f':
-				# prevent inserting 'f' when doing fn-f:
 				return 'break'
 
-			# Some shortcuts does not insert.
-			# Like fn-h does not insert h.
-			else:
-				return
+
+			# Pressed Alt + arrow left or right.
+			case 112:
+
+				if event.keysym in ['Up', 'Down']: return
+
+				# self.text_widget or self.entry
+				wid = event.widget
+
+				if wid == self.entry:
+
+					if event.keysym == 'Right':
+						self.entry.event_generate('<<NextWord>>')
+
+					elif event.keysym == 'Left':
+						self.entry.event_generate('<<PrevWord>>')
+
+					else: return
+
+				else:
+					res = self.move_by_words(event=event)
+					return res
+
+				return 'break'
+
+
+			# Pressed Alt + Shift + arrow left or right.
+			case 113:
+
+				if event.keysym in ['Up', 'Down']: return
+
+				# self.text_widget or self.entry
+				wid = event.widget
+
+				if wid == self.entry:
+
+					if event.keysym == 'Right':
+						self.entry.event_generate('<<SelectNextWord>>')
+
+					elif event.keysym == 'Left':
+						self.entry.event_generate('<<SelectPrevWord>>')
+
+					else: return
+
+				else:
+					res = self.select_by_words(event=event)
+					return res
+
+				return 'break'
+
+
+			# Pressed arrow left or right.
+			# If have selection, put cursor on the wanted side of selection.
+
+			# Pressed arrow up or down: return event.
+			# +shift: 97: return event.
+			case 97: return
+
+			case 96:
+
+				if event.keysym in ['Up', 'Down']:
+					# Hide completions-window with arrow updown
+					if self.comp_frame.winfo_ismapped():
+						self.comp_frame.place_forget()
+						return 'break'
+
+					return
+
+				# self.text_widget or self.entry
+				wid = event.widget
+				have_selection = False
+
+				if wid == self.entry:
+					have_selection = self.entry.selection_present()
+
+				elif wid == self.text_widget:
+					have_selection = len(self.text_widget.tag_ranges('sel')) > 0
+
+				else: return
+
+				if have_selection:
+					if event.keysym == 'Right':
+						self.check_sel(event=event)
+
+					elif event.keysym == 'Left':
+						self.check_sel(event=event)
+
+					else: return
+
+				else: return
+
+				return 'break'
+
+
+			# Pressed Fn
+			case 64:
+
+				# fullscreen
+				if event.keysym == 'f':
+					# prevent inserting 'f' when doing fn-f:
+					return 'break'
+
+				# Some shortcuts does not insert.
+				# Like fn-h does not insert h.
+				else:
+					return
 
 		return
 
@@ -9825,6 +9919,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			self.wait_for(150)
 			self.flash_line(pos)
+
+			# Give reminder when goto_def while searching
+			if self.state != 'normal':
+				self.show_message2(' GOTO DEF ', 20000)
 
 
 			# NOTE: If searching, this gets passed
@@ -12166,6 +12264,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.entry.flag_start = False
 
 
+		self.message_frame2.place_forget()
 
 		# Change color
 		# self.search_focus is range of focus-tag.
@@ -12283,6 +12382,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.wait_for(200)
 			self.entry.flag_start = False
 
+
+		self.message_frame2.place_forget()
 
 		# Change color
 		# self.search_focus is range of focus-tag.
@@ -13034,6 +13135,9 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 
 		if not flag_all: self.ensure_idx_visibility(line)
+
+		# Possible gotodef_banner
+		self.message_frame2.place_forget()
 
 		# Release space
 		self.wait_for(200)

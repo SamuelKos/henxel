@@ -27,6 +27,33 @@ check
 ################
 
 
+self.message_frame2.place_forget()
+show_next/prev
+check_sel
+stop_search
+done
+
+
+
+prev_word get only prevword
+on<INS>handle_diff_lineheights TAB -->
+onhandle_diff_lineheightshandle_diff_lineheights
+solution:
+split scope in half, before insert and after insert
+not done
+
+
+
+
+handle_diff_lineheights has to balance keyword_font vs textfont
+when changing keyword_font
+
+on_fontchange handle_diff_lineheights,
+this should be done in find_balancing_offset, in line with both keyword_font and textfont:
+self.line_height = self.text_widget.dlineinfo('@0,0')[3]
+-->
+self.line_height = self.find_balancing_offset(get_normal_lineheight=True)
+
 
 
 
@@ -37,6 +64,111 @@ check toml script entry -->
 
 3: $ henxel *.txt
 ################
+
+
+
+handle_diff_lineheights
+widget with one line, one char with boldfont
+measure_tag: tag with boldfont color fg=bg
+insert 'BBB' to curtab @0,0 with this tag
+self.text_widget.insert('@0,0', 'AAA', 'measure_tag')
+--> self.text_widget.dlineinfo('@0,0')[3] etc..
+self.text_widget.delete('@0,0', '@0,0 +3c')
+
+
+somewhat works:
+
+e.text_widget.tag_config('comments',spacing1=0) # default( can skip this)
+
+
+while diff height:
+	offset += 1
+	e.text_widget.tag_config('comments', offset=offset)
+
+
+e.fonts.keys()
+
+################################
+keyword_font vs. textfont:
+e.fonts['textfont'].metrics()
+{'ascent': 15, 'descent': 3, 'linespace': 18, 'fixed': 1}
+
+e.fonts['keyword_font'].metrics()
+{'ascent': 12, 'descent': 3, 'linespace': 15, 'fixed': 0}
+
+e.text_widget.tag_config('keywords','offset') = 0
+e.text_widget.tag_config('keywords','spacing1') = 0
+
+lineheights behave normally when adding or deleting keywords (also when comments on line)
+differences: fixed, linespace, ascent
+conclusion, these don't matter ###############################
+fonts have same descent
+conclusion, descent matters ##################################
+
+
+e.fonts['linenum_font'].metrics()
+{'ascent': 12, 'descent': 4, 'linespace': 16, 'fixed': 1}
+
+
+e.ln_widget.tag_config('justright', 'spacing1') = 2
+e.ln_widget.tag_config('justright', 'offset') = 0
+e.text_widget.tag_config('comments', 'spacing1') = 2
+e.text_widget.tag_config('comments', 'offset') = 0
+
+Must change both tags at the same time, if change justright spacing1
+must also change spacing1 of comments
+
+# Measure before and after changing spacing1, offset:
+e.ln_widget.dlineinfo('@0,0')
+18
+e.text_widget.dlineinfo('insert')
+18 without comments 19 with comments (21 if commented line is at indent0)
+--> try to get line with comments to 18
+--> try with same offset, but different spacing1: (ln_widget has spacing 2)
+###################################################
+e.ln_widget.tag_config('justright', offset=1)
+e.text_widget.tag_config('comments', offset=1)
+e.text_widget.tag_config('comments', spacing1=0)
+###################################################
+ln	text
+18	18
+
+--> also at indent0! adding removing comments does not change lineheights!
+###################################################
+d['spacing_linenums'] = self.spacing_linenums  <-- need more config than this
+
+1:
+diff_descent = linenum_font - textfont
+e.ln_widget.tag_config('justright', offset=diff_descent)
+e.text_widget.tag_config('comments', offset=diff_descent)
+
+2:
+space = e.ln_widget.tag_cget('justright', 'spacing1')
+while true
+	space -= 1
+	e.text_widget.tag_config('comments', spacing1=space)
+
+
+
+
+use this after handle diff 
+a = self.ln_widget.dlineinfo('@0,0')[3]
+b = self.text_widget.dlineinfo('insert')[3] # line has to be comments only starting from indent0
+if not a == b:
+	self.text_widget.tag_config('keywords','spacing1') = 0
+
+
+
+# Measure before and after changing spacing1, offset:
+text_widget line must be at indent0 and be commented!
+--> Must use dedicated measuring text-widget (in new frame maybe)
+a = e.ln_widget.dlineinfo('@0,0')[3]
+b = e.text_widget.dlineinfo('insert')[3]
+
+18 without comments 19 with comments (21 if commented line is at indent0)
+
+
+
 
 
 
@@ -61,6 +193,7 @@ check mainloop etc: set_version_control_cmd() ###
 
 
 use module: traceback to fix show error ####
+
 
 
 ###################
@@ -113,23 +246,6 @@ paste to multiline string, done
 paste_fallback, done
 
 
-
-##handle_diff_lineheigths
-##widget with one line one char with boldfont
-##measure_tag: tag with boldfont color fg=bg
-##insert 'BBB' to curtab @0,0 with this tag
-##self.text_widget.insert('@0,0', 'AAA', 'measure_tag')
-##--> self.text_widget.dlineinfo('@0,0')[3] etc..
-##self.text_widget.delete('@0,0', '@0,0 +3c')
-
-
-somewhat works:
-e.text_widget.tag_config('comments',spacing1=0)
-e.text_widget.tag_config('comments',offset=1)
-			
-			
-			
-			
 
 set_left_margin
 set_left_margin_gap

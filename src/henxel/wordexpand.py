@@ -61,7 +61,6 @@ class ExpandWord:
 		self.editor = editor
 		self.stub = ''
 		self.stub_has_dot = False
-		self.flag_scope_separator = False
 		self.scope_separator = 28 * '~'
 		self.no_words = False, False, None, False
 
@@ -173,29 +172,36 @@ class ExpandWord:
 
 		word = self.getprevword()
 
+		# Handle index Begin ###
+		def next_index(index, words):
+
+			if back:
+				index -= 1
+				# Wrap from start to end
+				if index == -2: index = len(words) -1
+
+			else:
+				index += 1
+				# Wrap from end to start
+				if index == len(words): index = -1
+
+			return index
 
 
-		if back:
-			index -= 1
-			# Wrap to end
-			if index == -2: index = len(words) -1
-
-		else:
-			index += 1
-			# Wrap to start
-			if index == len(words): index = -1
-
+		index = next_index(index, words)
 		newword = words[index]
+
+		# Skip over scope_separator
+		if newword == self.scope_separator:
+			index = next_index(index, words)
+		newword = words[index]
+
 		if index == -1 and not update_completions:
 			newword = self.stub
 
 
+		# Handle index End ###
 		pos = index
-
-		if newword == self.scope_separator:
-			self.flag_scope_separator = True
-		else:
-			self.flag_scope_separator = False
 
 		#######################
 		# Test-area
@@ -219,30 +225,28 @@ class ExpandWord:
 ##		.some
 
 
-		if not self.flag_scope_separator:
+		# First remove old completion
+		if self.stub_has_dot:
+			dots = self.stub_has_dot
 
-			# First remove old completion
-			if self.stub_has_dot:
-				dots = self.stub_has_dot
+			# 'rstrip' to first dot (-1c) when starting completion
+			if index == 0 and update_completions:
+				tail = len(self.stub) - dots
+				self.text_widget.delete("insert -%d chars" % tail, "insert")
 
-				# 'rstrip' to first dot (-1c) when starting completion
-				if index == 0 and update_completions:
-					tail = len(self.stub) - dots
-					self.text_widget.delete("insert -%d chars" % tail, "insert")
-
-				# wrapped back to stub
-				elif newword == self.stub:
-					self.text_widget.delete("insert -%d chars" % len(word), "insert")
-
-				# must 'add' head of stub because of not so wise self.getprevword()
-				else:
-					self.text_widget.delete("insert -%d chars +%d chars" % (len(word), dots), "insert")
-
-			else:
+			# wrapped back to stub
+			elif newword == self.stub:
 				self.text_widget.delete("insert -%d chars" % len(word), "insert")
 
-			# Then add newword/completion
-			self.text_widget.insert("insert", newword)
+			# must 'add' head of stub because of not so wise self.getprevword()
+			else:
+				self.text_widget.delete("insert -%d chars +%d chars" % (len(word), dots), "insert")
+
+		else:
+			self.text_widget.delete("insert -%d chars" % len(word), "insert")
+
+		# Then add newword/completion
+		self.text_widget.insert("insert", newword)
 
 
 		curinsert = self.text_widget.index("insert")
