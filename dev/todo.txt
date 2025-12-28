@@ -27,20 +27,6 @@ check
 ################
 
 
-self.message_frame2.place_forget()
-show_next/prev
-check_sel
-stop_search
-done
-
-
-
-prev_word get only prevword
-on<INS>handle_diff_lineheights TAB -->
-onhandle_diff_lineheightshandle_diff_lineheights
-solution:
-split scope in half, before insert and after insert
-not done
 
 
 

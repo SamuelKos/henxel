@@ -70,7 +70,9 @@ class ExpandWord:
 		'''
 
 		curinsert = event.widget.index("insert")
+		ins_as_int = int(curinsert.split('.')[1])
 		curline = event.widget.get("insert linestart", "insert lineend")
+		prev_word = self.getprevword(curline, ins_as_int)
 
 
 		def handle_words(word_list):
@@ -111,7 +113,6 @@ class ExpandWord:
 					for i in range(idx_sep+1, len(word_list)):
 						words_to_be_returned.append(word_list[i][idx_dot:])
 
-
 			else:
 
 				if all_matches_are_in_cur_scope:
@@ -142,7 +143,7 @@ class ExpandWord:
 
 			update_completions = True
 			self.flag_unique = False
-			word_list = self.getwords()
+			word_list = self.getwords(curline, ins_as_int, prev_word)
 
 			# Not sure if this first check is necessary
 			if not word_list: return self.no_words
@@ -159,7 +160,7 @@ class ExpandWord:
 
 				update_completions = True
 				self.flag_unique = False
-				word_list = self.getwords()
+				word_list = self.getwords(curline, ins_as_int, prev_word)
 
 				# Not sure if this first check is necessary
 				if not word_list: return self.no_words
@@ -170,7 +171,6 @@ class ExpandWord:
 
 
 
-		word = self.getprevword()
 
 		# Handle index Begin ###
 		def next_index(index, words):
@@ -203,6 +203,7 @@ class ExpandWord:
 		# Handle index End ###
 		pos = index
 
+
 		#######################
 		# Test-area
 		# Test completion inside this area, at empty line.
@@ -234,16 +235,16 @@ class ExpandWord:
 				tail = len(self.stub) - dots
 				self.text_widget.delete("insert -%d chars" % tail, "insert")
 
-			# wrapped back to stub
+			# Wrapped back to stub
 			elif newword == self.stub:
-				self.text_widget.delete("insert -%d chars" % len(word), "insert")
+				self.text_widget.delete("insert -%d chars" % len(prev_word), "insert")
 
-			# must 'add' head of stub because of not so wise self.getprevword()
+			# Must 'add' head of stub because of not so wise self.getprevword()
 			else:
-				self.text_widget.delete("insert -%d chars +%d chars" % (len(word), dots), "insert")
+				self.text_widget.delete("insert -%d chars +%d chars" % (len(prev_word), dots), "insert")
 
 		else:
-			self.text_widget.delete("insert -%d chars" % len(word), "insert")
+			self.text_widget.delete("insert -%d chars" % len(prev_word), "insert")
 
 		# Then add newword/completion
 		self.text_widget.insert("insert", newword)
@@ -261,7 +262,7 @@ class ExpandWord:
 			return False, False, pos, False
 
 
-	def getwords(self):
+	def getwords(self, curline, ins_as_int, prev_word):
 		''' Return a list of words that match the prefix before the cursor.
 
 			These methods of Editor are being used:
@@ -272,7 +273,7 @@ class ExpandWord:
 		'''
 
 		all_words = False
-		word = self.getprevword()
+		word = prev_word
 		#print(word)
 		words = []
 
@@ -280,6 +281,18 @@ class ExpandWord:
 
 
 		word_with_escaped_dots = word.replace('.', '\\.')
+
+		# If in middle of string, add one space to fool regexp to treat word as two words split from insert,
+		# word is fixed back to one later at end
+		flag_instring = False
+		try:
+			if not curline[ins_as_int-1].isspace() and curline[ins_as_int] in self.wordchars[:-1]:
+				flag_instring = True
+				self.text_widget.insert('insert', ' ')
+				self.text_widget.mark_set('insert', 'insert -1c')
+		# Nothing after cursor
+		except IndexError: pass
+
 
 		patt_end = ' get %s %s]'
 		patt_start = r'regexp -all -line -inline {\m%s[[:alnum:]_.]+} [%s' \
@@ -353,6 +366,11 @@ class ExpandWord:
 		#######################
 
 
+
+		if flag_instring:
+			self.text_widget.delete('insert', 'insert +1c')
+
+
 		dictionary = {}
 
 		for w in all_words:
@@ -383,14 +401,11 @@ class ExpandWord:
 		return words
 
 
-	def getprevword(self):
+	def getprevword(self, curline, ins_as_int):
 		''' Return the word prefix before the cursor.
 		'''
-		patt = r'%s get {insert linestart} insert' \
-				% self.tcl_name_of_contents
 
-		tmp = self.text_widget.tk.eval(patt)
-
+		tmp = curline[:ins_as_int]
 
 		for i in reversed( range(len(tmp)) ):
 			if tmp[i] not in self.wordchars:

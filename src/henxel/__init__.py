@@ -2141,12 +2141,12 @@ Error messages Begin
 		if tail:
 			msg = self.title_string + tail + num_spaces*' '
 
-		msg += ' \n\n' + self.get_scope_path('insert')
+		msg += ' \n\n' +'State: ' +self.state +' \n\n' +self.get_scope_path('insert')
 
-		self.show_message(msg, 2000)
+		self.show_message(msg, 2500)
 		self.flash_line(delay=800)
 		# Return original setting after window has been forget
-		self.after(2100, lambda kwargs={'anchor':'center', 'justify':'center'}: l.config(**kwargs))
+		self.after(2600, lambda kwargs={'anchor':'center', 'justify':'center'}: l.config(**kwargs))
 
 
 	def carousel(self, frame, idx, back):
@@ -7273,7 +7273,14 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		self.message_frame2.place_forget()
+		if self.state in [ 'search', 'replace' ]:
+			pos = self.search_focus[0]
+			# If cur match viewable
+			if self.text_widget.bbox(pos):
+				self.message_frame2.place_forget()
+			# Else:
+			# keep gotodef banner on
+
 
 		# self.text_widget or self.entry
 		wid = event.widget
@@ -7284,6 +7291,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if self.os_type != 'mac_os':
 			if self.os_type == 'linux' and event.state != 0: return
 			if self.os_type == 'windows' and event.state not in [ 262152, 262144 ]: return
+
+			# This also has been already done for macOS
+			if self.cursor_frame.winfo_ismapped():
+				self.cursor_frame.place_forget()
 
 			have_selection = False
 
@@ -7681,9 +7692,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# Pressed arrow up or down: return event.
 			# +shift: 97: return event.
-			case 97: return
+			case 97:
+##				if self.state in [ 'search', 'replace' ]:
+##					self.message_frame2.place_forget()
+				return
 
 			case 96:
+				if self.state in [ 'search', 'replace' ]:
+					pos = self.search_focus[0]
+					# If cur match viewable
+					if self.text_widget.bbox(pos):
+						self.message_frame2.place_forget()
+					# Else:
+					# keep gotodef banner on
+
+				if self.cursor_frame.winfo_ismapped():
+					self.cursor_frame.place_forget()
+
 
 				if event.keysym in ['Up', 'Down']:
 					# Hide completions-window with arrow updown
@@ -9808,6 +9833,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 
 		self.cursor_frame.place_forget()
+		self.message_frame2.place_forget()
 
 
 		# Space is on hold for extra 200ms, released below
@@ -9920,9 +9946,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.wait_for(150)
 			self.flash_line(pos)
 
-			# Give reminder when goto_def while searching
-			if self.state != 'normal':
-				self.show_message2(' GOTO DEF ', 20000)
+			# Give reminder
+			self.show_message2(' GOTO DEF ', 20000)
 
 
 			# NOTE: If searching, this gets passed
