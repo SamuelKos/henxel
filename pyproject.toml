@@ -22,7 +22,7 @@ classifiers = [
 ]
 
 [project.scripts]
-henxel = "__main__:main"
+henxel = "henxel:main"
 
 [project.urls]
 Homepage = "https://github.com/SamuelKos/henxel"

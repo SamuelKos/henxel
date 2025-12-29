@@ -766,7 +766,7 @@ class Editor(tkinter.Toplevel):
 
 
 			# Get conf #####################
-			conf_load_success = False
+			self.conf_load_success = False
 			string_representation = None
 			data, p = None, None
 
@@ -786,22 +786,27 @@ class Editor(tkinter.Toplevel):
 
 			if data:
 				self.oldconf = string_representation
-				conf_load_success = self.load_config(data)
+				self.conf_load_success = self.load_config(data)
 
 			###############################################
 			# Could not load files from conf, err-msg is already printed out from set_config
 			if self.tabindex == None:
+				# No conf and wanting to open some files from terminal
+				if self.one_time_conf:
+					self.handle_one_time_conf()
+					self.conf_read_files()
 
-				if len(self.tabs) == 0:
-					newtab = Tab(self.create_textwidget())
-					newtab.active = True
-					self.tabindex = 0
-					self.tabs.insert(self.tabindex, newtab)
-
-				# Recently active normal tab is gone
 				else:
-					self.tabindex = 0
-					self.tabs[self.tabindex].active = True
+					if len(self.tabs) == 0:
+						newtab = Tab(self.create_textwidget())
+						newtab.active = True
+						self.tabindex = 0
+						self.tabs.insert(self.tabindex, newtab)
+
+					# Recently active normal tab is gone
+					else:
+						self.tabindex = 0
+						self.tabs[self.tabindex].active = True
 			## Get conf End ################################
 
 
@@ -890,7 +895,7 @@ class Editor(tkinter.Toplevel):
 
 
 			## No conf Begin ########
-			if not conf_load_success:
+			if not self.conf_load_success:
 
 				self.curtheme = 'night'
 				self.themes = copy.deepcopy(self.default_themes)
@@ -1189,9 +1194,11 @@ static unsigned char infopic_bits[] = {
 						if not self.one_time_conf and p.exists() and tab.chk_sum == len(tab.contents):
 							tags_from_cache.append(tab)
 						else:
-							if not p.exists(): print('Missing cache-file')
-							else: print('Content changed:')
-							print(tab.filepath, tab.chk_sum, len(tab.contents))
+							if not self.one_time_conf:
+								if not p.exists(): print('Missing cache-file')
+								else: print('Content changed:')
+								print(tab.filepath, tab.chk_sum, len(tab.contents))
+
 							a = self.get_tokens(tab)
 							self.insert_tokens(a, tab=tab)
 
@@ -2067,7 +2074,7 @@ Error messages Begin
 		def same_heights():
 			a = self.ln_widget.dlineinfo('@0,0')[3]
 			b = f.t.dlineinfo('insert')[3]
-			print(a,b)
+			#print(a,b)
 			return a == b
 
 		i = 0
@@ -2905,7 +2912,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if self.geom != geom_current: self.geom = geom_current
 
 
-		if not self.one_time_conf: self.save_config()
+		# Save config after possibly first launch from terminal
+		if not self.conf_load_success: self.save_config()
+		# Do not overwrite 'real' config
+		elif not self.one_time_conf: self.save_config()
 
 		self.config(bg='') # Prevent flashing if slow machine
 		self.update_idletasks()
@@ -4122,6 +4132,54 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return d
 
 
+	def handle_one_time_conf(self):
+		# Started editor from terminal: python -m henxel file1 file2..
+		# --> skip messing original tabs and bookmarks by using:
+		# One time conf begin
+
+		# Intention: enable use of editor as adhoc(normal) editor
+
+		tmppath = pathlib.Path().cwd()
+
+		# Create tab for: 'to be opened' -file
+		for fname in self.files_to_be_opened:
+			newtab = Tab(self.create_textwidget())
+			newtab.filepath = tmppath / fname
+			newtab.filepath = newtab.filepath.resolve().__str__()
+			newtab.type = 'normal'
+			self.tabs.append(newtab)
+
+		self.tabs[0].active = True
+
+
+	def conf_read_files(self):
+		for tab in self.tabs[:]:
+
+			if tab.type == 'normal':
+				try:
+					with open(tab.filepath, 'r', encoding='utf-8') as f:
+						tmp = f.read()
+						tab.contents = tmp
+						tab.oldcontents = tab.contents
+
+					tab.filepath = pathlib.Path(tab.filepath)
+
+
+				except (EnvironmentError, UnicodeDecodeError) as e:
+					print(e.__str__())
+					# Note: remove(val) actually removes the first occurence of val
+					self.tabs.remove(tab)
+			else:
+				tab.bookmarks.clear()
+				tab.filepath = None
+				tab.position = '1.0'
+
+		for i,tab in enumerate(self.tabs):
+			if tab.active == True:
+				self.tabindex = i
+				break
+
+
 	def set_config(self, data, textfont, menufont, keyword_font, linenum_font):
 
 		d = data
@@ -4201,64 +4259,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		if self.one_time_conf:
-			# Started editor from terminal: python -m henxel file1 file2..
-			# --> skip messing original tabs and bookmarks by using:
-			# One time conf begin
-
-			# Intention: enable use of editor as adhoc(normal) editor
-
-			tmppath = pathlib.Path().cwd()
-
-			# Create tab for: 'to be opened' -file
-			for fname in self.files_to_be_opened:
-				newtab = Tab(self.create_textwidget())
-				newtab.filepath = tmppath / fname
-				newtab.filepath = newtab.filepath.resolve().__str__()
-				newtab.type = 'normal'
-				self.tabs.append(newtab)
-
-			self.tabs[0].active = True
-			### One time conf End ###
-
-
-		# Load tabs from conf
+			# Don't load tabs from conf
+			self.handle_one_time_conf()
 		else:
+			# Load tabs from conf
 			self.tabs = [ Tab(self.create_textwidget(), **items) for items in d['tabs'] ]
 
-
-		# To avoid for-loop breaking, while removing items from the container being iterated,
-		# one can iterate over container[:], that is: self.tabs[:],
-		# which returns a shallow copy of the list --> safe to remove items.
-
-		# This is same as:
-		# tmplist = self.tabs[:]
-		# for tab in tmplist:
-		for tab in self.tabs[:]:
-
-			if tab.type == 'normal':
-				try:
-					with open(tab.filepath, 'r', encoding='utf-8') as f:
-						tmp = f.read()
-						tab.contents = tmp
-						tab.oldcontents = tab.contents
-
-					tab.filepath = pathlib.Path(tab.filepath)
-
-
-				except (EnvironmentError, UnicodeDecodeError) as e:
-					print(e.__str__())
-					# Note: remove(val) actually removes the first occurence of val
-					self.tabs.remove(tab)
-			else:
-				tab.bookmarks.clear()
-				tab.filepath = None
-				tab.position = '1.0'
-
-		for i,tab in enumerate(self.tabs):
-			if tab.active == True:
-				self.tabindex = i
-				break
-
+		self.conf_read_files()
 
 		return True
 
@@ -13679,4 +13686,56 @@ https://www.tcl.tk/man/tcl9.0/TkCmd/text.html#M147
 
 ################ Replace End
 ########### Class Editor End
+
+
+def main():
+
+	# Do something with errors raising from Editor.__new__()
+	try:
+		Editor.in_mainloop = True
+		debug = False
+		e = False
+
+		try:
+			args = sys.argv[1:]
+			first_arg = args[0]
+			# Note: debug-session in Windows should be started using script
+			# found under /dev
+			if first_arg == '--debug': debug = True
+			# Use one time conf(original conf remains untouched) to enable 'adhoc behaviour' editor
+			# like normal editor: python -m henxel filepath1 filepath2
+			else: Editor.files_to_be_opened = args
+
+		except IndexError: pass
+
+
+		e=Editor(debug=debug)
+		e.mainloop()
+
+	except Exception as new_err:
+
+		if debug:
+			traceback.print_exception(new_err)
+			# This is used to break debug-restart-loop
+			sys.exit(0)
+		else:
+			raise new_err
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
