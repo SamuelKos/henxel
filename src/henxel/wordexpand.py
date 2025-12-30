@@ -65,6 +65,32 @@ class ExpandWord:
 		self.no_words = False, False, None, False
 
 
+	def cancel_completion(self, event=None):
+		if not self.state or event.widget != self.text_widget: return False
+
+		curinsert = event.widget.index("insert")
+		ins_as_int = int(curinsert.split('.')[1])
+		curline = event.widget.get("insert linestart", "insert lineend")
+		prev_word = self.getprevword(curline, ins_as_int)
+
+		_, index, insert, line = self.state
+
+
+		if insert != curinsert or line != curline: return False
+
+
+		# There already should be stub
+		if index == -1: return False
+
+		# First remove old completion
+		self.text_widget.delete("insert -%d chars" % len(prev_word), "insert")
+
+		# Then add stub
+		self.text_widget.insert("insert", self.stub)
+
+		return True
+
+
 	def expand_word(self, event=None, back=False):
 		''' Replace the current word with the next expansion.
 		'''
@@ -92,12 +118,13 @@ class ExpandWord:
 
 
 
-			# Below, two cases, stub has dot or not,
-			# if all matches are in cur_scope, for loop is normal
+			# Below, two cases, stub has dot or not.
+			# If all matches are in cur_scope, for loop is normal
 			# else, for loop is splitted in half at idx_sep, to possibly save some time
 
 			self.stub_has_dot = False
 			if '.' in self.stub:
+
 				# Rstrip to last dot for aligning completions with insertion-line, and to save some space
 				self.stub_has_dot = idx_dot = self.stub.rindex('.')
 
@@ -136,12 +163,20 @@ class ExpandWord:
 		update_completions = False
 
 
-		# Tab changed
-		if event.widget != self.text_widget:
+		# Tab changed. Not self.state: for example, no words at very first attempts
+		if event.widget != self.text_widget or not self.state:
 			self.text_widget = event.widget
 			self.tcl_name_of_contents = str( self.text_widget.nametowidget(self.text_widget) )
-
 			update_completions = True
+
+		else:
+			words, index, insert, line = self.state
+			# Something else changed
+			if insert != curinsert or line != curline:
+				update_completions = True
+
+
+		if update_completions:
 			self.flag_unique = False
 			word_list = self.getwords(curline, ins_as_int, prev_word)
 
@@ -151,24 +186,6 @@ class ExpandWord:
 			if not words: return self.no_words
 
 			index = -1
-
-
-		else:
-			words, index, insert, line = self.state
-			# Something else changed
-			if insert != curinsert or line != curline:
-
-				update_completions = True
-				self.flag_unique = False
-				word_list = self.getwords(curline, ins_as_int, prev_word)
-
-				# Not sure if this first check is necessary
-				if not word_list: return self.no_words
-				words = handle_words(word_list)
-				if not words: return self.no_words
-
-				index = -1
-
 
 
 
@@ -196,7 +213,7 @@ class ExpandWord:
 			index = next_index(index, words)
 		newword = words[index]
 
-		if index == -1 and not update_completions:
+		if index == -1:
 			newword = self.stub
 
 
@@ -227,8 +244,7 @@ class ExpandWord:
 
 
 		# First remove old completion
-		if self.stub_has_dot:
-			dots = self.stub_has_dot
+		if dots := self.stub_has_dot:
 
 			# 'rstrip' to first dot (-1c) when starting completion
 			if index == 0 and update_completions:
@@ -282,11 +298,11 @@ class ExpandWord:
 
 		word_with_escaped_dots = word.replace('.', '\\.')
 
-		# If in middle of string, add one space to fool regexp to treat word as two words split from insert,
-		# word is fixed back to one later at end
+		# If in middle of string, add one space to fool regexp to treat word as two words split from insert.
+		# Word is fixed back to one later at end.
 		flag_instring = False
 		try:
-			if not curline[ins_as_int-1].isspace() and curline[ins_as_int] in self.wordchars[:-1]:
+			if curline[ins_as_int-1] in self.wordchars and curline[ins_as_int] in self.wordchars+'([{':
 				flag_instring = True
 				self.text_widget.insert('insert', ' ')
 				self.text_widget.mark_set('insert', 'insert -1c')
@@ -379,7 +395,6 @@ class ExpandWord:
 
 			words.append(w)
 			dictionary[w] = w
-
 
 		# Remove non-sense separators
 		if self.scope_separator in words:

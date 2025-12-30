@@ -2246,7 +2246,7 @@ Error messages Begin
 			for item in word_list: lb.insert('end', item)
 			lb.see(0)
 
-			# figuring out the geometry of listbox etc
+			# Figuring out the geometry of listbox
 			height = len(word_list)
 			if  height > 11: height = 11
 			lb.height = height
@@ -2309,6 +2309,18 @@ Error messages Begin
 			if y -f.height -pad < 0:
 				anchor = 'nw'
 				y = y +h +2*self.pad # one line below
+
+				# Make list shorter when necessary
+				tmp_height = y +f.height +offset_y +pad
+				total_height  = self.winfo_height()
+				while tmp_height > total_height:
+					# Take one line off
+					lb.height -= 1
+					lb.config(height=lb.height)
+					f.height = lb.winfo_reqheight()
+					tmp_height = y +f.height +offset_y +pad
+					if lb.height < 4: break
+
 
 				# Near ne-corner
 				tmp = self.text_widget.winfo_width()
@@ -2377,11 +2389,6 @@ Error messages Begin
 
 		bg = self.bgcolor
 		fg = self.fgcolor
-		gray = 'gray'
-		black = 'black'
-		if self.curtheme == 'day':
-			gray = 'gray'
-			black = 'black'
 
 		kwargs = {
 		'highlightthickness':0,
@@ -2390,12 +2397,12 @@ Error messages Begin
 		'exportselection':0,
 		'height':10,
 		'bd':0,
-		'bg':gray,
-		'fg':black,
-		'font':self.menufont,
+		'bg':fg,
+		'fg':bg,
+		'font':self.textfont,
 		'disabledforeground':fg,
-		'selectbackground':fg,
-		'selectforeground':bg,
+		'selectbackground':'blue',
+		'selectforeground':'yellow',
 		'justify':'left',
 		'relief':'flat'
 		}
@@ -2410,7 +2417,7 @@ Error messages Begin
 		f.height = 1
 		f.width = 1
 		f.cur_anchor = 'sw'
-		f.char_width = self.menufont.measure('A')
+		f.char_width = self.textfont.measure('A')
 
 		f.place_configure(relx=0.1, rely=0.1, width=1, height=1)
 		f.place_forget()
@@ -3304,7 +3311,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind("<Left>", self.check_sel)
 			w.bind("<Right>", self.check_sel)
 
-			# Hide completions-window with arrow updown
+			# Hide completions-window with arrow up/down
 			w.bind("<Up>", func=lambda event: self.comp_frame.place_forget, add=True)
 			w.bind("<Down>", func=lambda event: self.comp_frame.place_forget, add=True)
 
@@ -5240,18 +5247,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		bg = self.bgcolor
 		fg = self.fgcolor
 
-		gray = 'gray'
-		black = 'black'
-		if self.curtheme == 'day':
-			gray = 'gray'
-			black = 'black'
-
 		kwargs = {
-		'bg':gray,
-		'fg':black,
+		'bg':fg,
+		'fg':bg,
 		'disabledforeground':fg,
-		'selectbackground':fg,
-		'selectforeground':bg,
+		'selectbackground':'blue',
+		'selectforeground':'yellow',
 		}
 
 		self.comp_frame.listbox.config(**kwargs)
@@ -5411,6 +5412,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		pad_x =  self.tab_width // self.ind_depth // 3
 		self.pad = pad_y = pad_x
 
+
+		# Used in show_completions
+		self.comp_frame.char_width = self.pad*3
+
+
 		self.scrollbar_width = self.tab_width // self.ind_depth
 		self.elementborderwidth = max(self.scrollbar_width // 6, 1)
 		if self.elementborderwidth == 1: self.scrollbar_width = 9
@@ -5429,9 +5435,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		width_img = 8
 		width_total = width_text + width_img + self.pad*4
 		self.btn_git.config(image=self.img_name, width=width_total)
-
-		# Used in show_completions
-		self.comp_frame.char_width = width_text//6
 
 
 
@@ -7699,10 +7702,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			# Pressed arrow up or down: return event.
 			# +shift: 97: return event.
-			case 97:
-##				if self.state in [ 'search', 'replace' ]:
-##					self.message_frame2.place_forget()
-				return
+			case 97: return
 
 			case 96:
 				if self.state in [ 'search', 'replace' ]:
@@ -7718,12 +7718,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 				if event.keysym in ['Up', 'Down']:
-					# Hide completions-window with arrow updown
 					if self.comp_frame.winfo_ismapped():
 						self.comp_frame.place_forget()
 						return 'break'
 
 					return
+
 
 				# self.text_widget or self.entry
 				wid = event.widget
@@ -7745,6 +7745,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						self.check_sel(event=event)
 
 					else: return
+
 
 				else: return
 
@@ -8320,13 +8321,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def esc_override(self, event):
-		'''	Enable toggle fullscreen with Esc.
+		'''	Enable toggle fullscreen with Esc
+			And cancel completion
 		'''
 		# Safe escing, if mistakenly pressed during search_next
 		if self.state in ['normal']:
 			if len(self.text_widget.tag_ranges('sel')) > 0:
 				self.text_widget.tag_remove('sel', '1.0', tkinter.END)
 				return 'break'
+
+			elif self.expander.cancel_completion(event=event):
+				self.comp_frame.place_forget()
+				return 'break'
+
 
 		delay = 300
 		want_maximize = 1

@@ -376,7 +376,8 @@
 			--> self.attribute1.
 			
 	  - Only single 's' is needed to expand to: self.
-	  - Hide completion-window with arrow updown
+	  - Hide completion-window with arrow up/down
+	  - Cancel completion with Esc
 
 	
 [15] Inspecting modules
