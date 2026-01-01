@@ -57,6 +57,9 @@ class ExpandWord:
 		# text_widget is tkinter.Text -widget
 		self.text_widget = None
 		self.flag_unique = False
+		self.curinsert = None
+		self.curword = ''
+		self.prefix = ''
 		self.state = None
 		self.editor = editor
 		self.stub = ''
@@ -66,24 +69,24 @@ class ExpandWord:
 
 
 	def cancel_completion(self, event=None):
+
 		if not self.state or event.widget != self.text_widget: return False
 
-		curinsert = event.widget.index("insert")
-		ins_as_int = int(curinsert.split('.')[1])
+		#col, ins_as_int = self.editor.get_line_col_as_int()
 		curline = event.widget.get("insert linestart", "insert lineend")
-		prev_word = self.getprevword(curline, ins_as_int)
+		line = self.state[3]
+		index = self.state[1]
 
-		_, index, insert, line = self.state
-
-
-		if insert != curinsert or line != curline: return False
-
+		if line != curline: return False
 
 		# There already should be stub
-		if index == -1: return False
+		elif index == -1: return False
+
+		# Insertion cursor is allowed to be anywhere in line before cancel, so move it back
+		self.text_widget.mark_set('insert', self.curinsert)
 
 		# First remove old completion
-		self.text_widget.delete("insert -%d chars" % len(prev_word), "insert")
+		self.text_widget.delete("insert -%d chars" % len(self.curword), "insert")
 
 		# Then add stub
 		self.text_widget.insert("insert", self.stub)
@@ -95,15 +98,8 @@ class ExpandWord:
 		''' Replace the current word with the next expansion.
 		'''
 
-		curinsert = event.widget.index("insert")
-		ins_as_int = int(curinsert.split('.')[1])
-		curline = event.widget.get("insert linestart", "insert lineend")
-		prev_word = self.getprevword(curline, ins_as_int)
-
-
 		def handle_words(word_list):
 
-			self.stub = word_list.pop()
 			if len(word_list) == 1:
 				self.flag_unique = True
 
@@ -121,12 +117,10 @@ class ExpandWord:
 			# Below, two cases, stub has dot or not.
 			# If all matches are in cur_scope, for loop is normal
 			# else, for loop is splitted in half at idx_sep, to possibly save some time
-
-			self.stub_has_dot = False
 			if '.' in self.stub:
 
-				# Rstrip to last dot for aligning completions with insertion-line, and to save some space
-				self.stub_has_dot = idx_dot = self.stub.rindex('.')
+				# Lstrip to last dot for aligning completions with insertion-line, and to save some space
+				idx_dot = self.stub_has_dot
 
 				if all_matches_are_in_cur_scope:
 					for i in range(0, len(word_list)):
@@ -159,9 +153,11 @@ class ExpandWord:
 			return words_to_be_returned
 
 
-
+		# Start
+		curinsert = event.widget.index("insert")
+		line_as_int, ins_as_int = self.editor.get_line_col_as_int()
+		curline = event.widget.get("insert linestart", "insert lineend")
 		update_completions = False
-
 
 		# Tab changed. Not self.state: for example, no words at very first attempts
 		if event.widget != self.text_widget or not self.state:
@@ -178,7 +174,15 @@ class ExpandWord:
 
 		if update_completions:
 			self.flag_unique = False
-			word_list = self.getwords(curline, ins_as_int, prev_word)
+			self.getprefix(curline, ins_as_int)
+
+			self.curword = self.stub
+			# Note: self.prefix is used only in self.getwords
+			# Explanation: because self.stub is (possibly) only tail of self.prefix, need additional variable (==self.prefix)
+			# to make the actual searching in self.getwords
+			# Q: But why self.stub gets stripped(in self.getprefix) when it has dots?
+			# A: It simplifies greatly deletion of old completion at the end of this method
+			word_list = self.getwords(curline, ins_as_int, self.prefix)
 
 			# Not sure if this first check is necessary
 			if not word_list: return self.no_words
@@ -208,13 +212,18 @@ class ExpandWord:
 		index = next_index(index, words)
 		newword = words[index]
 
+		# Check for wrap around
+		if index == -1:
+			newword = self.stub
+
 		# Skip over scope_separator
 		if newword == self.scope_separator:
 			index = next_index(index, words)
-		newword = words[index]
+			newword = words[index]
 
-		if index == -1:
-			newword = self.stub
+			# Again, check for wrap around (should happen only if separator is first item and going back from item 1 to item 0(==separator))
+			if index == -1:
+				newword = self.stub
 
 
 		# Handle index End ###
@@ -242,32 +251,17 @@ class ExpandWord:
 ##		# Note: this wont expand to those above
 ##		.some
 
-
+		#print(self.curword, newword)
 		# First remove old completion
-		if dots := self.stub_has_dot:
-
-			# 'rstrip' to first dot (-1c) when starting completion
-			if index == 0 and update_completions:
-				tail = len(self.stub) - dots
-				self.text_widget.delete("insert -%d chars" % tail, "insert")
-
-			# Wrapped back to stub
-			elif newword == self.stub:
-				self.text_widget.delete("insert -%d chars" % len(prev_word), "insert")
-
-			# Must 'add' head of stub because of not so wise self.getprevword()
-			else:
-				self.text_widget.delete("insert -%d chars +%d chars" % (len(prev_word), dots), "insert")
-
-		else:
-			self.text_widget.delete("insert -%d chars" % len(prev_word), "insert")
+		self.text_widget.delete("insert -%d chars" % len(self.curword), "insert")
 
 		# Then add newword/completion
 		self.text_widget.insert("insert", newword)
 
 
-		curinsert = self.text_widget.index("insert")
+		curinsert = self.curinsert = self.text_widget.index("insert")
 		curline = self.text_widget.get("insert linestart", "insert lineend")
+		self.curword = newword
 		self.state = words, index, curinsert, curline
 
 
@@ -278,7 +272,7 @@ class ExpandWord:
 			return False, False, pos, False
 
 
-	def getwords(self, curline, ins_as_int, prev_word):
+	def getwords(self, curline, ins_as_int, prefix):
 		''' Return a list of words that match the prefix before the cursor.
 
 			These methods of Editor are being used:
@@ -289,14 +283,15 @@ class ExpandWord:
 		'''
 
 		all_words = False
-		word = prev_word
+		word = prefix
 		#print(word)
 		words = []
 
 		if not word: return words
 
+		escaped_word = word.replace('.', '\\.')
 
-		word_with_escaped_dots = word.replace('.', '\\.')
+
 
 		# If in middle of string, add one space to fool regexp to treat word as two words split from insert.
 		# Word is fixed back to one later at end.
@@ -311,8 +306,8 @@ class ExpandWord:
 
 
 		patt_end = ' get %s %s]'
-		patt_start = r'regexp -all -line -inline {\m%s[[:alnum:]_.]+} [%s' \
-				% (word_with_escaped_dots, self.tcl_name_of_contents)
+		patt_start = r'regexp -all -line -inline {\m%s[[:alnum:]_.]+[(]?} [%s' \
+				% (escaped_word, self.tcl_name_of_contents)
 
 
 		if self.editor.can_do_syntax():
@@ -343,12 +338,12 @@ class ExpandWord:
 
 			if scope_end:
 				# Up: insert - scope_start == scope_start - insert reversed
-				p = patt_start + patt_end % (scope_start, '{insert wordstart}')
+				p = patt_start + patt_end % (scope_start, '{insert lineend}')
 				l1 = words_ins_def_up = self.text_widget.tk.eval(p).split()
 				l1.reverse()
 
 				# Down: insert - scope_end
-				p = patt_start + patt_end % ('{insert wordend}', scope_end)
+				p = patt_start + patt_end % ('{insert lineend}', scope_end)
 				l2 = words_ins_def_down = self.text_widget.tk.eval(p).split()
 
 				if scope_start != '1.0':
@@ -371,11 +366,11 @@ class ExpandWord:
 
 		# For example: Tabbing at __main__() or in non py-file
 		if not all_words:
-			p = patt_start + patt_end % ('1.0', '{insert wordstart}')
+			p = patt_start + patt_end % ('1.0', '{insert lineend}')
 			l1 = words_ins_filestart = self.text_widget.tk.eval(p).split()
 			l1.reverse()
 
-			p = patt_start + patt_end % ('{insert wordstart}', 'end')
+			p = patt_start + patt_end % ('{insert lineend}', 'end')
 			l2 = words_ins_filestart = self.text_widget.tk.eval(p).split()
 
 			all_words = l1 + l2
@@ -396,6 +391,7 @@ class ExpandWord:
 			words.append(w)
 			dictionary[w] = w
 
+
 		# Remove non-sense separators
 		if self.scope_separator in words:
 
@@ -410,13 +406,11 @@ class ExpandWord:
 			elif len(words) == 2:
 				words.remove(self.scope_separator)
 
-		# Add stub (wich will be removed soon)
-		words.append(word)
 
 		return words
 
 
-	def getprevword(self, curline, ins_as_int):
+	def getprefix(self, curline, ins_as_int):
 		''' Return the word prefix before the cursor.
 		'''
 
@@ -426,11 +420,39 @@ class ExpandWord:
 			if tmp[i] not in self.wordchars:
 				break
 
-		# Reached linestart --> Tabbing at __main__() (indent0)
-		else: return tmp
+		# i == 0: word starts at indent0
+		# + not: word does not start at indent0
+		if not i == 0:
+			# +1: Strip the char that was not in self.wordchars
+			tmp = tmp[i+1:]
 
-		# +1: Strip the char that was not in self.wordchars
-		return tmp[i+1:]
+		# self.prefix is used only in self.getwords
+		self.prefix = self.stub = tmp
+
+		self.stub_has_dot = False
+		if '.' in self.stub:
+			# Lstrip to last dot for aligning completions with insertion-line, and to save some space
+			self.stub_has_dot = self.stub.rindex('.')
+			self.stub = self.stub[self.stub_has_dot:]
+
+			# Explanation: because self.stub is (possibly) only tail of self.prefix, need additional variable (==self.prefix)
+			# to make the actual searching in self.getwords
+			# Q: But why self.stub gets stripped when it has dots?
+			# A: It simplifies greatly deletion of old completion at the end of self.expand_word
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

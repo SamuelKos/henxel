@@ -748,10 +748,8 @@ class Editor(tkinter.Toplevel):
 				#this_func_no_exist()
 
 			else:
-				self.popup.add_command(label="        copy", command=self.copy)
-				self.popup.add_command(label="       paste", command=self.paste)
-				self.popup.add_command(label="##   comment", command=self.comment)
-				self.popup.add_command(label="   uncomment", command=self.uncomment)
+				self.popup.add_command(label="copy", command=lambda: self.after_idle(self.run))
+				self.popup.add_command(label="     runfile", command=self.comment)
 
 			self.popup.add_command(label="  select all", command=self.select_all)
 			self.popup.add_command(label=" draw syntax", command=self.redraw_syntax)
@@ -2389,6 +2387,7 @@ Error messages Begin
 
 		bg = self.bgcolor
 		fg = self.fgcolor
+		white = r'#e3e7e3'
 
 		kwargs = {
 		'highlightthickness':0,
@@ -2402,7 +2401,7 @@ Error messages Begin
 		'font':self.textfont,
 		'disabledforeground':fg,
 		'selectbackground':'blue',
-		'selectforeground':'yellow',
+		'selectforeground':white,
 		'justify':'left',
 		'relief':'flat'
 		}
@@ -9122,7 +9121,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# 4. Show as banner also
 		patt2 = tmp +' @@' +scope_name
-		self.show_message(patt2, 1700)
+		self.show_message(patt2, 2500)
 
 
 	def get_scope_path_using_defline_tag(self, index, ind_depth, scope_path='', get_idx_linestart=False):
@@ -11623,25 +11622,35 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return False, 0
 
 
-	def can_expand_word(self):
+	def can_expand_word(self, event=None):
 		'''	Called from indent() and unindent()
 		'''
-		ins = tkinter.INSERT
-		# There should not be selection, checked before call in caller.
-
 		if not self.text_widget.bbox('insert'):
 			self.bell()
 			return 'break'
 
 		# Check previous char
-		idx = self.text_widget.index(ins)
-		col = int(idx.split(sep='.')[1])
+		curinsert = self.text_widget.index('insert')
+		line_as_int, ins_as_int = self.get_line_col_as_int()
 
-		if col > 0:
-			prev_char = self.text_widget.get( ('%s -1 char') % ins, '%s' % ins )
+		if ins_as_int > 0:
+			prev_char = self.text_widget.get( ('%s -1 char') % curinsert, '%s' % curinsert )
 
 			if prev_char in self.expander.wordchars:
 				return True
+
+			# There already are completions and previous completion was callable
+			elif prev_char in '(':
+				if event.widget != self.expander.text_widget or not self.expander.state:
+					return False
+
+				curline = self.text_widget.get("insert linestart", "insert lineend")
+
+				_, _, insert, line = self.expander.state
+
+				if insert == curinsert and line == curline:
+					return True
+
 
 		return False
 
@@ -11655,7 +11664,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if len(self.text_widget.tag_ranges('sel')) == 0:
 
-			if self.can_expand_word():
+			if self.can_expand_word(event=event):
 
 				self.show_completions(event=event)
 
@@ -11739,7 +11748,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		if len(self.text_widget.tag_ranges('sel')) == 0:
 
-			if self.can_expand_word():
+			if self.can_expand_word(event=event):
 
 				self.show_completions(event=event, back=True)
 
