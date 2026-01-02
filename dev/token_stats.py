@@ -4,7 +4,6 @@
 import subprocess
 
 # Change file to be tokenized here
-#path = '/home/samuel/pyyttoni/hub/henxel/src/henxel/fdialog.py'
 path = './src/henxel/fdialog.py'
 cmd = 'python -m tokenize %s' % path
 res = subprocess.run(cmd.split(), stdout=subprocess.PIPE).stdout
