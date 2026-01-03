@@ -187,7 +187,7 @@ def get_info():
 			'line_is_defline',
 			'line_is_elided',
 			'line_is_empty',
-			'package_has_syntax_error',
+			'tab_has_syntax_error',
 			'bookmarks_print',
 			'search_help_print',
 			'search_setting_print',
@@ -528,8 +528,10 @@ class Editor(tkinter.Toplevel):
 
 
 			super().__init__(self.root, *args, class_='Henxel', bd=4, **kwargs)
-			self.protocol("WM_DELETE_WINDOW", self.quit_me)
 
+			if self.debug: self.protocol("WM_DELETE_WINDOW", self.quit_me)
+			# When not debugging, exit editor from close-button even if there are any kind of errors, even saving errors
+			else: self.protocol("WM_DELETE_WINDOW", self.force_quit_editor)
 
 			# Dont map too early to prevent empty windows at startup
 			# when init is taking long
@@ -1700,13 +1702,12 @@ Error messages Begin
 
 		tmp = c.entry.get().strip()
 
-		# Walking through options
+
 		if c.lasttmp and tmp.startswith(c.lasttmp):
 			if c.lastword and (tmp == c.lastword or tmp == c.lastword +'()'):
 				tmp = c.lasttmp
 		else:
 			c.lastword = False
-			c.compidx = 0
 
 
 		options = []
@@ -1747,7 +1748,9 @@ Error messages Begin
 			completions = [ option for option in options if option.startswith(tmp) ]
 			if child:
 				# Most of time, show only childs in prints
-				options_minus_parent = list(map(lambda item: item.split('.')[1], completions))
+				m = map(lambda item: item.split('.')[-1], completions)
+				# Filter out dunder-methods for brevity in prints
+				options_minus_parent = [ item for item in m if not item.startswith('__') ]
 		else:
 			# When trying for example: "a."
 			return 'break'
@@ -1758,31 +1761,48 @@ Error messages Begin
 			if completions != c.completions:
 				c.completions = completions
 				c.lasttmp = tmp
-				c.compidx = 0
-				if child: self.complete_print(options_minus_parent)
-				else: self.complete_print(completions)
 
-			# insert from completions-list to enable options-walking
-			c.lastword = word = c.completions[c.compidx]
-			c.entry.delete(0, 'end')
-			c.entry.insert(0, word)
+				if len(completions) > 1:
+					if child: self.complete_print(options_minus_parent)
+					else: self.complete_print(completions)
+
+					# Find common prefix
+					first_comp = c.completions[0]
+					len_tmp = len(tmp)
+					len_tail = len(c.completions[0][len_tmp:])
+
+					flag_add = 0
+					flag_break = False
+					for i in range(1, len_tail+1, 1):
+						for completion in c.completions[1:]:
+							if not first_comp[:len_tmp+i] in completion:
+								flag_break = True
+								break
+						if not flag_break: flag_add += 1
+						else: break
+
+					# Extend word to common prefix
+					if flag_add > 0:
+						c.lasttmp = first_comp[:len_tmp+flag_add]
+						c.entry.delete(0, 'end')
+						c.entry.insert(0, c.lasttmp)
 
 
-			# If word is function, add braces and put cursor in between
-			check_if_func = f"type({word}).__name__ in ('method', 'function')"
+				else:
+					# insert when only one completions is left
+					c.lastword = word = c.completions[0]
+					c.entry.delete(0, 'end')
+					c.entry.insert(0, word)
 
-			if is_func := self.do_eval(check_if_func):
-				c.entry.insert('end', '()')
-				# Put cursor in between braces
-				try:c.entry.icursor(len(word)+1)
-				except Exception as err: print(err)
+					# If word is function, add braces and put cursor in between
+					check_if_func = f"type({word}).__name__ in ('method', 'function')"
 
+					if is_func := self.do_eval(check_if_func):
+						c.entry.insert('end', '()')
+						# Put cursor in between braces
+						try:c.entry.icursor(len(word)+1)
+						except Exception as err: print(err)
 
-			c.compidx += 1
-			# This (c.compidx-1) was last/only one option
-			if c.compidx == len(c.completions):
-				c.compidx = 0
-				self.bell()
 
 
 		# Trying for example: "aa"
@@ -2300,40 +2320,45 @@ Error messages Begin
 			offset_y = self.entry.winfo_height()
 
 			pad = self.pad*5
+			one_line_below = h +2*self.pad
 
 
 			# Make border-check
-			# Near top
-			if y -f.height -pad < 0:
-				anchor = 'nw'
-				y = y +h +2*self.pad # one line below
+			# If near bottom, (window-height +pad +one_line_below insertionline)
+			# Then map window above insertionline
+			tmp_height = y +f.height +offset_y +pad +one_line_below
+			total_height  = self.winfo_height()
+			if tmp_height > total_height:
+				anchor = 'sw'
+				y = y -2*self.pad
 
 				# Make list shorter when necessary
-				tmp_height = y +f.height +offset_y +pad
-				total_height  = self.winfo_height()
-				while tmp_height > total_height:
+				tmp_height = y -f.height -pad
+				while tmp_height < 0:
 					# Take one line off
 					lb.height -= 1
 					lb.config(height=lb.height)
 					f.height = lb.winfo_reqheight()
-					tmp_height = y +f.height +offset_y +pad
+					tmp_height = y -f.height -pad
 					if lb.height < 4: break
 
-
-				# Near ne-corner
-				tmp = self.text_widget.winfo_width()
-				if x +f.width +pad > tmp:
-					anchor = 'ne'
-					x = tmp -pad
-			else:
-				anchor = 'sw'
-				y = y -2*self.pad
-
-				# Near se-corner
+				# Near right edge, move window left to fit screen
 				tmp = self.text_widget.winfo_width()
 				if x +f.width +pad > tmp:
 					anchor = 'se'
 					x = tmp -pad
+
+			# Map window below insertionline (default)
+			else:
+				anchor = 'nw'
+				y = y + one_line_below
+
+				# Near right edge, move window left to fit screen
+				tmp = self.text_widget.winfo_width()
+				if x +f.width +pad > tmp:
+					anchor = 'ne'
+					x = tmp -pad
+
 
 			#print(offset_x, offset_y, f.width, f.height)
 			# kwargs for f.place_configure
@@ -2810,6 +2835,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
+	def force_quit_editor(self):
+		self.quit_me(force_close=True)
+		return 'break'
+
+
 	def activate_terminal(self, event=None):
 		''' Give focus back to Terminal when quitting
 		'''
@@ -2880,11 +2910,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		del self.msgbox
 
 
-	def quit_me(self, event=None, restart=False):
+	def quit_me(self, event=None, restart=False, force_close=False):
 
 		def delayed_break(delay):
 			self.wait_for(delay)
-			self.bell()
 			return 'break'
 
 
@@ -2901,8 +2930,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				return delayed_break(33)
 
 		else:
-			if not self.save_forced(): return delayed_break(33)
-			elif self.check_syntax and self.tab_has_syntax_error():
+			if not self.save_forced() and not force_close: return delayed_break(33)
+			elif self.check_syntax and self.tab_has_syntax_error() and not force_close:
 				self.activate_terminal()
 				return delayed_break(33)
 
@@ -9120,8 +9149,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# 4. Show as banner also
-		patt2 = tmp +' @@' +scope_name
-		self.show_message(patt2, 2500)
+		patt = tmp
+		if self.can_do_syntax(): patt += ' @@' +scope_name
+		self.show_message(patt, 2500)
 
 
 	def get_scope_path_using_defline_tag(self, index, ind_depth, scope_path='', get_idx_linestart=False):

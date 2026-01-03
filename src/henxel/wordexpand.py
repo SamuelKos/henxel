@@ -422,9 +422,11 @@ class ExpandWord:
 
 		# i == 0: word starts at indent0
 		# + not: word does not start at indent0
-		if not i == 0:
+		# tmp[0] in '\t	': line has indent1 of one tab (or one space)
+		if not i == 0 or tmp[0] in '	 ':
 			# +1: Strip the char that was not in self.wordchars
 			tmp = tmp[i+1:]
+
 
 		# self.prefix is used only in self.getwords
 		self.prefix = self.stub = tmp
@@ -435,7 +437,7 @@ class ExpandWord:
 			self.stub_has_dot = self.stub.rindex('.')
 			self.stub = self.stub[self.stub_has_dot:]
 
-			# Explanation: because self.stub is (possibly) only tail of self.prefix, need additional variable (==self.prefix)
+			# Explanation: because self.stub is now only tail of self.prefix, need additional variable (==self.prefix)
 			# to make the actual searching in self.getwords
 			# Q: But why self.stub gets stripped when it has dots?
 			# A: It simplifies greatly deletion of old completion at the end of self.expand_word

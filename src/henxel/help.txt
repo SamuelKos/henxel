@@ -6,7 +6,7 @@
 		  - After clicking hyperlink, reading and wanting to go back to top,
 			Press arrow left or right --> back to top (if not clicked anywhere)
 			
-			
+	
 	[2] While searching:
 			Ctrl-n  Next match
 			Ctrl-p  Prev match
@@ -109,6 +109,10 @@
 	  - If you do something in python-console that waits for user input,
 		Editor will be freezed during that time, like when viewing help
 		of some function.
+		
+	  - When not debugging, pressing close-button exits editor even if there
+		are errors, even saving errors.
+		Cmd/Ctrl-q does not exit editor in such cases.
 		
 	  
 [4] Save-button
@@ -397,9 +401,8 @@
 		
 	
 [17] Fix possible printing issue with macOS
-	  - When using macOS, printing from editor might not work when not in
-		mainloop(Editor is not in mainloop when launched with e=henxel.Editor
-		from Python-console)
+	  - If using macOS, printing from editor might not work when launched
+		from Python-console
 		
 	  - For example line-wrapping could be missing and there could be
 		only linefeeds, no translation: \n --> CR+LF
@@ -413,7 +416,8 @@
 		This is then saved in configuration
 	  
 	  - By default, normal printing is used on all platforms.
-	  - When in mainloop, normal printing is used even if this setting is on.
+	  - If editor is launched from terminal, normal printing is used
+		even when this setting is on.
 		
 	
 [18] Selecting range of lines
@@ -620,29 +624,33 @@
 	
 
 [28] Developing
-	  - To automate check syntax, test-launch, exit editor, re-open python and editor
-		start editor with: e=henxel.Editor(debug=True).
-		
-		Then Cmd/Control-q will do syntax checking on all open python-files
-		regardless of check_syntax setting and if that passes, test-launch.
-		After succesful test-launch editor exits.
+	  -	When editor is in debug-mode, Cmd/Control-q will do syntax checking
+		on all open python-files regardless of check_syntax setting
+		and if that passes, test-launch. After succesful test-launch editor exits.
 	  
-	  - Test-launch works on all platforms. This is quite enough, if there is no
-		need to often restart editor. And closing editor and console, then
-		restarting is matter of seconds anyway.
-		
-	  - If editor did not launch, error message and info about recovering is printed
-		See: help(henxel.stash_pop)
+	  - If editor does not launch after making some changes, error message and
+		info about recovering is printed. See: help(henxel.stash_pop)
 	
-	  - If wanting to start editor using new code, from popup-menu: restart
-		If want to be able to restart from popup-menu, see
-		Starting debug-session below
-		
+	  - It is possible to restart editor using new code from popup-menu: restart
+		(But it is easier, almost as fast, more ergonomic and recommended to
+		just close editor and restart it)
 	
-		Starting debug-session from
+	
+		Starting debug-session
 		
 	  - All platforms:
-		in python-console:
+		(This is most useful way to start debugging for several reasons.
+		One reason: Fast to start debugging: Control-r in terminal to search history
+		and enter "deb" and it should give this command right away)
+		
+		from terminal: python -m henxel --debug
+		
+				
+		
+		Other ways to start debug-session
+		
+	  - All platforms:
+		from Python-console:
 		import henxel
 		e=henxel.Editor(debug=True)
 		--> has python-console, test-launch works
