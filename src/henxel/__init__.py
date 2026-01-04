@@ -112,7 +112,7 @@ from . import fdialog
 ############ Module Utilities Begin
 
 modifier_dict = {
-# Modifier	Mask
+# Modifier		Mask
 'Shift':	0x0001,
 'CapsLock':	0x0002,
 'Control':	0x0004,
@@ -2247,13 +2247,14 @@ Error messages Begin
 		lb.selection_clear(0, 'end')
 
 		# Note: update is the prefix-string
-		update, word_list, pos, first_word = self.expander.expand_word(event=event, back=back)
+		update, word_list, pos, completion = self.expander.expand_word(event=event, back=back)
 		# No completions, wrap around or unique
 		if pos in [None, -1, 'unique']:
 			f.place_forget()
 			if pos is None: self.bell()
 			return 'break'
 
+		flag_scroll = False
 
 		# New word_list
 		if update:
@@ -2284,6 +2285,10 @@ Error messages Begin
 			f.height = lb.winfo_reqheight()
 			f.width = width * f.char_width
 
+			# Used to check if scrolling has happened between completions
+			f.last_y_top_row = self.text_widget.bbox('@0,0')[1]
+			f.lastlinenum, _  = self.get_line_col_as_int(index='@0,0')
+
 
 		# Handling of f.width here should be better (== only here and nowhere else)
 		if not update:
@@ -2298,20 +2303,31 @@ Error messages Begin
 				lb.config(width=tmp_max+2)
 				flag_update_width = True
 
+			# Check for possible scrolling between completions, since comp-window is not part of text,
+			# and update pos if necessary.
+			y_top_row = self.text_widget.bbox('@0,0')[1]
+			linenum, _  = self.get_line_col_as_int(index='@0,0')
+			if f.lastlinenum != linenum or f.last_y_top_row != y_top_row:
+				f.lastlinenum = linenum
+				f.last_y_top_row = y_top_row
+				update = True
+				flag_scroll = True
+
+
 
 		# update_pos: Tab-completing first time
-		# First completion has *already been inserted* by expander (except if no matches in cur_scope)
+		# Completion has *already been inserted* by expander
 		# --> affects insertion position
 		if update:
 			# Count adjust len
 			# Explanation: If prefix does not have dot --> adjust would be len(newword)
 			# If prefix does have dot --> adjust would also be len(newword)
-			# (because words have been rstripped to last dot by expander)
-			len_first = len(first_word)
+			# (because words have been lstripped to last dot by expander)
+			len_comp = len(completion)
 
-			# First completion has already been inserted by expander (except if no matches in cur_scope)
-			# need to adjust window position accordingly
-			x, y, _, h = self.text_widget.bbox('insert -%dc' % len_first)
+			# Completion has already been inserted by expander.
+			# Adjust window position accordingly
+			x, y, _, h = self.text_widget.bbox('insert -%dc' % len_comp)
 
 			# These are offsets of text_widget, relative to root.
 			# They have to be added, because frame is in root
@@ -2383,7 +2399,7 @@ Error messages Begin
 			self.after_cancel(item)
 			self.to_be_cancelled['completions'].remove(item)
 
-		if not f.winfo_ismapped():
+		if not f.winfo_ismapped() or flag_scroll:
 			f.place_configure(**kwargs)
 			# This, for some reason, is necessary
 			# Otherwise, sometimes text is not immediately shown
@@ -2651,7 +2667,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			flag_success = True
 			print('LAUNCHTEST, %s, START' % mode)
 
-			max_time = 4
+			max_time = 5
 			tmp = self.build_launch_test(mode)
 			d = dict(capture_output=True, timeout=max_time)
 
@@ -3422,11 +3438,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		#######################################################
 
 		# self.os_type == any:
-		w.bind( "<Control-j>", self.center_view)
-		w.bind( "<Control-u>",
+		w.bind( "<Control-u>", self.center_view)
+		w.bind( "<Control-j>",
 			lambda event: self.center_view(event, **{'up':True}) )
-		w.bind( "<Control-Shift-J>", self.center_view)
-		w.bind( "<Control-Shift-U>",
+		w.bind( "<Control-Shift-U>", self.center_view)
+		w.bind( "<Control-Shift-J>",
 			lambda event: self.center_view(event, **{'up':True}) )
 
 
@@ -11655,9 +11671,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def can_expand_word(self, event=None):
 		'''	Called from indent() and unindent()
 		'''
+
 		if not self.text_widget.bbox('insert'):
 			self.bell()
-			return 'break'
+			return False
 
 		# Check previous char
 		curinsert = self.text_widget.index('insert')
@@ -11727,6 +11744,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			else:
 				self.auto_update_syntax_continue()
+
+				# Check if tab-completing outside screen, if so, don't insert tab
+				if event.widget != self.expander.text_widget or not self.expander.state: return
+
+				curline = self.text_widget.get("insert linestart", "insert lineend")
+				curinsert = self.text_widget.index('insert')
+				_, _, insert, line = self.expander.state
+
+				# Don't insert tab
+				if insert == curinsert and line == curline:
+					self.ensure_idx_visibility('insert')
+					return 'break'
+
 				return
 
 
@@ -11801,6 +11831,19 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				self.auto_update_syntax_continue()
 				return 'break'
+
+			# Check if tab-completing outside screen, if so, don't insert tab
+			elif event.widget == self.expander.text_widget and self.expander.state:
+
+				curline = self.text_widget.get("insert linestart", "insert lineend")
+				curinsert = self.text_widget.index('insert')
+				_, _, insert, line = self.expander.state
+
+				# Don't insert tab
+				if insert == curinsert and line == curline:
+					self.ensure_idx_visibility('insert')
+					return 'break'
+
 
 		try:
 			# Unindenting curline only:

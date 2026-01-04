@@ -90,6 +90,7 @@
 
 		Ctrl-j/u	Scroll down/up 1/3 screens without moving cursor
 		+Shift		only one line
+					(if at file-end and press Ctrl-u, adds empty lines)
 
 		
 		Shift-up/down	Select lines one at time

@@ -269,7 +269,7 @@ class ExpandWord:
 		if update_completions:
 			return self.stub, words, pos, newword
 		else:
-			return False, False, pos, False
+			return False, False, pos, newword
 
 
 	def getwords(self, curline, ins_as_int, prefix):

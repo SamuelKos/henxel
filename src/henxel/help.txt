@@ -165,11 +165,10 @@
 	i-button
 	  - Toggle setting-console in which can edit settings just like
 		in python-console: e.search_setting_edit() etc.
-	  - If wrote: e.prin and hit Tab --> get all possible completions.
-		Hit Tab again to walk options.
+	  - If wrote: e.boo and hit Tab: get all possible completions.
 	  - Press Control-h to open help on current item.
-	  - If using ee instead of e --> get whole namespace of editor-instance
-		anf if using just single e --> get only settings
+	  - If using ee instead of e, get whole namespace of editor-instance
+		anf if using just single e, get only settings
 	  - Nice to know:
 	  	Control-a  Move cursor to linestart
 	  	Control-k  Kill from cursor to lineend
