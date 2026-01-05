@@ -295,10 +295,6 @@ ICONPATH = 'editor.png'
 HELPPATH = 'help.txt'
 KEYS_HLP = 'shortcuts.txt'
 KEYS_MAC = 'shortcuts_mac.txt'
-START_MAC = 'restart_editor.scpt'
-##START_WIN = 'restart_editor_todo.bat'
-##START_NIX = 'restart_editor_todo.sh'
-
 
 VERSION = importlib.metadata.version('henxel')
 
@@ -345,9 +341,7 @@ class Editor(tkinter.Toplevel):
 
 	# import flags
 	flags = FLAGS
-	restart_script = None
 
-	# Normal stuff
 	alive = False
 	in_mainloop = False
 	files_to_be_opened = False
@@ -446,19 +440,6 @@ class Editor(tkinter.Toplevel):
 
 		if cls.pkg_contents:
 
-			if debug and not cls.restart_script:
-				startfile = False
-				if cls.os_type == 'mac_os': startfile = START_MAC
-##				elif cls.os_type == 'windows': startfile = START_WIN
-##				else: startfile = START_NIX
-
-				if not startfile: pass
-				else:
-					for item in cls.pkg_contents.iterdir():
-						if item.name == startfile:
-							cls.restart_script = item.resolve()
-							break
-
 			if cls.no_icon:
 				for item in cls.pkg_contents.iterdir():
 
@@ -521,7 +502,6 @@ class Editor(tkinter.Toplevel):
 		try:
 			self.root = self.__class__.root
 			self.flags = self.__class__.flags
-			self.restart_script = self.__class__.restart_script
 			self.debug = debug
 			# Pass info to other modules
 			if self.in_mainloop: importflags.IN_MAINLOOP = True
@@ -637,7 +617,7 @@ class Editor(tkinter.Toplevel):
 
 
 			self.timeout = 1
-			self.popup_run_action = 0
+			self.popup_run_action = 1
 			# Used in popup_run_action_set
 			self.popup_run_action_idx = 2
 			self.module_run_name = None
@@ -740,20 +720,14 @@ class Editor(tkinter.Toplevel):
 
 			if self.debug:
 				self.popup.add_command(label="test", command=lambda: self.after_idle(self.do_test_launch))
-				self.popup.add_command(label="     restart",
-						command=lambda: self.after_idle(self.restart_editor))
-				# Next lines left as example of what does not work if doing restart in quit_me
-				#self.popup.add_command(label="test", command=self.quit_me)
-				#self.popup.add_command(label="     restart", command=self.restart_editor)
 
 				if self.flags and self.flags.get('test_fake_error'): this_func_no_exist()
 				#this_func_no_exist()
 
-			else:
-				self.popup.add_command(label="copy", command=lambda: self.after_idle(self.run))
-				self.popup.add_command(label="     runfile", command=self.comment)
+			else: self.popup.add_command(label="copy", command=self.copy)
 
-			self.popup.add_command(label="  select all", command=self.select_all)
+			self.popup.add_command(label="     runfile", command=lambda: self.after_idle(self.run))
+			self.popup.add_command(label="  select all", command=self.select_all) # this will be replaced by "run command"
 			self.popup.add_command(label=" draw syntax", command=self.redraw_syntax)
 			self.popup.add_command(label="  chk syntax",
 				command=lambda kwargs={'curtab':True}: self.tab_has_syntax_error(**kwargs) )
@@ -1404,9 +1378,7 @@ Error messages Begin
 				info = info_start + stash_pop.__doc__.replace('\t', '  ') + info_end
 				print(info)
 				traceback.print_exception(init_err)
-				# This is used to break debug-restart-loop
-				sys.exit(0)
-
+				sys.exit(1)
 			else:
 				info = info_start + info_end
 				print(info)
@@ -2071,49 +2043,6 @@ Error messages Begin
 		self.to_be_closed.append(f)
 
 
-	def find_balancing_offset(self, get_normal_lineheight=False):
-		''' Try to find balancing offset for: comments only -lines in text-window
-			and linenumbers.
-
-			Called from handle_diff_lineheights and on_fontchange
-		'''
-
-		# About lineheights
-		# If using same and only one font in text-window and ln_widget, things are quite easy, just figure out offset of top-most line
-		# in text-window and scroll that amount line-numbers up.
-		# If using more fonts, it seems that in somefont_instance.metrics() -values, 'descent' is important.
-		# In this editor case, now that lines behave correctly, all three fonts, textfont, keyword_font and linenum_font have the same descent-value
-
-
-		f = self.measure_frame
-		# It needs to be mapped during measuring
-		f.place_configure(relx=0.1, rely=0.1)
-
-		def same_heights():
-			a = self.ln_widget.dlineinfo('@0,0')[3]
-			b = f.t.dlineinfo('insert')[3]
-			#print(a,b)
-			return a == b
-
-		i = 0
-		offset = 0
-		f.t.tag_config('measure', offset=offset)
-		f.t.update_idletasks()
-
-		while not same_heights():
-			offset += 1
-			i += 1
-			f.t.tag_config('measure', offset=offset)
-			f.t.update_idletasks()
-			if i > 10:
-				print('INFO: Could not balance lineheights')
-				f.place_forget()
-				return 0
-
-		f.place_forget()
-		return offset
-
-
 	def measure_frame_init(self):
 		''' Used in find_balancing_offset
 		'''
@@ -2125,13 +2054,15 @@ Error messages Begin
 		f.t.config(font=self.textfont, foreground=bg, background=bg, selectbackground=bg,
 					selectforeground=bg, inactiveselectbackground=bg, width=100)
 
-		f.t.tag_config('measure', font=self.linenum_font)
-		f.t.insert('1.0', 'BBB\nBBB\n')
+		f.t.tag_config('measure_comment', font=self.linenum_font)
+		f.t.tag_config('measure_keyword', font=self.keyword_font)
+		f.t.insert('1.0', 'BBB\nBBB\nBBB\n')
 
 		# Line *has to be* comments only starting from indent0
 		f.t.mark_set('insert', '1.0')
 		#########################################
-		f.t.tag_add('measure', '1.0', '1.3')
+		f.t.tag_add('measure_comment', '1.0', '1.3')
+		f.t.tag_add('measure_keyword', '2.0', '2.3')
 		f.t.pack()
 
 		f.place_configure(relx=0.1, rely=0.1, width=1, height=1)
@@ -2239,6 +2170,9 @@ Error messages Begin
 
 	def show_completions(self, event=None, back=False):
 		''' Show completions-window
+
+			Returns False if there are no completions or unique completion
+			Else: True
 		'''
 		self.wait_for(30)
 
@@ -2252,7 +2186,7 @@ Error messages Begin
 		if pos in [None, -1, 'unique']:
 			f.place_forget()
 			if pos is None: self.bell()
-			return 'break'
+			return False
 
 		flag_scroll = False
 
@@ -2414,7 +2348,7 @@ Error messages Begin
 		c = self.after(2000, f.place_forget)
 		self.to_be_cancelled['completions'].append(c)
 
-		return 'break'
+		return True
 		# show_completions End #######
 
 
@@ -2567,7 +2501,7 @@ Error messages Begin
 		#
 		# This means, when one changes flags here,
 		#		(or even some normal code, in for example quit_me or save_forced)
-		# When one makes changes here, and does launch-test or restart
+		# When one makes changes here, and does launch-test
 		# 		--> old flags/code are still used in *executing test-launch*,
 		# 									that is, executing quit_me().
 		#
@@ -2624,11 +2558,6 @@ Error messages Begin
 		# And put this line to place where one wants to generate error:
 		# if self.flags and self.flags.get('test_fake_error'): this_func_no_exist()
 		#
-		# In __init__ one could use real error instead, to see effect.
-		# just git commit first, then put this line someplace:
-		# 	this_func_no_exist()
-		# Then dont restart, but quit editor and console, and restart python and editor
-		# --> see effect
 		# in help(henxel.stash_pop) is info about recovering from such errors
 		#############################################################################
 		# If want also to test some methods, add those lines to: launch_test_as_string
@@ -2846,11 +2775,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
-	def restart_editor(self, event=None):
-		self.quit_me(restart=True)
-		return 'break'
-
-
 	def force_quit_editor(self):
 		self.quit_me(force_close=True)
 		return 'break'
@@ -2926,7 +2850,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		del self.msgbox
 
 
-	def quit_me(self, event=None, restart=False, force_close=False):
+	def quit_me(self, event=None, force_close=False):
 
 		def delayed_break(delay):
 			self.wait_for(delay)
@@ -2974,18 +2898,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.__class__.alive = False
-
-
-		# In debug and want restart, restart-scripts are in: dev/
-		# Debug-session should be started using those scripts
-		if restart:
-			# macOS
-			if self.restart_script and not self.in_mainloop:
-				tmp = [self.restart_script]
-				subprocess.run(tmp)
-
-			else:
-				sys.exit(1)
 
 		#### quit_me End ##############
 
@@ -5339,7 +5251,88 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tab.text_widget.tag_config(tagname, background=bg, foreground=fg)
 
 
-	def handle_diff_lineheights(self, event=None):
+	def find_balancing_offset(self, get_normal_lineheight=False):
+		''' Try to find balancing offset for: comments only -lines in text-window
+			and linenumbers.
+
+			Called from handle_diff_lineheights and on_fontchange
+		'''
+
+		# About lineheights
+		# If using same and only one font in text-window and ln_widget, things are quite easy, just figure out offset of top-most line
+		# in text-window and scroll that amount line-numbers up.
+		# If using more fonts, it seems that in somefont_instance.metrics() -values, 'descent' is important.
+		# In this editor case, now that lines behave correctly, all three fonts, textfont, keyword_font and linenum_font have the same descent-value
+
+
+		f = self.measure_frame
+		# It needs to be mapped during measuring
+		if not f.winfo_ismapped():
+			f.place_configure(relx=0.1, rely=0.1)
+
+		if get_normal_lineheight:
+			f.t.mark_set('insert', '2.0')
+			f.t.update_idletasks()
+			normal_text_lineheight = f.t.dlineinfo('insert')[3]
+			f.t.mark_set('insert', '1.0')
+			#f.place_forget()
+
+			return normal_text_lineheight
+
+		else:
+			def same_heights():
+				a = self.ln_widget.dlineinfo('@0,0')[3]
+				b = f.t.dlineinfo('insert')[3]
+				#print(a,b)
+				return a == b
+
+			i = 0
+			offset = 0
+			f.t.tag_config('measure', offset=offset)
+			f.t.update_idletasks()
+
+			while not same_heights():
+				offset += 1
+				i += 1
+				f.t.tag_config('measure', offset=offset)
+				f.t.update_idletasks()
+				if i > 10:
+					print('INFO: Could not balance lineheights')
+					f.place_forget()
+					return 0
+
+			f.place_forget()
+			return offset
+
+
+	def handle_diff_lineheights(self, fontname=False):
+
+##		# Measure-widget:
+##		# No keywords line lineheight
+##		height_text = text_only_at_indent0
+##		# Keywords line lineheight
+##		height_keyword = keyword_only_at_indent0
+##		# Comments lineheight
+##		height_comment = comment_only_at_indent0
+##
+##		linespace_keyword = self.fonts['keyword_font'].metrics()['linespace']
+##		linespace_linenum = self.fonts['linenum_font'].metrics()['linespace']
+##		linespace_text = self.fonts['textfont'].metrics()['linespace']
+##
+##
+##		# If changing linenum_font, can use old method?
+##		if fontname == 'keyword_font':
+##			diff = linespace_text - linespace_keyword
+##			size = self.fonts['keyword_font'].cget('size')
+##			while diff < 0:
+##				size -= 1
+##				linespace_keyword = self.fonts['keyword_font'].metrics()['linespace']
+##				diff = linespace_text - linespace_keyword
+
+
+
+
+
 
 		self.ln_string = ''
 		self.ln_widget.tag_config('justright', spacing1=0)
@@ -5347,7 +5340,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.wait_for(200)
 		self.update_linenums()
 
-		a = self.text_widget.dlineinfo('@0,0')[3]
+		a = self.find_balancing_offset(get_normal_lineheight=True)
 		b = self.ln_widget.dlineinfo('@0,0')[3]
 		diff = a - b
 		spacing = 0
@@ -5363,7 +5356,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.wait_for(200)
 			self.update_linenums()
 
-			a = self.text_widget.dlineinfo('@0,0')[3]
+			a = self.find_balancing_offset(get_normal_lineheight=True)
 			b = self.ln_widget.dlineinfo('@0,0')[3]
 			diff = a - b
 
@@ -5378,6 +5371,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				tab.text_widget.tag_config('comments', offset=offset)
 
 		self.spacing_linenums = spacing
+		self.measure_frame.place_forget()
 
 
 	def on_fontchange(self, fontname=None):
@@ -6095,16 +6089,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def update_popup_run_action(self):
 
 		options = dict()
-		options['label'] = "         run"
-		options['command'] = self.run
 
-		if self.popup_run_action == 0: pass
-
-		elif self.popup_run_action == 1:
+		if self.popup_run_action == 1:
 			options['label'] = "  run module"
 			options['command'] = lambda kwargs={'module':True}: self.run(**kwargs)
 
-		elif self.popup_run_action == 2:
+		else:
 			options['label'] = "  run custom"
 			options['command'] = lambda kwargs={'custom':True}: self.run(**kwargs)
 
@@ -6118,8 +6108,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			1: run-module
 			2: run-custom
 		'''
-		if choice is None: pass
-		elif not choice: self.popup_run_action = 0
+		if not choice: pass
 		elif type(choice) != int:
 			self.bell()
 			return
@@ -6127,8 +6116,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		else: self.popup_run_action = 2
 		self.update_popup_run_action()
 
-		if not self.popup_run_action: print('run file')
-		elif self.popup_run_action == 1:
+		if self.popup_run_action == 1:
 			print('run module')
 			print('currently: ', self.module_run_name )
 		else:
@@ -11712,9 +11700,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if len(self.text_widget.tag_ranges('sel')) == 0:
 
 			if self.can_expand_word(event=event):
-
 				self.show_completions(event=event)
-
 				# can_expand_word called before indent and unindent
 
 				# Reason is that before commit 5300449a75c4826
@@ -13805,8 +13791,7 @@ def main():
 
 		if debug:
 			traceback.print_exception(new_err)
-			# This is used to break debug-restart-loop
-			sys.exit(0)
+			sys.exit(1)
 		else:
 			raise new_err
 

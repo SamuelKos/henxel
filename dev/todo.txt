@@ -50,6 +50,10 @@ check toml script entry -->
 ################
 
 
+.cache .config if not venv
+
+check if need after idle when doing run run module:
+self.popup.add_command(label="     runfile", command=lambda: self.after_idle(self.run))
 
 handle_diff_lineheights
 widget with one line, one char with boldfont
@@ -119,7 +123,7 @@ ln	text
 
 --> also at indent0! adding removing comments does not change lineheights!
 ###################################################
-d['spacing_linenums'] = self.spacing_linenums  <-- need more config than this
+d['spacing_linenums'] = self.spacing_linenums  <-- need more config-settings than this
 
 1:
 diff_descent = linenum_font - textfont

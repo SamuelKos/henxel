@@ -630,55 +630,22 @@
 	  - If editor does not launch after making some changes, error message and
 		info about recovering is printed. See: help(henxel.stash_pop)
 	
-	  - It is possible to restart editor using new code from popup-menu: restart
-		(But it is easier, almost as fast, more ergonomic and recommended to
-		just close editor and restart it)
 	
 	
-		Starting debug-session
-		
-	  - All platforms:
-		(This is most useful way to start debugging for several reasons.
+	  - Starting debug-session, all platforms:
+		This is most useful way to start debugging for several reasons.
 		One reason: Fast to start debugging: Control-r in terminal to search history
-		and enter "deb" and it should give this command right away)
+		and enter "deb" and it should give this command right away.
 		
 		from terminal: python -m henxel --debug
 		
-				
-		
-		Other ways to start debug-session
-		
-	  - All platforms:
-		from Python-console:
+		Or from Python-console (if wanting to have real Python-console):
 		import henxel
 		e=henxel.Editor(debug=True)
-		--> has python-console, test-launch works
-		--> restarting works in macOS (with osascript, needs some permissions)
-		
-	  - Windows: 1: activate python venv
-		in powershell
-		2a: dev/henxel_debug.bat
-		--> has python-console, restarting works
-		or
-		2b: dev/henxel_debug.bat mainloop
-		--> no python-console, restarting works, has mainloop
-		
-	  - Linux: 1: activate python venv
-		in terminal 
-		2: until python -m henxel --debug; do : ;done
-		--> no python-console, restarting works, has mainloop
-		
-	  - macOS: 1: activate python venv
-		in terminal
-		2a: until python -i -c "import henxel;e=henxel.Editor(debug=True)"; do : ;done
-		--> has python-console, restarting works
-		or
-		2b: until python -m henxel --debug; do : ;done
-		--> no python-console, restarting works, has mainloop
 		
 		
-		Q: When to use mainloop?
-		A: If having problems seeing tracebacks.
+		Q: When to start from terminal?
+		A: Always, or at least if having problems seeing tracebacks.
 		Sometimes, like errors from eval-lines, errors from nested callbacks
 		(callback was defined in callback), has to use try-block, but
 		
@@ -693,7 +660,7 @@
 	  - If using macOS and have issues with error messages, first read
 		section above about how to: Fix possible printing issue with macOS.
 		Then add @debug decorator on top of buggy callback, and then can
-		debug with print-lines also. Or launch in mainloop
+		debug with print-lines also. Or just launch with mainloop(==from terminal)
 		
 	
 	

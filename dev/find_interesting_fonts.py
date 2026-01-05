@@ -1,6 +1,3 @@
-# Run: python3 name_of_this_file.py
-
-# Get info on key-events and mouse-button -events
 
 import tkinter
 import tkinter.font
