@@ -406,6 +406,8 @@ class ExpandWord:
 			elif len(words) == 2:
 				words.remove(self.scope_separator)
 
+			elif words[-1] == self.scope_separator: words.pop()
+
 
 		return words
 

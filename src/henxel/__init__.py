@@ -551,6 +551,8 @@ class Editor(tkinter.Toplevel):
 			# Check syntax at exit
 			self.check_syntax = True
 
+			self.cachepath = CACHEPATH
+			self.confpath = CONFPATH
 			################################
 			# henxel.cnf is read from here #
 			################################
@@ -560,6 +562,9 @@ class Editor(tkinter.Toplevel):
 			# if not, in home-dir
 			else:
 				self.env = pathlib.Path().home()
+				self.cachepath = '.henxel.cache'
+				self.confpath = '.henxel.cnf'
+
 
 
 			self.tabs = list()
@@ -746,7 +751,7 @@ class Editor(tkinter.Toplevel):
 
 			if self.flags and self.flags.get('test_skip_conf') == True: pass
 			else:
-				p = pathlib.Path(self.env) / CONFPATH
+				p = pathlib.Path(self.env) / self.confpath
 
 				if p.exists():
 					try:
@@ -910,7 +915,8 @@ class Editor(tkinter.Toplevel):
 
 				self.flag_check_lineheights = True
 				self.spacing_linenums = 0
-
+				self.offset_comments = 0
+				self.offset_keywords = 0
 				## No conf End ########
 
 
@@ -951,7 +957,8 @@ class Editor(tkinter.Toplevel):
 			# Hide selection in linenumbers, etc
 			bg, fg = self.themes[self.curtheme]['comments'][:]
 			self.ln_widget.config(font=self.linenum_font, foreground=fg, background=self.bgcolor, selectbackground=self.bgcolor, selectforeground=fg, inactiveselectbackground=self.bgcolor, state='disabled', padx=self.pad, pady=self.pad, width=self.margin)
-			self.ln_widget.tag_config('justright', justify=tkinter.RIGHT, spacing1=self.spacing_linenums, rmargin=self.gap)
+			self.ln_widget.tag_config('justright', justify=tkinter.RIGHT, rmargin=self.gap,
+							spacing1=self.spacing_linenums, offset=self.offset_comments)
 
 
 
@@ -1091,6 +1098,11 @@ static unsigned char infopic_bits[] = {
 
 			self.init_syntags()
 
+
+			# Used in on_fontchange
+			# This is here to get little time-gap before first measuring, right after Tabs
+			self.measure_frame_init()
+
 			# Show Tab-completion -windows
 			# This is here, before first call to set_bindings, since there is a reference to self.comp_frame
 			self.completion_frame_init()
@@ -1129,7 +1141,7 @@ static unsigned char infopic_bits[] = {
 
 
 			tags_from_cache = list()
-			p = pathlib.Path(self.env) / CACHEPATH
+			p = pathlib.Path(self.env) / self.cachepath
 
 			for tab in self.tabs:
 
@@ -1218,10 +1230,8 @@ static unsigned char infopic_bits[] = {
 
 
 			# Now, get better values for these
-			#self.line_height = self.text_widget.bbox('@0,0')[3]
-			self.line_height = self.text_widget.dlineinfo('@0,0')[3]
+			self.line_height = self.get_lineheights()
 			self.text_widget_height = self.scrollbar.winfo_height()
-			print(self.line_height, self.text_widget_height)
 
 
 			############
@@ -1230,7 +1240,7 @@ static unsigned char infopic_bits[] = {
 			self.set_bindings_other()
 			############
 
-			curtab.text_widget.bind( "<Control-O>", self.test_bind)
+			#curtab.text_widget.bind( "<Control-O>", self.test_bind)
 
 			# Prevent flashing 2/3
 			self.config(bg=self.bgcolor)
@@ -1297,9 +1307,6 @@ static unsigned char infopic_bits[] = {
 			# Show info-messages when other frame is already in use
 			self.message_frame2_init()
 
-			# Used in on_fontchange, handle_diff_lineheights
-			self.measure_frame_init()
-
 
 
 			if self.start_fullscreen:
@@ -1319,17 +1326,6 @@ static unsigned char infopic_bits[] = {
 			self.state = 'normal'
 			self.update_title()
 
-##			# Widget visibility-check
-##			if self.flags and self.flags.get('launch_test'):
-##				a = self.text_widget.winfo_ismapped()
-##				b = self.text_widget.winfo_viewable()#check also if ancestors ar mapped
-##				print(a,b)
-##
-##			# Note also this
-##			if self.flags and self.flags.get('launch_test'):
-##				print(self.line_height,  self.text_widget_height)
-##				# self.line_height == 25,  self.text_widget_height == 616
-##				# --> self.text_widget is now 'packed' by (grid) geometry-manager
 
 		except Exception as init_err:
 
@@ -2044,7 +2040,9 @@ Error messages Begin
 
 
 	def measure_frame_init(self):
-		''' Used in find_balancing_offset
+		''' line 1 comments
+			line 2 keywords
+			line 3 normal_text
 		'''
 		self.measure_frame = f = tkinter.Frame(self, width=1, height=1)
 		f.t = tkinter.Text(f)
@@ -2399,44 +2397,30 @@ Error messages Begin
 		self.to_be_closed.append(f)
 
 
-	@debug
-	def test_bind(self, event=None, f=1):
-
-
-		#@do_twice
-		#@debug
-		def f1():
-
-			print(60*'  BBB  ')
-			l = [i for i in range(6)]
-			try:
-				print(l[10])
-
-			except IndexError:
-				eval('print("s"')
-
-##			t1 = int(self.root.tk.eval('clock milliseconds'))
-##			self.get_scope_start()
-##			t2 = int(self.root.tk.eval('clock milliseconds'))
-##			print(t2-t1, 'ms')
-
-##			# When syntax is not updating use this:
-##			print('\nState:', self.state,
-##			'\ntcl_name_self:', self.tcl_name_of_contents,
-##			'\ntcl_name_tab:', self.tabs[self.tabindex].tcl_name_of_contents,
-##			'\ncheck_scope:', self.tabs[self.tabindex].check_scope,
-##			'\nsyntax_can_auto_update:', self.syntax_can_auto_update)
-
-		def f2():
-			print(self.state)
-			pass
-
-		if f==1: f1()
-		else: f2()
-
-		#return
-		#print('jou')
-		return 'break'
+##	#@debug
+##	def test_bind(self, event=None):
+##
+##		print(60*'  BBB  ')
+##		l = [i for i in range(6)]
+##		try:
+##			print(l[10])
+##
+##		except IndexError:
+##			eval('print("s"')
+##
+##		t1 = int(self.root.tk.eval('clock milliseconds'))
+##		self.get_scope_start()
+##		t2 = int(self.root.tk.eval('clock milliseconds'))
+##		print(t2-t1, 'ms')
+##
+##		# When syntax is not updating use this:
+##		print('\nState:', self.state,
+##		'\ntcl_name_self:', self.tcl_name_of_contents,
+##		'\ntcl_name_tab:', self.tabs[self.tabindex].tcl_name_of_contents,
+##		'\ncheck_scope:', self.tabs[self.tabindex].check_scope,
+##		'\nsyntax_can_auto_update:', self.syntax_can_auto_update)
+##
+##		return 'break'
 
 
 	def skip_bindlevel(self, event=None):
@@ -3973,7 +3957,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		if string_representation == self.oldconf:
 			return
 
-		p = pathlib.Path(self.env) / CONFPATH
+		p = pathlib.Path(self.env) / self.confpath
 		try:
 			with open(p, 'w', encoding='utf-8') as f:
 				f.write(string_representation)
@@ -4043,6 +4027,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		d['version_control_cmd'] = self.version_control_cmd
 		d['marginals'] = self.margin, self.margin_fullscreen, self.gap, self.gap_fullscreen
 		d['spacing_linenums'] = self.spacing_linenums
+		d['offsets'] = self.offset_comments, self.offset_keywords
 		d['start_fullscreen'] = self.start_fullscreen
 		d['fdialog_sorting'] = self.dir_reverse, self.file_reverse
 		d['popup_run_action'] = self.popup_run_action
@@ -4175,10 +4160,12 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		self.spacing_linenums = d['spacing_linenums']
+		self.offset_comments, self.offset_keywords = d['offsets']
 
 		if flag_check_lineheights:
 			self.flag_check_lineheights = True
-			self.spacing_linenums = 0
+			self.spacing_linenums = self.offset_comments = self.offset_keywords = 0
+
 
 
 		self.textfont.config(**d['fonts']['textfont'])
@@ -4349,7 +4336,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		w.tag_config('keywords', font=self.keyword_font)
 		#w.tag_config('tests', font=self.keyword_font)
 		w.tag_config('numbers', font=self.boldfont)
-		w.tag_config('comments', font=self.linenum_font)
+		w.tag_config('comments', font=self.linenum_font, offset=self.offset_comments)
 		w.tag_config('breaks', font=self.boldfont)
 		w.tag_config('calls', font=self.boldfont)
 
@@ -5157,39 +5144,39 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 							elementborderwidth=self.elementborderwidth)
 
 
-	def highlight_line(self, index='insert', color=None):
-		''' color is tk color, which can be
-
-			A: System named color. For example, one has Entry-widget with default
-				foreground color. To get name of the color:
-
-					entry_widget.cget('fg')
-
-			B: tk named color. For example: 'red'
-
-			C: Hexadecimal number with any of the following forms,
-				in case of color white(using 4, 8, 12 and 16 bits):
-
-			#fff
-			#ffffff
-			#fffffffff
-			#ffffffffffff
-		'''
-
-		if not color: color = r'#303030'
-
-		safe_idx = self.get_safe_index(index)
-		s = '%s display linestart' % safe_idx
-
-		if not self.line_is_elided(safe_idx):
-			e = '%s display lineend' % safe_idx
-		else:
-			e = '%s display lineend -1 display char' % safe_idx
-
-		self.text_widget.tag_remove('highlight_line', '1.0', 'end')
-
-		self.text_widget.tag_config('highlight_line', background=color)
-		self.text_widget.tag_add('highlight_line', s, e)
+##	def highlight_line(self, index='insert', color=None):
+##		''' color is tk color, which can be
+##
+##			A: System named color. For example, one has Entry-widget with default
+##				foreground color. To get name of the color:
+##
+##					entry_widget.cget('fg')
+##
+##			B: tk named color. For example: 'red'
+##
+##			C: Hexadecimal number with any of the following forms,
+##				in case of color white(using 4, 8, 12 and 16 bits):
+##
+##			#fff
+##			#ffffff
+##			#fffffffff
+##			#ffffffffffff
+##		'''
+##
+##		if not color: color = r'#303030'
+##
+##		safe_idx = self.get_safe_index(index)
+##		s = '%s display linestart' % safe_idx
+##
+##		if not self.line_is_elided(safe_idx):
+##			e = '%s display lineend' % safe_idx
+##		else:
+##			e = '%s display lineend -1 display char' % safe_idx
+##
+##		self.text_widget.tag_remove('highlight_line', '1.0', 'end')
+##
+##		self.text_widget.tag_config('highlight_line', background=color)
+##		self.text_widget.tag_add('highlight_line', s, e)
 
 
 	def set_text_widget_colors(self, tab):
@@ -5208,11 +5195,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'fg':bg,
 		'disabledforeground':fg,
 		'selectbackground':'blue',
-		'selectforeground':'yellow',
+		'selectforeground':'white',
 		}
 
 		self.comp_frame.listbox.config(**kwargs)
-
 
 
 	def set_ln_widget_colors(self):
@@ -5251,127 +5237,89 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			tab.text_widget.tag_config(tagname, background=bg, foreground=fg)
 
 
-	def find_balancing_offset(self, get_normal_lineheight=False):
-		''' Try to find balancing offset for: comments only -lines in text-window
-			and linenumbers.
-
-			Called from handle_diff_lineheights and on_fontchange
+	def get_lineheights(self):
+		''' Returns lineheight of normal_text
 		'''
-
-		# About lineheights
-		# If using same and only one font in text-window and ln_widget, things are quite easy, just figure out offset of top-most line
-		# in text-window and scroll that amount line-numbers up.
-		# If using more fonts, it seems that in somefont_instance.metrics() -values, 'descent' is important.
-		# In this editor case, now that lines behave correctly, all three fonts, textfont, keyword_font and linenum_font have the same descent-value
-
-
 		f = self.measure_frame
+
 		# It needs to be mapped during measuring
 		if not f.winfo_ismapped():
 			f.place_configure(relx=0.1, rely=0.1)
 
-		if get_normal_lineheight:
-			f.t.mark_set('insert', '2.0')
-			f.t.update_idletasks()
-			normal_text_lineheight = f.t.dlineinfo('insert')[3]
-			f.t.mark_set('insert', '1.0')
-			#f.place_forget()
+		# It needs to be updated before measuring
+		f.t.update_idletasks()
 
-			return normal_text_lineheight
+##		line_heights = a,b,c = 1,1,1
 
-		else:
-			def same_heights():
-				a = self.ln_widget.dlineinfo('@0,0')[3]
-				b = f.t.dlineinfo('insert')[3]
-				#print(a,b)
-				return a == b
+		# 'normal_text':
+		a = f.t.dlineinfo('3.0')[3]
+##		# 'keywords':
+##		b = f.t.dlineinfo('2.0')[3]
+##		# 'comments':
+##		c = f.t.dlineinfo('1.0')[3]
 
-			i = 0
-			offset = 0
-			f.t.tag_config('measure', offset=offset)
-			f.t.update_idletasks()
+		f.place_forget()
 
-			while not same_heights():
-				offset += 1
-				i += 1
-				f.t.tag_config('measure', offset=offset)
-				f.t.update_idletasks()
-				if i > 10:
-					print('INFO: Could not balance lineheights')
-					f.place_forget()
-					return 0
-
-			f.place_forget()
-			return offset
+		return a
 
 
-	def handle_diff_lineheights(self, fontname=False):
+	def handle_diff_lineheights(self):
+		''' Called from init when for example missing font or conf
+			and from on_fontchange.
+		'''
 
-##		# Measure-widget:
-##		# No keywords line lineheight
-##		height_text = text_only_at_indent0
-##		# Keywords line lineheight
-##		height_keyword = keyword_only_at_indent0
-##		# Comments lineheight
-##		height_comment = comment_only_at_indent0
-##
-##		linespace_keyword = self.fonts['keyword_font'].metrics()['linespace']
-##		linespace_linenum = self.fonts['linenum_font'].metrics()['linespace']
-##		linespace_text = self.fonts['textfont'].metrics()['linespace']
-##
-##
-##		# If changing linenum_font, can use old method?
-##		if fontname == 'keyword_font':
-##			diff = linespace_text - linespace_keyword
-##			size = self.fonts['keyword_font'].cget('size')
-##			while diff < 0:
-##				size -= 1
-##				linespace_keyword = self.fonts['keyword_font'].metrics()['linespace']
-##				diff = linespace_text - linespace_keyword
-
-
-
-
-
-
-		self.ln_string = ''
+		# 1: Compare to linenum_font
 		self.ln_widget.tag_config('justright', spacing1=0)
-		self.ln_widget.update_idletasks()
-		self.wait_for(200)
-		self.update_linenums()
 
-		a = self.find_balancing_offset(get_normal_lineheight=True)
-		b = self.ln_widget.dlineinfo('@0,0')[3]
-		diff = a - b
-		spacing = 0
-
+		linespace_textfont = self.textfont.metrics()['linespace']
+		linespace_linenumfont = self.linenum_font.metrics()['linespace']
+		diff = linespace_textfont - linespace_linenumfont
 		size = self.linenum_font.cget('size')
 
 		# Linenumbers can't be higher than text
 		while diff < 0:
 			size -= 1
 			self.linenum_font.config(size=size)
-			self.ln_string = ''
-			self.ln_widget.update_idletasks()
-			self.wait_for(200)
-			self.update_linenums()
+			linespace_linenumfont = self.linenum_font.metrics()['linespace']
+			diff = linespace_textfont - linespace_linenumfont
 
-			a = self.find_balancing_offset(get_normal_lineheight=True)
-			b = self.ln_widget.dlineinfo('@0,0')[3]
-			diff = a - b
+		self.ln_widget.tag_config('justright', spacing1=diff)
+		self.spacing_linenums = diff
 
-		if diff > 0:
-			spacing = diff
+		# Now, count diff of, descent value, between linenum_font and textfont
+		descent_textfont = self.textfont.metrics()['descent']
+		descent_linenumfont = self.linenum_font.metrics()['descent']
+		diff_descent = descent_linenumfont - descent_textfont
+		self.offset_comments = diff_descent
+
+		# Apply it to comments-tag
+		for tab in self.tabs + [self.help_tab, self.err_tab]:
+			tab.text_widget.tag_config('comments', offset=self.offset_comments)
 
 
-		self.ln_widget.tag_config('justright', spacing1=spacing)
+		# 2: Compare to keyword_font
+		linespace_textfont = self.textfont.metrics()['linespace']
+		linespace_keywordfont = self.keyword_font.metrics()['linespace']
+		diff = linespace_textfont - linespace_keywordfont
+		size = self.keyword_font.cget('size')
 
-		if offset := self.find_balancing_offset():
+		# Keywords can't be higher than text
+		while diff < 0:
+			size -= 1
+			self.keyword_font.config(size=size)
+			linespace_keywordfont = self.keyword_font.metrics()['linespace']
+			diff = linespace_textfont - linespace_keywordfont
+
+		# Now, count diff of, descent value, between keyword_font and textfont
+		descent_textfont = self.textfont.metrics()['descent']
+		descent_keywordfont = self.keyword_font.metrics()['descent']
+		diff_descent = descent_keywordfont - descent_textfont
+		self.offset_keywords = diff_descent
+
+		# If diff_descent, apply it to keywords-tag
+		if diff_descent:
 			for tab in self.tabs + [self.help_tab, self.err_tab]:
-				tab.text_widget.tag_config('comments', offset=offset)
-
-		self.spacing_linenums = spacing
-		self.measure_frame.place_forget()
+				tab.text_widget.tag_config('keywords', offset=self.offset_keywords)
 
 
 	def on_fontchange(self, fontname=None):
@@ -5391,31 +5339,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if size of linenum_font is increased, then check is made that it does not get bigger than textfont.
 		'''
 
-		# There are two cases when lineheights of text_widget and ln_widget has to be checked
-		# A: changing linenum_font
-		# B: changing textfont or keyword_font
 
-		# A: changing linenum_font --> no need to update anything related to text_widget
+		# A: changing linenum_font, no need to update anything related to text_widget
 		# just check lineheights
 		if fontname and fontname == 'linenum_font':
 
 			res = True
-			old_spacing = self.ln_widget.tag_cget('justright', 'spacing1')
-
 			# Want this:
 			# lineheight text_widget >= lineheight ln_widget
 			#########################################
-			# count diff lineheights
-			self.ln_string = ''
+			# count diff linespace
+			oldspacing = self.ln_widget.tag_cget('justright', 'spacing1')
 			self.ln_widget.tag_config('justright', spacing1=0)
-			self.ln_widget.update_idletasks()
-			self.wait_for(200)
-			self.update_linenums()
-			a = self.text_widget.dlineinfo('@0,0')[3]
-			b = self.ln_widget.dlineinfo('@0,0')[3]
-			#print(a,b)
-			diff = a - b
-			spacing = old_spacing
+			spacing = 0
+
+			linespace_textfont = self.textfont.metrics()['linespace']
+			linespace_linenumfont = self.linenum_font.metrics()['linespace']
+			diff = linespace_textfont - linespace_linenumfont
 
 			# Linenumbers can't be higher than text
 			if diff < 0:
@@ -5423,26 +5363,70 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				self.bell()
 				print('Lineheight of linenumbers cant be bigger than lineheight of text-window.')
 				print('If want bigger linenumbers, increase textfont size first')
-			elif diff > 0:
+				self.ln_widget.tag_config('justright', spacing1=oldspacing)
+			else:
 				spacing = diff
 
-			if not diff == 0:
+			if res:
 				self.ln_widget.tag_config('justright', spacing1=spacing)
-
-			if offset := self.find_balancing_offset():
-				for tab in self.tabs + [self.help_tab, self.err_tab]:
-					tab.text_widget.tag_config('comments', offset=offset)
-
-
-			if spacing != old_spacing:
 				self.spacing_linenums = spacing
+
+				# Now, count diff of, descent value, between linenum_font and textfont
+				linespace_textfont = self.textfont.metrics()['descent']
+				linespace_linenumfont = self.linenum_font.metrics()['descent']
+				diff_descent = linespace_linenumfont - linespace_textfont
+				self.offset_comments = diff_descent
+
+				# Apply it to comments-tag
+				for tab in self.tabs + [self.help_tab, self.err_tab]:
+					tab.text_widget.tag_config('comments', offset=self.offset_comments)
+
 			# No further action is required so return
 			return res
 
 
+		# B: changing keyword_font --> no need to update anything related to text_widget
+		# just check lineheights
+		elif fontname and fontname == 'keyword_font':
+
+			res = True
+			linespace_textfont = self.textfont.metrics()['linespace']
+			linespace_keywordfont = self.keyword_font.metrics()['linespace']
+			diff = linespace_textfont - linespace_keywordfont
+			#print(diff)
+
+			# Keywords can't be higher than text
+			if diff < 0:
+				res =  False
+				self.bell()
+				print('Lineheight of keywords cant be bigger than lineheight of text-window.')
+				print('If want bigger keywords, increase textfont size first')
+
+			if res:
+				# Now, count diff of, descent value, between keyword_font and textfont
+				linespace_textfont = self.textfont.metrics()['descent']
+				linespace_keywordfont = self.keyword_font.metrics()['descent']
+				diff_descent = linespace_keywordfont - linespace_textfont
+				self.offset_keywords = diff_descent
+
+				# Apply it to keywords-tag
+				for tab in self.tabs + [self.help_tab, self.err_tab]:
+					tab.text_widget.tag_config('keywords', offset=self.offset_keywords)
+
+			return res
+
+
+		# textfont
+		elif fontname and fontname == 'textfont':
+			self.handle_diff_lineheights()
+
+
+		self.line_height = self.get_lineheights()
+
 
 		# There could be a geometry change, so:
 		if self.geom: self.flag_check_geom_at_exit = True
+
 		self.boldfont.config(**self.textfont.config())
 		self.boldfont.config(weight='bold')
 
@@ -5475,18 +5459,10 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		self.btn_git.config(image=self.img_name, width=width_total)
 
 
-
 		self.ln_widget.config(padx=self.pad, pady=self.pad)
+		# Likely not necessary:
 		self.y_extra_offset = self.text_widget['highlightthickness'] + self.text_widget['bd'] + self.text_widget['pady']
-		self.line_height = self.text_widget.dlineinfo('@0,0')[3]
 
-
-		# B: changing textfont or keyword_font --> need to update all things related to text_widget
-		# This was done above, now check lineheights
-
-		# Update ln_widget spacing after changing textfont or keyword_font
-		if fontname and fontname in ('textfont', 'keyword_font'):
-			self.handle_diff_lineheights()
 
 		return True
 
@@ -10544,7 +10520,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# B: cache with tcl load_tags() takes about 70ms
 		# --> Benefit is not as great but still about 1:3
 
-		p = pathlib.Path(self.env) / CACHEPATH
+		p = pathlib.Path(self.env) / self.cachepath
 
 		# In Tcl, need to enclose strings with possible '\'s inside curlies {}
 		# set cache_path {%s} % string_with_possible_\
@@ -10591,7 +10567,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			Called from save_forced()
 		'''
 		have_py_files = False
-		p = pathlib.Path(self.env) / CACHEPATH
+		p = pathlib.Path(self.env) / self.cachepath
 
 		# save tags at exit
 		###############

@@ -204,16 +204,13 @@
 	
 	  - Settings involved in short, see help for more info
 		e.timeout_set		default:1 (plus 1 sec delays)
-		e.run_module_set	For example, projects with __main__.py
-							and to set possible arguments
-							
+		e.run_module_set	Use this
+		
 		e.custom_run_cmd_set	Just in case
-		e.popup_run_action_set	default(False) is to run current tab with:
-								sys.executable filepath/tabcontents
-								1: run module (choose this)
+		e.popup_run_action_set	1: run module (default)
 								2: run custom
 	
-		
+	
 [7] Refreshing syntax-highlighting
 	  - If highlighting looks wierd, choose 'draw syntax' from popup-menu.
 	  - Note that it might not get any better if there is some

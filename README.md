@@ -1,5 +1,5 @@
 # Henxel
-GUI-editor for Python development. Tested to work with Debian 12, Windows 10 and 11 and macOS 12.
+GUI-editor for Python development.
 
 ![editor_mac](pics/editor_macOS.png)
 
@@ -14,7 +14,7 @@ GUI-editor for Python development. Tested to work with Debian 12, Windows 10 and
 * Tab-completion
 * Inspect module
 * Show git-branch
-* Run current file
+* Run code/file/project
 * Search - Replace
 * Indent - Unindent
 * Comment - Uncomment
@@ -68,40 +68,15 @@ Then make folder for your new project and install venv there and activate it, an
 To remove venv just remove the env-directory and you can start from clean desk making new one with mkvenv later. Optional about virtual environment ends here.
 
 # Prerequisites in Windows and venv-creation
-Python installation should already include tkinter. There is
-mkvenv-install script for Windows in /util. Here is short info about how to
-create a working Python virtual environment in Windows. First open console, like
-PowerShell (in which: ctrl-r to search command history, most useful) or CMD-Terminal and:
-
-```console
-mkdir myproject
-cd myproject
-myproject> py win_install_mkvenv.py
-myproject> mkvenv env
-
-myproject> env\act.bat
-
-If that did not activate venv:
-myproject> env\Scripts\activate
-
-After venv is active upgrade pip and install Henxel:
-(env) myproject> pip install --upgrade pip
-(env) myproject> pip install henxel
-
-Venv is now ready:
-(env) myproject> pip list
-(env) myproject> deactivate
-
-Launch Henxel:
-myproject> env\launch_ed.bat
-```
+Python installation should already include tkinter. First open console, like
+PowerShell (in which: ctrl-r to search command history, most useful) and read
+macOS -info below. Just use: env/Scripts/activate to activate venv.
 
 
 # Prerequisites in macOS and venv-creation
-You will need to install newer version of python for example with Homebrew. Look info on the ARR-repository
-about how to do that. Or just simply use pkg-installer from python-homepage. There currently is no mkvenv script for macOS,
-but making venv is quite same as in Linux. It seems to be enough to make venv
-and then install henxel to it without anything else.
+You will need to install newer version of python. Can simply use pkg-installer
+from Python-homepage. Making venv is quite same as in Linux. It seems to be
+enough to make venv and then install henxel to it without anything else.
 
 ```console
 ~$ mkdir myproject
@@ -129,7 +104,7 @@ To install system-wide, (You may need first to install pip from OS-repository):
 ```
 
 
-# Running from Python-console:
+# Running, from Python-console:
 
 ```console
 ~/myproject$ source env/bin/activate
@@ -137,6 +112,21 @@ To install system-wide, (You may need first to install pip from OS-repository):
 --------------------------------------
 >>> import henxel
 >>> e=henxel.Editor()
+```
+
+# Running, from terminal:
+Can just type "henxel" and hit Enter or for example:
+
+```console
+~/myproject$ source env/bin/activate
+(env) henxel file1.py file2.py ...
+```
+
+# Running, from terminal:
+
+```console
+~/myproject$ source env/bin/activate
+(env) python -m henxel file1.py file2.py ...
 ```
 
 # Developing

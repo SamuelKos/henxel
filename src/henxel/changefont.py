@@ -96,7 +96,7 @@ class FontChooser:
 
 		# Spinbox sets font size
 		self.sb = tkinter.Spinbox(self.topframe, font=('TkDefaultFont', 10), from_=self.min,
-								to=self.max, increment=1, width=3, command=self.change_font)
+								to=self.max, increment=1, width=3, command=lambda kwargs={'widget':'spinbox'}: self.change_font(**kwargs))
 		self.sb.pack(pady=10, anchor='w')
 
 
@@ -150,8 +150,6 @@ class FontChooser:
 
 		self.fontnames = list()
 		self.fontnames_mono = list()
-		self.fontnames_const_line = list()
-		self.fontnames_const_line_mono = list()
 
 		self.top.after(200, self.get_fonts)
 
@@ -264,7 +262,49 @@ class FontChooser:
 		if self.font['slant'] == 'italic': self.cb2.select()
 
 
-	def change_font(self, event=None):
+	def get_max_size_of(self):
+		''' compared to textfont
+		'''
+		textfont = False
+		for font in self.fonts:
+			if font.name == 'textfont':
+				textfont = font
+
+
+		sizetextfont = textfont.cget('size')
+		size = self.font.cget('size')
+
+		linespace_textfont = textfont.metrics()['linespace']
+		linespace_otherfont = self.font.metrics()['linespace']
+		diff = linespace_textfont - linespace_otherfont
+
+		# textfont is currently bigger
+		if diff > 0:
+			while diff > 0:
+				size += 1
+				self.font.config(size=size)
+				linespace_otherfont = self.font.metrics()['linespace']
+				diff = linespace_textfont - linespace_otherfont
+
+			# It could be one off
+			while diff < 0:
+				size -= 1
+				self.font.config(size=size)
+				linespace_otherfont = self.font.metrics()['linespace']
+				diff = linespace_textfont - linespace_otherfont
+
+		# textfont is currently smaller
+		elif diff < 0:
+			while diff < 0:
+				size -= 1
+				self.font.config(size=size)
+				linespace_otherfont = self.font.metrics()['linespace']
+				diff = linespace_textfont - linespace_otherfont
+
+		return size
+
+
+	def change_font(self, event=None, widget=None):
 		'''	Change values of current font-instance.
 		'''
 
@@ -276,19 +316,27 @@ class FontChooser:
 		flag_only_size = False
 
 
-		if l in [(), None, ""]:
+		if widget == 'spinbox':
 			flag_only_size = True
 			self.font.config(
 				size=self.sb.get()
 				)
 
+		# Changing fontfamily
 		else:
 			f = self.lb.get(l)
 
-			self.font.config(
-				family=f,
-				size=self.sb.get()
-				)
+			self.font.config(family=f)
+
+			# Set initially to maxsize
+			if self.font.name in ['linenum_font', 'keyword_font']:
+				maxsize = self.get_max_size_of()
+				self.font.config(size=maxsize)
+				self.sb.delete(0, 'end')
+				self.sb.insert(0, maxsize)
+			else:
+				self.font.config( size=self.sb.get() )
+
 
 
 		if self.on_fontchange:
@@ -353,19 +401,7 @@ class FontChooser:
 		fontnames = [f for f in s]
 		fontnames.sort()
 
-		# flag_skip_animation related stuff is commemted for fixing later
-##		maxtime = 1000
-##		flag_skip_animation = False
-##		t1 = int(self.top.tk.eval('clock milliseconds'))
-##		i = 0
-
 		for name in fontnames:
-
-##			t2 = int(self.top.tk.eval('clock milliseconds'))
-##			diff = t2-t1
-##			if diff > maxtime:
-##				flag_skip_animation = True
-##				break
 
 			font.config(family=name)
 			font_is_fixed = font.metrics()['fixed']
@@ -373,19 +409,8 @@ class FontChooser:
 			self.lb.insert('end', name)
 			self.lb.see('end')
 			self.wait_for(4)
-##			i += 1
 
 			if font_is_fixed: self.fontnames_mono.append(name)
-
-
-##		if flag_skip_animation:
-##			#print('jou')
-##			for name in fontnames[i:]:
-##				font.config(family=name)
-##				font_is_fixed = font.metrics()['fixed']
-##				self.fontnames.append(name)
-##				self.lb.insert('end', name)
-##				if font_is_fixed: self.fontnames_mono.append(name)
 
 
 		# Show current fontname in listbox
@@ -398,3 +423,19 @@ class FontChooser:
 		except ValueError:
 			# not in list
 			pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
