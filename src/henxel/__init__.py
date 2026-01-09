@@ -2408,10 +2408,12 @@ Error messages Begin
 ##		except IndexError:
 ##			eval('print("s"')
 ##
+##
 ##		t1 = int(self.root.tk.eval('clock milliseconds'))
-##		self.get_scope_start()
+##		a = self.get_scope_path('insert')
 ##		t2 = int(self.root.tk.eval('clock milliseconds'))
-##		print(t2-t1, 'ms')
+##		t3 = t2-t1
+##		print(a, t3, t4, 'ms')
 ##
 ##		# When syntax is not updating use this:
 ##		print('\nState:', self.state,
@@ -4134,7 +4136,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		# Set Font Begin ##############################
 		flag_check_lineheights = False
-		if not all((textfont, linenum_font)): flag_check_lineheights = True
+		if not all((textfont, linenum_font, keyword_font)): flag_check_lineheights = True
 
 		# Both missing:
 		if not textfont and not menufont:
@@ -4333,7 +4335,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		w = tab.text_widget
 
-		w.tag_config('keywords', font=self.keyword_font)
+		w.tag_config('keywords', font=self.keyword_font, offset=self.offset_keywords)
 		#w.tag_config('tests', font=self.keyword_font)
 		w.tag_config('numbers', font=self.boldfont)
 		w.tag_config('comments', font=self.linenum_font, offset=self.offset_comments)
@@ -6420,7 +6422,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def get_deflines(self, tab):
 		''' Get definition lines
 
-			Creates list, linenums,
+			Creates list: linenums,
 			which consist of tuples: (ind_lvl, idx_as_float, defname)
 			Example, for 'defline1'-tag:
 			(indentation level 1) -->(1, 1234.1, 'some_func')
@@ -6475,6 +6477,11 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			which holds deflinenums and indentation
 
 			Called from walk_scope
+
+			On success, returns tuple (1, 1234.1, 'some_func')
+			(indentation, index, funcname)
+
+			else: False
 		'''
 
 		if update:
@@ -9268,7 +9275,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		############################
-		# Find fisrt defline using just regexp
+		# Find first defline using just regexp
 		# After getting it, one can build rest of scope_path faster
 		# by using defline_tag
 
@@ -9344,219 +9351,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# FAIL
 		return '__main__()'
 
-
-	def get_scope_start2(self, index='insert', line=False):
-		''' asd
-			asd
-		'''
-		pass
-
-
-#####
-##this below no work because can be 'wandering lines' between scopes
-##with same indentation than ind_lvl_down
-##--> could just use old re-aproach or
-##-->
-#####
-##
-##
-##get_scope_start:
-##1:get_deflines()
-##
-##if no def_line down:
-##- nearest def_line with indent0 up == parent0
-##- if no def_line in file --> scope is __main__
-##
-##if nearest def_line down has indent0 or no def_line down:
-##	search scope in loop0
-##else:
-##	ind_lvl_down > 0
-##	search scope in loop1
-##
-##
-##example (loop1):
-##find nearest def_line down, (for example)has indent1 = ind_lvl_down
-##
-##- find nearest def_line, with ind_lvl_down-1 (now indent0), up
-##--> parent(ind_lvl_down-1), now(parent0)
-##
-##--> this will be the scope if there is no deeper parent found later
-##
-##
-##- then, get last def_line with ind_lvl_down (now indent1) between
-##	parent(ind_lvl_down-1) (now parent0) and cur_line
-##	--> parent(ind_lvl_down)
-##	if no such def_line --> scope is parent0
-##	else:--> this will be the scope if there is no deeper parent found later
-##
-##
-##maxind = 9
-##real start:
-##get nearest def_line (with maxind),
-##	between parent(ind_lvl_down) (now parent1) and curline:
-##1:	if none --> found scope, is parent(ind_lvl_down) (now parent1)
-##
-##	###
-##	execpt must search for 'wandering lines' between parent1 and curline:
-##	This should be faster though than searching backwards (old method)
-##	if there is line with ind_lvl_down: --> scope is not ind_lvl_down(parent1)
-##	--> scope is with indentation <= ind_lvl_down
-##	We know there is defline, up from curline, with ind_lvl_down-1 (parent0)
-##	--> scope is parent0
-##		Q: how we know this?
-##		A: nearest def_line down had ind_lvl=1
-##		--> it (and curline) has to belong to parent0 up
-##
-##	finally if there is now 'wandering lines':
-##	--> scope really was parent1
-##	###
-##
-##1: continuing here
-##	else: there is for example, def_line with (ind_lvl_down+2) (now indent3)
-##		== ind_lvl_def_line_ref_up
-##
-##	- find next line up with ind_lvl_def_line_ref_up (now indent3):
-##		if that line is also def_line --> found scope
-##		else:
-##			if ind_lvl_def_line_ref_up = ind_lvl_down+1
-##			--> found scope, is parent(ind_lvl_down) (now parent1)
-##
-##			goto: real start, with maxind == ind_lvl_def_line_ref_up-1
-##				get nearest def_line, between parent(ind_lvl_down) and
-##				that def_line with ind_lvl_def_line_ref_up (indent3),
-##
-##				if none --> scope is parent(ind_lvl_down) (now parent1)
-
-
-
-##		# Stage 1: Search backwards(up) from index for:
-##		# pos = Uncommented line with 0 blank or more
-##		blank_range = '{0,}'
-##		p1 = r'^[[:blank:]]%s' % blank_range
-##		# Not blank, not comment
-##		p2 = r'[^[:blank:]#]'
-##
-##		patt = p1 + p2
-##
-##		# Skip possible first defline at index
-##		safe_index = self.get_safe_index(index)
-##		pos = '%s linestart' % safe_index
-##
-##		while pos:
-##			try:
-##				pos = self.text_widget.search(patt, pos, stopindex='1.0',
-##						regexp=True, backwards=True)
-##
-##			except tkinter.TclError as e:
-##				print(e)
-##				break
-##
-##			if not pos:
-##				return '__main__()', 0, '1.0'
-##
-##			if 'strings' in self.text_widget.tag_names(pos):
-##				#print('strings3', pos)
-##				pos = self.text_widget.tag_prevrange('strings', pos)[0] + ' linestart'
-##				continue
-##
-##			break
-##			###################
-##
-##
-##		s, e = '%s linestart' % pos, '%s lineend' % pos
-##
-##		if r := self.line_is_elided(pos): e = r[0]
-##
-##		pos_line_contents = self.text_widget.get(s, e)
-##
-##
-##		ind_last_line = 0
-##		for char in pos_line_contents:
-##			if char in ['\t']: ind_last_line += 1
-##			else: break
-##
-##		# Check if defline already
-##		if res := self.line_is_defline(pos_line_contents):
-##			idx = self.idx_linestart(pos)[0]
-##			return pos_line_contents.strip(), ind_last_line, idx
-##
-##		elif ind_last_line == 0:
-##			return '__main__()', 0, '1.0'
-##
-##		### Stage 1 End ########
-##
-##
-##		# Stage 2: Search backwards(up) from pos updating indentation level until:
-##		# defline with ind_last_line-1 blanks or less
-##		if ind_last_line == 1:
-##			# note the added '^' at start, this is important to anchor
-##			# match to linestart. Without it this would match:
-##			# not blank not comment, which makes A LOT of matches on every line
-##			patt = p2 = r'^[^[:blank:]#]'
-##
-##		else:
-##			# ind_last_line > 1
-##			blank_range = '{0,%d}' % (ind_last_line - 1)
-##			p1 = r'^[[:blank:]]%s' % blank_range
-##			# Not blank, not comment
-##			p2 = r'[^[:blank:]#]'
-##			patt = p1 + p2
-##
-##		print(ind_last_line, 'before while')
-##
-##		while pos:
-##			try:
-##				pos = self.text_widget.search(patt, pos, stopindex='1.0',
-##						regexp=True, backwards=True, count=self.search_count_var)
-##
-##			except tkinter.TclError as e:
-##				print(e)
-##				break
-##
-##			if not pos:
-##				return '__main__()', 0, '1.0'
-##
-##			elif 'strings' in self.text_widget.tag_names(pos):
-##				print('strings4', pos)
-##				pos = self.text_widget.tag_prevrange('strings', pos)[0] + ' linestart'
-##				continue
-##
-##			################
-##			# -1: remove terminating char(not blank not #) from matched char count
-##			# Check patt if interested.
-##			ind_curline = self.search_count_var.get() - 1
-##
-##			# Find previous line that:
-##			# Has one (or more) indentation level smaller indentation than ind_last_line
-##			# 	Then if it also is definition line --> success
-##			# 	update ind_last_line
-##			def_line_contents = self.text_widget.get( pos, '%s lineend' % pos )
-##
-##			#####
-##			if res := self.line_is_defline(def_line_contents):
-##				idx = self.idx_linestart(pos)[0]
-##
-##				# SUCCESS
-##				print(def_line_contents, ind_curline, idx)
-##				return def_line_contents.strip(), ind_curline, idx
-##			#####
-##
-##
-##			# Update search pattern and indentation of matched pos line
-##			elif ind_curline > 1:
-##				patt = r'^[[:blank:]]{0,%d}[^[:blank:]#]' % (ind_curline-1)
-##
-##			elif ind_curline == 1:
-##				patt = r'^[^[:blank:]#]'
-##
-##			else:
-##				# ind_curline == 0
-##				return '__main__()', 0, '1.0'
-##
-##			### Stage 2 End ###
-##
-##		# FAIL
-##		return '__main__()', 0, '1.0'
 
 	#@debug
 	def get_scope_start(self, index='insert'):
@@ -9743,7 +9537,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# Stage 1: Search forwards(down) from index for:
-		# pos = Uncommented line with ind_def_line blanks or less
+		# pos = Uncommented line with ind_def_line blanks or less (== next defline/wanderin line)
 		blank_range = '{0,%d}' % ind_def_line
 		p1 = r'^[[:blank:]]%s' % blank_range
 		# Not blank, not comment
@@ -9787,7 +9581,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		# Stage 2: Search backwards(up) from pos up to index for:
-		# Line with ind_def_line+1 blanks or more
+		# Line with ind_def_line+1 blanks or more (== idx_scope_end)
 		blank_range = '{%d,}' % (ind_def_line + 1)
 
 		# Get line with any indentation

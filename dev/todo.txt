@@ -40,16 +40,6 @@ check toml script entry -->
 ################
 
 
-get scope start
-
-1 abs next defline up
-2 scope end
-3 if curline <= scope end --> found scope
-else:
-	indentation -= 1
-	goto 1
-
-
 
 
 macos printing issue is partly because of using shell installed from brew
