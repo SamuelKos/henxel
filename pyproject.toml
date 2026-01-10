@@ -8,7 +8,7 @@ version = "0.3.4"
 requires-python = ">=3.9"
 authors = [{name = "SamuelKos", email = "koskinens371@gmail.com"}]
 license = "GPL-3.0-or-later"
-licence-files = []
+licence-files = ["LICEN[CS]E*"]
 description = "GUI-editor for Python development."
 readme = "README.md"
 keywords = ["henxel", "editor", "editors", "tkinter", "GUI"]
