@@ -741,6 +741,7 @@ class Editor(tkinter.Toplevel):
 
 			self.popup.add_command(label="   strip one", command=self.strip_first_char)
 			self.popup.add_command(label="    open mod", command=self.view_module)
+			self.popup.add_command(label="      config", command=self.setting_console)
 			self.popup.add_command(label="      errors", command=self.show_errors)
 			self.popup.add_command(label="        help", command=self.help)
 
@@ -1660,7 +1661,7 @@ Error messages Begin
 		patt = '{0:%s}\t{1}' % max_len
 		num = half
 		if not even: num -= 1
-		print('\nall:\n')
+		print('\n')
 		for i in range(num): print(patt.format(col1[i], col2[i]))
 		if not even: print(col1[-1])
 
@@ -1953,6 +1954,7 @@ Error messages Begin
 			self.text_widget.focus_set()
 		else:
 			c.place_configure(x=c.old_x, y=c.old_y)
+			c.update_idletasks()
 			c.entry.focus_set()
 
 		return 'break'
@@ -7808,7 +7810,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if not all(tests): return 'break'
 
 
-			self.popup.post(event.x_root, event.y_root)
+			self.popup.post(event.x_root +self.pad*5, event.y_root +self.pad*3)
 
 		# Shortcut, try placing to center of text_widget
 		else:
@@ -10849,7 +10851,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				except EnvironmentError as e:
 					print(e.__str__())
-					print(f'\n Could not load existing configuration file: {p}')
+					print('\nCould not export bookmarks')
 
 		if data:
 			total_books = 0
