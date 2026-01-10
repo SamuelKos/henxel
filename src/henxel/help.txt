@@ -66,6 +66,8 @@
 		but original tabs are not opened, and nothing is saved in conf.
 		2: Do something, close editor. When restarting normally(no file-arguments)
 		--> original tabs are opened
+		
+		Note for Powershell users: type: $(dir *.txt) in place of *.txt
 	
 	
 [3] When is my file Saved to Disk?

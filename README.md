@@ -3,7 +3,7 @@ GUI-editor for Python development.
 
 ![editor_mac](pics/editor_macOS.png)
 
-![editor_linux](pics/editor_linux.png)
+![editor_windows](pics/editor_win.png)
 
 # Featuring
 * Auto-indent
@@ -159,7 +159,7 @@ Files are in src/henxel/
 
 * [Shortcuts for macOS](https://github.com/SamuelKos/henxel/blob/main/src/henxel/shortcuts_mac.txt)
 
-* [Help](https://github.com/SamuelKos/henxel/blob/main/src/henxel/help.txt)
+* [Help](src/henxel/help.txt)
 
 # Licence
 This project is licensed under the terms of the GNU General Public License v3.0.

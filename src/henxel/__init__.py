@@ -6703,7 +6703,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if event.state not in  [4, 5]: return
 
 		elif self.os_type == 'windows':
-			if event.state not in [ 262156, 262148, 262157, 262149 ]: return
+			if event.state not in [262148, 262149, 262156, 262157 ]: return
+
 
 
 		# Pressed Control + Shift + arrow up or down.
@@ -7014,7 +7015,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def select_by_words(self, event=None):
-		'''	Pressed ctrl or Alt + shift and arrow left or right.
+		'''	Pressed ctrl (or Alt in mac) + shift and arrow left or right.
 			Make <<SelectNextWord>> and <<SelectPrevWord>> to stop at lineends.
 		'''
 		if self.state not in ['normal', 'help', 'error', 'search', 'replace', 'replace_all', 'goto_def']:
@@ -7027,6 +7028,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if event.state != 5: return
 
 		elif self.os_type == 'windows':
+			# with or without numlock
 			if event.state not in [ 262157, 262149 ]: return
 
 
@@ -7265,7 +7267,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if event.state != 4: return
 
 		elif self.os_type == 'windows':
-			# win10 and win11 has different event-states for some keys
+			# With numlock +8 or without
 			if event.state not in [ 262156, 262148 ]: return
 
 
@@ -7315,6 +7317,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# macOS event here is only plain arrow left or right and has selection.
 		if self.os_type != 'mac_os':
 			if self.os_type == 'linux' and event.state != 0: return
+			# With numlock +8 or without
 			if self.os_type == 'windows' and event.state not in [ 262152, 262144 ]: return
 
 			# This also has been already done for macOS
@@ -8543,7 +8546,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			This is executed *before* actual deletion
 		'''
 
-		# State is 8 in windows when no other keys are pressed
+		# plain backspace, with +8 or without numlock
 		if self.state != 'normal' or event.state not in [0, 8]:
 			return
 		tab=self.tabs[self.tabindex]

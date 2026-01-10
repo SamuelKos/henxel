@@ -12,6 +12,9 @@
 
 	[1] Keyboard shortcuts:
 		
+		If shortcut is not working, try turning NumLock off.
+		
+		
 		Alt-m	Open menu
 		
 		Alt-p	Toggle bookmark

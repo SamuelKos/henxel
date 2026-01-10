@@ -11,6 +11,9 @@
 
 	[1] Keyboard shortcuts:
 		
+		If shortcut is not working, try turning NumLock off.
+		
+		
 		Alt-m	Open menu
 		Note: normal menubar in top of screen(where are apple-menu etc)
 		normal menubar should not be used when using editor.

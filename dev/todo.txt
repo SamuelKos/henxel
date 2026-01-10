@@ -18,39 +18,26 @@ macos: open filebrowser from terminal to current folder: open .
 ##########################################################
 
 
+a= self.text_widget.config('insertwidth')
+b=self.pad
 
-###############
-__main__
-toml
-youtube_dl
-check
-################
+a/b in 1/3 2/3
 
 
 
 
 
+no numlock:
+keys like a: 0
+arrows home end pgup down +262144
+shift +1
+control +8
+numlock +4
+Alt +131072
 
-################
-check toml script entry -->
-1: pip uninstall henxel
-2: pip install --no-cache-dir -e .
-
-3: $ henxel *.txt
-################
-
-win check:
-binds that uses:
-filter_keys_in
-filter_keys_out
-
-comp up down
+262144 +1 +4 +8
 
 
-take pic
-
-
-alt m menu
 
 
 macos printing issue is partly because of using shell installed from brew
@@ -59,21 +46,6 @@ even when using builtin shell, there was no word wrap for long single lines,
 or for tracabacks from tkinter callbacks
 --> not dumping printer fix, yet
 
-
-
-module docstring ######
-
-
-
-help mainloop vs console not done ############
-
-
-
-check mainloop etc: set_version_control_cmd() ###
-
-
-
-use module: traceback to fix show error ####
 
 
 
@@ -110,247 +82,6 @@ for key in list_of_new_keys:
 
 
 
-run_as_module()
-default is False
-check with some project with __main__.py ###
-done ok
-test with linux win
-run as module, macos if printing issue, use mainloop
-
-
-
-printer.py lineends by os?
-
-
-
-paste to multiline string, done
-paste_fallback, done
-
-
-
-set_left_margin
-set_left_margin_gap
-done
-
-
-mark cursor place when searching etc, cursor disabled:
-cursor_frame
-done
-
-
-can now run tab without filename
-
-
-fix for printing issue with macos12, mac_print
-partly done,
-not when error msg comes from raising, catched or not
-not when actually printed with print()
-
-
-renamed:
-self.contents --> self.text_widget
-change_indentation_width --> change_tabsize, help done
-self.bbox --> self.line_height
-editor.tag --> henxel.cache
-editor.cnf --> henxel.cnf
-line_can_update --> syntax_can_auto_update
-added: auto_update_syntax_stop/continue
-update_line --> auto_update_syntax
-
-
-syntax_can_auto_update:
-done
-
-syntax_can_auto_update is only temporary stopper-flag
-used in many places to temporarily stop auto_update_syntax.
-
-		
-
-
-
-
-comments with same font and color than linenumbers
-done
-needs check
-
-
-
-####################################
-done:
-import_bookmarks, export_bookmarks, stash_bookmark, unstash_bookmarks
-stash_bookmark has bind:
-cmd-u
-alt-u
-u is bit far from b but cmd-h is quite binded in mac
-maybe alt-h ?
-
-update help, docstring, done
-
-toggle_bookmark: removed:
-pos = self.search_focus[0]
---> can bookmark anything where clicked
-
-bookmarks are again set to indent0
-
-toggle_bookmark:
-Adding bookmark to line which has stashed bookmark will
-remove that stashed mark from list of stashed bookmarks
-			
-add animate_stash tag to distinquish from removing a bookmark
-bookmark_animate(old_idx, remove=True, tagname='animate')
-'animate_stash' color yellow
-####################################
-
-
-save/load tags tclerror check, done
-check there is tag file
-better tagfile-path
-
-
-font change by one, done
-geom after font change
-flag put to update_fonts, done
-
-save real geomstring at exit (if want use geom), done
-To prevent flashing, one must use full geometry-string
-
-
-space --> exit goto_def, done
-
-
-Control-Shift-ju --> move only one line at time, done
-
-
-toggle_ln, fix flashing if slow machine, done
-
-
-split help files, help_general == help.txt done
-shortcuts == shortcuts.txt, shortcuts_mac.txt
-
-
-move_many_lines back to old no jump, done
-using tcl
-
-
-kill line from insert to line-end, ctrl-k
-default text-class bind, just update help, done
-
-
-count token percentages /dev/token_stats.py, done
-
-
-check if want_ln in update_line, sbset_override , done
-
-
-check_sel
-change sel.start end etc also
---> enable sel editing at both ends, done
-
-
-popup
-inspect -->  open mod, done
-
-
-goto def:
-fixed no can bookmark when goto_def, done
-flash with flash_line(), done
-works with self.myfuncdef, with cursor at wordend,
-and with alt-g from search match
-see help(e.goto_def)
-( cursor is at or in between:
-self.<INS>walk_scop<INS>e )
--->
-( cursor is at or in between:
-self.w<INS>alk_scope<INS> )
-update help, done
-
-
-conf is now saved in sys.prefix without checks, done
---> enable saving conf when not in venv
-update help, readme done
-
-renamed:
-apply_config --> config_tabs, done
-
-
-(Shift)-Home/End --> goto/selectto linestart/end, done
-
-
-walk_scope absolutely next bind no work linux windows, done
-	parenleft right
-
-
-changed binds between rising and diving walk_scope, done
-help done
-reason: normally there is no deep nesting.
---> 'easier' bind first
-
-
-editor remember geometry in conf, done
-self.use_geometry()
-update help, done
-
-
-when closing tab ctrl-d check if bookmarks, done
---> ask confirmation with messabox
---> prevent mistakenly closing tabs and loosing bookmarks
-used in: del_tab, open_file
-ctrl-shift-Q --> no ask
-
-
-tab_has_syntax_error(), done
-checks all open py-files with ast
-is setting
-off by default, to set:
-check_syntax_on_exit(setting=0,1)
-without arguments returns current setting
-used also when debug, removed package_has_syntax_error(), done
-update help, done
-
-
-# enable getting branch when not using git, done
-self.set_version_control_cmd(command as list)
-is setting
-info about shlex
-cmd_as_string='someprg -somearg1 3 --somearg2 moreargs'
-mcmd_as_list=shlex.split(my_cmd_as_string)
-update help, done
-
-
-#######################################
-fixed move_many_lines(), done
-is faster, uses same stuff as in center_view
-If still is slow, use (Shift)-PgUp/PgDown
---> as fast as can get incremental moving/selecting
-
-Below, compensation for (possibly) missing PgUp/Down -keys,
-Control-1/2 (selecting), Control-3/4 just moving
-
-Copying Tcl func from one bind to other, example:
-( Next means PgDown, Prior means PgUp )
-
-proc = w.bind_class('Text', '<Key-Next>').strip()
-w.bind('<Control-Key-4>', proc)
-proc = w.bind_class('Text', '<Key-Prior>').strip()
-w.bind('<Control-Key-3>', proc)
-proc = w.bind_class('Text', '<Shift-Key-Next>').strip()
-w.bind('<Control-Key-2>', proc)
-proc = w.bind_class('Text', '<Shift-Key-Prior>').strip()
-w.bind('<Control-Key-1>', proc)
-
-
-help done
-#######################################
-walk_scope fixed, uses defline tag, done
-get_absolutely_next_defline()
-get_deflines()
-self.deflines list
-# is update of self.deflines needed:
-self.cur_defline = '-1.-1'
-#######################################
-
-
-
 
 Below this: not done:
 ###############################################
@@ -358,29 +89,11 @@ Below this: not done:
 
 
 
-todo: copy paste, defline ########
-
-
-test change font when no linenumbers want_ln 0 1
-
-
-
-
-
-move by 2 words: ctrl-,.  #######################
-alt/cmd?
-linux no work, win?
-
-
-Control-np --> just np? easy on search, search next?
-no?
+todo: copy paste
 
 
 --> check_line multiline fix for indent0
 generates indentation errors --> using old way to get scope start ends
-
-
-check import bookmarks
 
 
 
@@ -429,27 +142,6 @@ e.btn_git.config(width=width_total)
 
 
 
-popup --> normal menu to btn_git?
-
-
-fontchoose use incremental after?
-changefont: max total time for animation, needs check
-
-
-note ln_update: if font is different at @0,0 like def with smaller font
-its bbox is different. --> sometimes wonky linenums
-ln_update should be done with tcl?
-
-
-debug testlaunch no work
-
-
-conf should be dataclass?
-linescpacing increase?
-test reduce in update_tokens?
-
-
-
 #######
 macos, this could be 3 in future?
 ## popup
@@ -471,44 +163,7 @@ help no can search ##########################
 searching etc with slow tagging(wait_fors) --> can goto_def and esc too fast
 
 
-move_many_lines check win11, done?
-
-
 check breakpoint usage
-
-
-check use of 'defline'-tag, self.deflines in
- search_next etc
-
-
-###
-indent, unindent, etc check line_can_update
-currently found one error:
- uncomment had self.line_can_update = False
- fixed
-
-if self.can_do_syntax():
-			self.line_can_update = True
-###
-###
-copy/paste two lines sometimes no work
-check copy paste overrides
-check with defaults?
-copy whole lines
-
-cursor is in multiline string does not always work?
-because strings tag are not updated correctly
-check insert triples, then write in them couple lines
-check_line print scope
-maybe try:
-	return override if triple in oldline: check scope
-
-paste inside multiline string no work
-check paste token update
-###
-
-
-split __init__.py to smaller files/modules
 
 
 
@@ -571,21 +226,6 @@ also for comments? use tags instead? like if 'strings' in..
 ####
 
 
-Save-button behaviour should be changed to: always save curtab
-	and if holding down ctrl --> save_forced
-
-
-
-###
-note, runtime error can occur before __init__, like so:
-e=henxel.Editor()
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "/home/samuel/pyyttoni/hub/henxel/src/henxel/__init__.py", line 420, in __new__
-    cls.helptxt = keystext + helptxt
-NameError: name 'helptxt' is not defined
-###
-
 
 
 list tree of deflines
@@ -629,226 +269,10 @@ check lint marks
 
 
 
-################################
-################################
-definition tag
-for example: 'defline1'
-number is indentation level
-
-fix indent if async in update ins tokens, done
-using flag
-
-fix walk_scope, done
-got_def, done
-
-get_scope_path not done
-
-defline when update?
-indent/dedent?
-tab_over_indent?
-
-
-only 'defline' -tag without number?
-
-
-tab_over_indent no py file
-
-
-line_is_defline use 'defline' -tag?
-no, is parser, does not use index
-rename: line_is_defline --> parse_defline(line)
-make new func: line_is_defline(index), which uses 'defline' -tag
-
-
-
-get_scope_start:
-1170 ms with old method
-
-################################
-
-
-###
-this below no work because can be 'wandering lines' between scopes
-with same indentation than ind_lvl_down
---> could just use old re-aproach or
---> 
-###
-
-
-get_scope_start:
-1:get_deflines()
-
-if no def_line down:
-- nearest def_line with indent0 up == parent0
-- if no def_line in file --> scope is __main__
-
-if nearest def_line down has indent0 or no def_line down:
-	search scope in loop0
-else:
-	ind_lvl_down > 0
-	search scope in loop1
-	
-	
-example (loop1):
-find nearest def_line down, (for example)has indent1 = ind_lvl_down
-
-- find nearest def_line, with ind_lvl_down-1 (now indent0), up
---> parent(ind_lvl_down-1), now(parent0)
-
---> this will be the scope if there is no deeper parent found later
-
-
-- then, get last def_line with ind_lvl_down (now indent1) between
-	parent(ind_lvl_down-1) (now parent0) and cur_line
-	--> parent(ind_lvl_down)
-	if no such def_line --> scope is parent0
-	else:--> this will be the scope if there is no deeper parent found later
-	
-
-maxind = 9
-real start:
-get nearest def_line (with maxind),
-	between parent(ind_lvl_down) (now parent1) and curline:
-1:	if none --> found scope, is parent(ind_lvl_down) (now parent1)
-	
-	###
-	execpt must search for 'wandering lines' between parent1 and curline:
-	This should be faster though than searching backwards (old method)
-	if there is line with ind_lvl_down: --> scope is not ind_lvl_down(parent1)
-	--> scope is with indentation <= ind_lvl_down
-	We know there is defline, up from curline, with ind_lvl_down-1 (parent0)
-	--> scope is parent0
-		Q: how we know this?
-		A: nearest def_line down had ind_lvl=1
-		--> it (and curline) has to belong to parent0 up
-	
-	finally if there is now 'wandering lines':
-	--> scope really was parent1
-	###
-	
-1: continuing here	
-	else: there is for example, def_line with (ind_lvl_down+2) (now indent3)
-		== ind_lvl_def_line_ref_up
-	
-	- find next line up with ind_lvl_def_line_ref_up (now indent3):
-		if that line is also def_line --> found scope
-		else:
-			if ind_lvl_def_line_ref_up = ind_lvl_down+1
-			--> found scope, is parent(ind_lvl_down) (now parent1)
-			
-			goto: real start, with maxind == ind_lvl_def_line_ref_up-1
-				get nearest def_line, between parent(ind_lvl_down) and
-				that def_line with ind_lvl_def_line_ref_up (indent3),
-				
-				if none --> scope is parent(ind_lvl_down) (now parent1)
-				
-				
-################################
-
-
-
-
-
-
-
-get scope path:
-
-	#this speeds up getting path, but need to get first defline 
-	get first defline using old method
-					
-	get rest of path using new method:
-		get tagprevrange(indent?)
-
-################################
-################################
-
-
-
-
-
-get_tokens(self, tab, update=False):
-		''' Get syntax-tokens for insert_tokens()
-
-	fix this	-->	Called from: walk_tabs
-			
-
-detect slow machine, no?
-self.set_flag_machine_is_slow(True)
-
-
-
-
-
-
-
-
-
-
-
-apply_config():
-tab.text_widget = tkinter.Te<insert>
-
-then tab complete
--->
-tab.text_widget = Text}
-
-
-set_syntags() contents.tag_config combine?
-
-
-self.anchorname --> tab.anchorname
-	currently changed when walk_tabs, in close_tab
-
-
-self.text_widget_basic_config
-
-
-self.pad
-			
-			
-# something:
-henxel.Editor.__bases__
-type(self).__name__
-[i for i in dir(henxel.Editor) if i not in dir(henxel.tkinter.Toplevel)]
-
-
-henxel.get_info()
-list funcs which gets some info
-check list add comments
-
-
-idx_lineend() == display line end, this is ok?
-
-
-copy block to empty line indent0 no work?
-
-
-sel.first sel.last scope edit_search_setting ?
-
-
 ####
 macos
 clipboard not persist over restart if not paste to console
-termios
-tty
-pty
-
-get line from python console:
-	readline.get_line_buffer()
-
-insert line in console
-	readline.insert_text('dir()')
-
-display it
-	readline.redisplay()
-####
 ###########################################################
-
-
-tab complete at end of:
-	self.tabs[self.tabindex]
-insert .pos and tab -->
-self.tabs[self.tabindex]nposition
 
 
 
@@ -857,15 +281,7 @@ curline needs highligh #################
 when:
 	check_sel, button-1, gotos, tab_open, undo, stop_search
 
-
-when update color:
-	when self.bgcolor changes
 	
-
-need: select_lines(startline, endline) ############
-maybe put in gotoline? if ',:-?' in linenum: 1,100 then select, show last etc
-
-
 color_choose: enable toggle bold ############
 
 
@@ -874,24 +290,6 @@ self.winfo_rgb(red)
 self.winfo_rgb('deep sky blue')
 ####
 
-
-
-view changes, after open tab, restore_bookmarks() is used in:
-	walk_tabs *
-	del_tab *
-		
-	run *
-	show_errors *
-	stop_show_errors *
-		
-	help *
-	stop_help *
-		
-	new_tab *
-	tag_link *
-	loadfile *
-	save *
-	
 
 
 tokens
@@ -1037,9 +435,6 @@ Control-d not Control-c to quit multiline command --> help?
 
 
 handle_normal_entry
-
-
-save file to disk when pressing save
 
 
 get(elided) -displaychars
