@@ -155,5 +155,43 @@ Files are in src/henxel/
 
 * [Changelog](https://github.com/SamuelKos/henxel/blob/main/CHANGELOG)
 
+* [Shortcuts for Windows and Linux](https://github.com/SamuelKos/henxel/blob/main/src/henxel/shortcuts.txt)
+
+* [Shortcuts for macOS](https://github.com/SamuelKos/henxel/blob/main/src/henxel/shortcuts_mac.txt)
+
+* [Help](https://github.com/SamuelKos/henxel/blob/main/src/henxel/help.txt)
+
 # Licence
 This project is licensed under the terms of the GNU General Public License v3.0.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

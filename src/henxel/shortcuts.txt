@@ -12,6 +12,7 @@
 
 	[1] Keyboard shortcuts:
 		
+		Alt-m	Open menu
 		
 		Alt-p	Toggle bookmark
 		Alt-u	Hide bookmark

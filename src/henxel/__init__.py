@@ -111,6 +111,8 @@ from . import fdialog
 ############ Imports End
 ############ Module Utilities Begin
 
+# Note: These are not checked, for example: Alt here seems to be linux only
+# It might be better not to use these much and use hardcoded event.state as usual
 modifier_dict = {
 # Modifier		Mask
 'Shift':	0x0001,
@@ -3208,6 +3210,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			w.bind( "<Alt-i>", self.show_info_message)
 			w.bind( "<Alt-c>", self.start_new_console)
+			w.bind( "<Alt-m>", self.popup_raise)
+
 
 			w.bind( "<Alt-s>", self.color_choose)
 			w.bind( "<Alt-t>", self.toggle_color)
@@ -3254,8 +3258,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind("<Right>", self.check_sel)
 
 			# Hide completions-window with arrow up/down
-			w.bind("<Up>", func=lambda event: self.comp_frame.place_forget, add=True)
-			w.bind("<Down>", func=lambda event: self.comp_frame.place_forget, add=True)
+			w.bind("<Up>", func=self.handle_updown)
+			w.bind("<Down>", func=self.handle_updown)
 
 			w.bind( "<Alt-Key-BackSpace>", self.del_to_dot)
 
@@ -3327,6 +3331,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			w.bind( "<dagger>", self.toggle_color)		# Alt-t
 			w.bind( "<ssharp>", self.color_choose)		# Alt-s
 			w.bind( "<ccedilla>", self.start_new_console) # Alt-c
+			w.bind( "<rightsinglequotemark>", self.popup_raise) # Alt-m
 
 
 			w.bind( "<Mod1-Key-BackSpace>", self.del_to_dot)
@@ -3445,9 +3450,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		## popup
 		self.right_mousebutton_num = 3
 
+		# This is changing to 3?
 		if self.os_type == 'mac_os':
 			self.right_mousebutton_num = 2
-
 
 
 		# Binds with ID Begin
@@ -3494,9 +3499,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		else:
 
-			self.entry.bind("<Alt-r>", func=self.self.toggle_search_setting_regexp )
+			self.entry.bind("<Alt-r>", func=self.toggle_search_setting_regexp )
 			self.entry.bind("<Alt-i>", func=self.toggle_search_setting_starts_from_insert )
-			self.bind("<Alt-r>", func=self.self.toggle_search_setting_regexp )
+			self.bind("<Alt-r>", func=self.toggle_search_setting_regexp )
 			self.bind("<Alt-i>", func=self.toggle_search_setting_starts_from_insert )
 
 			self.bind( "<Alt-n>", self.new_tab)
@@ -5327,20 +5332,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	def on_fontchange(self, fontname=None):
 		''' fontname: String in self.fonts.keys
 
-			Check is made in cases A and B so that linenum_font does not get bigger than textfont.
-
-			B:
-			When textfont or keyword_font is changed, linenum_font is changed automatically:
-				if size of textfont is increased, then spacing of linenum_font
-				is increased to match the lines. Size of linenum_font stays the same.
-
-				if size of textfont is decreased,
-				Size and spacing of linenum_font is then changed if needed.
-
-			A:
-			if size of linenum_font is increased, then check is made that it does not get bigger than textfont.
+			Check is made so that linenum_font or keyword_font does not get bigger than textfont.
 		'''
-
 
 		# A: changing linenum_font, no need to update anything related to text_widget
 		# just check lineheights
@@ -5364,7 +5357,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				res =  False
 				self.bell()
 				print('Lineheight of linenumbers cant be bigger than lineheight of text-window.')
-				print('If want bigger linenumbers, increase textfont size first')
+				print('If want bigger linenumbers, increase textfont size first or choose different font for linenumbers.')
 				self.ln_widget.tag_config('justright', spacing1=oldspacing)
 			else:
 				spacing = diff
@@ -5402,7 +5395,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 				res =  False
 				self.bell()
 				print('Lineheight of keywords cant be bigger than lineheight of text-window.')
-				print('If want bigger keywords, increase textfont size first')
+				print('If want bigger keywords, increase textfont size first or choose different font for keywords.')
 
 			if res:
 				# Now, count diff of, descent value, between keyword_font and textfont
@@ -7289,6 +7282,13 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		return 'break'
 
 
+	def handle_updown(self, event=None):
+		if self.comp_frame.winfo_ismapped():
+			self.comp_frame.place_forget()
+			return 'break'
+		return
+
+
 	def check_sel(self, event=None):
 		'''	Pressed arrow left or right.
 			If have selection, put cursor on the wanted side of selection.
@@ -7790,19 +7790,31 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.bell()
 			return 'break'
 
-		# Disable popup when not clicked inside Text-widget
 		root_y = self.text_widget.winfo_rooty()
 		root_x = self.text_widget.winfo_rootx()
-		max_y = self.text_widget.winfo_rooty() + self.text_widget_height
-		max_x = self.text_widget.winfo_rootx() + self.text_widget.winfo_width()
 
-		tests = (root_x <= event.x_root <= max_x,
-				root_y <= event.y_root <= max_y)
+		# Pressed mouse-right, check widget is text_widget
+		if event.keysym not in ['rightsinglequotemark', 'm']:
+			# Disable popup when not clicked inside Text-widget
+			max_y = self.text_widget.winfo_rooty() + self.text_widget_height
+			max_x = self.text_widget.winfo_rootx() + self.text_widget.winfo_width()
 
-		if not all(tests): return 'break'
+			tests = (root_x <= event.x_root <= max_x,
+					root_y <= event.y_root <= max_y)
+
+			if not all(tests): return 'break'
 
 
-		self.popup.post(event.x_root, event.y_root)
+			self.popup.post(event.x_root, event.y_root)
+
+		# Shortcut, try placing to center of text_widget
+		else:
+			x = root_x + self.text_widget.winfo_width()//3 - self.ln_widget.winfo_width()
+			y = root_y + self.text_widget_height//3 -self.entry.winfo_height()
+
+			self.popup.post(x, y)
+
+
 		self.popup.focus_set() # Needed to remove popup when clicked outside.
 		return 'break'
 
@@ -8335,7 +8347,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.geometry(self.geom)
 
 
-	def esc_override(self, event):
+	def esc_override(self, event=None):
 		'''	Enable toggle fullscreen with Esc
 			And cancel completion
 		'''
@@ -11251,7 +11263,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 	General about editor
 	About buttons
 
-	Execute part of code in Python-console
+	Executing program
 	Doing Test-run
 	Fix syntax-highlighting
 	Check syntax

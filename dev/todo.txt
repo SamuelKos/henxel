@@ -39,7 +39,18 @@ check toml script entry -->
 3: $ henxel *.txt
 ################
 
+win check:
+binds that uses:
+filter_keys_in
+filter_keys_out
 
+comp up down
+
+
+take pic
+
+
+alt m menu
 
 
 macos printing issue is partly because of using shell installed from brew

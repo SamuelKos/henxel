@@ -59,9 +59,12 @@
 		Editor can be launched from terminal and with arguments, for example:
 		python -m henxel ../../dir1/dir2/*.txt *.py
 		
-		1: Editor is launched using 'one time conf': setting is same
+		or just:
+		henxel ../../dir1/dir2/*.txt *.py
+		
+		1: Editor is then launched using 'one time conf': setting is same
 		but original tabs are not opened, and nothing is saved in conf.
-		2: Do something, close editor. When restarting normally(no arguments)
+		2: Do something, close editor. When restarting normally(no file-arguments)
 		--> original tabs are opened
 	
 	
@@ -186,14 +189,19 @@
 	Selection
 	  - Long selection: if cursor is not visible,
 		to show wanted side of selection, toggle left/right -keys
+		
+	  - When doing "select scope" and if got too long selection,
+		to cancel it, do not press left/right, instead press Esc.
 
 	
-[5] Execute part of code in Python-console
-	  - Remember to put import-lines before the desired code-blocks. Then
-		just select whole thing, copy and paste to console. May have
-		to press Return before last block executes. This is very useful,
-		compared to writing all that in console is much more difficult.
-		You might need to reduce indentation.
+[5] Executing program
+	  - Code does not have to have filename, just write something and
+		select "runfile" from popup-menu (Alt-m)
+	 
+	  - Run file with filename: select "runfile" from popup-menu
+	 
+	  - Run bigger projects: select "run module" from popup-menu
+		(Also, See next section about these settings)
 	
 	
 [6] Doing Test-run
