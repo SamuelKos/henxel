@@ -1,19 +1,18 @@
 [build-system]
-requires = ["hatchling >= 1.26"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "henxel"
-version = "0.3.4"
+version = "0.3.5"
 requires-python = ">=3.9"
 authors = [{name = "SamuelKos", email = "koskinens371@gmail.com"}]
 description = "GUI-editor for Python development."
-license = "GPL-3.0-or-later"
-license-files = ["LICENSE"]
 readme = "README.md"
 keywords = ["henxel", "editor", "editors", "tkinter", "GUI"]
 classifiers = [
 	"Programming Language :: Python :: 3",
+	"License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
 	"Operating System :: Microsoft :: Windows",
 	"Operating System :: POSIX :: Linux",
 	"Operating System :: MacOS",

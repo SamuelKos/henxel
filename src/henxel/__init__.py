@@ -2561,7 +2561,6 @@ def print_jou():
 
 import importflags
 importflags.FLAGS=%s
-
 import henxel
 #henxel.FLAGS['test_func']()
 
@@ -2588,7 +2587,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 			max_time = 5
 			tmp = self.build_launch_test(mode)
-			d = dict(capture_output=True, timeout=max_time)
+			d = dict(capture_output=True, timeout=max_time, start_new_session=True)
 
 			# This try block catches only timeouts
 			try:
@@ -10716,6 +10715,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 		def get_and_print_books(book_list, filter_word):
 			book_list = sorted([ self.text_widget.index(mark) for mark in book_list if filter_word in mark], key=float )
+			if not book_list: return
 			book_list = [ (self.get_scope_path(pos), pos) for pos in book_list ]
 
 			max_len = max( map(lambda item: len(str(item[1])), book_list) )

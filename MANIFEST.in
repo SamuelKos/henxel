@@ -1,5 +1,2 @@
 include src/henxel/*.png
 include src/henxel/*.txt
-include src/henxel/*.scpt
-include src/henxel/*.bat
-include src/henxel/*.sh
