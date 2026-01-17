@@ -148,6 +148,25 @@ If you currently have no internet but have previously installed virtual environm
 Files are in src/henxel/
 
 
+# Note for Python 3.9 users
+Current version installed with pip uses match case which requires Python 3.10.
+One can install editable version as described above or if don't want that,
+one can build it oneself:
+
+```console
+~/myproject$ mkvenv env
+~/myproject$ . env/bin/activate
+(env) ~/myproject$ git clone https://github.com/SamuelKos/henxel
+(env) ~/myproject$ cd henxel
+(env) ~/myproject/henxel$ pip install build
+(env) ~/myproject/henxel$ python -m build
+(env) ~/myproject/henxel$ pip install dist/henxel-someversion.whl
+```
+
+It can then be installed anywhere one wants, in example it was installed in
+same venv.
+
+
 # More resources
 * [Tcl/Tk](https://tcl.tk/man/tcl9.0/TkCmd/index.html)
 

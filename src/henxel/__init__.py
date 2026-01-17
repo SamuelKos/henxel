@@ -7575,214 +7575,214 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		'''	Used to catch key-combinations like Alt-shift-Right
 			in macOS, which are difficult to bind.
 		'''
-		match event.state:
-			# Pressed Cmd + Shift + arrow left or right.
-			# Want: select line from cursor.
+		#match event.state:
+		# Pressed Cmd + Shift + arrow left or right.
+		# Want: select line from cursor.
 
-			# Pressed Cmd + Shift + arrow up or down.
-			# Want: select 10 lines from cursor.
-			case 105:
+		# Pressed Cmd + Shift + arrow up or down.
+		# Want: select 10 lines from cursor.
+		if event.state == 105:
 
-				# self.text_widget or self.entry
-				wid = event.widget
+			# self.text_widget or self.entry
+			wid = event.widget
 
-				# Enable select from in entry
-				if wid == self.entry: return
+			# Enable select from in entry
+			if wid == self.entry: return
 
-				# Enable select from in contents
-				elif wid == self.text_widget:
-
-					if event.keysym == 'Right':
-						self.goto_lineend(event=event)
-
-					elif event.keysym == 'Left':
-
-						# Want Cmd-Shift-left to:
-						# Select indentation on line that has indentation
-						# When: at idx_linestart
-						# same way than Alt-Shift-Left
-
-						# At idx_linestart of line that has indentation?
-						idx = self.idx_linestart()[0]
-						tests = [not self.line_is_empty(),
-								self.text_widget.compare(idx, '==', 'insert' ),
-								self.get_line_col_as_int(index=idx)[1] != 0,
-								not len(self.text_widget.tag_ranges('sel')) > 0
-								]
-
-						if all(tests):
-							pos = self.text_widget.index('%s linestart' % idx )
-							self.text_widget.mark_set(self.anchorname, 'insert')
-							self.text_widget.tag_add('sel', pos, 'insert')
-
-						else:
-							self.goto_linestart(event=event)
-
-
-					elif event.keysym == 'Up':
-						# As in move_many_lines()
-						# Add some delay to get visual feedback
-						for i in range(10):
-							self.after(i*5, lambda args=['<<SelectPrevLine>>']:
-								self.text_widget.event_generate(*args) )
-
-					elif event.keysym == 'Down':
-						for i in range(10):
-							self.after(i*5, lambda args=['<<SelectNextLine>>']:
-								self.text_widget.event_generate(*args) )
-
-					else: return
-
-				return 'break'
-
-
-			# Pressed Cmd + arrow left or right.
-			# Want: walk tabs.
-
-			# Pressed Cmd + arrow up or down.
-			# Want: move cursor 10 lines from cursor.
-			case 104:
+			# Enable select from in contents
+			elif wid == self.text_widget:
 
 				if event.keysym == 'Right':
-					self.walk_tabs(event=event)
+					self.goto_lineend(event=event)
 
 				elif event.keysym == 'Left':
-					self.walk_tabs(event=event, **{'back':True})
+
+					# Want Cmd-Shift-left to:
+					# Select indentation on line that has indentation
+					# When: at idx_linestart
+					# same way than Alt-Shift-Left
+
+					# At idx_linestart of line that has indentation?
+					idx = self.idx_linestart()[0]
+					tests = [not self.line_is_empty(),
+							self.text_widget.compare(idx, '==', 'insert' ),
+							self.get_line_col_as_int(index=idx)[1] != 0,
+							not len(self.text_widget.tag_ranges('sel')) > 0
+							]
+
+					if all(tests):
+						pos = self.text_widget.index('%s linestart' % idx )
+						self.text_widget.mark_set(self.anchorname, 'insert')
+						self.text_widget.tag_add('sel', pos, 'insert')
+
+					else:
+						self.goto_linestart(event=event)
+
 
 				elif event.keysym == 'Up':
 					# As in move_many_lines()
 					# Add some delay to get visual feedback
 					for i in range(10):
-						self.after(i*7, lambda args=['<<PrevLine>>']:
+						self.after(i*5, lambda args=['<<SelectPrevLine>>']:
 							self.text_widget.event_generate(*args) )
 
 				elif event.keysym == 'Down':
 					for i in range(10):
-						self.after(i*7, lambda args=['<<NextLine>>']:
+						self.after(i*5, lambda args=['<<SelectNextLine>>']:
 							self.text_widget.event_generate(*args) )
 
 				else: return
 
-				return 'break'
+			return 'break'
 
 
-			# Pressed Alt + arrow left or right.
-			case 112:
+		# Pressed Cmd + arrow left or right.
+		# Want: walk tabs.
 
-				if event.keysym in ['Up', 'Down']: return
+		# Pressed Cmd + arrow up or down.
+		# Want: move cursor 10 lines from cursor.
+		elif event.state == 104:
 
-				# self.text_widget or self.entry
-				wid = event.widget
+			if event.keysym == 'Right':
+				self.walk_tabs(event=event)
 
-				if wid == self.entry:
+			elif event.keysym == 'Left':
+				self.walk_tabs(event=event, **{'back':True})
 
-					if event.keysym == 'Right':
-						self.entry.event_generate('<<NextWord>>')
+			elif event.keysym == 'Up':
+				# As in move_many_lines()
+				# Add some delay to get visual feedback
+				for i in range(10):
+					self.after(i*7, lambda args=['<<PrevLine>>']:
+						self.text_widget.event_generate(*args) )
 
-					elif event.keysym == 'Left':
-						self.entry.event_generate('<<PrevWord>>')
+			elif event.keysym == 'Down':
+				for i in range(10):
+					self.after(i*7, lambda args=['<<NextLine>>']:
+						self.text_widget.event_generate(*args) )
 
-					else: return
+			else: return
 
-				else:
-					res = self.move_by_words(event=event)
-					return res
-
-				return 'break'
-
-
-			# Pressed Alt + Shift + arrow left or right.
-			case 113:
-
-				if event.keysym in ['Up', 'Down']: return
-
-				# self.text_widget or self.entry
-				wid = event.widget
-
-				if wid == self.entry:
-
-					if event.keysym == 'Right':
-						self.entry.event_generate('<<SelectNextWord>>')
-
-					elif event.keysym == 'Left':
-						self.entry.event_generate('<<SelectPrevWord>>')
-
-					else: return
-
-				else:
-					res = self.select_by_words(event=event)
-					return res
-
-				return 'break'
+			return 'break'
 
 
-			# Pressed arrow left or right.
-			# If have selection, put cursor on the wanted side of selection.
+		# Pressed Alt + arrow left or right.
+		elif event.state == 112:
 
-			# Pressed arrow up or down: return event.
-			# +shift: 97: return event.
-			case 97: return
+			if event.keysym in ['Up', 'Down']: return
 
-			case 96:
-				if self.state in [ 'search', 'replace' ]:
-					pos = self.search_focus[0]
-					# If cur match viewable
-					if self.text_widget.bbox(pos):
-						self.message_frame2.place_forget()
-					# Else:
-					# keep gotodef banner on
+			# self.text_widget or self.entry
+			wid = event.widget
 
-				if self.cursor_frame.winfo_ismapped():
-					self.cursor_frame.place_forget()
+			if wid == self.entry:
 
+				if event.keysym == 'Right':
+					self.entry.event_generate('<<NextWord>>')
 
-				if event.keysym in ['Up', 'Down']:
-					if self.comp_frame.winfo_ismapped():
-						self.comp_frame.place_forget()
-						return 'break'
-
-					return
-
-
-				# self.text_widget or self.entry
-				wid = event.widget
-				have_selection = False
-
-				if wid == self.entry:
-					have_selection = self.entry.selection_present()
-
-				elif wid == self.text_widget:
-					have_selection = len(self.text_widget.tag_ranges('sel')) > 0
+				elif event.keysym == 'Left':
+					self.entry.event_generate('<<PrevWord>>')
 
 				else: return
 
-				if have_selection:
-					if event.keysym == 'Right':
-						self.check_sel(event=event)
+			else:
+				res = self.move_by_words(event=event)
+				return res
 
-					elif event.keysym == 'Left':
-						self.check_sel(event=event)
+			return 'break'
 
-					else: return
 
+		# Pressed Alt + Shift + arrow left or right.
+		elif event.state == 113:
+
+			if event.keysym in ['Up', 'Down']: return
+
+			# self.text_widget or self.entry
+			wid = event.widget
+
+			if wid == self.entry:
+
+				if event.keysym == 'Right':
+					self.entry.event_generate('<<SelectNextWord>>')
+
+				elif event.keysym == 'Left':
+					self.entry.event_generate('<<SelectPrevWord>>')
 
 				else: return
 
-				return 'break'
+			else:
+				res = self.select_by_words(event=event)
+				return res
+
+			return 'break'
 
 
-			# Pressed Fn
-			case 64:
+		# Pressed arrow left or right.
+		# If have selection, put cursor on the wanted side of selection.
 
-				# fullscreen
-				if event.keysym == 'f':
-					# prevent inserting 'f' when doing fn-f:
+		# Pressed arrow up or down: return event.
+		# +shift: 97: return event.
+		elif event.state == 97: return
+
+		elif event.state == 96:
+			if self.state in [ 'search', 'replace' ]:
+				pos = self.search_focus[0]
+				# If cur match viewable
+				if self.text_widget.bbox(pos):
+					self.message_frame2.place_forget()
+				# Else:
+				# keep gotodef banner on
+
+			if self.cursor_frame.winfo_ismapped():
+				self.cursor_frame.place_forget()
+
+
+			if event.keysym in ['Up', 'Down']:
+				if self.comp_frame.winfo_ismapped():
+					self.comp_frame.place_forget()
 					return 'break'
 
-				# Some shortcuts does not insert.
-				# Like fn-h does not insert h.
-				else:
-					return
+				return
+
+
+			# self.text_widget or self.entry
+			wid = event.widget
+			have_selection = False
+
+			if wid == self.entry:
+				have_selection = self.entry.selection_present()
+
+			elif wid == self.text_widget:
+				have_selection = len(self.text_widget.tag_ranges('sel')) > 0
+
+			else: return
+
+			if have_selection:
+				if event.keysym == 'Right':
+					self.check_sel(event=event)
+
+				elif event.keysym == 'Left':
+					self.check_sel(event=event)
+
+				else: return
+
+
+			else: return
+
+			return 'break'
+
+
+		# Pressed Fn
+		elif event.state == 64:
+
+			# fullscreen
+			if event.keysym == 'f':
+				# prevent inserting 'f' when doing fn-f:
+				return 'break'
+
+			# Some shortcuts does not insert.
+			# Like fn-h does not insert h.
+			else:
+				return
 
 		return
 
