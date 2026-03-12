@@ -13561,8 +13561,6 @@ def main():
 		try:
 			args = sys.argv[1:]
 			first_arg = args[0]
-			# Note: debug-session in Windows should be started using script
-			# found under /dev
 			if first_arg == '--debug': debug = True
 			# Use one time conf(original conf remains untouched) to enable 'adhoc behaviour' editor
 			# like normal editor: python -m henxel filepath1 filepath2
