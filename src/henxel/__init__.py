@@ -1429,7 +1429,20 @@ Error messages Begin
 
 
 			d = dict()
-			d['input'] = tmp.encode('ascii')
+			# was, until 0.3.5: (generates encoding errors)
+			# d['input'] = tmp.encode('ascii')
+
+			# This kind of works, also with default strict errors, but all characters would not translate
+			# d['input'] = tmp.encode('utf-8', errors='backslashreplace')
+
+##			https://docs.python.org/3/library/codecs.html
+##			Text Encodings
+##			Following codecs provide str to bytes encoding and bytes-like object to str decoding, similar to the Unicode text encodings.
+##			mbcs		Windows only: Encode the operand according to the ANSI codepage (CP_ACP).
+##			oem		Windows only: Encode the operand according to the OEM codepage (CP_OEMCP).
+
+			# backslashreplace: just in case
+			d['input'] = tmp.encode('oem', errors='backslashreplace')
 
 			t = threading.Thread( target=subprocess.run, args=('clip',), kwargs=d, daemon=True )
 			t.start()
