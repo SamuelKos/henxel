@@ -90,11 +90,19 @@ FIIXED_PRINTER = printer.get_fixed_printer()
 importflags.PRINTER['default'] = DEFAUL_PRINTER
 importflags.PRINTER['fixed'] = FIIXED_PRINTER
 importflags.PRINTER['current'] = DEFAUL_PRINTER
+
+# global print-function gets decorated here
+from . import print_utils
+
+# It is referenced like this in: decorators.py changefont.py wordexpand.py fdialog.py
+# (They have to be imported after this below)
+from henxel.print_utils import print
+
 # MacOS printing fix related End #########
 
 
 # Used on debugging
-from .decorators import do_twice, debug
+from .decorators import debug
 
 # From this package
 from . import wordexpand
