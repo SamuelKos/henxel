@@ -2,27 +2,6 @@ import tkinter.font
 import tkinter
 import pathlib
 
-
-# OLD - DELETE THIS DUPLICATED CODE
-### Update printer, when necessary, Begin
-##import functools
-### Get reference to printer set in henxel
-##import importflags
-##
-##def fix_print(func):
-##	@functools.wraps(func)
-##	def wrapper_print(*args, **kwargs):
-##		printer = importflags.PRINTER['current']
-##		printer(*args, **kwargs)
-##	return wrapper_print
-##
-##global print
-##@fix_print
-##def print(*args, **kwargs): return
-### Update printer, when necessary, End
-
-
-# NEW - SINGLE IMPORT
 from henxel.print_utils import print
 
 

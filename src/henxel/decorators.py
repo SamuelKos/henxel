@@ -2,31 +2,6 @@ import traceback
 import functools
 import time
 
-
-# OLD - DELETE THIS DUPLICATED CODE
-### Update printer, when necessary, Begin
-### Get reference to printer set in henxel/__init__.py
-##import importflags
-##
-### With this arrangement there is no need to do anything else,
-### in this file, to actual code-lines which has print-calls.
-### Printer is always the same than user selected in editor-session.
-##
-##def fix_print(func):
-##	@functools.wraps(func)
-##	def wrapper_print(*args, **kwargs):
-##		printer = importflags.PRINTER['current']
-##		printer(*args, **kwargs)
-##	return wrapper_print
-##
-##
-##global print
-##@fix_print
-##def print(*args, **kwargs): return
-### Update printer, when necessary, End
-
-
-# NEW - SINGLE IMPORT
 from henxel.print_utils import print
 
 

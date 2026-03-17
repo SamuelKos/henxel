@@ -50,10 +50,8 @@ import tkinter.font
 import tkinter
 import traceback
 import pathlib
-import inspect
 import json
 import copy
-import ast
 
 # Used in init
 import importlib.resources
@@ -67,12 +65,6 @@ import keyword
 # For executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
 import subprocess
-
-# For making paste to work in Windows
-import threading
-
-# Only to sometimes get console, used in start_new_console
-import code
 
 # https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
 # Pass data to/from other modules and is used also in debugging, Look in: build_launch_test()
@@ -277,7 +269,7 @@ class Tab:
 
 @dataclass
 class FakeEvent:
-	''' Used in move_by_words2
+	''' Used in move_by_words2, mac_cmd_overrides
 	'''
 
 	keysym: str = 'Left'
@@ -309,7 +301,7 @@ KEYS_MAC = 'shortcuts_mac.txt'
 VERSION = importlib.metadata.version('henxel')
 
 
-TAB_WIDTH = 4
+TAB_WIDTH = 3
 TAB_WIDTH_CHAR = 'A'
 
 
@@ -373,8 +365,10 @@ class Editor(tkinter.Toplevel):
 	os_type = None
 
 	if sys.platform == 'darwin': os_type = 'mac_os'
-	elif sys.platform[:3] == 'win': os_type = 'windows'
-	elif sys.platform.count('linux'): os_type = 'linux'
+	elif sys.platform[:3] == 'win':
+		os_type = 'windows'
+		# For making clipboard, between Windows and editor, to work
+		import threading
 	else: os_type = 'linux'
 
 	# No need App-name at launch-test, also this would deadlock the editor
@@ -803,7 +797,7 @@ class Editor(tkinter.Toplevel):
 			self.update_popup_run_action()
 
 
-			## Fix for macos printing issue starting from about Python 3.13 Begin
+			## Fix for macos printing issue starting from about Python 3.13
 			# Can be set with: mac_print_fix_use
 			tests = (not self.in_mainloop, self.mac_print_fix, self.os_type == 'mac_os')
 			if all(tests):
@@ -811,7 +805,7 @@ class Editor(tkinter.Toplevel):
 				print('using fixed printer')
 
 
-			# Get version control branch #######
+			# Get version control branch
 			if self.flags and self.flags.get('launch_test') == True: pass
 			else:
 				try:
@@ -1536,6 +1530,8 @@ Error messages Begin
 
 
 	def start_new_console(self, event=None):
+		import code
+
 		if not self.in_mainloop:
 			self.wait_for(30)
 			self.bell()
@@ -2728,6 +2724,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def tab_has_syntax_error(self, curtab=False):
+		import ast
 		flag_cancel = False
 
 		if curtab:
@@ -4137,9 +4134,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 					with open(tab.filepath, 'r', encoding='utf-8') as f:
 						tmp = f.read()
 						tab.contents = tmp
-						tab.oldcontents = tab.contents
 
 					tab.filepath = pathlib.Path(tab.filepath)
+					tab.oldcontents = tab.contents
+
+					if '.py' in tab.filepath.suffix:
+						indentation_is_alien, indent_depth = self.check_indent_depth(tmp)
+
+						if indentation_is_alien:
+							tmp = tab.oldcontents.splitlines(True)
+							tmp[:] = [self.tabify(line, width=indent_depth) for line in tmp]
+							tmp = ''.join(tmp)
+							tab.contents = tmp
+						else:
+							tab.contents = tab.oldcontents
+
+					else:
+						tab.contents = tab.oldcontents
 
 
 				except (EnvironmentError, UnicodeDecodeError) as e:
@@ -4982,10 +4993,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			print('Use geometry:', False)
 			print('Geometry changes are applied at next restart')
 			return
-		elif type(geom_string) != str:
-			self.bell()
-			return
-		elif geom_string == self.geom:
+		elif type(geom_string) != str or geom_string == self.geom:
 			self.bell()
 			return
 		elif geom_string == 'default':
@@ -5022,16 +5030,9 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		''' width is integer between 1-8
 		'''
 
-		if type(width) != int:
+		if type(width) != int or width == self.ind_depth or not 0 < width <= 8:
 			self.bell()
 			return
-		elif width == self.ind_depth:
-			self.bell()
-			return
-		elif not 0 < width <= 8:
-			self.bell()
-			return
-
 
 		self.ind_depth = width
 		self.tab_width = self.textfont.measure(self.ind_depth * self.tab_char)
@@ -6763,6 +6764,8 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						after %s {
 						$ww yview scroll $sd units
 						event generate $ww $ee
+						update idletasks
+
 						}
 			} else {
 				after %s {event generate $ww $ee}
@@ -6791,7 +6794,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			wait_time = '[expr 17*$n]'
 			scroll_direction = '-1'
 			update_idle = '$ww update idletasks'
-			if 'Select' in e: wait_time = '5'
+			if 'Select' in e and not self.os_type == 'mac_os': wait_time = '5'
 			try:	self.tk.eval( cmd % ( w, e, scroll_direction, near, wait_time, wait_time ) )
 			except tkinter.TclError as err: print(err)
 			return 'break'
@@ -6807,7 +6810,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			if to_down < 10: near = '1'
 			wait_time = '[expr 17*$n]'
 			scroll_direction = '+1'
-			if 'Select' in e: wait_time = '5'
+			if 'Select' in e and not self.os_type == 'mac_os': wait_time = '5'
 			try:	self.tk.eval( cmd % ( w, e, scroll_direction, near, wait_time, wait_time ) )
 			except tkinter.TclError as err: print(err)
 			return 'break'
@@ -7614,7 +7617,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			elif wid == self.text_widget:
 
 				if event.keysym == 'Right':
-					self.goto_lineend(event=event)
+					return self.goto_lineend(event=event)
 
 				elif event.keysym == 'Left':
 
@@ -7635,26 +7638,22 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						pos = self.text_widget.index('%s linestart' % idx )
 						self.text_widget.mark_set(self.anchorname, 'insert')
 						self.text_widget.tag_add('sel', pos, 'insert')
-
+						return 'break'
 					else:
-						self.goto_linestart(event=event)
+						return self.goto_linestart(event=event)
 
 
-				elif event.keysym == 'Up':
-					# As in move_many_lines()
-					# Add some delay to get visual feedback
-					for i in range(10):
-						self.after(i*5, lambda args=['<<SelectPrevLine>>']:
-							self.text_widget.event_generate(*args) )
+				elif event.keysym in ('Up', 'Down'):
+					f = self.move_many_lines
 
-				elif event.keysym == 'Down':
-					for i in range(10):
-						self.after(i*5, lambda args=['<<SelectNextLine>>']:
-							self.text_widget.event_generate(*args) )
+					event_state = 5
+					event = FakeEvent(keysym=event.keysym, state=event_state)
+					event.widget = self.text_widget
+
+					return f(event=event)
+
 
 				else: return
-
-			return 'break'
 
 
 		# Pressed Cmd + arrow left or right.
@@ -7665,26 +7664,23 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		elif event.state == 104:
 
 			if event.keysym == 'Right':
-				self.walk_tabs(event=event)
+				return self.walk_tabs(event=event)
 
 			elif event.keysym == 'Left':
-				self.walk_tabs(event=event, **{'back':True})
+				return self.walk_tabs(event=event, **{'back':True})
 
-			elif event.keysym == 'Up':
-				# As in move_many_lines()
-				# Add some delay to get visual feedback
-				for i in range(10):
-					self.after(i*7, lambda args=['<<PrevLine>>']:
-						self.text_widget.event_generate(*args) )
+			elif event.keysym in ('Up', 'Down'):
+				f = self.move_many_lines
 
-			elif event.keysym == 'Down':
-				for i in range(10):
-					self.after(i*7, lambda args=['<<NextLine>>']:
-						self.text_widget.event_generate(*args) )
+				event_state = 4
+				event = FakeEvent(keysym=event.keysym, state=event_state)
+				event.widget = self.text_widget
+
+				return f(event=event)
+
 
 			else: return
 
-			return 'break'
 
 
 		# Pressed Alt + arrow left or right.
@@ -8731,7 +8727,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			return 'break'
 
 		self.auto_update_syntax_stop()
-
+		import inspect
 
 		try:
 			mod = importlib.import_module(target)
@@ -11457,7 +11453,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 						else:
 							if indent != self.ind_depth:
 								return True, indent
-
 							else:
 								return False, 0
 
