@@ -52,6 +52,7 @@ import traceback
 import pathlib
 import json
 import copy
+import ast
 
 # Used in init
 import importlib.resources
@@ -65,6 +66,9 @@ import keyword
 # For executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
 import subprocess
+
+# For making clipboard, between Windows and editor, to work
+import threading
 
 # https://stackoverflow.com/questions/3720740/pass-variable-on-import/39360070#39360070
 # Pass data to/from other modules and is used also in debugging, Look in: build_launch_test()
@@ -365,10 +369,7 @@ class Editor(tkinter.Toplevel):
 	os_type = None
 
 	if sys.platform == 'darwin': os_type = 'mac_os'
-	elif sys.platform[:3] == 'win':
-		os_type = 'windows'
-		# For making clipboard, between Windows and editor, to work
-		import threading
+	elif sys.platform[:3] == 'win':os_type = 'windows'
 	else: os_type = 'linux'
 
 	# No need App-name at launch-test, also this would deadlock the editor
@@ -751,6 +752,7 @@ class Editor(tkinter.Toplevel):
 
 			# Get conf #####################
 			self.conf_load_success = False
+			self.flag_tried_openfiles = False
 			string_representation = None
 			data, p = None, None
 
@@ -776,21 +778,20 @@ class Editor(tkinter.Toplevel):
 			# Could not load files from conf, err-msg is already printed out from set_config
 			if self.tabindex == None:
 				# No conf and wanting to open some files from terminal
-				if self.one_time_conf:
+				if self.one_time_conf and not self.flag_tried_openfiles:
 					self.handle_one_time_conf()
 					self.conf_read_files()
 
-				else:
-					if len(self.tabs) == 0:
-						newtab = Tab(self.create_textwidget())
-						newtab.active = True
-						self.tabindex = 0
-						self.tabs.insert(self.tabindex, newtab)
+				if len(self.tabs) == 0:
+					newtab = Tab(self.create_textwidget())
+					newtab.active = True
+					self.tabindex = 0
+					self.tabs.insert(self.tabindex, newtab)
 
-					# Recently active normal tab is gone
-					else:
-						self.tabindex = 0
-						self.tabs[self.tabindex].active = True
+				# Recent active tab is gone
+				if self.tabindex == None:
+					self.tabindex = 0
+					self.tabs[self.tabindex].active = True
 			## Get conf End ################################
 
 
@@ -2724,7 +2725,6 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 	def tab_has_syntax_error(self, curtab=False):
-		import ast
 		flag_cancel = False
 
 		if curtab:
@@ -4118,18 +4118,27 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 		# Create tab for: 'to be opened' -file
 		for fname in self.files_to_be_opened:
 			newtab = Tab(self.create_textwidget())
-			newtab.filepath = tmppath / fname
-			newtab.filepath = newtab.filepath.resolve().__str__()
-			newtab.type = 'normal'
+
+			try:
+				filepath = tmppath / fname
+				filepath = filepath.resolve().__str__()
+				newtab.filepath = filepath
+				newtab.type = 'normal'
+			except Exception:
+				print(f'Could not find file: {fname}')
+				pass
+
 			self.tabs.append(newtab)
 
 		self.tabs[0].active = True
 
 
 	def conf_read_files(self):
+		self.flag_tried_openfiles = True
 		for tab in self.tabs[:]:
 
 			if tab.type == 'normal':
+
 				try:
 					with open(tab.filepath, 'r', encoding='utf-8') as f:
 						tmp = f.read()
@@ -4155,6 +4164,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 				except (EnvironmentError, UnicodeDecodeError) as e:
 					print(e.__str__())
+					print(f'Could not open file: {tab.filepath}')
 					# Note: remove(val) actually removes the first occurence of val
 					self.tabs.remove(tab)
 			else:
