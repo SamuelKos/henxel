@@ -20,6 +20,44 @@ macos: open filebrowser from terminal to current folder: open .
 
 
 
+ind unind check comments
+
+##	asd
+
+
+unind:
+flag_continue = True
+for line in lines:
+	if line is fail:
+		if not (line[1-2] == '##' and line[3] == '\t'):
+			flag_continue = False
+			break
+
+
+if unind fails:
+	see and flash failing line
+	mark set to that line
+	
+
+
+
+
+ind:
+for line in lines:
+	flag_comm = False
+	if line[1-2] == '##':
+		delete 1-2
+		flag_comm = True
+		
+	indent
+	
+	if flag_comm:
+		comment
+
+
+
+
+
 
 move_many_lines:
 if 'Select' in e and not self.os_type == 'mac_os': wait_time = '5'
@@ -32,6 +70,8 @@ done, ok?
 deafault ind is now 3
 done ok?
 
+
+fixed patt in tab_over_indent, done ok?
 
 
 

@@ -8504,7 +8504,7 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 			self.text_widget.delete('insert linestart', 'insert lineend')
 
 
-		patt = r'^[[:blank:]]+[^[:blank:]]'
+		patt = r'^[[:blank:]]*[^[:blank:]]'
 
 		(ind_prev, ind_next, pos_prev, pos_next,
 		line_prev, line_next, diff_prev, diff_next) = (
@@ -11635,25 +11635,48 @@ a=henxel.Editor(%s)''' % (flag_string, mode_string)
 
 
 		try:
-			# Unindenting curline only:
+
+			# Unindenting curline only
 			if len(self.text_widget.tag_ranges('sel')) == 0:
-				startline = int(self.text_widget.index(tkinter.INSERT).split(sep='.')[0])
+				startline,_ = self.get_line_col_as_int()
 				endline = startline
 
+			# Normal case, unindenting selection
 			else:
-				startline = int(self.text_widget.index(tkinter.SEL_FIRST).split(sep='.')[0])
-				endline = int(self.text_widget.index(tkinter.SEL_LAST).split(sep='.')[0])
+				startline,_ = self.get_line_col_as_int(index=tkinter.SEL_FIRST)
+				endline,_ = self.get_line_col_as_int(index=tkinter.SEL_LAST)
+
 
 			i = self.text_widget.index(tkinter.INSERT)
-
-			# Check there is enough space in every line:
+			# Check there is enough space in every line
 			flag_continue = True
+
 
 			for linenum in range(startline, endline+1):
 				tmp = self.text_widget.get('%s.0' % linenum, '%s.0 lineend' % linenum)
 
 				# Check that every *non empty* line has tab-char at beginning of line
 				if len(tmp) != 0 and tmp[0] != '\t':
+
+					##
+					# line is allowed to be commented if there is space to move comment-marks
+##					if len(tmp) > 1 and tmp[:2] == '##':
+##
+##						if len(tmp) > 2:
+##							if tmp[2] == '\t':
+##								pass
+##
+##							elif tmp[2:].isspace():
+##								# delete line
+##								pass
+##
+##
+##						elif len(tmp) == 2:
+##							# delete line
+##							pass
+
+
+					##
 					flag_continue = False
 					break
 
